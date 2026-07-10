@@ -110,6 +110,24 @@ export interface AnalyticsModeBreakdown {
   customer_contract_count: number;
 }
 
+export interface OperationalMetricGroup {
+  label: string;
+  amount_due?: number;
+  paid_amount?: number;
+  outstanding_amount?: number;
+  collection_rate?: number | null;
+  payment_rate?: number | null;
+  accrual_net_amount?: number;
+  cash_net_amount?: number;
+}
+
+export interface OperationalMetricGroups {
+  terminal_collection: OperationalMetricGroup;
+  operator_income: OperationalMetricGroup;
+  operator_cost: OperationalMetricGroup;
+  operating_result: OperationalMetricGroup;
+}
+
 export interface PerformanceMetrics {
   asset_utilization: number;
   income_efficiency: number;
@@ -145,7 +163,10 @@ export interface AnalyticsData {
   counterparty_contract_breakdown?: Record<string, number>;
   project_breakdown?: AnalyticsProjectBreakdown[];
   mode_breakdown?: AnalyticsModeBreakdown[];
+  operational_metric_groups?: OperationalMetricGroups;
   metrics_version?: string;
+  period_attribution_basis?: string;
+  period_attribution_label?: string;
   occupancy_distribution: OccupancyDistribution[];
   property_nature_distribution: PropertyNatureDistribution[];
   ownership_status_distribution: OwnershipStatusDistribution[];
@@ -180,7 +201,10 @@ export interface AnalyticsResponse {
   counterparty_contract_breakdown?: Record<string, number>;
   project_breakdown?: AnalyticsProjectBreakdown[];
   mode_breakdown?: AnalyticsModeBreakdown[];
+  operational_metric_groups?: OperationalMetricGroups;
   metrics_version?: string;
+  period_attribution_basis?: string;
+  period_attribution_label?: string;
   occupancy_distribution?: OccupancyDistribution[];
   property_nature_distribution?: PropertyNatureDistribution[];
   ownership_status_distribution?: OwnershipStatusDistribution[];

@@ -8,7 +8,7 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
-| [2026-07-06-operations-ledger-implementation.md](2026-07-06-operations-ledger-implementation.md) | 经营台账与收付流水实施计划 | 🔄 实施中 | 后端模型、迁移、流水分摊和服务费底座已启动 |
+| [2026-07-06-operations-ledger-implementation.md](2026-07-06-operations-ledger-implementation.md) | 经营台账与收付流水实施计划 | 🔄 实施中 | 后端/API、前端经营台账、分析和通知口径已落地；剩余 Phase 6 门禁与归档 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案

@@ -6,10 +6,197 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.core.exception_handler import BusinessValidationError
+from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
 from src.models.contract_group import GroupRelationType, RevenueMode
 
 pytestmark = pytest.mark.asyncio
+
+
+async def test_list_contract_group_entries_should_return_agency_service_fees(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    service_fee_entries = [
+        SimpleNamespace(
+            service_fee_entry_id="service-fee-1",
+            source_ledger_ids=["rent-ledger-1"],
+            year_month="2026-05",
+        )
+    ]
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=service_fee_entries),
+        ) as mock_list,
+    ):
+        result = await service.list_contract_group_entries(mock_db, group_id="group-1")
+
+    assert result == service_fee_entries
+    mock_list.assert_awaited_once_with(mock_db, group_id="group-1")
+
+
+async def test_list_contract_group_entries_should_allow_scoped_party(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    service_fee_entries = [SimpleNamespace(service_fee_entry_id="service-fee-1")]
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=service_fee_entries),
+        ) as mock_list,
+    ):
+        result = await service.list_contract_group_entries(
+            mock_db,
+            group_id="group-1",
+            binding_type="manager",
+            effective_party_ids=["operator-1"],
+        )
+
+    assert result == service_fee_entries
+    mock_list.assert_awaited_once_with(mock_db, group_id="group-1")
+
+
+async def test_list_contract_group_entries_should_hide_out_of_scope_group(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ) as mock_list,
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await service.list_contract_group_entries(
+                mock_db,
+                group_id="group-1",
+                binding_type="owner",
+                effective_party_ids=["other-owner"],
+            )
+
+    mock_list.assert_not_awaited()
+
+
+async def test_list_contract_group_entries_should_hide_empty_all_scope(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ) as mock_list,
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await service.list_contract_group_entries(
+                mock_db,
+                group_id="group-1",
+                binding_type="all",
+                effective_party_ids=[],
+            )
+
+    mock_list.assert_not_awaited()
+
+
+async def test_list_contract_group_entries_should_skip_non_agency_group(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    lease_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.LEASE,
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=lease_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ) as mock_list,
+    ):
+        result = await service.list_contract_group_entries(mock_db, group_id="group-1")
+
+    assert result == []
+    mock_list.assert_not_awaited()
+
+
+async def test_list_contract_group_entries_should_raise_when_group_missing(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+
+    with patch(
+        "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+        new=AsyncMock(return_value=None),
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await service.list_contract_group_entries(mock_db, group_id="missing")
 
 
 async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(

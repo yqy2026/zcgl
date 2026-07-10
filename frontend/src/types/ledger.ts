@@ -128,6 +128,27 @@ export interface ServiceFeeGeneratePayload {
   contract_group_id: string;
 }
 
+export interface ServiceFeeLedger {
+  service_fee_entry_id: string;
+  contract_group_id: string;
+  agency_contract_id: string;
+  agency_agreement_contract_id: string;
+  source_ledger_ids: string[];
+  year_month: string;
+  amount_due: string | number;
+  paid_amount: string | number;
+  payment_status: LedgerPaymentStatus | string;
+  currency_code: string;
+  service_fee_ratio: string | number;
+  calculation_base_amount: string | number;
+  attributed_project_id?: string | null;
+  attributed_owner_party_id?: string | null;
+  attributed_operator_party_id?: string | null;
+  attributed_asset_ids?: string[] | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 export interface ServiceFeeGenerateResult {
   created: number;
   updated: number;

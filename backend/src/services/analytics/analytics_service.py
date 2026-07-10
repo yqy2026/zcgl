@@ -41,6 +41,10 @@ from ...models.party import PartyReviewStatus
 logger = logging.getLogger(__name__)
 
 ANALYTICS_METRICS_VERSION = "req-ana-001-v2"
+ANALYTICS_PERIOD_ATTRIBUTION_BASIS = "rent_year_month"
+ANALYTICS_PERIOD_ATTRIBUTION_LABEL = (
+    "按租金账期归属，流水发生日期仅用于查询、导出和审计"
+)
 CUSTOMER_BREAKDOWN_KEYS = (
     "downstream_sublease",
     "direct_lease",
@@ -340,6 +344,161 @@ class AnalyticsService:
             return False
         return True
 
+    @staticmethod
+    def _ledger_entry_has_view(entry: Any, view: str) -> bool:
+        ledger_views = getattr(entry, "ledger_views", None)
+        if not isinstance(ledger_views, list | tuple | set):
+            return False
+        return view in ledger_views
+
+    @classmethod
+    def _new_operational_metric_group(cls, label: str) -> dict[str, Any]:
+        return {
+            "label": label,
+            "amount_due": Decimal("0"),
+            "paid_amount": Decimal("0"),
+        }
+
+    @classmethod
+    def _add_amounts_to_operational_metric_group(
+        cls,
+        group: dict[str, Any],
+        *,
+        amount_due: Decimal,
+        paid_amount: Decimal,
+    ) -> None:
+        group["amount_due"] += amount_due
+        group["paid_amount"] += paid_amount
+
+    @classmethod
+    def _serialize_operational_metric_group(
+        cls,
+        group: dict[str, Any],
+        *,
+        rate_key: str,
+    ) -> dict[str, Any]:
+        amount_due = cls._quantize_money(group["amount_due"])
+        paid_amount = cls._quantize_money(group["paid_amount"])
+        outstanding_amount = cls._quantize_money(
+            max(amount_due - paid_amount, Decimal("0"))
+        )
+        rate = (
+            None
+            if amount_due == Decimal("0")
+            else float(
+                (paid_amount / amount_due * Decimal("100")).quantize(
+                    Decimal("0.01"),
+                    rounding=ROUND_HALF_UP,
+                )
+            )
+        )
+        return {
+            "label": group["label"],
+            "amount_due": float(amount_due),
+            "paid_amount": float(paid_amount),
+            "outstanding_amount": float(outstanding_amount),
+            rate_key: rate,
+        }
+
+    @classmethod
+    def _calculate_operational_metric_groups(
+        cls,
+        contracts: list[Contract],
+        filters: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        terminal_collection = cls._new_operational_metric_group("终端租户收缴")
+        operator_income = cls._new_operational_metric_group("运营方收入")
+        operator_cost = cls._new_operational_metric_group("运营方成本")
+        lower_year_month, upper_year_month = cls._resolve_ledger_year_month_bounds(
+            filters
+        )
+
+        for contract in contracts:
+            for ledger_entry in getattr(contract, "ledger_entries", []) or []:
+                if getattr(ledger_entry, "payment_status", None) == "voided":
+                    continue
+                if not cls._is_ledger_entry_in_scope(
+                    getattr(ledger_entry, "year_month", None),
+                    lower=lower_year_month,
+                    upper=upper_year_month,
+                ):
+                    continue
+
+                amount_due = cls._quantize_money(
+                    cls._to_decimal(getattr(ledger_entry, "amount_due", None))
+                )
+                paid_amount = cls._quantize_money(
+                    cls._to_decimal(getattr(ledger_entry, "paid_amount", None))
+                )
+                if cls._ledger_entry_has_view(ledger_entry, "terminal_collection"):
+                    cls._add_amounts_to_operational_metric_group(
+                        terminal_collection,
+                        amount_due=amount_due,
+                        paid_amount=paid_amount,
+                    )
+                if cls._ledger_entry_has_view(ledger_entry, "operator_income"):
+                    cls._add_amounts_to_operational_metric_group(
+                        operator_income,
+                        amount_due=amount_due,
+                        paid_amount=paid_amount,
+                    )
+                if cls._ledger_entry_has_view(ledger_entry, "operator_cost"):
+                    cls._add_amounts_to_operational_metric_group(
+                        operator_cost,
+                        amount_due=amount_due,
+                        paid_amount=paid_amount,
+                    )
+
+            for service_fee_entry in getattr(contract, "service_fee_ledgers", []) or []:
+                if getattr(service_fee_entry, "payment_status", None) == "voided":
+                    continue
+                if not cls._is_ledger_entry_in_scope(
+                    getattr(service_fee_entry, "year_month", None),
+                    lower=lower_year_month,
+                    upper=upper_year_month,
+                ):
+                    continue
+                cls._add_amounts_to_operational_metric_group(
+                    operator_income,
+                    amount_due=cls._quantize_money(
+                        cls._to_decimal(getattr(service_fee_entry, "amount_due", None))
+                    ),
+                    paid_amount=cls._quantize_money(
+                        cls._to_decimal(getattr(service_fee_entry, "paid_amount", None))
+                    ),
+                )
+
+        serialized_income = cls._serialize_operational_metric_group(
+            operator_income,
+            rate_key="collection_rate",
+        )
+        serialized_cost = cls._serialize_operational_metric_group(
+            operator_cost,
+            rate_key="payment_rate",
+        )
+        income_amount_due = cls._quantize_money(operator_income["amount_due"])
+        income_paid_amount = cls._quantize_money(operator_income["paid_amount"])
+        cost_amount_due = cls._quantize_money(operator_cost["amount_due"])
+        cost_paid_amount = cls._quantize_money(operator_cost["paid_amount"])
+
+        return {
+            "terminal_collection": cls._serialize_operational_metric_group(
+                terminal_collection,
+                rate_key="collection_rate",
+            ),
+            "operator_income": serialized_income,
+            "operator_cost": serialized_cost,
+            "operating_result": {
+                "label": "经营结果",
+                "accrual_net_amount": float(
+                    cls._quantize_money(income_amount_due - cost_amount_due)
+                ),
+                "cash_net_amount": float(
+                    cls._quantize_money(income_paid_amount - cost_paid_amount)
+                ),
+            },
+        }
+
     def _calculate_operational_metrics(
         self,
         contracts: list[Contract],
@@ -368,6 +527,7 @@ class AnalyticsService:
         lower_year_month, upper_year_month = self._resolve_ledger_year_month_bounds(
             filters
         )
+        eligible_contracts: list[Contract] = []
 
         for contract in contracts:
             if not self._is_contract_statistically_eligible(contract):
@@ -376,6 +536,7 @@ class AnalyticsService:
             group = getattr(contract, "contract_group", None)
             if group is None:
                 continue
+            eligible_contracts.append(contract)
 
             relation_type = getattr(contract, "group_relation_type", None)
             group_mode = getattr(group, "revenue_mode", None)
@@ -510,7 +671,13 @@ class AnalyticsService:
             "counterparty_contract_breakdown": dict(
                 counterparty_contract_counts_by_bucket
             ),
+            "operational_metric_groups": self._calculate_operational_metric_groups(
+                eligible_contracts,
+                filters,
+            ),
             "metrics_version": ANALYTICS_METRICS_VERSION,
+            "period_attribution_basis": ANALYTICS_PERIOD_ATTRIBUTION_BASIS,
+            "period_attribution_label": ANALYTICS_PERIOD_ATTRIBUTION_LABEL,
         }
 
     def _calculate_analytics_breakdowns(

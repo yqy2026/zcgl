@@ -67,8 +67,8 @@ const TYPE_META_MAP: Record<
     tone: Tone;
   }
 > = {
-  [NotificationType.CONTRACT_EXPIRING]: { label: '合同提醒', tone: 'warning' },
-  [NotificationType.CONTRACT_EXPIRED]: { label: '合同到期', tone: 'error' },
+  [NotificationType.CONTRACT_EXPIRING]: { label: '合同/协议提醒', tone: 'warning' },
+  [NotificationType.CONTRACT_EXPIRED]: { label: '合同/协议到期', tone: 'error' },
   [NotificationType.PAYMENT_OVERDUE]: { label: '逾期提醒', tone: 'error' },
   [NotificationType.PAYMENT_DUE]: { label: '支付提醒', tone: 'primary' },
   [NotificationType.SYSTEM_NOTICE]: { label: '系统通知', tone: 'success' },
@@ -210,7 +210,7 @@ const NotificationCenter: React.FC = () => {
         item.type === NotificationType.CONTRACT_EXPIRING ||
         item.type === NotificationType.CONTRACT_EXPIRED
       ) {
-        MessageManager.info('合同通知详情入口迁移中，请改从新 contract/contract-group 页面处理');
+        MessageManager.info('合同/协议通知详情入口迁移中，请改从合同中心页面处理');
       } else if (item.related_entity_type === 'asset') {
         navigate(`/assets/${item.related_entity_id}`);
       }
@@ -285,7 +285,7 @@ const NotificationCenter: React.FC = () => {
           className={styles.tabs}
           items={[
             { label: '全部消息', key: 'all' },
-            { label: '合同提醒', key: NotificationType.CONTRACT_EXPIRING },
+            { label: '合同/协议提醒', key: NotificationType.CONTRACT_EXPIRING },
             { label: '支付提醒', key: NotificationType.PAYMENT_DUE },
             { label: '系统通知', key: NotificationType.SYSTEM_NOTICE },
           ]}

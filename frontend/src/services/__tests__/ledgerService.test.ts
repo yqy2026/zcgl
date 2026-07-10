@@ -265,6 +265,38 @@ describe('LedgerService', () => {
     expect(allocations[0].allocation_id).toBe('allocation-1');
   });
 
+  it('lists service-fee ledgers by contract group', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          service_fee_entry_id: 'service-fee-1',
+          contract_group_id: 'group-1',
+          agency_contract_id: 'contract-direct-1',
+          agency_agreement_contract_id: 'contract-entrust-1',
+          source_ledger_ids: ['rent-ledger-1'],
+          year_month: '2026-05',
+          amount_due: '50.00',
+          paid_amount: '20.00',
+          payment_status: 'partial',
+          currency_code: 'CNY',
+          service_fee_ratio: '0.1000',
+          calculation_base_amount: '500.00',
+        },
+      ],
+    });
+
+    const result = await service.listServiceFees('group-1');
+
+    expect(apiClient.get).toHaveBeenCalledWith('/ledger/service-fees', {
+      params: { contract_group_id: 'group-1' },
+      cache: false,
+      retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+      smartExtract: true,
+    });
+    expect(result[0].source_ledger_ids).toEqual(['rent-ledger-1']);
+  });
+
   it('generates service fees and updates follow-up state', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       success: true,

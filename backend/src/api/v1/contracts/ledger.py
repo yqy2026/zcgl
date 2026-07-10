@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Annotated, Literal, cast
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,8 +12,10 @@ from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
+    DataScopeContext,
     get_current_active_user,
     require_authz,
+    require_data_scope_context,
 )
 from ....models.auth import User
 from ....schemas.contract_group import (
@@ -30,6 +32,7 @@ from ....schemas.contract_group import (
     PaymentAllocationSaveRequest,
     ServiceFeeGenerateRequest,
     ServiceFeeGenerateResponse,
+    ServiceFeeLedgerResponse,
 )
 from ....services.contract.ledger_compensation_service import (
     ledger_compensation_service,
@@ -133,6 +136,10 @@ def resolve_ledger_export_query_params(
         offset=params.offset,
         limit=params.limit,
     )
+
+
+async def resolve_service_fee_group_resource_id(request: Request) -> str | None:
+    return request.query_params.get("contract_group_id")
 
 
 @router.get(
@@ -357,6 +364,46 @@ async def generate_service_fees(
         raise
     except Exception as exc:
         raise internal_error("生成月度服务费台账失败", original_error=exc) from exc
+
+
+@router.get(
+    "/ledger/service-fees",
+    response_model=list[ServiceFeeLedgerResponse],
+    summary="查询月度服务费台账",
+)
+async def list_service_fees(
+    contract_group_id: str = Query(..., min_length=1, description="合同组 ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="contract_group",
+                resource_id=resolve_service_fee_group_resource_id,
+                deny_as_not_found=True,
+            )
+        ),
+    ] = None,
+) -> list[ServiceFeeLedgerResponse]:
+    _ = current_user
+    _ = _authz
+    try:
+        result = await service_fee_ledger_service.list_contract_group_entries(
+            db,
+            group_id=contract_group_id,
+            binding_type=_scope_ctx.scope_mode,
+            effective_party_ids=_scope_ctx.effective_party_ids,
+        )
+        return [ServiceFeeLedgerResponse.model_validate(item) for item in result]
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询月度服务费台账失败", original_error=exc) from exc
 
 
 @router.post(

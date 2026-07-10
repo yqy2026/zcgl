@@ -14,6 +14,7 @@ import type {
   PaymentAllocationCreate,
   ServiceFeeGeneratePayload,
   ServiceFeeGenerateResult,
+  ServiceFeeLedger,
 } from '@/types/ledger';
 
 type LedgerExportParams = LedgerListParams & {
@@ -164,6 +165,26 @@ export class LedgerService {
 
       if (!result.success || result.data == null) {
         throw new Error(`生成服务费台账失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async listServiceFees(contractGroupId: string): Promise<ServiceFeeLedger[]> {
+    try {
+      const result = await apiClient.get<ServiceFeeLedger[]>(API_ENDPOINTS.LEDGER.SERVICE_FEES, {
+        params: { contract_group_id: contractGroupId },
+        cache: false,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
+
+      if (!result.success || result.data == null) {
+        throw new Error(`查询服务费台账失败: ${result.error}`);
       }
 
       return result.data;

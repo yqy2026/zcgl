@@ -23,6 +23,8 @@ def test_ledger_module_should_use_require_authz() -> None:
     source = _module_source()
     assert "require_authz" in source
     assert 'resource_id="{contract_id}"' in source
+    assert "resolve_service_fee_group_resource_id" in source
+    assert 'resource_type="contract_group"' in source
 
 
 def test_get_ledger_entries_delegates_to_service(client) -> None:
@@ -396,3 +398,48 @@ def test_generate_service_fees_delegates_to_service(client) -> None:
     assert response.status_code == 200
     assert response.json() == payload
     mock_generate.assert_awaited_once_with(ANY, group_id="group-001")
+
+
+def test_list_service_fees_delegates_to_service(client) -> None:
+    payload = [
+        {
+            "service_fee_entry_id": "service-fee-001",
+            "contract_group_id": "group-001",
+            "agency_contract_id": "contract-direct-001",
+            "agency_agreement_contract_id": "contract-entrust-001",
+            "source_ledger_ids": ["rent-ledger-001"],
+            "year_month": "2026-05",
+            "amount_due": "50.00",
+            "paid_amount": "20.00",
+            "payment_status": "partial",
+            "currency_code": "CNY",
+            "service_fee_ratio": "0.1000",
+            "calculation_base_amount": "500.00",
+            "attributed_project_id": "project-001",
+            "attributed_owner_party_id": "owner-001",
+            "attributed_operator_party_id": "operator-001",
+            "attributed_asset_ids": ["asset-001"],
+            "created_at": None,
+            "updated_at": None,
+        }
+    ]
+
+    with patch(
+        "src.api.v1.contracts.ledger.service_fee_ledger_service.list_contract_group_entries",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_list:
+        response = client.get(
+            "/api/v1/ledger/service-fees",
+            params={"contract_group_id": "group-001"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()[0]["service_fee_entry_id"] == "service-fee-001"
+    assert response.json()[0]["source_ledger_ids"] == ["rent-ledger-001"]
+    mock_list.assert_awaited_once_with(
+        ANY,
+        group_id="group-001",
+        binding_type="all",
+        effective_party_ids=[],
+    )

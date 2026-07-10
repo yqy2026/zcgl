@@ -22,6 +22,7 @@ export interface AnalyticsExportData {
     customer_entity_count?: number;
     customer_contract_count?: number;
     metrics_version?: string;
+    period_attribution_label?: string;
   };
   property_nature_distribution: Array<{
     name: string;
@@ -78,6 +79,7 @@ class AnalyticsExportService {
         ['客户主体数', data.summary.customer_entity_count ?? 0, '个'],
         ['客户合同数', data.summary.customer_contract_count ?? 0, '份'],
         ['口径版本', data.summary.metrics_version ?? '', ''],
+        ['账期归属口径', data.summary.period_attribution_label ?? '', ''],
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(workbook, summarySheet, '概览统计');
@@ -199,6 +201,7 @@ class AnalyticsExportService {
       csvData.push(['客户主体数', data.summary.customer_entity_count ?? 0, '个']);
       csvData.push(['客户合同数', data.summary.customer_contract_count ?? 0, '份']);
       csvData.push(['口径版本', data.summary.metrics_version ?? '', '']);
+      csvData.push(['账期归属口径', data.summary.period_attribution_label ?? '', '']);
       csvData.push([]);
 
       // 添加物业性质分布
@@ -330,6 +333,7 @@ class AnalyticsExportService {
         .summary-card h3 { margin: 0 0 var(--report-spacing-md) 0; color: var(--report-color-primary); }
         .summary-card .value { font-size: var(--report-font-size-lg); font-weight: bold; color: var(--report-color-text-primary); }
         .summary-card .unit { font-size: var(--report-font-size-base); color: var(--report-color-text-secondary); }
+        .period-attribution { margin: 0 0 var(--report-spacing-lg); color: var(--report-color-text-secondary); }
     </style>
 </head>
 <body>
@@ -366,6 +370,12 @@ class AnalyticsExportService {
 
     <div class="section">
         <h2>经营口径${data.summary.metrics_version != null && data.summary.metrics_version !== '' ? ` <small style="color:#999">(${data.summary.metrics_version})</small>` : ''}</h2>
+        ${
+          data.summary.period_attribution_label != null &&
+          data.summary.period_attribution_label !== ''
+            ? `<p class="period-attribution">账期归属口径：${data.summary.period_attribution_label}</p>`
+            : ''
+        }
         <div class="summary-grid">
             <div class="summary-card">
                 <h3>总收入（经营口径）</h3>

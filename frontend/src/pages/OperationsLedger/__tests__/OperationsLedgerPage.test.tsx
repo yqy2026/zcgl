@@ -9,6 +9,7 @@ vi.mock('@/services/ledgerService', () => ({
     createPaymentFlow: vi.fn(),
     savePaymentFlowAllocations: vi.fn(),
     generateServiceFees: vi.fn(),
+    listServiceFees: vi.fn(),
     updateLedgerEntryFollowUp: vi.fn(),
     triggerLedgerDownload: vi.fn(),
   },
@@ -120,6 +121,23 @@ describe('OperationsLedgerPage', () => {
       voided: 0,
       source_mismatches: 0,
     });
+    vi.mocked(ledgerService.listServiceFees).mockResolvedValue([
+      {
+        service_fee_entry_id: 'service-fee-1',
+        contract_group_id: 'group-1',
+        agency_contract_id: 'contract-direct-1',
+        agency_agreement_contract_id: 'contract-entrust-1',
+        source_ledger_ids: ['rent-ledger-1'],
+        year_month: '2026-05',
+        amount_due: '50.00',
+        paid_amount: '20.00',
+        payment_status: 'partial',
+        currency_code: 'CNY',
+        service_fee_ratio: '0.1000',
+        calculation_base_amount: '500.00',
+        attributed_owner_party_id: 'owner-party-1',
+      },
+    ]);
     vi.mocked(ledgerService.updateLedgerEntryFollowUp).mockResolvedValue({
       entry_id: 'ledger-1',
       contract_id: 'contract-1',
@@ -252,5 +270,77 @@ describe('OperationsLedgerPage', () => {
         contract_group_id: 'group-1',
       });
     });
+  });
+
+  it('queries service-fee source ledgers from the service-fee settlement view', async () => {
+    renderWithProviders(<OperationsLedgerPage />);
+
+    fireEvent.click(screen.getByText('服务费结算'));
+    fireEvent.change(screen.getByLabelText('合同组 ID'), {
+      target: { value: 'group-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /查询来源账期/ }));
+
+    await waitFor(() => {
+      expect(ledgerService.listServiceFees).toHaveBeenCalledWith('group-1');
+    });
+    expect(await screen.findByText('rent-ledger-1')).toBeInTheDocument();
+  });
+
+  it('registers service-fee receipts from a listed service-fee ledger', async () => {
+    renderWithProviders(<OperationsLedgerPage />);
+
+    fireEvent.click(screen.getByText('服务费结算'));
+    fireEvent.change(screen.getByLabelText('合同组 ID'), {
+      target: { value: 'group-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /查询来源账期/ }));
+
+    expect(await screen.findByText('service-fee-1')).toBeInTheDocument();
+    const serviceFeeRow = screen.getByText('service-fee-1').closest('tr');
+    if (serviceFeeRow == null) {
+      throw new Error('service-fee row missing');
+    }
+    fireEvent.click(within(serviceFeeRow).getByRole('button', { name: /登记收款/ }));
+    fireEvent.change(screen.getByLabelText('经办人'), { target: { value: 'operator' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /登\s*记/ }));
+
+    await waitFor(() => {
+      expect(ledgerService.createPaymentFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flow_type: 'service_fee_receipt',
+          amount: 30,
+          registered_by: 'operator',
+          counterparty_id: 'owner-party-1',
+        })
+      );
+    });
+    expect(ledgerService.savePaymentFlowAllocations).toHaveBeenCalledWith('flow-1', [
+      {
+        target_type: 'service_fee_ledger',
+        target_id: 'service-fee-1',
+        year_month: '2026-05',
+        amount: 30,
+      },
+    ]);
+  });
+
+  it('does not query an empty contract group after a manual service-fee receipt', async () => {
+    renderWithProviders(<OperationsLedgerPage />);
+
+    fireEvent.click(screen.getByText('服务费结算'));
+    fireEvent.click(screen.getByRole('button', { name: '登记服务费收款' }));
+    fireEvent.change(screen.getByLabelText('服务费台账 ID'), {
+      target: { value: 'service-fee-manual' },
+    });
+    fireEvent.change(screen.getByLabelText('账期'), { target: { value: '2026-05' } });
+    fireEvent.change(screen.getByLabelText('金额'), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('经办人'), { target: { value: 'operator' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /登\s*记/ }));
+
+    await waitFor(() => {
+      expect(ledgerService.createPaymentFlow).toHaveBeenCalled();
+    });
+    expect(ledgerService.listServiceFees).not.toHaveBeenCalled();
   });
 });

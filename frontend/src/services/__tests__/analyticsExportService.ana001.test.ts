@@ -33,6 +33,7 @@ const makeExportData = (
     customer_entity_count: 15,
     customer_contract_count: 22,
     metrics_version: 'req-ana-001-v2',
+    period_attribution_label: '按租金账期归属，流水发生日期仅用于查询、导出和审计',
     ...overrides,
   },
   property_nature_distribution: [],
@@ -65,6 +66,7 @@ describe('analyticsExportService ANA-001 fields', () => {
       expect(rowLabels).toContain('客户主体数');
       expect(rowLabels).toContain('客户合同数');
       expect(rowLabels).toContain('口径版本');
+      expect(rowLabels).toContain('账期归属口径');
     });
 
     it('should export metrics_version value', async () => {
@@ -77,7 +79,9 @@ describe('analyticsExportService ANA-001 fields', () => {
       const summaryRows = aoaCalls[0][0] as unknown[][];
 
       const versionRow = summaryRows.find(r => r[0] === '口径版本');
+      const attributionRow = summaryRows.find(r => r[0] === '账期归属口径');
       expect(versionRow?.[1]).toBe('req-ana-001-v2');
+      expect(attributionRow?.[1]).toBe('按租金账期归属，流水发生日期仅用于查询、导出和审计');
     });
   });
 
@@ -114,6 +118,8 @@ describe('analyticsExportService ANA-001 fields', () => {
       expect(blobContent).toContain('客户合同数');
       expect(blobContent).toContain('口径版本');
       expect(blobContent).toContain('req-ana-001-v2');
+      expect(blobContent).toContain('账期归属口径');
+      expect(blobContent).toContain('流水发生日期');
 
       globalThis.Blob = OrigBlob;
       createElementSpy.mockRestore();
@@ -132,6 +138,7 @@ describe('analyticsExportService ANA-001 fields', () => {
         customer_entity_count: undefined as unknown as number,
         customer_contract_count: undefined as unknown as number,
         metrics_version: undefined as unknown as string,
+        period_attribution_label: undefined,
       });
 
       // Should not throw

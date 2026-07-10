@@ -770,6 +770,7 @@ class CRUDContractGroup:
             )
             .where(
                 ContractLedgerEntry._payment_status != "voided",
+                ContractLedgerEntry.ledger_views.contains(["terminal_collection"]),
                 ContractLedgerEntry.due_date < today,
                 allocated_paid_amount < ContractLedgerEntry.amount_due,
                 Contract.data_status == "正常",
@@ -813,6 +814,7 @@ class CRUDContractGroup:
             )
             .where(
                 ContractLedgerEntry._payment_status != "voided",
+                ContractLedgerEntry.ledger_views.contains(["terminal_collection"]),
                 ContractLedgerEntry.due_date <= warning_date,
                 ContractLedgerEntry.due_date >= today,
                 allocated_paid_amount <= 0,

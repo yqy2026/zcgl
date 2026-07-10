@@ -52,11 +52,14 @@ def _ledger_entry(
     )
 
 
-def _assert_active_ledger_allocation_sql(sql: str) -> None:
+def _assert_active_ledger_allocation_sql(sql: str, params: str = "") -> None:
     assert "payment_allocations" in sql
     assert "operational_payment_flows" in sql
-    assert "target_type = 'contract_ledger_entry'" in sql
-    assert "operational_payment_flows.status = 'active'" in sql
+    assert (
+        "target_type = 'contract_ledger_entry'" in sql
+        or "contract_ledger_entry" in params
+    )
+    assert "operational_payment_flows.status = 'active'" in sql or "active" in params
     assert "count(payment_allocations.allocation_id)" in sql
 
 
@@ -260,12 +263,17 @@ class TestLedgerAggregateQueries:
         )
 
         stmt = mock_db.execute.await_args.args[0]
-        sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        compiled = stmt.compile()
+        sql = str(compiled)
+        params = repr(compiled.params)
         assert items == [entry]
         assert entry.paid_amount == Decimal("600.00")
         assert entry.payment_status == "partial"
-        assert "contract_ledger_entries.due_date < '2026-02-01'" in sql
-        _assert_active_ledger_allocation_sql(sql)
+        assert "contract_ledger_entries.due_date <" in sql
+        assert "datetime.date(2026, 2, 1)" in params
+        assert "ledger_views" in sql
+        assert "terminal_collection" in params
+        _assert_active_ledger_allocation_sql(sql, params)
 
     async def test_get_due_soon_with_contract_uses_active_allocations(
         self, crud: CRUDContractGroup, mock_db: MagicMock
@@ -282,10 +290,16 @@ class TestLedgerAggregateQueries:
         )
 
         stmt = mock_db.execute.await_args.args[0]
-        sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        compiled = stmt.compile()
+        sql = str(compiled)
+        params = repr(compiled.params)
         assert items == [entry]
         assert entry.paid_amount == Decimal("0.00")
         assert entry.payment_status == "unpaid"
-        assert "contract_ledger_entries.due_date <= '2026-01-31'" in sql
-        assert "contract_ledger_entries.due_date >= '2026-01-01'" in sql
-        _assert_active_ledger_allocation_sql(sql)
+        assert "contract_ledger_entries.due_date <=" in sql
+        assert "contract_ledger_entries.due_date >=" in sql
+        assert "datetime.date(2026, 1, 31)" in params
+        assert "datetime.date(2026, 1, 1)" in params
+        assert "ledger_views" in sql
+        assert "terminal_collection" in params
+        _assert_active_ledger_allocation_sql(sql, params)

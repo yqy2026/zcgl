@@ -44,6 +44,14 @@
   gap: var(--spacing-lg);
 }
 
+.serviceFeeTableCard {
+  grid-column: 1 / -1;
+}
+
+.serviceFeeSummary {
+  margin-bottom: var(--spacing-md);
+}
+
 @media (max-width: var(--breakpoint-lg)) {
   .toolbar,
   .serviceFeeGrid {

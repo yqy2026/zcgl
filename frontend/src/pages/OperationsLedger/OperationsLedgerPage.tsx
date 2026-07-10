@@ -36,6 +36,7 @@ import type {
   LedgerPaymentStatus,
   OperationsLedgerView,
   PaymentAllocationTargetType,
+  ServiceFeeLedger,
 } from '@/types/ledger';
 import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './OperationsLedgerPage.module.css';
@@ -105,6 +106,13 @@ const FOLLOW_UP_META: Record<LedgerFollowUpStatus, { label: string; color: strin
   deferred: { label: '暂缓', color: 'default' },
 };
 
+const SERVICE_FEE_STATUS_META: Record<string, { label: string; color: string }> = {
+  unpaid: { label: '未收', color: 'default' },
+  paid: { label: '已收', color: 'green' },
+  partial: { label: '部分收款', color: 'orange' },
+  voided: { label: '已作废', color: 'gray' },
+};
+
 interface CashFlowFormValues {
   occurred_on?: Dayjs;
   amount?: number | null;
@@ -144,6 +152,9 @@ const formatAmount = (value: string | number): string => {
 };
 
 const getOutstandingAmount = (entry: LedgerEntry): number =>
+  Math.max(Number(entry.amount_due || 0) - Number(entry.paid_amount || 0), 0);
+
+const getServiceFeeOutstandingAmount = (entry: ServiceFeeLedger): number =>
   Math.max(Number(entry.amount_due || 0) - Number(entry.paid_amount || 0), 0);
 
 const isDerivedOverdue = (entry: LedgerEntry, view: OperationsLedgerView): boolean => {
@@ -194,6 +205,9 @@ const OperationsLedgerPage: React.FC = () => {
   const [cashFlowModalOpen, setCashFlowModalOpen] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [serviceFeeReceiptOpen, setServiceFeeReceiptOpen] = useState(false);
+  const [serviceFeeGroupId, setServiceFeeGroupId] = useState(
+    searchParams.get('contract_group_id') ?? ''
+  );
 
   const yearMonthStart = yearMonthRange[0]?.format('YYYY-MM') ?? undefined;
   const yearMonthEnd = yearMonthRange[1]?.format('YYYY-MM') ?? undefined;
@@ -203,6 +217,7 @@ const OperationsLedgerPage: React.FC = () => {
   const normalizedContractId = contractId.trim();
   const normalizedAssetId = assetId.trim();
   const normalizedPartyId = partyId.trim();
+  const normalizedServiceFeeGroupId = serviceFeeGroupId.trim();
   const isServiceFeeView = activeView === 'service_fee_settlement';
   const hasRequiredLedgerFilter =
     isContractLedgerView(activeView) &&
@@ -252,7 +267,14 @@ const OperationsLedgerPage: React.FC = () => {
     enabled: hasRequiredLedgerFilter,
   });
 
+  const serviceFeeQuery = useQuery({
+    queryKey: ['operations-ledger-service-fees', queryScopeKey, normalizedServiceFeeGroupId],
+    queryFn: () => ledgerService.listServiceFees(normalizedServiceFeeGroupId),
+    enabled: isServiceFeeView && normalizedServiceFeeGroupId !== '',
+  });
+
   const ledgerItems = hasRequiredLedgerFilter ? (ledgerQuery.data?.items ?? []) : [];
+  const serviceFeeItems = isServiceFeeView ? (serviceFeeQuery.data ?? []) : [];
   const amountDueTotal = useMemo(
     () => ledgerItems.reduce((sum, item) => sum + Number(item.amount_due || 0), 0),
     [ledgerItems]
@@ -260,6 +282,14 @@ const OperationsLedgerPage: React.FC = () => {
   const paidAmountTotal = useMemo(
     () => ledgerItems.reduce((sum, item) => sum + Number(item.paid_amount || 0), 0),
     [ledgerItems]
+  );
+  const serviceFeeAmountDueTotal = useMemo(
+    () => serviceFeeItems.reduce((sum, item) => sum + Number(item.amount_due || 0), 0),
+    [serviceFeeItems]
+  );
+  const serviceFeePaidAmountTotal = useMemo(
+    () => serviceFeeItems.reduce((sum, item) => sum + Number(item.paid_amount || 0), 0),
+    [serviceFeeItems]
   );
   const selectedEntries = useMemo(() => {
     const selectedIdSet = new Set(selectedEntryIds.map(String));
@@ -326,7 +356,11 @@ const OperationsLedgerPage: React.FC = () => {
       setServiceFeeReceiptOpen(false);
       setSelectedEntryIds([]);
       cashFlowForm.resetFields();
-      await ledgerQuery.refetch();
+      if (activeView === 'service_fee_settlement' && normalizedServiceFeeGroupId !== '') {
+        await serviceFeeQuery.refetch();
+      } else if (activeView !== 'service_fee_settlement') {
+        await ledgerQuery.refetch();
+      }
       message.success('收付流水已登记');
     },
   });
@@ -358,13 +392,32 @@ const OperationsLedgerPage: React.FC = () => {
       }
       return ledgerService.generateServiceFees({ contract_group_id: contractGroupId });
     },
-    onSuccess: result => {
+    onSuccess: (result, values) => {
+      const contractGroupId = normalizeText(values.contract_group_id);
+      if (contractGroupId != null) {
+        setServiceFeeGroupId(contractGroupId);
+        if (contractGroupId === normalizedServiceFeeGroupId) {
+          void serviceFeeQuery.refetch();
+        }
+      }
       serviceFeeGenerateForm.resetFields();
       message.success(
         `服务费已生成：新增 ${result.created}，更新 ${result.updated}，作废 ${result.voided}`
       );
     },
   });
+
+  const handleQueryServiceFees = () => {
+    serviceFeeGenerateForm
+      .validateFields(['contract_group_id'])
+      .then(values => {
+        const contractGroupId = normalizeText(values.contract_group_id);
+        if (contractGroupId != null) {
+          setServiceFeeGroupId(contractGroupId);
+        }
+      })
+      .catch(() => undefined);
+  };
 
   const resetPagination = () => {
     setOffset(0);
@@ -412,9 +465,16 @@ const OperationsLedgerPage: React.FC = () => {
     setCashFlowModalOpen(true);
   };
 
-  const openServiceFeeReceiptModal = () => {
+  const openServiceFeeReceiptModal = (entry?: ServiceFeeLedger) => {
     cashFlowForm.setFieldsValue({
       occurred_on: dayjs(),
+      target_id: entry?.service_fee_entry_id,
+      year_month: entry?.year_month,
+      amount:
+        entry != null
+          ? getServiceFeeOutstandingAmount(entry) || Number(entry.amount_due || 0)
+          : undefined,
+      counterparty_id: entry?.attributed_owner_party_id ?? undefined,
     });
     setServiceFeeReceiptOpen(true);
   };
@@ -578,6 +638,96 @@ const OperationsLedgerPage: React.FC = () => {
     return columnsForView;
   }, [activeView]);
 
+  const serviceFeeColumns = useMemo<ColumnsType<ServiceFeeLedger>>(
+    () => [
+      {
+        title: '账期',
+        dataIndex: 'year_month',
+        key: 'year_month',
+        width: 110,
+      },
+      {
+        title: '服务费台账 ID',
+        dataIndex: 'service_fee_entry_id',
+        key: 'service_fee_entry_id',
+        ellipsis: true,
+      },
+      {
+        title: '来源租金台账',
+        dataIndex: 'source_ledger_ids',
+        key: 'source_ledger_ids',
+        ellipsis: true,
+        render: (value?: string[]) =>
+          (value?.length ?? 0) > 0 ? (
+            <Space size="small" wrap>
+              {value?.map(sourceLedgerId => (
+                <Tag key={sourceLedgerId}>{sourceLedgerId}</Tag>
+              ))}
+            </Space>
+          ) : (
+            '-'
+          ),
+      },
+      {
+        title: '计算基数',
+        dataIndex: 'calculation_base_amount',
+        key: 'calculation_base_amount',
+        align: 'right',
+        render: (value: string | number, record) =>
+          `${formatAmount(value)} ${record.currency_code}`,
+      },
+      {
+        title: '费率',
+        dataIndex: 'service_fee_ratio',
+        key: 'service_fee_ratio',
+        align: 'right',
+        width: 100,
+        render: (value: string | number) => `${(Number(value) * 100).toFixed(2)}%`,
+      },
+      {
+        title: '应收服务费',
+        dataIndex: 'amount_due',
+        key: 'amount_due',
+        align: 'right',
+        render: (value: string | number, record) =>
+          `${formatAmount(value)} ${record.currency_code}`,
+      },
+      {
+        title: '实收服务费',
+        dataIndex: 'paid_amount',
+        key: 'paid_amount',
+        align: 'right',
+        render: (value: string | number, record) =>
+          `${formatAmount(value)} ${record.currency_code}`,
+      },
+      {
+        title: '状态',
+        dataIndex: 'payment_status',
+        key: 'payment_status',
+        width: 120,
+        render: (value: string) => {
+          const meta = SERVICE_FEE_STATUS_META[value] ?? { label: value, color: 'default' };
+          return <Tag color={meta.color}>{meta.label}</Tag>;
+        },
+      },
+      {
+        title: '操作',
+        key: 'actions',
+        width: 120,
+        render: (_, record) => (
+          <Button
+            type="link"
+            disabled={record.payment_status === 'voided'}
+            onClick={() => openServiceFeeReceiptModal(record)}
+          >
+            登记收款
+          </Button>
+        ),
+      },
+    ],
+    [openServiceFeeReceiptModal]
+  );
+
   const selectedCanRegisterFlow =
     selectedEntry != null &&
     selectedEntry.payment_status !== 'voided' &&
@@ -646,6 +796,17 @@ const OperationsLedgerPage: React.FC = () => {
               serviceFeeGenerateMutation.error instanceof Error
                 ? serviceFeeGenerateMutation.error.message
                 : '服务费生成失败'
+            }
+          />
+        ) : null}
+        {serviceFeeQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              serviceFeeQuery.error instanceof Error
+                ? serviceFeeQuery.error.message
+                : '服务费台账加载失败'
             }
           />
         ) : null}
@@ -812,7 +973,7 @@ const OperationsLedgerPage: React.FC = () => {
           </>
         ) : (
           <div className={styles.serviceFeeGrid}>
-            <Card title="服务费生成">
+            <Card title="服务费生成与查询">
               <Form form={serviceFeeGenerateForm} layout="vertical">
                 <Form.Item
                   label="合同组 ID"
@@ -821,24 +982,63 @@ const OperationsLedgerPage: React.FC = () => {
                 >
                   <Input placeholder="contract_group_id" />
                 </Form.Item>
-                <Button
-                  type="primary"
-                  loading={serviceFeeGenerateMutation.isPending}
-                  onClick={() => {
-                    serviceFeeGenerateForm
-                      .validateFields()
-                      .then(values => serviceFeeGenerateMutation.mutate(values))
-                      .catch(() => undefined);
-                  }}
-                >
-                  生成服务费
-                </Button>
+                <Space wrap>
+                  <Button onClick={handleQueryServiceFees}>查询来源账期</Button>
+                  <Button
+                    type="primary"
+                    loading={serviceFeeGenerateMutation.isPending}
+                    onClick={() => {
+                      serviceFeeGenerateForm
+                        .validateFields()
+                        .then(values => serviceFeeGenerateMutation.mutate(values))
+                        .catch(() => undefined);
+                    }}
+                  >
+                    生成服务费
+                  </Button>
+                </Space>
               </Form>
             </Card>
             <Card title="服务费收款登记">
-              <Button type="primary" onClick={openServiceFeeReceiptModal}>
+              <Button type="primary" onClick={() => openServiceFeeReceiptModal()}>
                 登记服务费收款
               </Button>
+            </Card>
+            <Card className={styles.serviceFeeTableCard} title="服务费来源账期">
+              <Space size="large" wrap className={styles.serviceFeeSummary}>
+                <Statistic title="服务费条目" value={serviceFeeItems.length} />
+                <Statistic
+                  title="应收服务费"
+                  value={serviceFeeAmountDueTotal}
+                  precision={2}
+                  suffix="元"
+                />
+                <Statistic
+                  title="实收服务费"
+                  value={serviceFeePaidAmountTotal}
+                  precision={2}
+                  suffix="元"
+                />
+              </Space>
+              <Table<ServiceFeeLedger>
+                rowKey="service_fee_entry_id"
+                loading={serviceFeeQuery.isLoading || serviceFeeQuery.isFetching}
+                columns={serviceFeeColumns}
+                dataSource={serviceFeeItems}
+                pagination={{ pageSize: 10, showSizeChanger: true }}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      description={
+                        normalizedServiceFeeGroupId === ''
+                          ? '请输入合同组 ID 后查询服务费台账'
+                          : '暂无服务费台账'
+                      }
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ),
+                }}
+              />
             </Card>
           </div>
         )}

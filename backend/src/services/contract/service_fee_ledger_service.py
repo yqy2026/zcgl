@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -113,6 +113,80 @@ class ServiceFeeSourceMismatch:
 
 class ServiceFeeLedgerService:
     """Generate monthly service-fee receivables from direct-lease rent receipts."""
+
+    @staticmethod
+    def _normalize_effective_party_ids(
+        effective_party_ids: list[str] | None,
+    ) -> list[str]:
+        if effective_party_ids is None:
+            return []
+
+        normalized_ids: list[str] = []
+        seen: set[str] = set()
+        for party_id in effective_party_ids:
+            normalized_party_id = str(party_id).strip()
+            if normalized_party_id == "" or normalized_party_id in seen:
+                continue
+            seen.add(normalized_party_id)
+            normalized_ids.append(normalized_party_id)
+        return normalized_ids
+
+    @classmethod
+    def _assert_group_in_scope(
+        cls,
+        *,
+        group: Any,
+        group_id: str,
+        binding_type: Literal["owner", "manager", "all"] | None,
+        effective_party_ids: list[str] | None,
+    ) -> None:
+        normalized_effective_party_ids = cls._normalize_effective_party_ids(
+            effective_party_ids
+        )
+        if binding_type is None:
+            return
+        if len(normalized_effective_party_ids) == 0:
+            raise ResourceNotFoundError("合同组", group_id)
+
+        owner_party_id = str(getattr(group, "owner_party_id", "")).strip()
+        operator_party_id = str(getattr(group, "operator_party_id", "")).strip()
+        if binding_type == "all":
+            if (
+                owner_party_id in normalized_effective_party_ids
+                or operator_party_id in normalized_effective_party_ids
+            ):
+                return
+            raise ResourceNotFoundError("合同组", group_id)
+
+        scoped_party_id = (
+            owner_party_id if binding_type == "owner" else operator_party_id
+        )
+        if scoped_party_id not in normalized_effective_party_ids:
+            raise ResourceNotFoundError("合同组", group_id)
+
+    async def list_contract_group_entries(
+        self,
+        db: AsyncSession,
+        *,
+        group_id: str,
+        binding_type: Literal["owner", "manager", "all"] | None = None,
+        effective_party_ids: list[str] | None = None,
+    ) -> list[Any]:
+        group = await contract_group_crud.get(db, group_id)
+        if group is None:
+            raise ResourceNotFoundError("contract group", group_id)
+        self._assert_group_in_scope(
+            group=group,
+            group_id=group_id,
+            binding_type=binding_type,
+            effective_party_ids=effective_party_ids,
+        )
+        if getattr(group, "revenue_mode", None) != RevenueMode.AGENCY:
+            return []
+        return await contract_group_crud.list_service_fee_entries_by_group(
+            db,
+            group_id=group_id,
+        )
 
     async def sync_contract_group(
         self,

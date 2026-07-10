@@ -32,7 +32,10 @@ interface RawApiData {
   counterparty_contract_breakdown?: Record<string, number>;
   project_breakdown?: unknown[];
   mode_breakdown?: unknown[];
+  operational_metric_groups?: unknown;
   metrics_version?: string;
+  period_attribution_basis?: string;
+  period_attribution_label?: string;
   property_nature_distribution?: unknown[];
   ownership_status_distribution?: unknown[];
   usage_status_distribution?: unknown[];
@@ -112,6 +115,17 @@ interface RawAnalyticsModeBreakdownItem {
   customer_contract_count?: unknown;
 }
 
+interface RawOperationalMetricGroup {
+  label?: unknown;
+  amount_due?: unknown;
+  paid_amount?: unknown;
+  outstanding_amount?: unknown;
+  collection_rate?: unknown;
+  payment_rate?: unknown;
+  accrual_net_amount?: unknown;
+  cash_net_amount?: unknown;
+}
+
 const toNumber = (value: unknown): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -139,6 +153,16 @@ const toNullableNumber = (value: unknown): number | null => {
     }
   }
   return null;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value != null && typeof value === 'object' && !Array.isArray(value);
+
+const toOperationalMetricGroup = (value: unknown): RawOperationalMetricGroup => {
+  if (!isRecord(value)) {
+    return { label: '' };
+  }
+  return value;
 };
 
 export class AnalyticsService {
@@ -330,6 +354,30 @@ export class AnalyticsService {
         customer_contract_count: toNumber(item.customer_contract_count),
       };
     });
+    const rawOperationalMetricGroups = isRecord(apiData.operational_metric_groups)
+      ? apiData.operational_metric_groups
+      : undefined;
+    const operational_metric_groups: AnalyticsData['operational_metric_groups'] =
+      rawOperationalMetricGroups == null
+        ? undefined
+        : {
+            terminal_collection: this.adaptOperationalMetricGroup(
+              toOperationalMetricGroup(rawOperationalMetricGroups.terminal_collection),
+              '终端租户收缴'
+            ),
+            operator_income: this.adaptOperationalMetricGroup(
+              toOperationalMetricGroup(rawOperationalMetricGroups.operator_income),
+              '运营方收入'
+            ),
+            operator_cost: this.adaptOperationalMetricGroup(
+              toOperationalMetricGroup(rawOperationalMetricGroups.operator_cost),
+              '运营方成本'
+            ),
+            operating_result: this.adaptOperationalMetricGroup(
+              toOperationalMetricGroup(rawOperationalMetricGroups.operating_result),
+              '经营结果'
+            ),
+          };
 
     const adaptedData: AnalyticsData = {
       area_summary,
@@ -357,8 +405,17 @@ export class AnalyticsService {
           : undefined,
       project_breakdown,
       mode_breakdown,
+      operational_metric_groups,
       metrics_version:
         typeof apiData.metrics_version === 'string' ? apiData.metrics_version : undefined,
+      period_attribution_basis:
+        typeof apiData.period_attribution_basis === 'string'
+          ? apiData.period_attribution_basis
+          : undefined,
+      period_attribution_label:
+        typeof apiData.period_attribution_label === 'string'
+          ? apiData.period_attribution_label
+          : undefined,
       property_nature_distribution,
       ownership_status_distribution,
       usage_status_distribution,
@@ -373,6 +430,23 @@ export class AnalyticsService {
 
     serviceLogger.debug('Adapted AnalyticsData:', { data: adaptedData });
     return adaptedData;
+  }
+
+  private adaptOperationalMetricGroup(
+    item: RawOperationalMetricGroup,
+    fallbackLabel: string
+  ): NonNullable<AnalyticsData['operational_metric_groups']>['terminal_collection'] {
+    return {
+      label:
+        typeof item.label === 'string' && item.label.trim() !== '' ? item.label : fallbackLabel,
+      amount_due: toNumber(item.amount_due),
+      paid_amount: toNumber(item.paid_amount),
+      outstanding_amount: toNumber(item.outstanding_amount),
+      collection_rate: toNullableNumber(item.collection_rate),
+      payment_rate: toNullableNumber(item.payment_rate),
+      accrual_net_amount: toNumber(item.accrual_net_amount),
+      cash_net_amount: toNumber(item.cash_net_amount),
+    };
   }
 
   async getBasicStatistics(

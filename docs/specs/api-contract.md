@@ -139,6 +139,7 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 | 经营台账导出 | `GET /api/v1/ledger/entries/export` | 按当前经营台账筛选条件导出查询结果；导出列包含 `ledger_views`、账期 `year_month` 和有效流水发生日期集合 `flow_occurred_on_dates` |
 | 台账跟进状态 | `PATCH /api/v1/ledger/entries/{entry_id}/follow-up` | 仅维护终端租户收缴视图的轻量跟进字段：`follow_up_status`、`next_follow_up_date`、`follow_up_note`；不修改台账金额或派生支付状态 |
 | 服务费月度生成 | `POST /api/v1/ledger/service-fees/generate` | 按租金账期月份、项目、委托协议和产权方汇总代理直租实收，固化服务费比例、计算基数和来源账期生成服务费应收；不逐笔生成 |
+| 服务费台账查询 | `GET /api/v1/ledger/service-fees` | 按 `contract_group_id` 查询代理模式月度服务费台账；响应包含服务费台账 ID、服务费账期、应收/实收/派生状态、计算基数、服务费比例、固化归属字段和 `source_ledger_ids` 来源租金台账集合，用于服务费结算视图展示来源账期并登记服务费收款 |
 | 台账重算 | `POST /api/v1/contracts/{contract_id}/ledger/recalculate` | 对受影响区间作废并重建；响应返回 `created`/`updated`/`voided` 与 `skipped_entries`，已收/部分已收条目被跳过时需在前端当场展示 |
 | 补偿任务 | `POST /api/v1/ledger/compensation/run` | 扫描并补齐缺失台账，必须幂等 |
 
@@ -171,7 +172,7 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回终端租户收缴、运营方收入、运营方成本、经营结果、客户双指标、按项目分区的 `project_breakdown` 和按经营模式分区的 `mode_breakdown`；承租转租统计下游租金收入和上游成本，代理运营统计代理直租收缴和服务费，代理直租租金不计入运营方收入；默认按租金账期归属，流水发生日期仅用于经营台账查询/导出；`customer_entity_breakdown` / `customer_contract_breakdown` 仅含终端客户桶 `downstream_sublease`、`direct_lease`，上游/委托等非客户对手方只通过 `counterparty_entity_breakdown` / `counterparty_contract_breakdown` 的 `upstream_lease`、`entrusted_operation` 返回；客户双指标分析拒绝 `view_mode=all` |
+| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回 `operational_metric_groups`（终端租户收缴、运营方收入、运营方成本、经营结果四组）、统计口径版本 `metrics_version`、账期归属字段 `period_attribution_basis/label`、客户双指标、按项目分区的 `project_breakdown` 和按经营模式分区的 `mode_breakdown`；承租转租统计下游租金收入和上游成本，代理运营统计代理直租收缴和服务费，代理直租租金不计入运营方收入；默认按租金账期归属，流水发生日期仅用于经营台账查询/导出；`customer_entity_breakdown` / `customer_contract_breakdown` 仅含终端客户桶 `downstream_sublease`、`direct_lease`，上游/委托等非客户对手方只通过 `counterparty_entity_breakdown` / `counterparty_contract_breakdown` 的 `upstream_lease`、`entrusted_operation` 返回；客户双指标分析拒绝 `view_mode=all` |
 | 分析导出 | `GET /api/v1/analytics/export` | 导出带统计口径版本的结果；客户双指标分析拒绝 `view_mode=all`；导出应标记账期归属口径和流水发生日期字段 |
 | 统计报表 | `/api/v1/statistics/*` | 提供基础、面积、财务、出租率、分布、趋势等统计能力 |
 

@@ -291,6 +291,7 @@ interface RevenueStatsGridProps {
     counterparty_entity_breakdown?: Record<string, number>;
     counterparty_contract_breakdown?: Record<string, number>;
     metrics_version?: string;
+    period_attribution_label?: string;
   };
   loading?: boolean;
 }
@@ -423,11 +424,17 @@ export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loadin
           />
         </Card>
       )}
-      {data.metrics_version != null && data.metrics_version !== '' && (
+      {(data.metrics_version != null && data.metrics_version !== '') ||
+      (data.period_attribution_label != null && data.period_attribution_label !== '') ? (
         <div style={{ textAlign: 'right', marginTop: 8 }}>
-          <Tag color="blue">口径版本: {data.metrics_version}</Tag>
+          {data.metrics_version != null && data.metrics_version !== '' ? (
+            <Tag color="blue">口径版本: {data.metrics_version}</Tag>
+          ) : null}
+          {data.period_attribution_label != null && data.period_attribution_label !== '' ? (
+            <Tag color="cyan">账期归属: {data.period_attribution_label}</Tag>
+          ) : null}
         </div>
-      )}
+      ) : null}
     </>
   );
 };
