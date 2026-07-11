@@ -78,6 +78,8 @@ def test_get_ledger_entries_delegates_to_service(client) -> None:
         include_voided=False,
         offset=0,
         limit=20,
+        current_user_id="test_user_001",
+        party_filter=None,
     )
 
 
@@ -119,6 +121,8 @@ def test_get_ledger_entries_delegates_operations_filters(client) -> None:
         include_voided=False,
         offset=0,
         limit=20,
+        current_user_id="test_user_001",
+        party_filter=None,
     )
 
 
@@ -196,7 +200,12 @@ def test_export_ledger_entries_delegates_to_service(client) -> None:
         in response.headers["content-disposition"]
     )
     assert response.text == "entry_id,contract_id\r\nentry-001,contract-001\r\n"
-    mock_export.assert_awaited_once()
+    mock_export.assert_awaited_once_with(
+        ANY,
+        params=ANY,
+        current_user_id="test_user_001",
+        party_filter=None,
+    )
 
 
 def test_run_ledger_compensation_delegates_to_service(client) -> None:
@@ -259,7 +268,7 @@ def test_create_payment_flow_delegates_to_service(client) -> None:
                 "flow_type": "terminal_rent_receipt",
                 "occurred_on": "2026-05-10",
                 "amount": "1200.00",
-                "registered_by": "user-001",
+                "registered_by": "forged-user",
                 "counterparty_id": "tenant-001",
                 "voucher_attachment_ids": ["attachment-001"],
                 "notes": "offline receipt",
@@ -274,11 +283,11 @@ def test_create_payment_flow_delegates_to_service(client) -> None:
             "flow_type": "terminal_rent_receipt",
             "occurred_on": ANY,
             "amount": ANY,
-            "registered_by": "user-001",
             "counterparty_id": "tenant-001",
             "voucher_attachment_ids": ["attachment-001"],
             "notes": "offline receipt",
         },
+        registered_by="test_user_001",
     )
 
 
@@ -328,6 +337,8 @@ def test_save_payment_flow_allocations_delegates_to_service(client) -> None:
                 "amount": ANY,
             }
         ],
+        current_user_id="test_user_001",
+        party_filter=None,
     )
 
 
@@ -374,6 +385,8 @@ def test_update_ledger_entry_follow_up_delegates_to_service(client) -> None:
         follow_up_status="contacted",
         next_follow_up_date=date(2026, 5, 20),
         follow_up_note="已联系租户",
+        current_user_id="test_user_001",
+        party_filter=None,
     )
 
 
@@ -392,7 +405,12 @@ def test_generate_service_fees_delegates_to_service(client) -> None:
 
     assert response.status_code == 200
     assert response.json() == payload
-    mock_generate.assert_awaited_once_with(ANY, group_id="group-001")
+    mock_generate.assert_awaited_once_with(
+        ANY,
+        group_id="group-001",
+        current_user_id="test_user_001",
+        party_filter=None,
+    )
 
 
 def test_list_service_fees_delegates_to_service(client) -> None:
@@ -420,7 +438,7 @@ def test_list_service_fees_delegates_to_service(client) -> None:
     ]
 
     with patch(
-        "src.api.v1.contracts.ledger.service_fee_ledger_service.list_contract_group_entries",
+        "src.api.v1.contracts.ledger.service_fee_ledger_service.list_entries",
         new=AsyncMock(return_value=payload),
         create=True,
     ) as mock_list:
@@ -435,6 +453,71 @@ def test_list_service_fees_delegates_to_service(client) -> None:
     mock_list.assert_awaited_once_with(
         ANY,
         group_id="group-001",
-        binding_type="all",
-        effective_party_ids=[],
+        project_id=None,
+        current_user_id="test_user_001",
+        party_filter=None,
+    )
+
+
+def test_list_service_fees_supports_project_filter(client) -> None:
+    with patch(
+        "src.api.v1.contracts.ledger.service_fee_ledger_service.list_entries",
+        new=AsyncMock(return_value=[]),
+        create=True,
+    ) as mock_list:
+        response = client.get(
+            "/api/v1/ledger/service-fees",
+            params={"project_id": "project-001"},
+        )
+
+    assert response.status_code == 200
+    mock_list.assert_awaited_once_with(
+        ANY,
+        group_id=None,
+        project_id="project-001",
+        current_user_id="test_user_001",
+        party_filter=None,
+    )
+
+
+def test_reconcile_service_fee_source_delegates_to_service(client) -> None:
+    payload = {
+        "service_fee_entry_id": "service-fee-001",
+        "contract_group_id": "group-001",
+        "agency_contract_id": "contract-direct-001",
+        "agency_agreement_contract_id": "contract-entrust-001",
+        "source_ledger_ids": ["rent-ledger-current"],
+        "year_month": "2026-05",
+        "amount_due": "50.00",
+        "paid_amount": "20.00",
+        "payment_status": "partial",
+        "currency_code": "CNY",
+        "service_fee_ratio": "0.1000",
+        "calculation_base_amount": "500.00",
+        "attributed_project_id": "project-001",
+        "attributed_owner_party_id": "owner-001",
+        "attributed_operator_party_id": "operator-001",
+        "attributed_asset_ids": ["asset-001"],
+        "created_at": None,
+        "updated_at": None,
+    }
+
+    with patch(
+        "src.api.v1.contracts.ledger.service_fee_ledger_service.reconcile_source",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_reconcile:
+        response = client.post(
+            "/api/v1/ledger/service-fees/service-fee-001/reconcile",
+            json={"reason": "确认采用当前租金台账来源"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["source_ledger_ids"] == ["rent-ledger-current"]
+    mock_reconcile.assert_awaited_once_with(
+        ANY,
+        entry_id="service-fee-001",
+        reason="确认采用当前租金台账来源",
+        current_user_id="test_user_001",
+        party_filter=None,
     )

@@ -5,6 +5,7 @@ from unittest.mock import ANY, AsyncMock, patch
 import pytest
 
 from src.core.exception_handler import BusinessValidationError
+from src.crud.query_builder import PartyFilter
 from src.services.contract.ledger_service_v2 import ledger_service_v2
 
 pytestmark = pytest.mark.asyncio
@@ -15,6 +16,12 @@ async def test_query_ledger_entries_delegates_filters_and_pagination() -> None:
         SimpleNamespace(entry_id="entry-001"),
         SimpleNamespace(entry_id="entry-002"),
     ]
+
+    party_filter = PartyFilter(
+        party_ids=["operator-001"],
+        filter_mode="manager",
+        manager_party_ids=["operator-001"],
+    )
 
     with patch(
         "src.services.contract.ledger_service_v2.contract_group_crud.query_ledger_entries",
@@ -35,6 +42,8 @@ async def test_query_ledger_entries_delegates_filters_and_pagination() -> None:
             include_voided=True,
             offset=10,
             limit=50,
+            current_user_id="user-001",
+            party_filter=party_filter,
         )
 
     assert result == {
@@ -58,6 +67,7 @@ async def test_query_ledger_entries_delegates_filters_and_pagination() -> None:
         include_voided=True,
         offset=10,
         limit=50,
+        party_filter=party_filter,
     )
 
 

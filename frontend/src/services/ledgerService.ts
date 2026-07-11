@@ -14,6 +14,8 @@ import type {
   ServiceFeeGeneratePayload,
   ServiceFeeGenerateResult,
   ServiceFeeLedger,
+  ServiceFeeLedgerQuery,
+  ServiceFeeSourceReconcilePayload,
 } from '@/types/ledger';
 
 type LedgerExportParams = LedgerListParams & {
@@ -149,10 +151,10 @@ export class LedgerService {
     }
   }
 
-  async listServiceFees(contractGroupId: string): Promise<ServiceFeeLedger[]> {
+  async listServiceFees(params: ServiceFeeLedgerQuery): Promise<ServiceFeeLedger[]> {
     try {
       const result = await apiClient.get<ServiceFeeLedger[]>(API_ENDPOINTS.LEDGER.SERVICE_FEES, {
-        params: { contract_group_id: contractGroupId },
+        params,
         cache: false,
         retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
         smartExtract: true,
@@ -160,6 +162,31 @@ export class LedgerService {
 
       if (!result.success || result.data == null) {
         throw new Error(`查询服务费台账失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async reconcileServiceFeeSource(
+    entryId: string,
+    payload: ServiceFeeSourceReconcilePayload
+  ): Promise<ServiceFeeLedger> {
+    try {
+      const result = await apiClient.post<ServiceFeeLedger>(
+        API_ENDPOINTS.LEDGER.SERVICE_FEE_RECONCILE(entryId),
+        payload,
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`校准服务费台账来源失败: ${result.error}`);
       }
 
       return result.data;

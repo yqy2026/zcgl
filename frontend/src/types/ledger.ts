@@ -80,7 +80,6 @@ export interface OperationalPaymentFlowCreate {
   flow_type: OperationalPaymentFlowType;
   occurred_on: string;
   amount: string | number;
-  registered_by: string;
   counterparty_id?: string | null;
   voucher_attachment_ids?: string[] | null;
   notes?: string | null;
@@ -141,6 +140,15 @@ export interface ServiceFeeLedger {
   attributed_asset_ids?: string[] | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface ServiceFeeLedgerQuery {
+  contract_group_id?: string;
+  project_id?: string;
+}
+
+export interface ServiceFeeSourceReconcilePayload {
+  reason: string;
 }
 
 export interface ServiceFeeGenerateResult {

@@ -158,6 +158,7 @@ export const LEDGER_API = {
   PAYMENT_FLOW_ALLOCATIONS: (flowId: string) => `/ledger/payment-flows/${flowId}/allocations`,
   SERVICE_FEES: '/ledger/service-fees',
   SERVICE_FEES_GENERATE: '/ledger/service-fees/generate',
+  SERVICE_FEE_RECONCILE: (entryId: string) => `/ledger/service-fees/${entryId}/reconcile`,
   ENTRY_FOLLOW_UP: (entryId: string) => `/ledger/entries/${entryId}/follow-up`,
   CONTRACT_RECALCULATE: (contractId: string) => `/contracts/${contractId}/ledger/recalculate`,
 } as const;

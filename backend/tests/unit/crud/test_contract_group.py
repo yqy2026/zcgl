@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.crud.contract_group import CRUDContractGroup
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import ContractLedgerEntry
 
 pytestmark = pytest.mark.asyncio
@@ -228,6 +229,31 @@ class TestLedgerAggregateQueries:
         assert "datetime.date(2026, 5, 31)" in params
         assert "operational_payment_flows.status" in sql
         assert "active" in params
+
+    async def test_query_ledger_entries_applies_relation_aware_party_scope(
+        self, crud: CRUDContractGroup, mock_db: MagicMock
+    ) -> None:
+        page_result = MagicMock()
+        page_result.scalar_one.return_value = 0
+        page_result.all.return_value = []
+        mock_db.execute.return_value = page_result
+
+        await crud.query_ledger_entries(
+            mock_db,
+            project_id="project-1",
+            party_filter=PartyFilter(
+                party_ids=["owner-1", "operator-1"],
+                filter_mode="any",
+                owner_party_ids=["owner-1"],
+                manager_party_ids=["operator-1"],
+            ),
+        )
+
+        count_stmt = mock_db.execute.await_args_list[0].args[0]
+        sql = str(count_stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "attributed_owner_party_id IN ('owner-1')" in sql
+        assert "attributed_operator_party_id IN ('operator-1')" in sql
+        assert " OR " in sql
 
     async def test_list_ledger_entries_by_contract_applies_active_allocation_facts(
         self, crud: CRUDContractGroup, mock_db: MagicMock

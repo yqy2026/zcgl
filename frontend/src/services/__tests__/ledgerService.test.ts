@@ -181,7 +181,6 @@ describe('LedgerService', () => {
       flow_type: 'terminal_rent_receipt',
       occurred_on: '2026-05-10',
       amount: '1000.00',
-      registered_by: 'operator',
     });
     const allocations = await service.savePaymentFlowAllocations(flow.flow_id, [
       {
@@ -199,7 +198,6 @@ describe('LedgerService', () => {
         flow_type: 'terminal_rent_receipt',
         occurred_on: '2026-05-10',
         amount: '1000.00',
-        registered_by: 'operator',
       },
       {
         retry: false,
@@ -248,7 +246,7 @@ describe('LedgerService', () => {
       ],
     });
 
-    const result = await service.listServiceFees('group-1');
+    const result = await service.listServiceFees({ contract_group_id: 'group-1' });
 
     expect(apiClient.get).toHaveBeenCalledWith('/ledger/service-fees', {
       params: { contract_group_id: 'group-1' },
@@ -257,6 +255,50 @@ describe('LedgerService', () => {
       smartExtract: true,
     });
     expect(result[0].source_ledger_ids).toEqual(['rent-ledger-1']);
+  });
+
+  it('lists service-fee ledgers by project', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ success: true, data: [] });
+
+    await service.listServiceFees({ project_id: 'project-1' });
+
+    expect(apiClient.get).toHaveBeenCalledWith('/ledger/service-fees', {
+      params: { project_id: 'project-1' },
+      cache: false,
+      retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+      smartExtract: true,
+    });
+  });
+
+  it('reconciles a service-fee ledger source with an explicit reason', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: {
+        service_fee_entry_id: 'service-fee-1',
+        contract_group_id: 'group-1',
+        agency_contract_id: 'contract-direct-1',
+        agency_agreement_contract_id: 'contract-entrust-1',
+        source_ledger_ids: ['rent-ledger-current'],
+        year_month: '2026-05',
+        amount_due: '50.00',
+        paid_amount: '20.00',
+        payment_status: 'partial',
+        currency_code: 'CNY',
+        service_fee_ratio: '0.1000',
+        calculation_base_amount: '500.00',
+      },
+    });
+
+    const result = await service.reconcileServiceFeeSource('service-fee-1', {
+      reason: '确认采用当前租金台账来源',
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/ledger/service-fees/service-fee-1/reconcile',
+      { reason: '确认采用当前租金台账来源' },
+      { retry: false, smartExtract: true }
+    );
+    expect(result.source_ledger_ids).toEqual(['rent-ledger-current']);
   });
 
   it('generates service fees and updates follow-up state', async () => {

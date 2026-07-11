@@ -8,7 +8,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any, TypedDict
 
-from sqlalchemy import Select, and_, case, func, select
+from sqlalchemy import Select, and_, case, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
@@ -27,6 +27,7 @@ from ..models.contract_group import (
     ServiceFeeLedger,
 )
 from ..models.project_asset import ProjectAsset
+from .query_builder import PartyFilter
 
 
 def _utcnow() -> datetime:
@@ -44,6 +45,44 @@ class ContractAssetIdsByGroupRow(TypedDict):
 
 class CRUDContractGroup:
     """ContractGroup CRUD 操作。"""
+
+    @staticmethod
+    def _attribution_scope_clause(model: Any, party_filter: PartyFilter) -> Any:
+        general_ids = {
+            normalized
+            for value in party_filter.party_ids
+            if (normalized := str(value).strip()) != ""
+        }
+        owner_ids = (
+            {
+                normalized
+                for value in party_filter.owner_party_ids
+                if (normalized := str(value).strip()) != ""
+            }
+            if party_filter.owner_party_ids is not None
+            else general_ids
+        )
+        manager_ids = (
+            {
+                normalized
+                for value in party_filter.manager_party_ids
+                if (normalized := str(value).strip()) != ""
+            }
+            if party_filter.manager_party_ids is not None
+            else general_ids
+        )
+        conditions: list[Any] = []
+        if party_filter.filter_mode in {"owner", "any"} and owner_ids:
+            conditions.append(model.attributed_owner_party_id.in_(sorted(owner_ids)))
+        if party_filter.filter_mode in {"manager", "any"} and manager_ids:
+            conditions.append(
+                model.attributed_operator_party_id.in_(sorted(manager_ids))
+            )
+        if not conditions:
+            return false()
+        if len(conditions) == 1:
+            return conditions[0]
+        return or_(*conditions)
 
     @staticmethod
     def _ledger_allocation_totals_subquery() -> Any:
@@ -670,6 +709,7 @@ class CRUDContractGroup:
         flow_occurred_on_end: date | None = None,
         payment_status: str | None = None,
         include_voided: bool = False,
+        party_filter: PartyFilter | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[ContractLedgerEntry], int]:
@@ -724,6 +764,10 @@ class CRUDContractGroup:
             stmt = stmt.where(allocation_payment_status == payment_status)
         if not include_voided:
             stmt = stmt.where(ContractLedgerEntry._payment_status != "voided")
+        if party_filter is not None:
+            stmt = stmt.where(
+                self._attribution_scope_clause(ContractLedgerEntry, party_filter)
+            )
 
         stmt = stmt.where(Contract.data_status == "正常")
 
@@ -947,10 +991,13 @@ class CRUDContractGroup:
         db: AsyncSession,
         *,
         flow_id: str,
+        for_update: bool = False,
     ) -> OperationalPaymentFlow | None:
         stmt = select(OperationalPaymentFlow).where(
             OperationalPaymentFlow.flow_id == flow_id
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         return (await db.execute(stmt)).scalars().first()
 
     async def list_payment_allocations_by_flow(
@@ -997,12 +1044,15 @@ class CRUDContractGroup:
         db: AsyncSession,
         *,
         entry_ids: list[str],
+        for_update: bool = False,
     ) -> list[ContractLedgerEntry]:
         if not entry_ids:
             return []
         stmt = select(ContractLedgerEntry).where(
             ContractLedgerEntry.entry_id.in_(entry_ids)
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         return list((await db.execute(stmt)).scalars().all())
 
     async def get_service_fee_entries_by_ids(
@@ -1010,12 +1060,15 @@ class CRUDContractGroup:
         db: AsyncSession,
         *,
         entry_ids: list[str],
+        for_update: bool = False,
     ) -> list[ServiceFeeLedger]:
         if not entry_ids:
             return []
         stmt = select(ServiceFeeLedger).where(
             ServiceFeeLedger.service_fee_entry_id.in_(entry_ids)
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         return list((await db.execute(stmt)).scalars().all())
 
     async def sum_active_allocations_by_target(

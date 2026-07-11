@@ -16,7 +16,7 @@
 
 | 文件 | 主题 | 最终状态 |
 |------|------|----------|
-| 2026-07-06-operations-ledger-implementation.md | 经营台账与收付流水实施计划 | ✅ 已完成；流水分摊、四类经营视图、服务费结算、分析通知和旧写路径清理已收口 |
+| 2026-07-06-operations-ledger-implementation.md | 经营台账与收付流水实施计划 | ✅ 已完成；最终双轴复核与全量门禁通过 |
 | 2026-06-18-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0015~0018 + ADR-0011/0012 修订） | ✅ 代码项已收口；企业微信残余项拆至 `docs/issues/2026-06-23-wecom-userid-mapping-and-send-verification.md` |
 | 2026-06-16-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0010~0014） | ✅ 已完成 |
 | 2026-06-15-prd-grill-code-followup.md | PRD Grill 代码收口清单 | ✅ 已完成 |

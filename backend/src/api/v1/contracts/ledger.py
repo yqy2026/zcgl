@@ -33,6 +33,7 @@ from ....schemas.contract_group import (
     ServiceFeeGenerateRequest,
     ServiceFeeGenerateResponse,
     ServiceFeeLedgerResponse,
+    ServiceFeeSourceReconcileRequest,
 )
 from ....services.contract.ledger_compensation_service import (
     ledger_compensation_service,
@@ -41,6 +42,7 @@ from ....services.contract.ledger_export_service import ledger_export_service
 from ....services.contract.ledger_service_v2 import ledger_service_v2
 from ....services.contract.payment_flow_service import payment_flow_service
 from ....services.contract.service_fee_ledger_service import service_fee_ledger_service
+from ....services.party_scope import build_party_filter_from_scope_context
 
 router = APIRouter()
 
@@ -151,6 +153,9 @@ async def get_ledger_entries(
     params: LedgerAggregateQueryParams = Depends(resolve_ledger_query_params),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -161,7 +166,6 @@ async def get_ledger_entries(
         ),
     ] = None,
 ) -> ContractLedgerListResponse:
-    _ = current_user
     _ = _authz
     try:
         result = await ledger_service_v2.query_ledger_entries(
@@ -179,6 +183,8 @@ async def get_ledger_entries(
             include_voided=params.include_voided,
             offset=params.offset,
             limit=params.limit,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return ContractLedgerListResponse.model_validate(result)
     except BaseBusinessError:
@@ -195,6 +201,9 @@ async def export_ledger_entries(
     params: LedgerExportQueryParams = Depends(resolve_ledger_export_query_params),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -205,10 +214,14 @@ async def export_ledger_entries(
         ),
     ] = None,
 ) -> Response:
-    _ = current_user
     _ = _authz
     try:
-        result = await ledger_export_service.export_ledger_entries(db, params=params)
+        result = await ledger_export_service.export_ledger_entries(
+            db,
+            params=params,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
         return Response(
             content=result.content,
             media_type=result.media_type,
@@ -239,12 +252,12 @@ async def create_payment_flow(
         ),
     ] = None,
 ) -> OperationalPaymentFlowResponse:
-    _ = current_user
     _ = _authz
     try:
         result = await payment_flow_service.create_flow(
             db,
             data=payload.model_dump(mode="json"),
+            registered_by=str(current_user.id),
         )
         return OperationalPaymentFlowResponse.model_validate(result)
     except BaseBusinessError:
@@ -263,6 +276,9 @@ async def save_payment_flow_allocations(
     payload: PaymentAllocationSaveRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -274,7 +290,6 @@ async def save_payment_flow_allocations(
         ),
     ] = None,
 ) -> list[PaymentAllocationResponse]:
-    _ = current_user
     _ = _authz
     try:
         result = await payment_flow_service.save_allocations(
@@ -283,6 +298,8 @@ async def save_payment_flow_allocations(
             allocations=[
                 allocation.model_dump(mode="json") for allocation in payload.allocations
             ],
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return [PaymentAllocationResponse.model_validate(item) for item in result]
     except BaseBusinessError:
@@ -301,6 +318,9 @@ async def update_ledger_entry_follow_up(
     payload: LedgerFollowUpUpdateRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -312,7 +332,6 @@ async def update_ledger_entry_follow_up(
         ),
     ] = None,
 ) -> ContractLedgerEntryResponse:
-    _ = current_user
     _ = _authz
     try:
         result = await ledger_service_v2.update_follow_up(
@@ -325,6 +344,8 @@ async def update_ledger_entry_follow_up(
             ),
             next_follow_up_date=payload.next_follow_up_date,
             follow_up_note=payload.follow_up_note,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return ContractLedgerEntryResponse.model_validate(result)
     except BaseBusinessError:
@@ -342,6 +363,9 @@ async def generate_service_fees(
     payload: ServiceFeeGenerateRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -352,12 +376,13 @@ async def generate_service_fees(
         ),
     ] = None,
 ) -> ServiceFeeGenerateResponse:
-    _ = current_user
     _ = _authz
     try:
         result = await service_fee_ledger_service.sync_contract_group(
             db,
             group_id=payload.contract_group_id,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return ServiceFeeGenerateResponse.model_validate(result)
     except BaseBusinessError:
@@ -372,7 +397,8 @@ async def generate_service_fees(
     summary="查询月度服务费台账",
 )
 async def list_service_fees(
-    contract_group_id: str = Query(..., min_length=1, description="合同组 ID"),
+    contract_group_id: str | None = Query(None, min_length=1, description="合同组 ID"),
+    project_id: str | None = Query(None, min_length=1, description="项目 ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _scope_ctx: DataScopeContext = Depends(
@@ -390,20 +416,59 @@ async def list_service_fees(
         ),
     ] = None,
 ) -> list[ServiceFeeLedgerResponse]:
-    _ = current_user
     _ = _authz
     try:
-        result = await service_fee_ledger_service.list_contract_group_entries(
+        result = await service_fee_ledger_service.list_entries(
             db,
             group_id=contract_group_id,
-            binding_type=_scope_ctx.scope_mode,
-            effective_party_ids=_scope_ctx.effective_party_ids,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return [ServiceFeeLedgerResponse.model_validate(item) for item in result]
     except BaseBusinessError:
         raise
     except Exception as exc:
         raise internal_error("查询月度服务费台账失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/service-fees/{entry_id}/reconcile",
+    response_model=ServiceFeeLedgerResponse,
+    summary="人工校准服务费台账来源",
+)
+async def reconcile_service_fee_source(
+    entry_id: str,
+    payload: ServiceFeeSourceReconcileRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="ledger",
+            )
+        ),
+    ] = None,
+) -> ServiceFeeLedgerResponse:
+    _ = _authz
+    try:
+        result = await service_fee_ledger_service.reconcile_source(
+            db,
+            entry_id=entry_id,
+            reason=payload.reason,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
+        return ServiceFeeLedgerResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("校准服务费台账来源失败", original_error=exc) from exc
 
 
 @router.post(

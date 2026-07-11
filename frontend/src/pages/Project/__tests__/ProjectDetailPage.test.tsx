@@ -125,6 +125,34 @@ describe('ProjectDetailPage', () => {
             overdue_amount: '600.00',
             service_fee_receivable: '250.00',
             service_fee_received: '200.00',
+            terminal_collection: {
+              amount_due: '7400.00',
+              paid_amount: '6200.00',
+              outstanding_amount: '1200.00',
+              overdue_amount: '600.00',
+            },
+            operator_income: {
+              amount_due: '2650.00',
+              paid_amount: '1400.00',
+              outstanding_amount: '1250.00',
+              overdue_amount: '0.00',
+            },
+            operator_cost: {
+              amount_due: '1000.00',
+              paid_amount: '700.00',
+              outstanding_amount: '300.00',
+              overdue_amount: '0.00',
+            },
+            service_fee_settlement: {
+              amount_due: '250.00',
+              paid_amount: '200.00',
+              outstanding_amount: '50.00',
+              overdue_amount: '0.00',
+            },
+            operating_result: {
+              accrual_net_amount: '1650.00',
+              cash_net_amount: '700.00',
+            },
           },
           isLoading: false,
           error: null,
@@ -401,17 +429,16 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByText('承租转租').length).toBeGreaterThan(0);
     expect(screen.getAllByText('代理运营').length).toBeGreaterThan(0);
     expect(screen.getByText('收付款摘要')).toBeInTheDocument();
-    expect(screen.getAllByText('终端应收').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('运营成本').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('终端实收').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('成本实付').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('逾期收缴').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('¥2,650.00').length).toBeGreaterThan(0);
-    expect(screen.getByText('¥1,000.00')).toBeInTheDocument();
+    expect(screen.getAllByText('终端租户收缴').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('运营方收入').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('运营方成本').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('服务费结算').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('经营净流入').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('¥6,200.00').length).toBeGreaterThan(0);
     expect(screen.getByText('¥1,400.00')).toBeInTheDocument();
-    expect(screen.getByText('¥700.00')).toBeInTheDocument();
-    expect(screen.getByText('¥600.00')).toBeInTheDocument();
-    expect(screen.getByText('服务费应收 ¥250.00 / 实收 ¥200.00')).toBeInTheDocument();
+    expect(screen.getAllByText('¥700.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('¥200.00')).toBeInTheDocument();
+    expect(screen.getByText('应收 ¥7,400.00 / 未收 ¥1,200.00')).toBeInTheDocument();
     expect(screen.queryByText('待台账接入')).not.toBeInTheDocument();
     expect(screen.getByText('风险提示')).toBeInTheDocument();
     expect(screen.getByText('生效中')).toBeInTheDocument();
@@ -505,6 +532,34 @@ describe('ProjectDetailPage', () => {
             overdue_amount: '0.00',
             service_fee_receivable: '0.00',
             service_fee_received: '0.00',
+            terminal_collection: {
+              amount_due: '0.00',
+              paid_amount: '0.00',
+              outstanding_amount: '0.00',
+              overdue_amount: '0.00',
+            },
+            operator_income: {
+              amount_due: '0.00',
+              paid_amount: '0.00',
+              outstanding_amount: '0.00',
+              overdue_amount: '0.00',
+            },
+            operator_cost: {
+              amount_due: '0.00',
+              paid_amount: '0.00',
+              outstanding_amount: '0.00',
+              overdue_amount: '0.00',
+            },
+            service_fee_settlement: {
+              amount_due: '0.00',
+              paid_amount: '0.00',
+              outstanding_amount: '0.00',
+              overdue_amount: '0.00',
+            },
+            operating_result: {
+              accrual_net_amount: '0.00',
+              cash_net_amount: '0.00',
+            },
           },
           isLoading: false,
           error: null,

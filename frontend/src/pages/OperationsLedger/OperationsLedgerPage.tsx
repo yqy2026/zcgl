@@ -116,7 +116,6 @@ const SERVICE_FEE_STATUS_META: Record<string, { label: string; color: string }> 
 interface CashFlowFormValues {
   occurred_on?: Dayjs;
   amount?: number | null;
-  registered_by?: string;
   counterparty_id?: string;
   target_id?: string;
   year_month?: string;
@@ -131,6 +130,10 @@ interface FollowUpFormValues {
 
 interface ServiceFeeGenerateFormValues {
   contract_group_id?: string;
+}
+
+interface ServiceFeeReconcileFormValues {
+  reason?: string;
 }
 
 const resolveCurrentYearMonth = () => dayjs().format('YYYY-MM');
@@ -180,6 +183,7 @@ const OperationsLedgerPage: React.FC = () => {
   const [cashFlowForm] = Form.useForm<CashFlowFormValues>();
   const [followUpForm] = Form.useForm<FollowUpFormValues>();
   const [serviceFeeGenerateForm] = Form.useForm<ServiceFeeGenerateFormValues>();
+  const [serviceFeeReconcileForm] = Form.useForm<ServiceFeeReconcileFormValues>();
 
   const initialView = searchParams.get('ledger_view') as OperationsLedgerView | null;
   const [activeView, setActiveView] = useState<OperationsLedgerView>(
@@ -205,6 +209,9 @@ const OperationsLedgerPage: React.FC = () => {
   const [cashFlowModalOpen, setCashFlowModalOpen] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [serviceFeeReceiptOpen, setServiceFeeReceiptOpen] = useState(false);
+  const [serviceFeeReconcileEntry, setServiceFeeReconcileEntry] = useState<ServiceFeeLedger | null>(
+    null
+  );
   const [serviceFeeGroupId, setServiceFeeGroupId] = useState(
     searchParams.get('contract_group_id') ?? ''
   );
@@ -268,9 +275,20 @@ const OperationsLedgerPage: React.FC = () => {
   });
 
   const serviceFeeQuery = useQuery({
-    queryKey: ['operations-ledger-service-fees', queryScopeKey, normalizedServiceFeeGroupId],
-    queryFn: () => ledgerService.listServiceFees(normalizedServiceFeeGroupId),
-    enabled: isServiceFeeView && normalizedServiceFeeGroupId !== '',
+    queryKey: [
+      'operations-ledger-service-fees',
+      queryScopeKey,
+      normalizedServiceFeeGroupId,
+      normalizedProjectId,
+    ],
+    queryFn: () =>
+      ledgerService.listServiceFees({
+        ...(normalizedServiceFeeGroupId !== ''
+          ? { contract_group_id: normalizedServiceFeeGroupId }
+          : {}),
+        ...(normalizedProjectId !== '' ? { project_id: normalizedProjectId } : {}),
+      }),
+    enabled: isServiceFeeView && (normalizedServiceFeeGroupId !== '' || normalizedProjectId !== ''),
   });
 
   const ledgerItems = hasRequiredLedgerFilter ? (ledgerQuery.data?.items ?? []) : [];
@@ -301,17 +319,12 @@ const OperationsLedgerPage: React.FC = () => {
     mutationFn: async (values: CashFlowFormValues) => {
       const amount = values.amount;
       const occurredOn = values.occurred_on;
-      const registeredBy = normalizeText(values.registered_by);
       if (amount == null || Number.isNaN(amount) || amount <= 0) {
         throw new Error('请输入有效金额');
       }
       if (occurredOn == null) {
         throw new Error('请选择发生日期');
       }
-      if (registeredBy == null) {
-        throw new Error('请填写经办人');
-      }
-
       const isServiceFeeReceipt = activeView === 'service_fee_settlement';
       const targetId = isServiceFeeReceipt
         ? normalizeText(values.target_id)
@@ -332,7 +345,6 @@ const OperationsLedgerPage: React.FC = () => {
               : 'terminal_rent_receipt',
         occurred_on: occurredOn.format('YYYY-MM-DD'),
         amount,
-        registered_by: registeredBy,
         counterparty_id: normalizeText(values.counterparty_id),
         notes: normalizeText(values.notes),
       });
@@ -356,7 +368,10 @@ const OperationsLedgerPage: React.FC = () => {
       setServiceFeeReceiptOpen(false);
       setSelectedEntryIds([]);
       cashFlowForm.resetFields();
-      if (activeView === 'service_fee_settlement' && normalizedServiceFeeGroupId !== '') {
+      if (
+        activeView === 'service_fee_settlement' &&
+        (normalizedServiceFeeGroupId !== '' || normalizedProjectId !== '')
+      ) {
         await serviceFeeQuery.refetch();
       } else if (activeView !== 'service_fee_settlement') {
         await ledgerQuery.refetch();
@@ -407,6 +422,28 @@ const OperationsLedgerPage: React.FC = () => {
     },
   });
 
+  const serviceFeeReconcileMutation = useMutation({
+    mutationFn: async (values: ServiceFeeReconcileFormValues) => {
+      if (serviceFeeReconcileEntry == null) {
+        throw new Error('请选择服务费台账');
+      }
+      const reason = normalizeText(values.reason);
+      if (reason == null) {
+        throw new Error('请填写处理原因');
+      }
+      return ledgerService.reconcileServiceFeeSource(
+        serviceFeeReconcileEntry.service_fee_entry_id,
+        { reason }
+      );
+    },
+    onSuccess: async () => {
+      setServiceFeeReconcileEntry(null);
+      serviceFeeReconcileForm.resetFields();
+      await serviceFeeQuery.refetch();
+      message.success('服务费台账来源已校准');
+    },
+  });
+
   const handleQueryServiceFees = () => {
     serviceFeeGenerateForm
       .validateFields(['contract_group_id'])
@@ -454,7 +491,7 @@ const OperationsLedgerPage: React.FC = () => {
     }
     cashFlowForm.setFieldsValue({
       occurred_on: dayjs(),
-      amount: getOutstandingAmount(selectedEntry) || Number(selectedEntry.amount_due || 0),
+      amount: getOutstandingAmount(selectedEntry),
       counterparty_id:
         activeView === 'operator_cost'
           ? (selectedEntry.attributed_owner_party_id ?? undefined)
@@ -470,13 +507,16 @@ const OperationsLedgerPage: React.FC = () => {
       occurred_on: dayjs(),
       target_id: entry?.service_fee_entry_id,
       year_month: entry?.year_month,
-      amount:
-        entry != null
-          ? getServiceFeeOutstandingAmount(entry) || Number(entry.amount_due || 0)
-          : undefined,
+      amount: entry != null ? getServiceFeeOutstandingAmount(entry) : undefined,
       counterparty_id: entry?.attributed_owner_party_id ?? undefined,
     });
     setServiceFeeReceiptOpen(true);
+  };
+
+  const openServiceFeeReconcileModal = (entry: ServiceFeeLedger) => {
+    serviceFeeReconcileMutation.reset();
+    serviceFeeReconcileForm.resetFields();
+    setServiceFeeReconcileEntry(entry);
   };
 
   const openFollowUpModal = () => {
@@ -713,24 +753,36 @@ const OperationsLedgerPage: React.FC = () => {
       {
         title: '操作',
         key: 'actions',
-        width: 120,
+        width: 190,
         render: (_, record) => (
-          <Button
-            type="link"
-            disabled={record.payment_status === 'voided'}
-            onClick={() => openServiceFeeReceiptModal(record)}
-          >
-            登记收款
-          </Button>
+          <Space size="small">
+            <Button
+              type="link"
+              disabled={
+                record.payment_status === 'voided' || getServiceFeeOutstandingAmount(record) <= 0
+              }
+              onClick={() => openServiceFeeReceiptModal(record)}
+            >
+              登记收款
+            </Button>
+            <Button
+              type="link"
+              disabled={record.payment_status === 'voided'}
+              onClick={() => openServiceFeeReconcileModal(record)}
+            >
+              校准来源
+            </Button>
+          </Space>
         ),
       },
     ],
-    [openServiceFeeReceiptModal]
+    [openServiceFeeReceiptModal, openServiceFeeReconcileModal]
   );
 
   const selectedCanRegisterFlow =
     selectedEntry != null &&
     selectedEntry.payment_status !== 'voided' &&
+    getOutstandingAmount(selectedEntry) > 0 &&
     (activeView === 'terminal_collection' || activeView === 'operator_cost');
   const selectedCanFollowUp =
     selectedEntry != null &&
@@ -1091,13 +1143,6 @@ const OperationsLedgerPage: React.FC = () => {
           <Form.Item label="金额" name="amount" rules={[{ required: true, message: '请输入金额' }]}>
             <InputNumber min={0} precision={2} className={styles.fullWidthControl} />
           </Form.Item>
-          <Form.Item
-            label="经办人"
-            name="registered_by"
-            rules={[{ required: true, message: '请填写经办人' }]}
-          >
-            <Input />
-          </Form.Item>
           <Form.Item label="对方主体 ID" name="counterparty_id">
             <Input />
           </Form.Item>
@@ -1132,6 +1177,46 @@ const OperationsLedgerPage: React.FC = () => {
             <DatePicker className={styles.fullWidthControl} />
           </Form.Item>
           <Form.Item label="跟进备注" name="follow_up_note">
+            <Input.TextArea rows={3} maxLength={500} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="校准服务费台账来源"
+        open={serviceFeeReconcileEntry != null}
+        okText="校准"
+        cancelText="取消"
+        confirmLoading={serviceFeeReconcileMutation.isPending}
+        onOk={() => {
+          serviceFeeReconcileForm
+            .validateFields()
+            .then(values => serviceFeeReconcileMutation.mutate(values))
+            .catch(() => undefined);
+        }}
+        onCancel={() => {
+          setServiceFeeReconcileEntry(null);
+          serviceFeeReconcileForm.resetFields();
+          serviceFeeReconcileMutation.reset();
+        }}
+      >
+        {serviceFeeReconcileMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            message={
+              serviceFeeReconcileMutation.error instanceof Error
+                ? serviceFeeReconcileMutation.error.message
+                : '服务费来源校准失败'
+            }
+          />
+        ) : null}
+        <Form form={serviceFeeReconcileForm} layout="vertical">
+          <Form.Item
+            label="处理原因"
+            name="reason"
+            rules={[{ required: true, message: '请填写处理原因' }]}
+          >
             <Input.TextArea rows={3} maxLength={500} />
           </Form.Item>
         </Form>

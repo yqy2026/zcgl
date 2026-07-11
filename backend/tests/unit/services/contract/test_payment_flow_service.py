@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.core.exception_handler import BusinessValidationError
+from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
 
 pytestmark = pytest.mark.asyncio
 
@@ -73,6 +73,7 @@ async def test_create_flow_rejects_non_positive_amount(mock_db) -> None:
     ):
         await payment_flow_service.create_flow(
             mock_db,
+            registered_by="user-1",
             data={
                 "flow_type": "terminal_rent_receipt",
                 "occurred_on": "2026-07-01",
@@ -103,11 +104,12 @@ async def test_create_flow_supports_all_operational_flow_types(
     ) as mock_create:
         result = await payment_flow_service.create_flow(
             mock_db,
+            registered_by="user-1",
             data={
                 "flow_type": flow_type,
                 "occurred_on": "2026-07-01",
                 "amount": "1000.00",
-                "registered_by": "user-1",
+                "registered_by": "forged-user",
             },
             commit=False,
         )
@@ -116,6 +118,7 @@ async def test_create_flow_supports_all_operational_flow_types(
     payload = mock_create.await_args.kwargs["data"]
     assert payload["flow_type"] == flow_type
     assert payload["amount"] == Decimal("1000.00")
+    assert payload["registered_by"] == "user-1"
     assert payload["status"] == "active"
     mock_create.assert_awaited_once()
 
@@ -126,6 +129,7 @@ async def test_create_flow_rejects_unsupported_flow_type(mock_db) -> None:
     with pytest.raises(BusinessValidationError, match="unsupported payment flow type"):
         await payment_flow_service.create_flow(
             mock_db,
+            registered_by="user-1",
             data={
                 "flow_type": "manual_adjustment",
                 "occurred_on": "2026-07-01",
@@ -522,6 +526,64 @@ async def test_save_allocations_rejects_mixed_project_party_or_currency_scope(
             )
 
 
+async def test_save_allocations_hides_out_of_scope_target(mock_db) -> None:
+    from src.crud.query_builder import PartyFilter
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    flow = SimpleNamespace(
+        flow_id="flow-1",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("1000.00"),
+        status="active",
+    )
+    entry = _contract_ledger_target(
+        entry_id="entry-1",
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    party_filter = PartyFilter(
+        party_ids=["other-owner"],
+        filter_mode="owner",
+        owner_party_ids=["other-owner"],
+    )
+
+    with (
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+            new=AsyncMock(return_value=flow),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_ledger_entries_by_ids",
+            new=AsyncMock(return_value=[entry]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.list_payment_allocations_by_flow",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.replace_payment_allocations",
+            new=AsyncMock(),
+        ) as mock_replace,
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await payment_flow_service.save_allocations(
+                mock_db,
+                flow_id="flow-1",
+                allocations=[
+                    {
+                        "target_type": "contract_ledger_entry",
+                        "target_id": "entry-1",
+                        "year_month": "2026-07",
+                        "amount": Decimal("1000.00"),
+                    }
+                ],
+                current_user_id="user-1",
+                party_filter=party_filter,
+            )
+
+    mock_replace.assert_not_awaited()
+
+
 async def test_save_allocations_resets_removed_target_paid_amount(mock_db) -> None:
     from src.services.contract.payment_flow_service import payment_flow_service
 
@@ -594,3 +656,4 @@ async def test_save_allocations_resets_removed_target_paid_amount(mock_db) -> No
         "entry-old",
         "entry-new",
     }
+    assert mock_get_ledger_entries.await_args.kwargs["for_update"] is True

@@ -11,6 +11,7 @@ from typing import Any
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.crud.query_builder import PartyFilter
 from src.schemas.contract_group import LedgerExportQueryParams
 from src.services.contract.ledger_service_v2 import ledger_service_v2
 from src.services.excel import ExcelExportService
@@ -53,24 +54,38 @@ class LedgerExportService:
         db: AsyncSession,
         *,
         params: LedgerExportQueryParams,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> LedgerExportPayload:
-        result = await ledger_service_v2.query_ledger_entries(
-            db,
-            ledger_view=params.ledger_view,
-            project_id=params.project_id,
-            asset_id=params.asset_id,
-            party_id=params.party_id,
-            contract_id=params.contract_id,
-            year_month_start=params.year_month_start,
-            year_month_end=params.year_month_end,
-            flow_occurred_on_start=params.flow_occurred_on_start,
-            flow_occurred_on_end=params.flow_occurred_on_end,
-            payment_status=params.payment_status,
-            include_voided=params.include_voided,
-            offset=params.offset,
-            limit=params.limit,
-        )
-        rows = [self._normalize_row(item) for item in result.get("items", [])]
+        items: list[Any] = []
+        offset = 0
+        page_size = 200
+        while True:
+            result = await ledger_service_v2.query_ledger_entries(
+                db,
+                ledger_view=params.ledger_view,
+                project_id=params.project_id,
+                asset_id=params.asset_id,
+                party_id=params.party_id,
+                contract_id=params.contract_id,
+                year_month_start=params.year_month_start,
+                year_month_end=params.year_month_end,
+                flow_occurred_on_start=params.flow_occurred_on_start,
+                flow_occurred_on_end=params.flow_occurred_on_end,
+                payment_status=params.payment_status,
+                include_voided=params.include_voided,
+                offset=offset,
+                limit=page_size,
+                current_user_id=current_user_id,
+                party_filter=party_filter,
+            )
+            page_items = list(result.get("items", []))
+            items.extend(page_items)
+            offset += len(page_items)
+            if offset >= int(result.get("total", 0)) or len(page_items) == 0:
+                break
+
+        rows = [self._normalize_row(item) for item in items]
         timestamp = _utcnow_naive().strftime("%Y%m%d_%H%M%S")
 
         if params.export_format == "csv":

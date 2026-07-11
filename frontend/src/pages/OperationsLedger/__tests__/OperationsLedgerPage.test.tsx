@@ -10,6 +10,7 @@ vi.mock('@/services/ledgerService', () => ({
     savePaymentFlowAllocations: vi.fn(),
     generateServiceFees: vi.fn(),
     listServiceFees: vi.fn(),
+    reconcileServiceFeeSource: vi.fn(),
     updateLedgerEntryFollowUp: vi.fn(),
     triggerLedgerDownload: vi.fn(),
   },
@@ -138,6 +139,21 @@ describe('OperationsLedgerPage', () => {
         attributed_owner_party_id: 'owner-party-1',
       },
     ]);
+    vi.mocked(ledgerService.reconcileServiceFeeSource).mockResolvedValue({
+      service_fee_entry_id: 'service-fee-1',
+      contract_group_id: 'group-1',
+      agency_contract_id: 'contract-direct-1',
+      agency_agreement_contract_id: 'contract-entrust-1',
+      source_ledger_ids: ['rent-ledger-current'],
+      year_month: '2026-05',
+      amount_due: '50.00',
+      paid_amount: '20.00',
+      payment_status: 'partial',
+      currency_code: 'CNY',
+      service_fee_ratio: '0.1000',
+      calculation_base_amount: '500.00',
+      attributed_owner_party_id: 'owner-party-1',
+    });
     vi.mocked(ledgerService.updateLedgerEntryFollowUp).mockResolvedValue({
       entry_id: 'ledger-1',
       contract_id: 'contract-1',
@@ -215,7 +231,6 @@ describe('OperationsLedgerPage', () => {
 
     selectFirstLedgerRow();
     fireEvent.click(screen.getByRole('button', { name: /登记收款/ }));
-    fireEvent.change(screen.getByLabelText('经办人'), { target: { value: 'operator' } });
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /登\s*记/ }));
 
     await waitFor(() => {
@@ -223,7 +238,6 @@ describe('OperationsLedgerPage', () => {
         expect.objectContaining({
           flow_type: 'terminal_rent_receipt',
           amount: 10000,
-          registered_by: 'operator',
           counterparty_id: 'operator-party-1',
         })
       );
@@ -282,7 +296,9 @@ describe('OperationsLedgerPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /查询来源账期/ }));
 
     await waitFor(() => {
-      expect(ledgerService.listServiceFees).toHaveBeenCalledWith('group-1');
+      expect(ledgerService.listServiceFees).toHaveBeenCalledWith({
+        contract_group_id: 'group-1',
+      });
     });
     expect(await screen.findByText('rent-ledger-1')).toBeInTheDocument();
   });
@@ -302,7 +318,6 @@ describe('OperationsLedgerPage', () => {
       throw new Error('service-fee row missing');
     }
     fireEvent.click(within(serviceFeeRow).getByRole('button', { name: /登记收款/ }));
-    fireEvent.change(screen.getByLabelText('经办人'), { target: { value: 'operator' } });
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /登\s*记/ }));
 
     await waitFor(() => {
@@ -310,7 +325,6 @@ describe('OperationsLedgerPage', () => {
         expect.objectContaining({
           flow_type: 'service_fee_receipt',
           amount: 30,
-          registered_by: 'operator',
           counterparty_id: 'owner-party-1',
         })
       );
@@ -325,6 +339,35 @@ describe('OperationsLedgerPage', () => {
     ]);
   });
 
+  it('reconciles a listed service-fee source with an operator reason', async () => {
+    renderWithProviders(<OperationsLedgerPage />);
+
+    fireEvent.click(screen.getByText('服务费结算'));
+    fireEvent.change(screen.getByLabelText('合同组 ID'), {
+      target: { value: 'group-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /查询来源账期/ }));
+
+    const serviceFeeRow = (await screen.findByText('service-fee-1')).closest('tr');
+    if (serviceFeeRow == null) {
+      throw new Error('service-fee row missing');
+    }
+    fireEvent.click(within(serviceFeeRow).getByRole('button', { name: /校准来源/ }));
+    fireEvent.change(screen.getByLabelText('处理原因'), {
+      target: { value: '确认采用当前租金台账来源' },
+    });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /校\s*准/ }));
+
+    await waitFor(() => {
+      expect(ledgerService.reconcileServiceFeeSource).toHaveBeenCalledWith('service-fee-1', {
+        reason: '确认采用当前租金台账来源',
+      });
+    });
+    await waitFor(() => {
+      expect(ledgerService.listServiceFees).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('does not query an empty contract group after a manual service-fee receipt', async () => {
     renderWithProviders(<OperationsLedgerPage />);
 
@@ -335,12 +378,50 @@ describe('OperationsLedgerPage', () => {
     });
     fireEvent.change(screen.getByLabelText('账期'), { target: { value: '2026-05' } });
     fireEvent.change(screen.getByLabelText('金额'), { target: { value: '50' } });
-    fireEvent.change(screen.getByLabelText('经办人'), { target: { value: 'operator' } });
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /登\s*记/ }));
 
     await waitFor(() => {
       expect(ledgerService.createPaymentFlow).toHaveBeenCalled();
     });
     expect(ledgerService.listServiceFees).not.toHaveBeenCalled();
+  });
+
+  it('loads service-fee ledgers from a project summary filter', async () => {
+    renderWithProviders(<OperationsLedgerPage />, {
+      route: '/operations/ledger?ledger_view=service_fee_settlement&project_id=project-1',
+    });
+
+    await waitFor(() => {
+      expect(ledgerService.listServiceFees).toHaveBeenCalledWith({ project_id: 'project-1' });
+    });
+  });
+
+  it('does not allow another receipt for a fully paid ledger row', async () => {
+    vi.mocked(ledgerService.getLedgerEntries).mockResolvedValue({
+      items: [
+        {
+          entry_id: 'ledger-paid',
+          contract_id: 'contract-1',
+          year_month: '2026-05',
+          due_date: '2026-05-15',
+          amount_due: '12000.00',
+          ledger_views: ['terminal_collection'],
+          currency_code: 'CNY',
+          is_tax_included: true,
+          payment_status: 'paid',
+          paid_amount: '12000.00',
+        },
+      ],
+      total: 1,
+      offset: 0,
+      limit: 20,
+    });
+    renderWithProviders(<OperationsLedgerPage />, {
+      route: '/operations/ledger?contract_id=contract-paid',
+    });
+
+    expect(await screen.findByText('contract-1')).toBeInTheDocument();
+    selectFirstLedgerRow();
+    expect(screen.getByRole('button', { name: /登记收款/ })).toBeDisabled();
   });
 });

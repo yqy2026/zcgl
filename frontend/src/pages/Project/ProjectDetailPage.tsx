@@ -448,17 +448,66 @@ const ProjectDetailPage: React.FC = () => {
     overdue_amount: '0.00',
     service_fee_receivable: '0.00',
     service_fee_received: '0.00',
+    terminal_collection: {
+      amount_due: '0.00',
+      paid_amount: '0.00',
+      outstanding_amount: '0.00',
+      overdue_amount: '0.00',
+    },
+    operator_income: {
+      amount_due: '0.00',
+      paid_amount: '0.00',
+      outstanding_amount: '0.00',
+      overdue_amount: '0.00',
+    },
+    operator_cost: {
+      amount_due: '0.00',
+      paid_amount: '0.00',
+      outstanding_amount: '0.00',
+      overdue_amount: '0.00',
+    },
+    service_fee_settlement: {
+      amount_due: '0.00',
+      paid_amount: '0.00',
+      outstanding_amount: '0.00',
+      overdue_amount: '0.00',
+    },
+    operating_result: {
+      accrual_net_amount: '0.00',
+      cash_net_amount: '0.00',
+    },
   };
   const ledgerSummaryItems = [
     {
-      label: '终端应收',
-      value: ledgerSummary.receivable_amount,
+      label: '终端租户收缴',
+      value: ledgerSummary.terminal_collection.paid_amount,
+      detail: `应收 ${formatCurrency(ledgerSummary.terminal_collection.amount_due)} / 未收 ${formatCurrency(ledgerSummary.terminal_collection.outstanding_amount)}`,
       ledgerView: 'terminal_collection',
     },
-    { label: '运营成本', value: ledgerSummary.payable_amount, ledgerView: 'operator_cost' },
-    { label: '终端实收', value: ledgerSummary.received_amount, ledgerView: 'terminal_collection' },
-    { label: '成本实付', value: ledgerSummary.paid_amount, ledgerView: 'operator_cost' },
-    { label: '逾期收缴', value: ledgerSummary.overdue_amount, ledgerView: 'terminal_collection' },
+    {
+      label: '运营方收入',
+      value: ledgerSummary.operator_income.paid_amount,
+      detail: `应收 ${formatCurrency(ledgerSummary.operator_income.amount_due)} / 未收 ${formatCurrency(ledgerSummary.operator_income.outstanding_amount)}`,
+      ledgerView: 'operator_income',
+    },
+    {
+      label: '运营方成本',
+      value: ledgerSummary.operator_cost.paid_amount,
+      detail: `应付 ${formatCurrency(ledgerSummary.operator_cost.amount_due)} / 未付 ${formatCurrency(ledgerSummary.operator_cost.outstanding_amount)}`,
+      ledgerView: 'operator_cost',
+    },
+    {
+      label: '服务费结算',
+      value: ledgerSummary.service_fee_settlement.paid_amount,
+      detail: `应收 ${formatCurrency(ledgerSummary.service_fee_settlement.amount_due)} / 未收 ${formatCurrency(ledgerSummary.service_fee_settlement.outstanding_amount)}`,
+      ledgerView: 'service_fee_settlement',
+    },
+    {
+      label: '经营净流入',
+      value: ledgerSummary.operating_result.cash_net_amount,
+      detail: `账面差额 ${formatCurrency(ledgerSummary.operating_result.accrual_net_amount)}`,
+      ledgerView: 'operator_income',
+    },
   ];
   const buildProjectLedgerPath = (ledgerView: string): string =>
     `${OPERATIONS_ROUTES.LEDGER}?project_id=${encodeURIComponent(
@@ -778,19 +827,10 @@ const ProjectDetailPage: React.FC = () => {
                     >
                       <Text type="secondary">{item.label}</Text>
                       <Text strong>{formatCurrency(item.value)}</Text>
+                      <Text type="secondary">{item.detail}</Text>
                     </button>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  className={styles.ledgerServiceFeeButton}
-                  onClick={() => navigate(buildProjectLedgerPath('service_fee_settlement'))}
-                >
-                  <Text type="secondary">
-                    服务费应收 {formatCurrency(ledgerSummary.service_fee_receivable)} / 实收{' '}
-                    {formatCurrency(ledgerSummary.service_fee_received)}
-                  </Text>
-                </button>
               </>
             )}
           </Card>

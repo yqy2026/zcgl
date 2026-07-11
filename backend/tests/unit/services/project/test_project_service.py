@@ -23,10 +23,66 @@ from src.models.contract_group import (
     GroupRelationType,
     RevenueMode,
 )
-from src.schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
+from src.schemas.project import (
+    ProjectCreate,
+    ProjectLedgerMetricGroup,
+    ProjectLedgerSummaryResponse,
+    ProjectOperatingResultSummary,
+    ProjectSearchRequest,
+    ProjectUpdate,
+)
 from src.services.project.service import ProjectService
 
 pytestmark = pytest.mark.asyncio
+
+
+def _project_ledger_summary(
+    *,
+    receivable_amount: Decimal,
+    payable_amount: Decimal,
+    received_amount: Decimal,
+    paid_amount: Decimal,
+    overdue_amount: Decimal,
+    service_fee_receivable: Decimal,
+    service_fee_received: Decimal,
+) -> ProjectLedgerSummaryResponse:
+    return ProjectLedgerSummaryResponse(
+        receivable_amount=receivable_amount,
+        payable_amount=payable_amount,
+        received_amount=received_amount,
+        paid_amount=paid_amount,
+        overdue_amount=overdue_amount,
+        service_fee_receivable=service_fee_receivable,
+        service_fee_received=service_fee_received,
+        terminal_collection=ProjectLedgerMetricGroup(
+            amount_due=receivable_amount,
+            paid_amount=received_amount,
+            outstanding_amount=max(receivable_amount - received_amount, Decimal(0)),
+            overdue_amount=overdue_amount,
+        ),
+        operator_income=ProjectLedgerMetricGroup(
+            amount_due=receivable_amount,
+            paid_amount=received_amount,
+            outstanding_amount=max(receivable_amount - received_amount, Decimal(0)),
+        ),
+        operator_cost=ProjectLedgerMetricGroup(
+            amount_due=payable_amount,
+            paid_amount=paid_amount,
+            outstanding_amount=max(payable_amount - paid_amount, Decimal(0)),
+        ),
+        service_fee_settlement=ProjectLedgerMetricGroup(
+            amount_due=service_fee_receivable,
+            paid_amount=service_fee_received,
+            outstanding_amount=max(
+                service_fee_receivable - service_fee_received,
+                Decimal(0),
+            ),
+        ),
+        operating_result=ProjectOperatingResultSummary(
+            accrual_net_amount=receivable_amount - payable_amount,
+            cash_net_amount=received_amount - paid_amount,
+        ),
+    )
 
 
 async def test_project_service_module_should_not_use_datetime_utcnow() -> None:
@@ -53,6 +109,7 @@ def _ledger_entry(
     year_month: str | None = None,
     due_date: date | None = None,
     current_project_id: str = "project-moved-away",
+    ledger_views: list[str] | None = None,
 ) -> SimpleNamespace:
     group = SimpleNamespace(
         contract_group_id=f"group-{contract_id}",
@@ -73,6 +130,15 @@ def _ledger_entry(
         year_month=year_month,
         due_date=due_date,
         attributed_project_id="project-1",
+        ledger_views=ledger_views
+        or {
+            GroupRelationType.UPSTREAM: ["operator_cost"],
+            GroupRelationType.DOWNSTREAM: [
+                "terminal_collection",
+                "operator_income",
+            ],
+            GroupRelationType.DIRECT_LEASE: ["terminal_collection"],
+        }.get(relation_type, []),
     )
 
 
@@ -1360,6 +1426,24 @@ class TestGetProjectContractRelations:
 
 
 class TestGetProjectRisks:
+    @pytest.fixture(autouse=True)
+    def _resolved_party_filter(self, project_service: ProjectService):
+        async def _resolve(
+            _db: MagicMock,
+            *,
+            current_user_id: str | None = None,
+            party_filter: PartyFilter | None = None,
+        ) -> PartyFilter | None:
+            _ = current_user_id
+            return party_filter
+
+        with patch.object(
+            project_service,
+            "_resolve_party_filter",
+            new=AsyncMock(side_effect=_resolve),
+        ):
+            yield
+
     async def test_get_project_risks_returns_manual_relation_tags(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
@@ -1550,12 +1634,26 @@ class TestGetProjectRisks:
             paid_amount=Decimal("400.00"),
             payment_status="unpaid",
             due_date=date(2026, 5, 1),
+            attributed_owner_party_id="owner-1",
+            attributed_operator_party_id="manager-1",
+        )
+        hidden_overdue_entry = SimpleNamespace(
+            amount_due=Decimal("900.00"),
+            paid_amount=Decimal("0.00"),
+            payment_status="unpaid",
+            due_date=date(2026, 5, 1),
+            attributed_owner_party_id="owner-hidden",
+            attributed_operator_party_id="manager-hidden",
         )
 
         async def mock_list_ledger_entries_by_contract(
             _db: MagicMock, *, contract_id: str
         ) -> list[SimpleNamespace]:
-            return [overdue_entry] if contract_id == "contract-downstream" else []
+            return (
+                [overdue_entry, hidden_overdue_entry]
+                if contract_id == "contract-downstream"
+                else []
+            )
 
         with (
             patch.object(
@@ -1593,11 +1691,17 @@ class TestGetProjectRisks:
                 mock_db,
                 project_id="project-1",
                 current_user_id="user-1",
+                party_filter=PartyFilter(
+                    party_ids=["owner-1"],
+                    filter_mode="owner",
+                    owner_party_ids=["owner-1"],
+                ),
             )
 
         assert response.total == 1
         assert response.items[0].risk_type == "payment_overdue"
         assert "CN-DOWNSTREAM-001" in response.items[0].message
+        assert "¥600.00" in response.items[0].message
         assert "600.00" in response.items[0].message
 
     async def test_get_project_risks_returns_stale_paid_ledger_risk_after_correction(
@@ -2208,6 +2312,18 @@ class TestGetProjectLedgerSummary:
         assert response.overdue_amount == Decimal("600.00")
         assert response.service_fee_receivable == Decimal("250.00")
         assert response.service_fee_received == Decimal("200.00")
+        assert response.terminal_collection.amount_due == Decimal("7400.00")
+        assert response.terminal_collection.paid_amount == Decimal("6200.00")
+        assert response.terminal_collection.outstanding_amount == Decimal("1200.00")
+        assert response.terminal_collection.overdue_amount == Decimal("600.00")
+        assert response.operator_income.amount_due == Decimal("2650.00")
+        assert response.operator_income.paid_amount == Decimal("1400.00")
+        assert response.operator_cost.amount_due == Decimal("1000.00")
+        assert response.operator_cost.paid_amount == Decimal("700.00")
+        assert response.service_fee_settlement.amount_due == Decimal("250.00")
+        assert response.service_fee_settlement.paid_amount == Decimal("200.00")
+        assert response.operating_result.accrual_net_amount == Decimal("1650.00")
+        assert response.operating_result.cash_net_amount == Decimal("700.00")
 
     async def test_get_project_ledger_summary_rejects_invisible_project(
         self, project_service: ProjectService, mock_db: MagicMock
@@ -2232,6 +2348,80 @@ class TestGetProjectLedgerSummary:
                 )
 
         mock_get_project.assert_not_awaited()
+
+    async def test_get_project_ledger_summary_filters_frozen_party_attribution(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        visible_entry = _ledger_entry(
+            contract_id="contract-visible",
+            revenue_mode=RevenueMode.LEASE,
+            relation_type=GroupRelationType.DOWNSTREAM,
+            amount_due="100.00",
+            paid_amount="50.00",
+            payment_status="partial",
+        )
+        visible_entry.attributed_owner_party_id = "owner-1"
+        visible_entry.attributed_operator_party_id = "operator-1"
+        hidden_entry = _ledger_entry(
+            contract_id="contract-hidden",
+            revenue_mode=RevenueMode.LEASE,
+            relation_type=GroupRelationType.DOWNSTREAM,
+            amount_due="900.00",
+            paid_amount="900.00",
+            payment_status="paid",
+        )
+        hidden_entry.attributed_owner_party_id = "other-owner"
+        hidden_entry.attributed_operator_party_id = "other-operator"
+        visible_fee = _service_fee_entry(
+            amount_due="10.00",
+            paid_amount="5.00",
+            payment_status="partial",
+        )
+        visible_fee.attributed_owner_party_id = "owner-1"
+        visible_fee.attributed_operator_party_id = "operator-1"
+        hidden_fee = _service_fee_entry(
+            amount_due="90.00",
+            paid_amount="90.00",
+            payment_status="paid",
+        )
+        hidden_fee.attributed_owner_party_id = "other-owner"
+        hidden_fee.attributed_operator_party_id = "other-operator"
+        party_filter = PartyFilter(
+            party_ids=["owner-1"],
+            filter_mode="owner",
+            owner_party_ids=["owner-1"],
+        )
+
+        with (
+            patch.object(
+                project_service,
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
+            ),
+            patch.object(
+                project_service,
+                "get_project_by_id",
+                new=AsyncMock(return_value=SimpleNamespace(id="project-1")),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_ledger_entries_by_attributed_project",
+                new=AsyncMock(return_value=[visible_entry, hidden_entry]),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_service_fee_entries_by_attributed_project",
+                new=AsyncMock(return_value=[visible_fee, hidden_fee]),
+            ),
+        ):
+            response = await project_service.get_project_ledger_summary(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+                party_filter=party_filter,
+            )
+
+        assert response.terminal_collection.amount_due == Decimal("100.00")
+        assert response.operator_income.amount_due == Decimal("110.00")
+        assert response.service_fee_settlement.amount_due == Decimal("10.00")
 
 
 class TestGetProjectTenants:
@@ -2379,6 +2569,114 @@ class TestGetProjectTenants:
 
 
 class TestGetProjectAnalytics:
+    async def test_get_project_analytics_filters_frozen_party_attribution(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        from src.schemas.project import (
+            ProjectAssetSummary,
+            ProjectContractRelationsResponse,
+            ProjectRisksResponse,
+            ProjectTenantSummaryResponse,
+        )
+
+        visible_entry = _ledger_entry(
+            contract_id="contract-visible",
+            revenue_mode=RevenueMode.LEASE,
+            relation_type=GroupRelationType.DOWNSTREAM,
+            amount_due="100.00",
+            paid_amount="50.00",
+            payment_status="partial",
+        )
+        visible_entry.attributed_owner_party_id = "owner-1"
+        hidden_entry = _ledger_entry(
+            contract_id="contract-hidden",
+            revenue_mode=RevenueMode.LEASE,
+            relation_type=GroupRelationType.DOWNSTREAM,
+            amount_due="900.00",
+            paid_amount="900.00",
+            payment_status="paid",
+        )
+        hidden_entry.attributed_owner_party_id = "owner-hidden"
+        party_filter = PartyFilter(
+            party_ids=["owner-1"],
+            filter_mode="owner",
+            owner_party_ids=["owner-1"],
+        )
+
+        with (
+            patch.object(
+                project_service,
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
+            ),
+            patch.object(
+                project_service,
+                "get_project_active_assets",
+                new=AsyncMock(
+                    return_value=(
+                        [],
+                        ProjectAssetSummary(
+                            total_assets=0,
+                            total_rentable_area=0,
+                            total_rented_area=0,
+                            occupancy_rate=0,
+                        ),
+                    )
+                ),
+            ),
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(
+                    return_value=ProjectContractRelationsResponse(items=[], total=0)
+                ),
+            ),
+            patch.object(
+                project_service,
+                "get_project_ledger_summary",
+                new=AsyncMock(
+                    return_value=_project_ledger_summary(
+                        receivable_amount=Decimal("100.00"),
+                        payable_amount=Decimal("0"),
+                        received_amount=Decimal("50.00"),
+                        paid_amount=Decimal("0"),
+                        overdue_amount=Decimal("0"),
+                        service_fee_receivable=Decimal("0"),
+                        service_fee_received=Decimal("0"),
+                    )
+                ),
+            ),
+            patch.object(
+                project_service,
+                "get_project_tenants",
+                new=AsyncMock(
+                    return_value=ProjectTenantSummaryResponse(items=[], total=0)
+                ),
+            ),
+            patch.object(
+                project_service,
+                "get_project_risks",
+                new=AsyncMock(return_value=ProjectRisksResponse(items=[], total=0)),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_ledger_entries_by_attributed_project",
+                new=AsyncMock(return_value=[visible_entry, hidden_entry]),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_service_fee_entries_by_attributed_project",
+                new=AsyncMock(return_value=[]),
+            ),
+        ):
+            response = await project_service.get_project_analytics(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+                party_filter=party_filter,
+            )
+
+        by_kind = {item.relation_kind: item for item in response.mode_summaries}
+        assert by_kind["lease_sublease"].receivable_amount == Decimal("100.00")
+
     async def test_get_project_analytics_separates_lease_and_agency_metrics(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
@@ -2386,7 +2684,6 @@ class TestGetProjectAnalytics:
             ProjectAssetSummary,
             ProjectContractRelationItem,
             ProjectContractRelationsResponse,
-            ProjectLedgerSummaryResponse,
             ProjectRiskItem,
             ProjectRisksResponse,
             ProjectTenantSummaryItem,
@@ -2432,7 +2729,7 @@ class TestGetProjectAnalytics:
             ],
             total=2,
         )
-        ledger_summary = ProjectLedgerSummaryResponse(
+        ledger_summary = _project_ledger_summary(
             receivable_amount=Decimal("2650.00"),
             payable_amount=Decimal("1000.00"),
             received_amount=Decimal("1400.00"),
@@ -2518,6 +2815,11 @@ class TestGetProjectAnalytics:
         with (
             patch.object(
                 project_service,
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=None),
+            ),
+            patch.object(
+                project_service,
                 "get_project_active_assets",
                 new=AsyncMock(return_value=([], asset_summary)),
             ),
@@ -2584,7 +2886,6 @@ class TestGetProjectAnalytics:
         from src.schemas.project import (
             ProjectAssetSummary,
             ProjectContractRelationsResponse,
-            ProjectLedgerSummaryResponse,
             ProjectRisksResponse,
             ProjectTenantSummaryItem,
             ProjectTenantSummaryResponse,
@@ -2596,7 +2897,7 @@ class TestGetProjectAnalytics:
             total_rented_area=70.0,
             occupancy_rate=70.0,
         )
-        ledger_summary = ProjectLedgerSummaryResponse(
+        ledger_summary = _project_ledger_summary(
             receivable_amount=Decimal("100.00"),
             payable_amount=Decimal("0.00"),
             received_amount=Decimal("20.00"),
@@ -2681,7 +2982,6 @@ class TestGetProjectAnalytics:
             ProjectAssetSummary,
             ProjectContractRelationItem,
             ProjectContractRelationsResponse,
-            ProjectLedgerSummaryResponse,
             ProjectRisksResponse,
             ProjectTenantSummaryResponse,
         )
@@ -2725,7 +3025,7 @@ class TestGetProjectAnalytics:
             ],
             total=2,
         )
-        ledger_summary = ProjectLedgerSummaryResponse(
+        ledger_summary = _project_ledger_summary(
             receivable_amount=Decimal("4000.00"),
             payable_amount=Decimal("1000.00"),
             received_amount=Decimal("2100.00"),
@@ -2766,6 +3066,11 @@ class TestGetProjectAnalytics:
         ]
 
         with (
+            patch.object(
+                project_service,
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=None),
+            ),
             patch.object(
                 project_service,
                 "get_project_active_assets",
@@ -2880,6 +3185,11 @@ async def _get_agency_project_risks(
     )
 
     with (
+        patch.object(
+            project_service,
+            "_resolve_party_filter",
+            new=AsyncMock(return_value=None),
+        ),
         patch.object(
             project_service,
             "get_project_contract_relations",

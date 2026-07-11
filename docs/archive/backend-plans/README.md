@@ -4,7 +4,7 @@
 
 | 文档 | 主题 |
 |------|------|
-| [2026-07-06-operations-ledger-implementation.md](./2026-07-06-operations-ledger-implementation.md) | 经营台账与收付流水实施计划 |
+| [2026-07-06-operations-ledger-implementation.md](./2026-07-06-operations-ledger-implementation.md) | 经营台账与收付流水实施计划（已完成） |
 | [2026-05-31-auth-middleware-split.md](./2026-05-31-auth-middleware-split.md) | Auth middleware 拆分方案 |
 | [2026-05-29-codebase-lean-refocus-plan.md](./2026-05-29-codebase-lean-refocus-plan.md) | 代码库瘦身与业务聚焦方案 |
 | [2026-05-12-project-centered-asset-operations-plan.md](./2026-05-12-project-centered-asset-operations-plan.md) | 项目主轴资产运营全局规划 |

@@ -582,7 +582,6 @@ class OperationalPaymentFlowCreate(BaseModel):
     flow_type: OperationalPaymentFlowType
     occurred_on: date
     amount: Decimal = Field(..., gt=0)
-    registered_by: str = Field(..., min_length=1, max_length=100)
     counterparty_id: str | None = None
     voucher_attachment_ids: list[str] | None = None
     notes: str | None = None
@@ -665,6 +664,12 @@ class ServiceFeeGenerateRequest(BaseModel):
     """Request body for generating monthly service-fee ledger entries."""
 
     contract_group_id: str = Field(..., min_length=1)
+
+
+class ServiceFeeSourceReconcileRequest(BaseModel):
+    """Explicit operator confirmation for adopting the current source facts."""
+
+    reason: str = Field(..., min_length=1, max_length=500)
 
 
 class ServiceFeeGenerateResponse(BaseModel):

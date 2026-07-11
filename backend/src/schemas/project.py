@@ -355,6 +355,22 @@ class ProjectRisksResponse(BaseModel):
     total: int
 
 
+class ProjectLedgerMetricGroup(BaseModel):
+    """项目单一经营台账视图指标。"""
+
+    amount_due: Decimal
+    paid_amount: Decimal
+    outstanding_amount: Decimal
+    overdue_amount: Decimal = Decimal(0)
+
+
+class ProjectOperatingResultSummary(BaseModel):
+    """项目经营结果，分别提供权责和已登记收付口径。"""
+
+    accrual_net_amount: Decimal
+    cash_net_amount: Decimal
+
+
 class ProjectLedgerSummaryResponse(BaseModel):
     """项目收付款摘要响应。"""
 
@@ -365,6 +381,11 @@ class ProjectLedgerSummaryResponse(BaseModel):
     overdue_amount: Decimal
     service_fee_receivable: Decimal
     service_fee_received: Decimal
+    terminal_collection: ProjectLedgerMetricGroup
+    operator_income: ProjectLedgerMetricGroup
+    operator_cost: ProjectLedgerMetricGroup
+    service_fee_settlement: ProjectLedgerMetricGroup
+    operating_result: ProjectOperatingResultSummary
 
 
 class ProjectTenantSummaryItem(BaseModel):

@@ -18,6 +18,7 @@ from src.core.exception_handler import (
 )
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import (
     Contract,
     ContractGroup,
@@ -26,6 +27,10 @@ from src.models.contract_group import (
     ContractRentTerm,
     GroupRelationType,
     LedgerView,
+)
+from src.services.contract.ledger_scope import (
+    assert_resource_in_scope,
+    resolve_ledger_party_filter,
 )
 
 logger = logging.getLogger(__name__)
@@ -454,6 +459,8 @@ class ContractLedgerServiceV2:
         include_voided: bool = False,
         offset: int = 0,
         limit: int = 20,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         normalized_flow_occurred_on_start = _parse_optional_date(flow_occurred_on_start)
         normalized_flow_occurred_on_end = _parse_optional_date(flow_occurred_on_end)
@@ -487,6 +494,11 @@ class ContractLedgerServiceV2:
                 "flow occurred start date cannot be after end date"
             )
 
+        resolved_party_filter = await resolve_ledger_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
         items, total = await contract_group_crud.query_ledger_entries(
             db,
             ledger_view=ledger_view,
@@ -500,6 +512,7 @@ class ContractLedgerServiceV2:
             flow_occurred_on_end=normalized_flow_occurred_on_end,
             payment_status=payment_status,
             include_voided=include_voided,
+            party_filter=resolved_party_filter,
             offset=offset,
             limit=limit,
         )
@@ -654,10 +667,24 @@ class ContractLedgerServiceV2:
         follow_up_status: str | None,
         next_follow_up_date: date | None = None,
         follow_up_note: str | None = None,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> ContractLedgerEntry:
         entry = await contract_group_crud.get_ledger_entry_by_id(db, entry_id=entry_id)
         if entry is None:
             raise ResourceNotFoundError("台账条目不存在")
+
+        resolved_party_filter = await resolve_ledger_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        assert_resource_in_scope(
+            entry,
+            party_filter=resolved_party_filter,
+            resource_type="台账条目",
+            resource_id=entry_id,
+        )
 
         ledger_views = set(getattr(entry, "ledger_views", []) or [])
         if LedgerView.TERMINAL_COLLECTION.value not in ledger_views:

@@ -10,12 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
 from src.crud.contract_group import contract_group_crud
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import (
     LedgerView,
     OperationalPaymentFlowStatus,
     OperationalPaymentFlowType,
     PaymentAllocationTargetType,
     derive_ledger_payment_status,
+)
+from src.services.contract.ledger_scope import (
+    assert_resource_in_scope,
+    resolve_ledger_party_filter,
 )
 
 _SCOPE_FIELDS = (
@@ -56,6 +61,7 @@ class PaymentFlowService:
         db: AsyncSession,
         *,
         data: dict[str, Any],
+        registered_by: str,
         commit: bool = True,
     ) -> Any:
         flow_type = _enum_value(data.get("flow_type"))
@@ -64,10 +70,14 @@ class PaymentFlowService:
         amount = _as_decimal(data.get("amount"))
         if amount <= 0:
             raise BusinessValidationError("payment flow amount must be greater than 0")
+        normalized_registered_by = registered_by.strip()
+        if normalized_registered_by == "":
+            raise BusinessValidationError("payment flow registered_by is required")
 
         now = _utcnow()
         payload = {
             **data,
+            "registered_by": normalized_registered_by,
             "flow_type": flow_type,
             "amount": amount,
             "status": _enum_value(
@@ -89,8 +99,14 @@ class PaymentFlowService:
         flow_id: str,
         allocations: list[dict[str, Any]],
         commit: bool = True,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> list[Any]:
-        flow = await contract_group_crud.get_payment_flow(db, flow_id=flow_id)
+        flow = await contract_group_crud.get_payment_flow(
+            db,
+            flow_id=flow_id,
+            for_update=True,
+        )
         if flow is None:
             raise ResourceNotFoundError("PaymentFlow", flow_id)
         if _enum_value(getattr(flow, "status", None)) != (
@@ -131,6 +147,18 @@ class PaymentFlowService:
             target_type=expected_target_type,
             rows=sync_rows,
         )
+        resolved_party_filter = await resolve_ledger_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        for target_id, target in targets.items():
+            assert_resource_in_scope(
+                target,
+                party_filter=resolved_party_filter,
+                resource_type="台账分摊目标",
+                resource_id=target_id,
+            )
         allocation_targets = {
             row["target_id"]: targets[row["target_id"]] for row in rows
         }
@@ -217,11 +245,13 @@ class PaymentFlowService:
             entries = await contract_group_crud.get_service_fee_entries_by_ids(
                 db,
                 entry_ids=target_ids,
+                for_update=True,
             )
         else:
             entries = await contract_group_crud.get_ledger_entries_by_ids(
                 db,
                 entry_ids=target_ids,
+                for_update=True,
             )
         targets = {_entry_id(entry, target_type): entry for entry in entries}
         missing = sorted(set(target_ids) - set(targets))

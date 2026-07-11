@@ -149,7 +149,6 @@ _READ_ONLY_ACTIONS = ("read",)
 _EXPANDED_RESOURCE_TYPES = (
     "contract_group",
     "contract",
-    "ledger",
     "property_certificate",
     "ownership",
     "occupancy",
@@ -411,17 +410,11 @@ def downgrade() -> None:
         .where(rule_table.c.policy_id == policy_table.c.id)
         .exists()
     )
-    orphan_policy_ids = (
-        bind.execute(
-            sa.select(policy_table.c.id).where(
-                policy_table.c.id.in_(policy_ids),
-                ~remaining_rule_exists,
-            )
+    orphan_policy_ids = bind.execute(
+        sa.select(policy_table.c.id).where(
+            policy_table.c.id.in_(policy_ids),
+            ~remaining_rule_exists,
         )
-        .scalars()
-        .all()
-    )
+    ).scalars().all()
     if orphan_policy_ids:
-        bind.execute(
-            policy_table.delete().where(policy_table.c.id.in_(orphan_policy_ids))
-        )
+        bind.execute(policy_table.delete().where(policy_table.c.id.in_(orphan_policy_ids)))

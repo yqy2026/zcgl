@@ -377,7 +377,7 @@
 | `flow_type` | enum | 是 | `terminal_rent_receipt`、`service_fee_receipt`、`upstream_cost_payment` |
 | `occurred_on` | date | 是 | 实际收款/付款发生日期，用于流水查询、导出和审计，不作为默认经营分析归属月 |
 | `amount` | decimal | 是 | 流水金额，> 0 |
-| `registered_by` | string | 是 | 登记人 |
+| `registered_by` | string | 是 | 登记人；由服务端从认证用户固化，客户端请求不得指定 |
 | `counterparty_id` | string | 否 | 对方主体；终端租户、产权方或运营方 |
 | `voucher_attachment_ids` | string[] | 否 | 可选凭证附件；不上传不阻断登记 |
 | `notes` | text | 否 | 备注 |
@@ -425,7 +425,9 @@
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
 
-约束：服务费应收只在代理直租租金实际收到后形成，按租金账期月份 / 项目 / 委托协议 / 产权方汇总生成。当前业务服务费比例存在历史差异：当前合同 30%，更早合同 20%；台账生成后固化比例、计算基数和来源账期。每条可计算服务费的租金账期必须命中单一委托协议比例；若账期跨比例区间，系统提示拆分账期，不自动按天拆分。已生成服务费应收后的租金实收更正，不得静默覆盖既有服务费应收；来源租金条目被合同更正重算跳过时，既有服务费台账不自动重算或覆盖，必须派生服务费来源不一致风险并交由人工处理；尚未生成服务费的账期按修正后的实收进入后续月度生成。服务费实收是产权方支付给运营方的收款事实，通过 `OperationalPaymentFlow(flow_type=service_fee_receipt)` 登记；服务费未收不产生逾期。
+约束：服务费应收只在代理直租租金实际收到后形成，按租金账期月份 / 项目 / 委托协议 / 产权方汇总生成。`ContractGroup` 固定归属单一项目，因此月度唯一键中的 `contract_group_id` 已隐含项目边界，不重复增加 `project_id`。当前业务服务费比例存在历史差异：当前合同 30%，更早合同 20%；台账生成后固化比例、计算基数和来源账期。每条可计算服务费的租金账期必须命中单一委托协议比例；若账期跨比例区间，系统提示拆分账期，不自动按天拆分。已生成服务费应收后的租金实收更正，不得静默覆盖既有服务费应收；来源租金条目被合同更正重算跳过时，既有服务费台账不自动重算或覆盖，必须派生服务费来源不一致风险并交由人工处理；人工校准必须提交原因，只允许把既有条目更新到当前唯一可计算来源，底层租金条目仍陈旧、来源已消失、无法唯一匹配，或校准后应收低于有效服务费收款分摊时失败暴露。尚未生成服务费的账期按修正后的实收进入后续月度生成。服务费实收是产权方支付给运营方的收款事实，通过 `OperationalPaymentFlow(flow_type=service_fee_receipt)` 登记；服务费未收不产生逾期。
+
+Concurrency and scope constraints: replacing allocations locks the payment flow and every old/new target row before recalculating `paid_amount`; reconciling a service-fee source locks the service-fee row before reading active allocations. Service-fee source rent rows are scope-filtered before monthly aggregation; service-fee queries/generation and project summaries/analytics/risks authorize each historical row against its frozen owner/operator attribution, not only the contract group's current parties. If a current monthly bucket and an unmatched existing receivable share a unique source-ledger identity after an owner/agreement key change, generation preserves the existing receivable as a mismatch instead of creating a duplicate; reasoned reconciliation is the only path that may re-key it. When the preserved row is outside the caller's frozen party scope, generation fails loudly without exposing the row and requires unrestricted administrative reconciliation.
 
 ### 4.16 ContractAuditLog
 

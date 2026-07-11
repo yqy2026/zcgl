@@ -133,17 +133,24 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 合同/协议台账 | `GET /api/v1/contracts/{contract_id}/ledger` | 查询单合同/协议台账，返回账期、四类视图归属、应收/应付、实收/实付、未收/未付和派生状态 |
-| 收付流水登记 | `POST /api/v1/ledger/payment-flows` | 创建轻量收付流水，支持 `terminal_rent_receipt`、`service_fee_receipt`、`upstream_cost_payment`；字段包含发生日期、金额、登记人、备注和可选凭证附件，返回流水主键、类型、发生日期、金额、登记人、对方主体、凭证附件、备注、状态和时间戳 |
+| 收付流水登记 | `POST /api/v1/ledger/payment-flows` | 创建轻量收付流水，支持 `terminal_rent_receipt`、`service_fee_receipt`、`upstream_cost_payment`；请求字段包含发生日期、金额、备注和可选凭证附件，登记人由服务端从认证用户固化、客户端不得指定；返回流水主键、类型、发生日期、金额、登记人、对方主体、凭证附件、备注、状态和时间戳 |
 | 收付流水分摊 | `POST /api/v1/ledger/payment-flows/{flow_id}/allocations` | 一笔流水可人工分摊到多个账期，系统校验分摊金额合计等于流水金额；账期归属按租金账期，流水发生日期仅用于查询、导出和审计；返回分摊主键、流水 ID、目标类型、目标 ID、账期、金额和时间戳 |
 | 经营台账查询 | `GET /api/v1/ledger/entries` | 支持项目上下文和全局上下文；按合同租金台账视图 `ledger_view=terminal_collection/operator_income/operator_cost`、`project_id`、资产、主体、合同/协议、账期、有效收付流水发生日期 `flow_occurred_on_start/end` 和派生支付状态查询，作为全局“经营台账”入口的数据源；响应包含 `ledger_views` 与 `flow_occurred_on_dates`。服务费结算由 `ServiceFeeLedger` 与服务费生成/分摊路径承载，不复用合同租金台账响应暗中混排 |
 | 经营台账导出 | `GET /api/v1/ledger/entries/export` | 按当前经营台账筛选条件导出查询结果；导出列包含 `ledger_views`、账期 `year_month` 和有效流水发生日期集合 `flow_occurred_on_dates` |
 | 台账跟进状态 | `PATCH /api/v1/ledger/entries/{entry_id}/follow-up` | 仅维护终端租户收缴视图的轻量跟进字段：`follow_up_status`、`next_follow_up_date`、`follow_up_note`；不修改台账金额或派生支付状态 |
 | 服务费月度生成 | `POST /api/v1/ledger/service-fees/generate` | 按租金账期月份、项目、委托协议和产权方汇总代理直租实收，固化服务费比例、计算基数和来源账期生成服务费应收；不逐笔生成 |
-| 服务费台账查询 | `GET /api/v1/ledger/service-fees` | 按 `contract_group_id` 查询代理模式月度服务费台账；响应包含服务费台账 ID、服务费账期、应收/实收/派生状态、计算基数、服务费比例、固化归属字段和 `source_ledger_ids` 来源租金台账集合，用于服务费结算视图展示来源账期并登记服务费收款 |
+| 服务费台账查询 | `GET /api/v1/ledger/service-fees` | 按 `contract_group_id` 或 `project_id` 查询代理模式月度服务费台账，并按当前主体数据范围过滤；响应包含服务费台账 ID、服务费账期、应收/实收/派生状态、计算基数、服务费比例、固化归属字段和 `source_ledger_ids` 来源租金台账集合，用于服务费结算视图展示来源账期并登记服务费收款 |
+| 服务费来源校准 | `POST /api/v1/ledger/service-fees/{entry_id}/reconcile` | 人工确认采用当前唯一可计算来源，必须提交处理原因并通过当前主体数据范围校验；只处理现有服务费台账与当前来源桶字段不一致的场景，底层租金台账仍陈旧、当前来源已消失、无法唯一匹配，或重算应收低于已登记服务费实收时拒绝，不自动冲销收付事实 |
 | 台账重算 | `POST /api/v1/contracts/{contract_id}/ledger/recalculate` | 对受影响区间作废并重建；响应返回 `created`/`updated`/`voided` 与 `skipped_entries`，已收/部分已收条目被跳过时需在前端当场展示 |
 | 补偿任务 | `POST /api/v1/ledger/compensation/run` | 扫描并补齐缺失台账，必须幂等 |
 
 实收/实付唯一写路径是「创建收付流水 → 保存账期分摊」。旧 `PATCH /api/v1/contracts/{contract_id}/ledger/batch-update-status` 已下线，不提供直接改写累计 `paid_amount` 的兼容入口。
+
+Authorization boundary: ledger ABAC rules admit the configured role/action pair; service methods then fail closed against each ledger row's frozen owner/operator attribution. Project and contract-group access alone never authorizes historical rows whose frozen attribution is outside the active party scope. Allocation replacement locks the payment flow and all affected target rows, while service-fee reconciliation locks its target row, so allocation totals and reconciliation cannot race to overwrite each other.
+
+Payment-flow creation records an authenticated actor but has no ledger target and therefore does not alter any receivable/payable balance. Party-scope authorization is mandatory when allocations bind that flow to ledger targets; a flow cannot affect ledger totals until the allocation service validates every target's frozen project/owner/operator scope.
+
+When an existing service-fee receivable no longer matches its monthly key because the owner or entrusted agreement changed, generation must not create a second receivable if the frozen and current buckets share a unique source-ledger identity. It preserves the existing row as a source mismatch; explicit reconciliation may re-key it only when exactly one current bucket matches and the reconciled amount is not below active receipt allocations. If the preserved row belongs to a different frozen party scope, scoped generation fails loudly without disclosing that row and requires an unrestricted administrator to perform the cross-party reconciliation.
 
 多资产合同按合同级金额返回，不做资产级金额拆分；项目或主体汇总时按合同和账期去重。逾期只由终端租户租金收缴派生；运营方成本未付、服务费未收不产生逾期。
 

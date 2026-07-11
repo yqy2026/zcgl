@@ -620,7 +620,9 @@ async def test_get_project_analytics_should_delegate_project_service() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_project_analytics_should_suppress_customer_metrics_for_all_scope() -> None:
+async def test_get_project_analytics_should_suppress_customer_metrics_for_all_scope() -> (
+    None
+):
     """scope_mode=all 下项目分析只抑制客户双指标，其余摘要照常返回。"""
     from decimal import Decimal
 
@@ -696,7 +698,17 @@ async def test_get_project_ledger_summary_should_delegate_project_service() -> N
 
     from src.api.v1.assets.project import get_project_ledger_summary
     from src.middleware.auth import DataScopeContext
-    from src.schemas.project import ProjectLedgerSummaryResponse
+    from src.schemas.project import (
+        ProjectLedgerMetricGroup,
+        ProjectLedgerSummaryResponse,
+        ProjectOperatingResultSummary,
+    )
+
+    empty_metric = ProjectLedgerMetricGroup(
+        amount_due=Decimal("0.00"),
+        paid_amount=Decimal("0.00"),
+        outstanding_amount=Decimal("0.00"),
+    )
 
     response_payload = ProjectLedgerSummaryResponse(
         receivable_amount=Decimal("0.00"),
@@ -706,6 +718,14 @@ async def test_get_project_ledger_summary_should_delegate_project_service() -> N
         overdue_amount=Decimal("0.00"),
         service_fee_receivable=Decimal("0.00"),
         service_fee_received=Decimal("0.00"),
+        terminal_collection=empty_metric,
+        operator_income=empty_metric,
+        operator_cost=empty_metric,
+        service_fee_settlement=empty_metric,
+        operating_result=ProjectOperatingResultSummary(
+            accrual_net_amount=Decimal("0.00"),
+            cash_net_amount=Decimal("0.00"),
+        ),
     )
     mock_service = MagicMock()
     mock_service.get_project_ledger_summary = AsyncMock(return_value=response_payload)
@@ -735,6 +755,34 @@ async def test_get_project_ledger_summary_should_delegate_project_service() -> N
         "overdue_amount": "0.00",
         "service_fee_receivable": "0.00",
         "service_fee_received": "0.00",
+        "terminal_collection": {
+            "amount_due": "0.00",
+            "paid_amount": "0.00",
+            "outstanding_amount": "0.00",
+            "overdue_amount": "0",
+        },
+        "operator_income": {
+            "amount_due": "0.00",
+            "paid_amount": "0.00",
+            "outstanding_amount": "0.00",
+            "overdue_amount": "0",
+        },
+        "operator_cost": {
+            "amount_due": "0.00",
+            "paid_amount": "0.00",
+            "outstanding_amount": "0.00",
+            "overdue_amount": "0",
+        },
+        "service_fee_settlement": {
+            "amount_due": "0.00",
+            "paid_amount": "0.00",
+            "outstanding_amount": "0.00",
+            "overdue_amount": "0",
+        },
+        "operating_result": {
+            "accrual_net_amount": "0.00",
+            "cash_net_amount": "0.00",
+        },
     }
     mock_service.get_project_ledger_summary.assert_awaited_once_with(
         db=ANY,

@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import ContractLifecycleStatus, GroupRelationType
 
 pytestmark = pytest.mark.asyncio
@@ -364,3 +365,38 @@ class TestLedgerServiceV2:
                     entry_id="missing-entry",
                     follow_up_status="contacted",
                 )
+
+    async def test_update_follow_up_hides_out_of_scope_entry(self):
+        from src.services.contract import ledger_service_v2 as ledger_module
+
+        service = ledger_module.ledger_service_v2
+        entry = MagicMock(entry_id="entry-001")
+        entry.ledger_views = ["terminal_collection"]
+        entry.attributed_owner_party_id = "owner-001"
+        entry.attributed_operator_party_id = "operator-001"
+        party_filter = PartyFilter(
+            party_ids=["other-owner"],
+            filter_mode="owner",
+            owner_party_ids=["other-owner"],
+        )
+
+        with (
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.get_ledger_entry_by_id",
+                new=AsyncMock(return_value=entry),
+            ),
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.update_ledger_follow_up",
+                new=AsyncMock(),
+            ) as mock_update,
+        ):
+            with pytest.raises(ResourceNotFoundError):
+                await service.update_follow_up(
+                    AsyncMock(),
+                    entry_id="entry-001",
+                    follow_up_status="contacted",
+                    current_user_id="user-001",
+                    party_filter=party_filter,
+                )
+
+        mock_update.assert_not_awaited()

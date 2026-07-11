@@ -250,14 +250,19 @@
 - [x] 更新 `docs/prd.md`、`docs/specs/*`、`docs/traceability/*` 的实现证据。
 - [x] 归档 `docs/archive/issues/2026-07-06-operations-ledger-prd-revision.md`，并将非阻断增强项拆至新 issue。
 - [x] 完成 `CHANGELOG.md`。
+- [x] 收口最终双轴复核发现的数据范围、权限迁移、项目摘要、导出和前端付款默认值问题，并补齐服务费来源人工校准闭环。
 - [x] 跑受影响测试；能跑 `make check` 时跑全量门禁。
 
-验证结果（2026-07-10）：
+复核决策：服务费月度唯一键无需再加入 `project_id`。`ContractGroup` 已固定归属单一项目，现有唯一键中的 `contract_group_id` 已包含项目边界；重复加入项目字段不增加隔离能力。
 
-- 后端 unit：`4370 passed, 301 skipped`。
-- 前端全量 Vitest 四分片：`2279 passed`。
-- 前端 `check`、生产构建、后端 Ruff、迁移命名检查和应用导入烟测通过。
-- Windows 环境无 `make`，按 `Makefile` 目标逐项执行等价命令；归档后再次运行文档门禁。
+最终验证结果（2026-07-11）：
+
+- 后端 unit：`4634 passed, 50 skipped, 436 deselected`，覆盖率 `76.98%`。
+- 前端全量 Vitest 四分片：`2284 passed`（`445 + 721 + 514 + 604`）。
+- 受影响回归：后端 `118 passed`；前端经营台账与 service `21 passed`。
+- 前端 lint、UI guard、应用/E2E type-check、生产构建、后端全仓 Ruff、迁移命名检查（`compliant=66, legacy=7`）和应用导入烟测通过。
+- 最终双轴复核已收口认证登记人、冻结归属逐条过滤、聚合前来源过滤、分摊/校准行锁、跨产权方重键 fail-loud 与管理员校准边界；复核后无剩余具体问题。
+- Windows 环境无 `make`，已按 `Makefile` 的 `make check` 目标逐项执行等价命令；归档后再次运行文档门禁。
 
 ## 6. 建议首个代码切片
 
