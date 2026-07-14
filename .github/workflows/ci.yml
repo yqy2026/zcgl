@@ -17,6 +17,8 @@ env:
   # Updated to match TESTING_STANDARDS.md baseline gates (更新以匹配文档基线)
   BACKEND_COVERAGE_THRESHOLD: 70
   FRONTEND_COVERAGE_THRESHOLD: 50
+  # Public, deterministic test key. Production must provide its own secret.
+  DATA_ENCRYPTION_KEY: WmNnbENpRGF0YUtleTIwMjYwNzE0T25seVRlc3Rpbmc=:1
 
 jobs:
   # ===========================

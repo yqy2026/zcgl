@@ -31,7 +31,9 @@ def _job_steps(job: dict[str, Any]) -> Iterable[dict[str, Any]]:
     return []
 
 
-def _jobs_running_alembic_upgrade(workflow: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _jobs_running_alembic_upgrade(
+    workflow: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
     jobs = workflow.get("jobs")
     if not isinstance(jobs, dict):
         return {}
@@ -61,16 +63,22 @@ def _step_by_name(job: dict[str, Any], step_name: str) -> dict[str, Any]:
 
 def test_ci_jobs_running_alembic_should_define_required_env() -> None:
     workflow = _load_ci_workflow()
-    required_env = {"SECRET_KEY", "PHASE4_TENANT_NOT_NULL_DECISION"}
+    required_env = {
+        "SECRET_KEY",
+        "DATA_ENCRYPTION_KEY",
+        "PHASE4_TENANT_NOT_NULL_DECISION",
+    }
+    global_env = workflow.get("env")
+    assert isinstance(global_env, dict)
 
     missing_by_job: dict[str, list[str]] = {}
     for job_name, job in _jobs_running_alembic_upgrade(workflow).items():
-        env = job.get("env")
-        if not isinstance(env, dict):
-            missing_by_job[job_name] = sorted(required_env)
-            continue
+        job_env = job.get("env")
+        if job_env is not None:
+            assert isinstance(job_env, dict)
 
-        missing = sorted(required_env.difference(env))
+        effective_env = {**global_env, **(job_env or {})}
+        missing = sorted(required_env.difference(effective_env))
         if missing:
             missing_by_job[job_name] = missing
 
