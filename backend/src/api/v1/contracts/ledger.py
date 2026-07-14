@@ -3,12 +3,17 @@
 from datetime import date
 from typing import Annotated, Literal, cast
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import BaseBusinessError, internal_error
+from ....core.exception_handler import (
+    BaseBusinessError,
+    BusinessValidationError,
+    internal_error,
+)
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
@@ -27,24 +32,38 @@ from ....schemas.contract_group import (
     LedgerFollowUpUpdateRequest,
     LedgerRecalculateResponse,
     OperationalPaymentFlowCreate,
+    OperationalPaymentFlowDetailResponse,
     OperationalPaymentFlowResponse,
     PaymentAllocationResponse,
     PaymentAllocationSaveRequest,
+    PaymentFlowCorrectionRequest,
+    PaymentFlowLifecycleActionRequest,
+    PaymentVoucherAttachmentResponse,
+    PaymentVoucherDownloadAuditResponse,
     ServiceFeeGenerateRequest,
     ServiceFeeGenerateResponse,
     ServiceFeeLedgerResponse,
     ServiceFeeSourceReconcileRequest,
 )
+from ....security.file_validation import validate_upload_file
 from ....services.contract.ledger_compensation_service import (
     ledger_compensation_service,
 )
 from ....services.contract.ledger_export_service import ledger_export_service
 from ....services.contract.ledger_service_v2 import ledger_service_v2
 from ....services.contract.payment_flow_service import payment_flow_service
+from ....services.contract.payment_voucher_service import payment_voucher_service
 from ....services.contract.service_fee_ledger_service import service_fee_ledger_service
 from ....services.party_scope import build_party_filter_from_scope_context
 
 router = APIRouter()
+
+PAYMENT_VOUCHER_MAX_SIZE = 20 * 1024 * 1024
+PAYMENT_VOUCHER_ALLOWED_MIME_TYPES = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+]
 
 LedgerPaymentStatus = Literal["unpaid", "paid", "partial", "voided"]
 LedgerViewFilter = Literal["terminal_collection", "operator_income", "operator_cost"]
@@ -266,6 +285,179 @@ async def create_payment_flow(
         raise internal_error("创建经营收付流水失败", original_error=exc) from exc
 
 
+@router.get(
+    "/ledger/payment-flows",
+    response_model=list[OperationalPaymentFlowDetailResponse],
+    summary="按台账目标查询经营收付流水",
+)
+async def list_payment_flows(
+    target_type: Literal["contract_ledger_entry", "service_fee_ledger"] = Query(...),
+    target_id: str = Query(..., min_length=1),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(require_authz(action="read", resource_type="ledger")),
+    ] = None,
+) -> list[OperationalPaymentFlowDetailResponse]:
+    _ = _authz
+    try:
+        result = await payment_flow_service.list_flows_by_target(
+            db,
+            target_type=target_type,
+            target_id=target_id,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
+        return [
+            OperationalPaymentFlowDetailResponse.model_validate(item)
+            for item in result
+        ]
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询经营收付流水失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/payment-flows/{flow_id}/vouchers",
+    response_model=PaymentVoucherAttachmentResponse,
+    summary="上传经营收付流水凭证",
+)
+async def upload_payment_flow_voucher(
+    flow_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(require_authz(action="update", resource_type="ledger")),
+    ] = None,
+) -> PaymentVoucherAttachmentResponse:
+    _ = _authz
+    try:
+        await validate_upload_file(
+            file,
+            allowed_types=PAYMENT_VOUCHER_ALLOWED_MIME_TYPES,
+            max_size=PAYMENT_VOUCHER_MAX_SIZE,
+        )
+        content = await file.read(PAYMENT_VOUCHER_MAX_SIZE + 1)
+        if len(content) > PAYMENT_VOUCHER_MAX_SIZE:
+            raise BusinessValidationError(
+                "payment flow voucher exceeds the 20MB size limit"
+            )
+        result = await payment_voucher_service.upload_voucher(
+            db,
+            flow_id=flow_id,
+            file_name=file.filename or "",
+            content_type=file.content_type,
+            content=content,
+            user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
+        return PaymentVoucherAttachmentResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("上传经营收付流水凭证失败", original_error=exc) from exc
+
+
+@router.get(
+    "/ledger/payment-flows/{flow_id}/vouchers/{attachment_id}/download",
+    summary="下载经营收付流水凭证",
+)
+async def download_payment_flow_voucher(
+    flow_id: str,
+    attachment_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="ledger_voucher",
+                resource_id="{flow_id}",
+            )
+        ),
+    ] = None,
+) -> FileResponse:
+    _ = _authz
+    try:
+        result = await payment_voucher_service.prepare_download(
+            db,
+            flow_id=flow_id,
+            attachment_id=attachment_id,
+            user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
+        media_types = {
+            "pdf": "application/pdf",
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+        }
+        return FileResponse(
+            str(result.path),
+            filename=result.attachment.file_name,
+            media_type=media_types[result.attachment.file_type],
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("下载经营收付流水凭证失败", original_error=exc) from exc
+
+
+@router.get(
+    "/ledger/payment-flows/{flow_id}/voucher-download-audits",
+    response_model=list[PaymentVoucherDownloadAuditResponse],
+    summary="查询经营收付流水凭证下载审计",
+)
+async def list_payment_flow_voucher_download_audits(
+    flow_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="ledger",
+                resource_id="{flow_id}",
+            )
+        ),
+    ] = None,
+) -> list[PaymentVoucherDownloadAuditResponse]:
+    _ = _authz
+    try:
+        result = await payment_voucher_service.list_download_audits(
+            db,
+            flow_id=flow_id,
+            current_user_id=str(current_user.id),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
+        return [
+            PaymentVoucherDownloadAuditResponse.model_validate(item)
+            for item in result
+        ]
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询经营收付流水凭证审计失败", original_error=exc) from exc
+
+
 @router.post(
     "/ledger/payment-flows/{flow_id}/allocations",
     response_model=list[PaymentAllocationResponse],
@@ -306,6 +498,95 @@ async def save_payment_flow_allocations(
         raise
     except Exception as exc:
         raise internal_error("保存经营收付流水分摊失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/payment-flows/{flow_id}/void",
+    response_model=OperationalPaymentFlowResponse,
+    summary="作废经营收付流水",
+)
+async def void_payment_flow(
+    flow_id: str,
+    payload: PaymentFlowLifecycleActionRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="ledger",
+                resource_id="{flow_id}",
+            )
+        ),
+    ] = None,
+) -> OperationalPaymentFlowResponse:
+    _ = _authz
+    try:
+        user_id = str(current_user.id)
+        result = await payment_flow_service.void_flow(
+            db,
+            flow_id=flow_id,
+            reason=payload.reason,
+            actor_id=user_id,
+            current_user_id=user_id,
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
+        return OperationalPaymentFlowResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("作废经营收付流水失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/payment-flows/{flow_id}/correct",
+    response_model=OperationalPaymentFlowResponse,
+    summary="更正经营收付流水",
+)
+async def correct_payment_flow(
+    flow_id: str,
+    payload: PaymentFlowCorrectionRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
+    ),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="ledger",
+                resource_id="{flow_id}",
+            )
+        ),
+    ] = None,
+) -> OperationalPaymentFlowResponse:
+    _ = _authz
+    try:
+        user_id = str(current_user.id)
+        result = await payment_flow_service.correct_flow(
+            db,
+            flow_id=flow_id,
+            reason=payload.reason,
+            actor_id=user_id,
+            replacement_data=payload.replacement.model_dump(mode="json"),
+            allocations=[
+                allocation.model_dump(mode="json")
+                for allocation in payload.allocations
+            ],
+            current_user_id=user_id,
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
+        )
+        return OperationalPaymentFlowResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("更正经营收付流水失败", original_error=exc) from exc
 
 
 @router.patch(

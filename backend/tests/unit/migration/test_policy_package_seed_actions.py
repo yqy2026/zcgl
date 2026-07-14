@@ -288,7 +288,7 @@ def test_backfill_expanded_resource_types_should_match_non_base_api_authz_resour
 
     retired_resources = {"collection"}
 
-    later_backfill_resources = {"ledger"}
+    later_backfill_resources = {"ledger", "ledger_voucher"}
     assert (
         (set(module._EXPANDED_RESOURCE_TYPES) - retired_resources)
         | later_backfill_resources

@@ -128,6 +128,25 @@ class TestEnumColumnStorageStrategy:
 
         assert "amount > 0" in constraint_sql
 
+    def test_payment_flow_lifecycle_is_traceable_and_single_successor(self) -> None:
+        columns = OperationalPaymentFlow.__table__.c
+
+        assert columns["corrected_from_flow_id"].nullable is True
+        assert columns["corrected_from_flow_id"].unique is True
+        assert columns["status_changed_by"].nullable is True
+        assert columns["status_changed_at"].nullable is True
+        assert columns["status_change_reason"].nullable is True
+
+        constraint_sql = " ".join(
+            str(constraint.sqltext)
+            for constraint in OperationalPaymentFlow.__table__.constraints
+            if hasattr(constraint, "sqltext")
+        )
+        assert "status = 'active'" in constraint_sql
+        assert "status_change_reason IS NOT NULL" in constraint_sql
+        assert "btrim(status_changed_by) <> ''" in constraint_sql
+        assert "btrim(status_change_reason) <> ''" in constraint_sql
+
     def test_service_fee_ledger_uses_monthly_aggregate_source_columns(self) -> None:
         columns = ServiceFeeLedger.__table__.c
 

@@ -1,5 +1,6 @@
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
@@ -291,6 +292,62 @@ def test_create_payment_flow_delegates_to_service(client) -> None:
     )
 
 
+def test_list_payment_flows_for_target_delegates_scope_to_service(client) -> None:
+    payload = [
+        {
+            "flow_id": "flow-001",
+            "flow_type": "terminal_rent_receipt",
+            "occurred_on": "2026-05-10",
+            "amount": "1200.00",
+            "registered_by": "user-001",
+            "counterparty_id": "tenant-001",
+            "voucher_attachment_ids": ["attachment-001"],
+            "notes": None,
+            "status": "active",
+            "corrected_from_flow_id": None,
+            "status_changed_by": None,
+            "status_changed_at": None,
+            "status_change_reason": None,
+            "created_at": "2026-05-10T10:00:00",
+            "updated_at": "2026-05-10T10:00:00",
+            "allocations": [],
+            "voucher_attachments": [
+                {
+                    "id": "attachment-001",
+                    "file_name": "receipt.pdf",
+                    "file_type": "pdf",
+                    "file_size": 123,
+                }
+            ],
+        }
+    ]
+
+    with patch(
+        "src.api.v1.contracts.ledger.payment_flow_service.list_flows_by_target",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_list:
+        response = client.get(
+            "/api/v1/ledger/payment-flows",
+            params={
+                "target_type": "contract_ledger_entry",
+                "target_id": "entry-001",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()[0]["voucher_attachments"][0]["file_name"] == (
+        "receipt.pdf"
+    )
+    mock_list.assert_awaited_once_with(
+        ANY,
+        target_type="contract_ledger_entry",
+        target_id="entry-001",
+        current_user_id="test_user_001",
+        party_filter=None,
+    )
+
+
 def test_save_payment_flow_allocations_delegates_to_service(client) -> None:
     payload = [
         {
@@ -340,6 +397,231 @@ def test_save_payment_flow_allocations_delegates_to_service(client) -> None:
         current_user_id="test_user_001",
         party_filter=None,
     )
+
+
+def test_void_payment_flow_delegates_reason_and_scope_to_service(client) -> None:
+    payload = {
+        "flow_id": "flow-001",
+        "flow_type": "terminal_rent_receipt",
+        "occurred_on": "2026-05-10",
+        "amount": "1200.00",
+        "registered_by": "user-001",
+        "counterparty_id": "tenant-001",
+        "voucher_attachment_ids": [],
+        "notes": None,
+        "status": "voided",
+        "corrected_from_flow_id": None,
+        "status_changed_by": "test_user_001",
+        "status_changed_at": "2026-05-11T10:00:00",
+        "status_change_reason": "重复登记",
+        "created_at": "2026-05-10T10:00:00",
+        "updated_at": "2026-05-11T10:00:00",
+    }
+
+    with patch(
+        "src.api.v1.contracts.ledger.payment_flow_service.void_flow",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_void:
+        response = client.post(
+            "/api/v1/ledger/payment-flows/flow-001/void",
+            json={"reason": "重复登记"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "voided"
+    mock_void.assert_awaited_once_with(
+        ANY,
+        flow_id="flow-001",
+        reason="重复登记",
+        actor_id="test_user_001",
+        current_user_id="test_user_001",
+        party_filter=None,
+    )
+
+
+def test_correct_payment_flow_delegates_replacement_as_one_action(client) -> None:
+    payload = {
+        "flow_id": "flow-002",
+        "flow_type": "terminal_rent_receipt",
+        "occurred_on": "2026-05-11",
+        "amount": "1000.00",
+        "registered_by": "test_user_001",
+        "counterparty_id": "tenant-001",
+        "voucher_attachment_ids": [],
+        "notes": "corrected",
+        "status": "active",
+        "corrected_from_flow_id": "flow-001",
+        "status_changed_by": None,
+        "status_changed_at": None,
+        "status_change_reason": None,
+        "created_at": "2026-05-11T10:00:00",
+        "updated_at": "2026-05-11T10:00:00",
+    }
+
+    with patch(
+        "src.api.v1.contracts.ledger.payment_flow_service.correct_flow",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_correct:
+        response = client.post(
+            "/api/v1/ledger/payment-flows/flow-001/correct",
+            json={
+                "reason": "金额录入错误",
+                "replacement": {
+                    "flow_type": "terminal_rent_receipt",
+                    "occurred_on": "2026-05-11",
+                    "amount": "1000.00",
+                    "counterparty_id": "tenant-001",
+                    "voucher_attachment_ids": [],
+                    "notes": "corrected",
+                },
+                "allocations": [
+                    {
+                        "target_type": "contract_ledger_entry",
+                        "target_id": "entry-001",
+                        "year_month": "2026-05",
+                        "amount": "1000.00",
+                    }
+                ],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["corrected_from_flow_id"] == "flow-001"
+    mock_correct.assert_awaited_once()
+    assert mock_correct.await_args.kwargs["flow_id"] == "flow-001"
+    assert mock_correct.await_args.kwargs["reason"] == "金额录入错误"
+    assert mock_correct.await_args.kwargs["actor_id"] == "test_user_001"
+    assert mock_correct.await_args.kwargs["replacement_data"]["amount"] == "1000.00"
+    assert mock_correct.await_args.kwargs["allocations"][0]["target_id"] == (
+        "entry-001"
+    )
+
+
+def test_upload_payment_flow_voucher_delegates_to_scoped_service(client) -> None:
+    attachment = {
+        "id": "attachment-001",
+        "file_name": "receipt.pdf",
+        "file_type": "pdf",
+        "file_size": 3,
+    }
+    with patch(
+        "src.api.v1.contracts.ledger.payment_voucher_service.upload_voucher",
+        new=AsyncMock(return_value=attachment),
+        create=True,
+    ) as mock_upload:
+        response = client.post(
+            "/api/v1/ledger/payment-flows/flow-001/vouchers",
+            files={"file": ("receipt.pdf", b"pdf", "application/pdf")},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "attachment-001"
+    assert mock_upload.await_args.kwargs["flow_id"] == "flow-001"
+    assert mock_upload.await_args.kwargs["content"] == b"pdf"
+    assert mock_upload.await_args.kwargs["user_id"] == "test_user_001"
+
+
+@pytest.mark.asyncio
+async def test_upload_payment_flow_voucher_validates_and_reads_with_hard_limit() -> None:
+    """The route must never materialize an unbounded upload in application memory."""
+    from src.api.v1.contracts.ledger import upload_payment_flow_voucher
+
+    attachment = {
+        "id": "attachment-001",
+        "file_name": "receipt.pdf",
+        "file_type": "pdf",
+        "file_size": 3,
+    }
+    file = SimpleNamespace(
+        filename="receipt.pdf",
+        content_type="application/pdf",
+        read=AsyncMock(return_value=b"pdf"),
+    )
+    with (
+        patch(
+            "src.api.v1.contracts.ledger.validate_upload_file",
+            new=AsyncMock(return_value={"valid": True}),
+            create=True,
+        ) as mock_validate,
+        patch(
+            "src.api.v1.contracts.ledger.build_party_filter_from_scope_context",
+            return_value=None,
+        ),
+        patch(
+            "src.api.v1.contracts.ledger.payment_voucher_service.upload_voucher",
+            new=AsyncMock(return_value=attachment),
+        ) as mock_upload,
+    ):
+        result = await upload_payment_flow_voucher(
+            flow_id="flow-001",
+            file=file,
+            db=AsyncMock(),
+            current_user=SimpleNamespace(id="user-001"),
+            _scope_ctx=SimpleNamespace(),
+            _authz=None,
+        )
+
+    assert result.id == "attachment-001"
+    mock_validate.assert_awaited_once_with(
+        file,
+        allowed_types=["application/pdf", "image/jpeg", "image/png"],
+        max_size=20 * 1024 * 1024,
+    )
+    file.read.assert_awaited_once_with(20 * 1024 * 1024 + 1)
+    assert mock_upload.await_args.kwargs["content"] == b"pdf"
+
+
+def test_download_payment_flow_voucher_returns_audited_file(client, tmp_path) -> None:
+    file_path = tmp_path / "receipt.pdf"
+    file_path.write_bytes(b"pdf")
+    prepared = SimpleNamespace(
+        path=file_path,
+        attachment=SimpleNamespace(
+            file_name="receipt.pdf",
+            file_type="pdf",
+        ),
+    )
+    with patch(
+        "src.api.v1.contracts.ledger.payment_voucher_service.prepare_download",
+        new=AsyncMock(return_value=prepared),
+        create=True,
+    ) as mock_download:
+        response = client.get(
+            "/api/v1/ledger/payment-flows/flow-001/vouchers/attachment-001/download"
+        )
+
+    assert response.status_code == 200
+    assert response.content == b"pdf"
+    assert mock_download.await_args.kwargs["attachment_id"] == "attachment-001"
+    assert mock_download.await_args.kwargs["user_id"] == "test_user_001"
+
+
+def test_list_payment_flow_voucher_audits_delegates_scope(client) -> None:
+    audits = [
+        {
+            "log_id": "log-1",
+            "user_id": "user-1",
+            "flow_id": "flow-001",
+            "attachment_id": "attachment-001",
+            "file_name": "receipt.pdf",
+            "downloaded_at": "2026-07-13T10:00:00",
+            "result": "success",
+        }
+    ]
+    with patch(
+        "src.api.v1.contracts.ledger.payment_voucher_service.list_download_audits",
+        new=AsyncMock(return_value=audits),
+        create=True,
+    ) as mock_list:
+        response = client.get(
+            "/api/v1/ledger/payment-flows/flow-001/voucher-download-audits"
+        )
+
+    assert response.status_code == 200
+    assert response.json()[0]["result"] == "success"
+    assert mock_list.await_args.kwargs["current_user_id"] == "test_user_001"
 
 
 def test_update_ledger_entry_follow_up_delegates_to_service(client) -> None:

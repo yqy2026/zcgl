@@ -1009,6 +1009,32 @@ class CRUDContractGroup:
         stmt = select(PaymentAllocation).where(PaymentAllocation.flow_id == flow_id)
         return list((await db.execute(stmt)).scalars().all())
 
+    async def list_payment_flows_by_target(
+        self,
+        db: AsyncSession,
+        *,
+        target_type: str,
+        target_id: str,
+    ) -> list[OperationalPaymentFlow]:
+        stmt = (
+            select(OperationalPaymentFlow)
+            .join(
+                PaymentAllocation,
+                PaymentAllocation.flow_id == OperationalPaymentFlow.flow_id,
+            )
+            .where(
+                PaymentAllocation.target_type == target_type,
+                PaymentAllocation.target_id == target_id,
+            )
+            .options(selectinload(OperationalPaymentFlow.allocations))
+            .distinct()
+            .order_by(
+                OperationalPaymentFlow.created_at.desc(),
+                OperationalPaymentFlow.flow_id.desc(),
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
     async def replace_payment_allocations(
         self,
         db: AsyncSession,

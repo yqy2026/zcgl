@@ -156,6 +156,13 @@ export const LEDGER_API = {
   EXPORT: '/ledger/entries/export',
   PAYMENT_FLOWS: '/ledger/payment-flows',
   PAYMENT_FLOW_ALLOCATIONS: (flowId: string) => `/ledger/payment-flows/${flowId}/allocations`,
+  PAYMENT_FLOW_VOID: (flowId: string) => `/ledger/payment-flows/${flowId}/void`,
+  PAYMENT_FLOW_CORRECT: (flowId: string) => `/ledger/payment-flows/${flowId}/correct`,
+  PAYMENT_FLOW_VOUCHERS: (flowId: string) => `/ledger/payment-flows/${flowId}/vouchers`,
+  PAYMENT_FLOW_VOUCHER_DOWNLOAD: (flowId: string, attachmentId: string) =>
+    `/ledger/payment-flows/${flowId}/vouchers/${attachmentId}/download`,
+  PAYMENT_FLOW_VOUCHER_DOWNLOAD_AUDITS: (flowId: string) =>
+    `/ledger/payment-flows/${flowId}/voucher-download-audits`,
   SERVICE_FEES: '/ledger/service-fees',
   SERVICE_FEES_GENERATE: '/ledger/service-fees/generate',
   SERVICE_FEE_RECONCILE: (entryId: string) => `/ledger/service-fees/${entryId}/reconcile`,

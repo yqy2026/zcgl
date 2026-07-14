@@ -137,6 +137,25 @@ class OperationLogCRUD:
         stmt = select(OperationLog).where(OperationLog.id == log_id)
         return (await db.execute(stmt)).scalars().first()
 
+    async def list_resource_actions_async(
+        self,
+        db: AsyncSession,
+        *,
+        resource_type: str,
+        resource_id: str,
+        action: str,
+    ) -> list[OperationLog]:
+        stmt = (
+            select(OperationLog)
+            .where(
+                OperationLog.resource_type == resource_type,
+                OperationLog.resource_id == resource_id,
+                OperationLog.action == action,
+            )
+            .order_by(OperationLog.created_at.desc(), OperationLog.id.desc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
     async def get_multi_with_count_async(
         self,
         db: AsyncSession,

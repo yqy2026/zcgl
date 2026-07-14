@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
+from src.crud.attachment import attachment_crud
 from src.crud.contract_group import contract_group_crud
 from src.crud.query_builder import PartyFilter
 from src.models.contract_group import (
@@ -91,6 +92,109 @@ class PaymentFlowService:
             data=payload,
             commit=commit,
         )
+
+    async def get_flow_in_scope(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
+        for_update: bool = False,
+    ) -> Any:
+        """Resolve a flow only after its frozen allocation scope is authorized."""
+        flow = await contract_group_crud.get_payment_flow(
+            db,
+            flow_id=flow_id,
+            for_update=for_update,
+        )
+        if flow is None:
+            raise ResourceNotFoundError("PaymentFlow", flow_id)
+        allocations = await contract_group_crud.list_payment_allocations_by_flow(
+            db,
+            flow_id=flow_id,
+        )
+        if not allocations:
+            raise ResourceNotFoundError("PaymentFlow", flow_id)
+        target_type = self._expected_target_type(_enum_value(flow.flow_type))
+        rows = self._existing_allocation_rows(
+            allocations,
+            expected_target_type=target_type,
+        )
+        targets = await self._load_targets(
+            db,
+            target_type=target_type,
+            rows=rows,
+        )
+        resolved_party_filter = await resolve_ledger_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        for target_id, target in targets.items():
+            assert_resource_in_scope(
+                target,
+                party_filter=resolved_party_filter,
+                resource_type="收付流水",
+                resource_id=target_id,
+            )
+        return flow
+
+    async def list_flows_by_target(
+        self,
+        db: AsyncSession,
+        *,
+        target_type: str,
+        target_id: str,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
+    ) -> list[Any]:
+        allowed_target_types = {
+            PaymentAllocationTargetType.CONTRACT_LEDGER_ENTRY.value,
+            PaymentAllocationTargetType.SERVICE_FEE_LEDGER.value,
+        }
+        if target_type not in allowed_target_types:
+            raise BusinessValidationError("unsupported payment allocation target type")
+        normalized_target_id = target_id.strip()
+        if normalized_target_id == "":
+            raise BusinessValidationError("payment allocation target id is required")
+
+        targets = await self._load_targets(
+            db,
+            target_type=target_type,
+            rows=[{"target_id": normalized_target_id}],
+        )
+        resolved_party_filter = await resolve_ledger_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        target = targets[normalized_target_id]
+        assert_resource_in_scope(
+            target,
+            party_filter=resolved_party_filter,
+            resource_type="台账分摊目标",
+            resource_id=normalized_target_id,
+        )
+
+        flows = await contract_group_crud.list_payment_flows_by_target(
+            db,
+            target_type=target_type,
+            target_id=normalized_target_id,
+        )
+        for flow in flows:
+            attachments = await attachment_crud.list_for_owner(
+                db,
+                owner_type="payment_flow",
+                owner_id=str(flow.flow_id),
+            )
+            linked_ids = {str(value) for value in flow.voucher_attachment_ids or []}
+            setattr(
+                flow,
+                "voucher_attachments",
+                [attachment for attachment in attachments if attachment.id in linked_ids],
+            )
+        return flows
 
     async def save_allocations(
         self,
@@ -182,6 +286,250 @@ class PaymentFlowService:
         if commit:
             await db.commit()
         return saved
+
+    async def void_flow(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+        reason: str,
+        actor_id: str,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
+    ) -> Any:
+        """Void one active flow and refresh every affected ledger target."""
+        normalized_reason = reason.strip()
+        normalized_actor_id = actor_id.strip()
+        if normalized_reason == "":
+            raise BusinessValidationError("payment flow lifecycle reason is required")
+        if normalized_actor_id == "":
+            raise BusinessValidationError("payment flow lifecycle actor is required")
+        try:
+            flow = await contract_group_crud.get_payment_flow(
+                db,
+                flow_id=flow_id,
+                for_update=True,
+            )
+            if flow is None:
+                raise ResourceNotFoundError("PaymentFlow", flow_id)
+            if _enum_value(getattr(flow, "status", None)) != (
+                OperationalPaymentFlowStatus.ACTIVE.value
+            ):
+                raise BusinessValidationError("only active payment flows can be voided")
+
+            allocations = await contract_group_crud.list_payment_allocations_by_flow(
+                db,
+                flow_id=flow_id,
+            )
+            if not allocations:
+                raise BusinessValidationError(
+                    "payment flow must have allocations before it can be voided"
+                )
+            target_type = self._expected_target_type(_enum_value(flow.flow_type))
+            rows = self._existing_allocation_rows(
+                allocations,
+                expected_target_type=target_type,
+            )
+            targets = await self._load_targets(
+                db,
+                target_type=target_type,
+                rows=rows,
+            )
+            resolved_party_filter = await resolve_ledger_party_filter(
+                db,
+                current_user_id=current_user_id,
+                party_filter=party_filter,
+            )
+            for target_id, target in targets.items():
+                assert_resource_in_scope(
+                    target,
+                    party_filter=resolved_party_filter,
+                    resource_type="收付流水",
+                    resource_id=target_id,
+                )
+
+            now = _utcnow()
+            flow.status = OperationalPaymentFlowStatus.VOIDED.value
+            flow.status_changed_by = normalized_actor_id
+            flow.status_changed_at = now
+            flow.status_change_reason = normalized_reason
+            flow.updated_at = now
+            await db.flush()
+            await self._sync_target_paid_amounts(
+                db,
+                target_type=target_type,
+                targets=targets,
+            )
+            await db.flush()
+            await db.commit()
+            return flow
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def correct_flow(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+        reason: str,
+        actor_id: str,
+        replacement_data: dict[str, Any],
+        allocations: list[dict[str, Any]],
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
+    ) -> Any:
+        """Replace one active flow while retaining the original audit record."""
+        normalized_reason = reason.strip()
+        normalized_actor_id = actor_id.strip()
+        if normalized_reason == "":
+            raise BusinessValidationError("payment flow lifecycle reason is required")
+        if normalized_actor_id == "":
+            raise BusinessValidationError("payment flow lifecycle actor is required")
+        if replacement_data.get("voucher_attachment_ids"):
+            raise BusinessValidationError(
+                "replacement voucher attachments must be uploaded after correction"
+            )
+
+        try:
+            original = await contract_group_crud.get_payment_flow(
+                db,
+                flow_id=flow_id,
+                for_update=True,
+            )
+            if original is None:
+                raise ResourceNotFoundError("PaymentFlow", flow_id)
+            if _enum_value(getattr(original, "status", None)) != (
+                OperationalPaymentFlowStatus.ACTIVE.value
+            ):
+                raise BusinessValidationError("only active payment flows can be corrected")
+
+            original_flow_type = _enum_value(original.flow_type)
+            replacement_flow_type = _enum_value(replacement_data.get("flow_type"))
+            if replacement_flow_type != original_flow_type:
+                raise BusinessValidationError(
+                    "replacement payment flow type must match original payment flow type"
+                )
+
+            replacement_amount = _as_decimal(replacement_data.get("amount"))
+            if replacement_amount <= 0:
+                raise BusinessValidationError(
+                    "payment flow amount must be greater than 0"
+                )
+            replacement_rows = self._normalize_allocations(allocations)
+            replacement_total = sum(
+                (row["amount"] for row in replacement_rows),
+                Decimal("0"),
+            )
+            if replacement_total != replacement_amount:
+                raise BusinessValidationError(
+                    "allocation amount total must equal payment flow amount"
+                )
+            original_target_type = self._expected_target_type(original_flow_type)
+            if any(
+                row["target_type"] != original_target_type
+                for row in replacement_rows
+            ):
+                raise BusinessValidationError(
+                    "payment flow type does not match allocation target type"
+                )
+
+            original_allocations = (
+                await contract_group_crud.list_payment_allocations_by_flow(
+                    db,
+                    flow_id=flow_id,
+                )
+            )
+            if not original_allocations:
+                raise BusinessValidationError(
+                    "payment flow must have allocations before it can be corrected"
+                )
+            original_rows = self._existing_allocation_rows(
+                original_allocations,
+                expected_target_type=original_target_type,
+            )
+            if not original_rows:
+                raise BusinessValidationError(
+                    "payment flow allocations do not match payment flow type"
+                )
+            targets = await self._load_targets(
+                db,
+                target_type=original_target_type,
+                rows=[*original_rows, *replacement_rows],
+            )
+            resolved_party_filter = await resolve_ledger_party_filter(
+                db,
+                current_user_id=current_user_id,
+                party_filter=party_filter,
+            )
+            for target_id, target in targets.items():
+                assert_resource_in_scope(
+                    target,
+                    party_filter=resolved_party_filter,
+                    resource_type="收付流水",
+                    resource_id=target_id,
+                )
+
+            original_targets = {
+                row["target_id"]: targets[row["target_id"]] for row in original_rows
+            }
+            replacement_targets = {
+                row["target_id"]: targets[row["target_id"]]
+                for row in replacement_rows
+            }
+            self._validate_target_periods(
+                rows=replacement_rows,
+                targets=replacement_targets,
+            )
+            self._validate_target_views(
+                flow_type=replacement_flow_type,
+                targets=replacement_targets,
+            )
+            self._validate_target_scope(targets=original_targets)
+            self._validate_target_scope(targets=replacement_targets)
+            if self._target_scope_identity(original_targets) != (
+                self._target_scope_identity(replacement_targets)
+            ):
+                raise BusinessValidationError(
+                    "replacement allocations must remain in original project, owner, "
+                    "operator, and currency scope"
+                )
+
+            now = _utcnow()
+            original.status = OperationalPaymentFlowStatus.CORRECTED.value
+            original.status_changed_by = normalized_actor_id
+            original.status_changed_at = now
+            original.status_change_reason = normalized_reason
+            original.updated_at = now
+            await db.flush()
+
+            replacement = await self.create_flow(
+                db,
+                data={
+                    **replacement_data,
+                    "corrected_from_flow_id": flow_id,
+                    "status": OperationalPaymentFlowStatus.ACTIVE.value,
+                },
+                registered_by=normalized_actor_id,
+                commit=False,
+            )
+            await contract_group_crud.replace_payment_allocations(
+                db,
+                flow_id=str(replacement.flow_id),
+                rows=replacement_rows,
+                commit=False,
+            )
+            await self._sync_target_paid_amounts(
+                db,
+                target_type=original_target_type,
+                targets=targets,
+            )
+            await db.flush()
+            await db.commit()
+            return replacement
+        except Exception:
+            await db.rollback()
+            raise
 
     @staticmethod
     def _normalize_allocations(
@@ -315,6 +663,15 @@ class PaymentFlowService:
                 "allocations must share the same project, owner, operator, and "
                 "currency scope"
             )
+
+    @staticmethod
+    def _target_scope_identity(targets: dict[str, Any]) -> tuple[Any, ...]:
+        if not targets:
+            raise BusinessValidationError("payment flow scope requires allocations")
+        return tuple(
+            getattr(next(iter(targets.values())), field, None)
+            for field in _SCOPE_FIELDS
+        )
 
     async def _sync_target_paid_amounts(
         self,

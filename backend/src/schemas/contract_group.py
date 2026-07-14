@@ -599,10 +599,37 @@ class OperationalPaymentFlowResponse(BaseModel):
     voucher_attachment_ids: list[str] | None = None
     notes: str | None = None
     status: OperationalPaymentFlowStatus
+    corrected_from_flow_id: str | None = None
+    status_changed_by: str | None = None
+    status_changed_at: datetime | None = None
+    status_change_reason: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentVoucherAttachmentResponse(BaseModel):
+    """Downloadable voucher metadata exposed with a payment flow."""
+
+    id: str
+    file_name: str
+    file_type: str
+    file_size: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentVoucherDownloadAuditResponse(BaseModel):
+    """Scoped evidence for one voucher download attempt."""
+
+    log_id: str
+    user_id: str
+    flow_id: str
+    attachment_id: str
+    file_name: str | None = None
+    downloaded_at: datetime
+    result: Literal["success", "not_found"]
 
 
 class PaymentAllocationCreate(BaseModel):
@@ -620,6 +647,19 @@ class PaymentAllocationSaveRequest(BaseModel):
     allocations: list[PaymentAllocationCreate] = Field(..., min_length=1)
 
 
+class PaymentFlowLifecycleActionRequest(BaseModel):
+    """Reason required for a payment-flow terminal action."""
+
+    reason: str = Field(..., min_length=1, max_length=500)
+
+
+class PaymentFlowCorrectionRequest(PaymentFlowLifecycleActionRequest):
+    """Atomic replacement payload for one active payment flow."""
+
+    replacement: OperationalPaymentFlowCreate
+    allocations: list[PaymentAllocationCreate] = Field(..., min_length=1)
+
+
 class PaymentAllocationResponse(BaseModel):
     """Response payload for a payment allocation."""
 
@@ -633,6 +673,15 @@ class PaymentAllocationResponse(BaseModel):
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OperationalPaymentFlowDetailResponse(OperationalPaymentFlowResponse):
+    """Payment flow with allocations and authorized voucher metadata."""
+
+    allocations: list[PaymentAllocationResponse] = Field(default_factory=list)
+    voucher_attachments: list[PaymentVoucherAttachmentResponse] = Field(
+        default_factory=list
+    )
 
 
 class ServiceFeeLedgerResponse(BaseModel):

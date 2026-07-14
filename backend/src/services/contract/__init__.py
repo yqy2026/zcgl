@@ -6,6 +6,7 @@ from . import (
     ledger_export_service,
     ledger_service_v2,
     payment_flow_service,
+    payment_voucher_service,
     service_fee_ledger_service,
 )
 
@@ -15,5 +16,6 @@ __all__ = [
     "ledger_export_service",
     "ledger_service_v2",
     "payment_flow_service",
+    "payment_voucher_service",
     "service_fee_ledger_service",
 ]

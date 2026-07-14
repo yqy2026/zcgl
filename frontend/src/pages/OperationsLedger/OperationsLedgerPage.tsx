@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   DatePicker,
+  Drawer,
   Empty,
   Form,
   Input,
@@ -16,7 +17,9 @@ import {
   Statistic,
   Table,
   Tag,
+  Upload,
 } from 'antd';
+import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -28,6 +31,7 @@ import {
   PROJECT_ROUTES,
   SYSTEM_ROUTES,
 } from '@/constants/routes';
+import { useCapabilities } from '@/hooks/useCapabilities';
 import { ledgerService } from '@/services/ledgerService';
 import type {
   LedgerEntry,
@@ -35,7 +39,10 @@ import type {
   LedgerListParams,
   LedgerPaymentStatus,
   OperationsLedgerView,
+  OperationalPaymentFlowDetail,
+  PaymentAllocationCreate,
   PaymentAllocationTargetType,
+  PaymentFlowTargetQuery,
   ServiceFeeLedger,
 } from '@/types/ledger';
 import { buildQueryScopeKey } from '@/utils/queryScope';
@@ -113,6 +120,25 @@ const SERVICE_FEE_STATUS_META: Record<string, { label: string; color: string }> 
   voided: { label: '已作废', color: 'gray' },
 };
 
+const PAYMENT_FLOW_STATUS_META: Record<string, { label: string; color: string }> = {
+  active: { label: '有效', color: 'green' },
+  voided: { label: '已作废', color: 'default' },
+  corrected: { label: '已更正', color: 'orange' },
+};
+
+const PAYMENT_FLOW_TYPE_LABELS: Record<string, string> = {
+  terminal_rent_receipt: '终端收款',
+  upstream_cost_payment: '上游付款',
+  service_fee_receipt: '服务费收款',
+};
+
+const PAYMENT_ALLOCATION_TARGET_OPTIONS = [
+  { label: '合同台账', value: 'contract_ledger_entry' },
+  { label: '服务费台账', value: 'service_fee_ledger' },
+];
+
+const ACCEPTED_VOUCHER_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png']);
+
 interface CashFlowFormValues {
   occurred_on?: Dayjs;
   amount?: number | null;
@@ -134,6 +160,26 @@ interface ServiceFeeGenerateFormValues {
 
 interface ServiceFeeReconcileFormValues {
   reason?: string;
+}
+
+interface PaymentFlowVoidFormValues {
+  reason?: string;
+}
+
+interface PaymentFlowCorrectionAllocationFormValues {
+  target_type?: PaymentAllocationTargetType;
+  target_id?: string;
+  year_month?: string;
+  amount?: number | null;
+}
+
+interface PaymentFlowCorrectionFormValues {
+  reason?: string;
+  occurred_on?: Dayjs;
+  amount?: number | null;
+  counterparty_id?: string;
+  notes?: string;
+  allocations?: PaymentFlowCorrectionAllocationFormValues[];
 }
 
 const resolveCurrentYearMonth = () => dayjs().format('YYYY-MM');
@@ -178,12 +224,15 @@ const isContractLedgerView = (
 
 const OperationsLedgerPage: React.FC = () => {
   const { message } = App.useApp();
+  const { canPerform } = useCapabilities();
   const [searchParams] = useSearchParams();
   const queryScopeKey = buildQueryScopeKey();
   const [cashFlowForm] = Form.useForm<CashFlowFormValues>();
   const [followUpForm] = Form.useForm<FollowUpFormValues>();
   const [serviceFeeGenerateForm] = Form.useForm<ServiceFeeGenerateFormValues>();
   const [serviceFeeReconcileForm] = Form.useForm<ServiceFeeReconcileFormValues>();
+  const [paymentFlowVoidForm] = Form.useForm<PaymentFlowVoidFormValues>();
+  const [paymentFlowCorrectionForm] = Form.useForm<PaymentFlowCorrectionFormValues>();
 
   const initialView = searchParams.get('ledger_view') as OperationsLedgerView | null;
   const [activeView, setActiveView] = useState<OperationsLedgerView>(
@@ -212,6 +261,14 @@ const OperationsLedgerPage: React.FC = () => {
   const [serviceFeeReconcileEntry, setServiceFeeReconcileEntry] = useState<ServiceFeeLedger | null>(
     null
   );
+  const [paymentFlowTarget, setPaymentFlowTarget] = useState<PaymentFlowTargetQuery | null>(null);
+  const [paymentFlowToVoid, setPaymentFlowToVoid] = useState<OperationalPaymentFlowDetail | null>(
+    null
+  );
+  const [paymentFlowToCorrect, setPaymentFlowToCorrect] =
+    useState<OperationalPaymentFlowDetail | null>(null);
+  const [paymentFlowForAudit, setPaymentFlowForAudit] =
+    useState<OperationalPaymentFlowDetail | null>(null);
   const [serviceFeeGroupId, setServiceFeeGroupId] = useState(
     searchParams.get('contract_group_id') ?? ''
   );
@@ -226,6 +283,9 @@ const OperationsLedgerPage: React.FC = () => {
   const normalizedPartyId = partyId.trim();
   const normalizedServiceFeeGroupId = serviceFeeGroupId.trim();
   const isServiceFeeView = activeView === 'service_fee_settlement';
+  const canUpdateLedger = canPerform('update', 'ledger');
+  const canReadLedger = canPerform('read', 'ledger');
+  const canReadLedgerVoucher = canPerform('read', 'ledger_voucher');
   const hasRequiredLedgerFilter =
     isContractLedgerView(activeView) &&
     (yearMonthStart != null ||
@@ -291,6 +351,37 @@ const OperationsLedgerPage: React.FC = () => {
     enabled: isServiceFeeView && (normalizedServiceFeeGroupId !== '' || normalizedProjectId !== ''),
   });
 
+  const paymentFlowsQuery = useQuery({
+    queryKey: [
+      'operations-ledger-payment-flows',
+      queryScopeKey,
+      paymentFlowTarget?.target_type,
+      paymentFlowTarget?.target_id,
+    ],
+    queryFn: () => {
+      if (paymentFlowTarget == null) {
+        throw new Error('缺少流水查询目标');
+      }
+      return ledgerService.listPaymentFlows(paymentFlowTarget);
+    },
+    enabled: paymentFlowTarget != null,
+  });
+
+  const voucherDownloadAuditsQuery = useQuery({
+    queryKey: [
+      'operations-ledger-voucher-download-audits',
+      queryScopeKey,
+      paymentFlowForAudit?.flow_id,
+    ],
+    queryFn: () => {
+      if (paymentFlowForAudit == null) {
+        throw new Error('缺少下载审计查询目标');
+      }
+      return ledgerService.listPaymentFlowVoucherDownloadAudits(paymentFlowForAudit.flow_id);
+    },
+    enabled: paymentFlowForAudit != null,
+  });
+
   const ledgerItems = hasRequiredLedgerFilter ? (ledgerQuery.data?.items ?? []) : [];
   const serviceFeeItems = isServiceFeeView ? (serviceFeeQuery.data ?? []) : [];
   const amountDueTotal = useMemo(
@@ -314,6 +405,126 @@ const OperationsLedgerPage: React.FC = () => {
     return ledgerItems.filter(item => selectedIdSet.has(item.entry_id));
   }, [ledgerItems, selectedEntryIds]);
   const selectedEntry = selectedEntries[0];
+
+  const refreshPaymentFlowContext = async () => {
+    await paymentFlowsQuery.refetch();
+    if (paymentFlowTarget?.target_type === 'service_fee_ledger') {
+      await serviceFeeQuery.refetch();
+    } else if (paymentFlowTarget?.target_type === 'contract_ledger_entry') {
+      await ledgerQuery.refetch();
+    }
+  };
+
+  const paymentFlowVoidMutation = useMutation({
+    mutationFn: async (values: PaymentFlowVoidFormValues) => {
+      if (paymentFlowToVoid == null) {
+        throw new Error('请选择要作废的流水');
+      }
+      const reason = normalizeText(values.reason);
+      if (reason == null) {
+        throw new Error('请填写作废原因');
+      }
+      return ledgerService.voidPaymentFlow(paymentFlowToVoid.flow_id, { reason });
+    },
+    onSuccess: async () => {
+      await refreshPaymentFlowContext();
+      setPaymentFlowToVoid(null);
+      paymentFlowVoidForm.resetFields();
+      message.success('收付流水已作废');
+    },
+  });
+
+  const paymentFlowCorrectionMutation = useMutation({
+    mutationFn: async (values: PaymentFlowCorrectionFormValues) => {
+      if (paymentFlowToCorrect == null) {
+        throw new Error('请选择要更正的流水');
+      }
+      const reason = normalizeText(values.reason);
+      const occurredOn = values.occurred_on;
+      const amount = values.amount;
+      if (reason == null) {
+        throw new Error('请填写更正原因');
+      }
+      if (occurredOn == null) {
+        throw new Error('请选择发生日期');
+      }
+      if (amount == null || Number.isNaN(amount) || amount <= 0) {
+        throw new Error('请输入有效金额');
+      }
+      const allocations = (values.allocations ?? []).map((allocation, index) => {
+        const targetId = normalizeText(allocation.target_id);
+        const yearMonth = normalizeText(allocation.year_month);
+        const allocationAmount = allocation.amount;
+        if (
+          allocation.target_type == null ||
+          targetId == null ||
+          yearMonth == null ||
+          allocationAmount == null ||
+          Number.isNaN(allocationAmount) ||
+          allocationAmount <= 0
+        ) {
+          throw new Error(`请完整填写第 ${index + 1} 条分摊`);
+        }
+        return {
+          target_type: allocation.target_type,
+          target_id: targetId,
+          year_month: yearMonth,
+          amount: allocationAmount,
+        } satisfies PaymentAllocationCreate;
+      });
+      if (allocations.length === 0) {
+        throw new Error('请至少保留一条分摊');
+      }
+      return ledgerService.correctPaymentFlow(paymentFlowToCorrect.flow_id, {
+        reason,
+        replacement: {
+          flow_type: paymentFlowToCorrect.flow_type,
+          occurred_on: occurredOn.format('YYYY-MM-DD'),
+          amount,
+          counterparty_id: normalizeText(values.counterparty_id),
+          notes: normalizeText(values.notes),
+        },
+        allocations,
+      });
+    },
+    onSuccess: async () => {
+      await refreshPaymentFlowContext();
+      setPaymentFlowToCorrect(null);
+      paymentFlowCorrectionForm.resetFields();
+      message.success('收付流水已更正');
+    },
+  });
+
+  const voucherUploadMutation = useMutation({
+    mutationFn: ({ flowId, file }: { flowId: string; file: File }) =>
+      ledgerService.uploadPaymentFlowVoucher(flowId, file),
+    onSuccess: async () => {
+      await paymentFlowsQuery.refetch();
+      message.success('凭证已上传');
+    },
+  });
+
+  const voucherDownloadMutation = useMutation({
+    mutationFn: async ({
+      flowId,
+      attachmentId,
+      fileName,
+    }: {
+      flowId: string;
+      attachmentId: string;
+      fileName: string;
+    }) => ({
+      blob: await ledgerService.downloadPaymentFlowVoucher(flowId, attachmentId),
+      fileName,
+      flowId,
+    }),
+    onSuccess: async ({ blob, fileName, flowId }) => {
+      ledgerService.triggerPaymentFlowVoucherDownload(blob, fileName);
+      if (paymentFlowForAudit?.flow_id === flowId) {
+        await voucherDownloadAuditsQuery.refetch();
+      }
+    },
+  });
 
   const cashFlowMutation = useMutation({
     mutationFn: async (values: CashFlowFormValues) => {
@@ -530,6 +741,42 @@ const OperationsLedgerPage: React.FC = () => {
       follow_up_note: selectedEntry.follow_up_note ?? undefined,
     });
     setFollowUpModalOpen(true);
+  };
+
+  const openPaymentFlowDrawer = (target: PaymentFlowTargetQuery) => {
+    setPaymentFlowForAudit(null);
+    setPaymentFlowTarget(target);
+  };
+
+  const openPaymentFlowCorrectionModal = (flow: OperationalPaymentFlowDetail) => {
+    paymentFlowCorrectionMutation.reset();
+    paymentFlowCorrectionForm.setFieldsValue({
+      occurred_on: dayjs(flow.occurred_on),
+      amount: Number(flow.amount),
+      counterparty_id: flow.counterparty_id ?? undefined,
+      notes: flow.notes ?? undefined,
+      allocations: flow.allocations.map(allocation => ({
+        target_type: allocation.target_type,
+        target_id: allocation.target_id,
+        year_month: allocation.year_month,
+        amount: Number(allocation.amount),
+      })),
+    });
+    setPaymentFlowToCorrect(flow);
+  };
+
+  const handleVoucherUpload = (flowId: string, file: File): boolean => {
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!ACCEPTED_VOUCHER_EXTENSIONS.has(extension)) {
+      message.error('仅支持 PDF、JPG、JPEG、PNG 凭证');
+      return false;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      message.error('单个凭证不能超过 20MB');
+      return false;
+    }
+    voucherUploadMutation.mutate({ flowId, file });
+    return false;
   };
 
   const columns = useMemo<ColumnsType<LedgerEntry>>(() => {
@@ -753,9 +1000,20 @@ const OperationsLedgerPage: React.FC = () => {
       {
         title: '操作',
         key: 'actions',
-        width: 190,
+        width: 280,
         render: (_, record) => (
           <Space size="small">
+            <Button
+              type="link"
+              onClick={() =>
+                openPaymentFlowDrawer({
+                  target_type: 'service_fee_ledger',
+                  target_id: record.service_fee_entry_id,
+                })
+              }
+            >
+              流水明细
+            </Button>
             <Button
               type="link"
               disabled={
@@ -776,8 +1034,135 @@ const OperationsLedgerPage: React.FC = () => {
         ),
       },
     ],
-    [openServiceFeeReceiptModal, openServiceFeeReconcileModal]
+    [openPaymentFlowDrawer, openServiceFeeReceiptModal, openServiceFeeReconcileModal]
   );
+
+  const paymentFlowColumns: ColumnsType<OperationalPaymentFlowDetail> = [
+    {
+      title: '流水 ID',
+      dataIndex: 'flow_id',
+      key: 'flow_id',
+      ellipsis: true,
+      width: 180,
+    },
+    {
+      title: '类型',
+      dataIndex: 'flow_type',
+      key: 'flow_type',
+      width: 120,
+      render: (value: string) => PAYMENT_FLOW_TYPE_LABELS[value] ?? value,
+    },
+    {
+      title: '发生日期',
+      dataIndex: 'occurred_on',
+      key: 'occurred_on',
+      width: 120,
+    },
+    {
+      title: '金额',
+      dataIndex: 'amount',
+      key: 'amount',
+      align: 'right',
+      width: 130,
+      render: (value: string | number) => formatAmount(value),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (value: string) => {
+        const meta = PAYMENT_FLOW_STATUS_META[value] ?? { label: value, color: 'default' };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
+    },
+    {
+      title: '状态原因',
+      dataIndex: 'status_change_reason',
+      key: 'status_change_reason',
+      ellipsis: true,
+      render: (value?: string | null) => value ?? '-',
+    },
+    {
+      title: '凭证',
+      key: 'vouchers',
+      width: 220,
+      render: (_, flow) =>
+        flow.voucher_attachments.length > 0 ? (
+          <Space orientation="vertical" size="small">
+            {flow.voucher_attachments.map(attachment =>
+              canReadLedgerVoucher ? (
+                <Button
+                  key={attachment.id}
+                  type="link"
+                  icon={<DownloadOutlined />}
+                  loading={voucherDownloadMutation.isPending}
+                  onClick={() =>
+                    voucherDownloadMutation.mutate({
+                      flowId: flow.flow_id,
+                      attachmentId: attachment.id,
+                      fileName: attachment.file_name,
+                    })
+                  }
+                >
+                  {attachment.file_name}
+                </Button>
+              ) : (
+                <span key={attachment.id}>{attachment.file_name}</span>
+              )
+            )}
+          </Space>
+        ) : (
+          '-'
+        ),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      fixed: 'right',
+      width: 260,
+      render: (_, flow) => (
+        <Space size="small" wrap>
+          {flow.status === 'active' && canUpdateLedger ? (
+            <>
+              <Button
+                type="link"
+                danger
+                onClick={() => {
+                  paymentFlowVoidForm.resetFields();
+                  paymentFlowVoidMutation.reset();
+                  setPaymentFlowToVoid(flow);
+                }}
+              >
+                作废
+              </Button>
+              <Button type="link" onClick={() => openPaymentFlowCorrectionModal(flow)}>
+                更正
+              </Button>
+              <Upload
+                accept=".pdf,.jpg,.jpeg,.png"
+                showUploadList={false}
+                beforeUpload={file => handleVoucherUpload(flow.flow_id, file)}
+              >
+                <Button
+                  type="link"
+                  icon={<UploadOutlined />}
+                  loading={voucherUploadMutation.isPending}
+                >
+                  上传凭证
+                </Button>
+              </Upload>
+            </>
+          ) : null}
+          {canReadLedger ? (
+            <Button type="link" onClick={() => setPaymentFlowForAudit(flow)}>
+              下载审计
+            </Button>
+          ) : null}
+        </Space>
+      ),
+    },
+  ];
 
   const selectedCanRegisterFlow =
     selectedEntry != null &&
@@ -956,6 +1341,19 @@ const OperationsLedgerPage: React.FC = () => {
                   </Button>
                   <Button disabled={!selectedCanFollowUp} onClick={openFollowUpModal}>
                     维护跟进
+                  </Button>
+                  <Button
+                    disabled={selectedEntry == null}
+                    onClick={() => {
+                      if (selectedEntry != null) {
+                        openPaymentFlowDrawer({
+                          target_type: 'contract_ledger_entry',
+                          target_id: selectedEntry.entry_id,
+                        });
+                      }
+                    }}
+                  >
+                    流水明细
                   </Button>
                   <Button
                     disabled={!hasRequiredLedgerFilter}
@@ -1220,6 +1618,264 @@ const OperationsLedgerPage: React.FC = () => {
             <Input.TextArea rows={3} maxLength={500} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Drawer
+        title="收付流水明细"
+        open={paymentFlowTarget != null}
+        size="large"
+        onClose={() => {
+          setPaymentFlowTarget(null);
+          setPaymentFlowForAudit(null);
+        }}
+      >
+        {paymentFlowsQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              paymentFlowsQuery.error instanceof Error
+                ? paymentFlowsQuery.error.message
+                : '收付流水加载失败'
+            }
+          />
+        ) : null}
+        {voucherUploadMutation.isError || voucherDownloadMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              voucherUploadMutation.error instanceof Error
+                ? voucherUploadMutation.error.message
+                : voucherDownloadMutation.error instanceof Error
+                  ? voucherDownloadMutation.error.message
+                  : '凭证操作失败'
+            }
+          />
+        ) : null}
+        <Table<OperationalPaymentFlowDetail>
+          rowKey="flow_id"
+          loading={paymentFlowsQuery.isLoading || paymentFlowsQuery.isFetching}
+          columns={paymentFlowColumns}
+          dataSource={paymentFlowsQuery.data ?? []}
+          pagination={false}
+          scroll={{ x: 1200 }}
+          locale={{
+            emptyText: <Empty description="暂无关联流水" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
+          }}
+        />
+      </Drawer>
+
+      <Modal
+        title="作废收付流水"
+        open={paymentFlowToVoid != null}
+        okText="确认作废"
+        cancelText="取消"
+        okButtonProps={{ danger: true }}
+        confirmLoading={paymentFlowVoidMutation.isPending}
+        onOk={() => {
+          paymentFlowVoidForm
+            .validateFields()
+            .then(values => paymentFlowVoidMutation.mutate(values))
+            .catch(() => undefined);
+        }}
+        onCancel={() => {
+          setPaymentFlowToVoid(null);
+          paymentFlowVoidForm.resetFields();
+          paymentFlowVoidMutation.reset();
+        }}
+      >
+        {paymentFlowVoidMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              paymentFlowVoidMutation.error instanceof Error
+                ? paymentFlowVoidMutation.error.message
+                : '收付流水作废失败'
+            }
+          />
+        ) : null}
+        <Form form={paymentFlowVoidForm} layout="vertical">
+          <Form.Item
+            label="作废原因"
+            name="reason"
+            rules={[{ required: true, whitespace: true, message: '请填写作废原因' }]}
+          >
+            <Input.TextArea rows={3} maxLength={500} showCount />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="更正收付流水"
+        open={paymentFlowToCorrect != null}
+        width={760}
+        okText="确认更正"
+        cancelText="取消"
+        confirmLoading={paymentFlowCorrectionMutation.isPending}
+        onOk={() => {
+          paymentFlowCorrectionForm
+            .validateFields()
+            .then(values => paymentFlowCorrectionMutation.mutate(values))
+            .catch(() => undefined);
+        }}
+        onCancel={() => {
+          setPaymentFlowToCorrect(null);
+          paymentFlowCorrectionForm.resetFields();
+          paymentFlowCorrectionMutation.reset();
+        }}
+      >
+        {paymentFlowCorrectionMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              paymentFlowCorrectionMutation.error instanceof Error
+                ? paymentFlowCorrectionMutation.error.message
+                : '收付流水更正失败'
+            }
+          />
+        ) : null}
+        <Form form={paymentFlowCorrectionForm} layout="vertical">
+          <Form.Item
+            label="更正原因"
+            name="reason"
+            rules={[{ required: true, whitespace: true, message: '请填写更正原因' }]}
+          >
+            <Input.TextArea rows={3} maxLength={500} showCount />
+          </Form.Item>
+          <Space size="middle" className={styles.fullWidthControl} align="start">
+            <Form.Item
+              label="发生日期"
+              name="occurred_on"
+              rules={[{ required: true, message: '请选择发生日期' }]}
+            >
+              <DatePicker />
+            </Form.Item>
+            <Form.Item
+              label="金额"
+              name="amount"
+              rules={[{ required: true, message: '请输入金额' }]}
+            >
+              <InputNumber min={0.01} precision={2} />
+            </Form.Item>
+          </Space>
+          <Form.Item label="对方主体 ID" name="counterparty_id">
+            <Input />
+          </Form.Item>
+          <Form.Item label="备注" name="notes">
+            <Input.TextArea rows={2} maxLength={200} />
+          </Form.Item>
+          <Form.List name="allocations">
+            {(fields, { add, remove }) => (
+              <Space orientation="vertical" className={styles.fullWidthControl} size="middle">
+                {fields.map((field, index) => (
+                  <Space key={field.key} align="start" wrap>
+                    <Form.Item
+                      label={index === 0 ? '分摊类型' : undefined}
+                      name={[field.name, 'target_type']}
+                      rules={[{ required: true, message: '请选择类型' }]}
+                    >
+                      <Select options={PAYMENT_ALLOCATION_TARGET_OPTIONS} style={{ width: 140 }} />
+                    </Form.Item>
+                    <Form.Item
+                      label={index === 0 ? '目标 ID' : undefined}
+                      name={[field.name, 'target_id']}
+                      rules={[{ required: true, whitespace: true, message: '请填写目标 ID' }]}
+                    >
+                      <Input style={{ width: 190 }} />
+                    </Form.Item>
+                    <Form.Item
+                      label={index === 0 ? '账期' : undefined}
+                      name={[field.name, 'year_month']}
+                      rules={[
+                        { required: true, pattern: /^\d{4}-\d{2}$/, message: '格式 YYYY-MM' },
+                      ]}
+                    >
+                      <Input placeholder="YYYY-MM" style={{ width: 110 }} />
+                    </Form.Item>
+                    <Form.Item
+                      label={index === 0 ? '分摊金额' : undefined}
+                      name={[field.name, 'amount']}
+                      rules={[{ required: true, message: '请输入金额' }]}
+                    >
+                      <InputNumber min={0.01} precision={2} style={{ width: 130 }} />
+                    </Form.Item>
+                    <Button
+                      danger
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      aria-label="移除分摊"
+                      disabled={fields.length === 1}
+                      onClick={() => remove(field.name)}
+                    />
+                  </Space>
+                ))}
+                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} block>
+                  添加分摊
+                </Button>
+              </Space>
+            )}
+          </Form.List>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="凭证下载审计"
+        open={paymentFlowForAudit != null}
+        footer={null}
+        width={760}
+        onCancel={() => setPaymentFlowForAudit(null)}
+      >
+        {voucherDownloadAuditsQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              voucherDownloadAuditsQuery.error instanceof Error
+                ? voucherDownloadAuditsQuery.error.message
+                : '下载审计加载失败'
+            }
+          />
+        ) : null}
+        <Table
+          rowKey="log_id"
+          loading={voucherDownloadAuditsQuery.isLoading || voucherDownloadAuditsQuery.isFetching}
+          dataSource={voucherDownloadAuditsQuery.data ?? []}
+          pagination={false}
+          columns={[
+            { title: '用户', dataIndex: 'user_id', key: 'user_id', ellipsis: true },
+            {
+              title: '附件',
+              dataIndex: 'file_name',
+              key: 'file_name',
+              ellipsis: true,
+              render: (value?: string | null) => value ?? '-',
+            },
+            {
+              title: '结果',
+              dataIndex: 'result',
+              key: 'result',
+              width: 100,
+              render: (value: 'success' | 'not_found') => (
+                <Tag color={value === 'success' ? 'green' : 'red'}>
+                  {value === 'success' ? '文件已就绪' : '未找到'}
+                </Tag>
+              ),
+            },
+            {
+              title: '时间',
+              dataIndex: 'downloaded_at',
+              key: 'downloaded_at',
+              width: 180,
+              render: (value: string) => dayjs(value).format('YYYY-MM-DD HH:mm:ss'),
+            },
+          ]}
+          locale={{
+            emptyText: <Empty description="暂无下载审计" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
+          }}
+        />
       </Modal>
     </PageContainer>
   );

@@ -2,12 +2,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, renderWithProviders, screen, waitFor, within } from '@/test/utils/test-helpers';
 import OperationsLedgerPage from '../OperationsLedgerPage';
 
+const mockCanPerform = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/useCapabilities', () => ({
+  useCapabilities: () => ({ canPerform: mockCanPerform }),
+}));
+
 vi.mock('@/services/ledgerService', () => ({
   ledgerService: {
     getLedgerEntries: vi.fn(),
     exportLedgerEntries: vi.fn(),
     createPaymentFlow: vi.fn(),
     savePaymentFlowAllocations: vi.fn(),
+    listPaymentFlows: vi.fn(),
+    voidPaymentFlow: vi.fn(),
+    correctPaymentFlow: vi.fn(),
+    uploadPaymentFlowVoucher: vi.fn(),
+    downloadPaymentFlowVoucher: vi.fn(),
+    listPaymentFlowVoucherDownloadAudits: vi.fn(),
+    triggerPaymentFlowVoucherDownload: vi.fn(),
     generateServiceFees: vi.fn(),
     listServiceFees: vi.fn(),
     reconcileServiceFeeSource: vi.fn(),
@@ -69,6 +82,7 @@ const selectFirstLedgerRow = () => {
 describe('OperationsLedgerPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCanPerform.mockReturnValue(true);
     vi.mocked(ledgerService.getLedgerEntries).mockResolvedValue({
       items: [
         {
@@ -116,6 +130,49 @@ describe('OperationsLedgerPage', () => {
         amount: '10000.00',
       },
     ]);
+    vi.mocked(ledgerService.listPaymentFlows).mockResolvedValue([
+      {
+        flow_id: 'flow-active',
+        flow_type: 'terminal_rent_receipt',
+        occurred_on: '2026-05-10',
+        amount: '1000.00',
+        registered_by: 'operator',
+        status: 'active',
+        allocations: [
+          {
+            allocation_id: 'allocation-active',
+            flow_id: 'flow-active',
+            target_type: 'contract_ledger_entry',
+            target_id: 'ledger-1',
+            year_month: '2026-05',
+            amount: '1000.00',
+          },
+        ],
+        voucher_attachments: [
+          {
+            id: 'attachment-1',
+            file_name: 'receipt.pdf',
+            file_type: 'application/pdf',
+            file_size: 7,
+          },
+        ],
+      },
+      {
+        flow_id: 'flow-voided',
+        flow_type: 'terminal_rent_receipt',
+        occurred_on: '2026-05-09',
+        amount: '500.00',
+        registered_by: 'operator',
+        status: 'voided',
+        status_changed_by: 'operator',
+        status_changed_at: '2026-05-11T10:00:00Z',
+        status_change_reason: '重复登记',
+        allocations: [],
+        voucher_attachments: [],
+      },
+    ]);
+    vi.mocked(ledgerService.downloadPaymentFlowVoucher).mockResolvedValue(new Blob(['voucher']));
+    vi.mocked(ledgerService.listPaymentFlowVoucherDownloadAudits).mockResolvedValue([]);
     vi.mocked(ledgerService.generateServiceFees).mockResolvedValue({
       created: 1,
       updated: 0,
@@ -423,5 +480,52 @@ describe('OperationsLedgerPage', () => {
     expect(await screen.findByText('contract-1')).toBeInTheDocument();
     selectFirstLedgerRow();
     expect(screen.getByRole('button', { name: /登记收款/ })).toBeDisabled();
+  });
+
+  it('shows lifecycle actions only for active payment flows', async () => {
+    renderWithProviders(<OperationsLedgerPage />);
+
+    expect(await screen.findByText('contract-1')).toBeInTheDocument();
+    selectFirstLedgerRow();
+    fireEvent.click(screen.getByRole('button', { name: '流水明细' }));
+
+    await waitFor(() => {
+      expect(ledgerService.listPaymentFlows).toHaveBeenCalledWith({
+        target_type: 'contract_ledger_entry',
+        target_id: 'ledger-1',
+      });
+    });
+    const activeRow = (await screen.findByText('flow-active')).closest('tr');
+    const voidedRow = screen.getByText('flow-voided').closest('tr');
+    if (activeRow == null || voidedRow == null) {
+      throw new Error('payment flow rows missing');
+    }
+    expect(within(activeRow).getByRole('button', { name: '作废' })).toBeInTheDocument();
+    expect(within(activeRow).getByRole('button', { name: '更正' })).toBeInTheDocument();
+    expect(within(voidedRow).queryByRole('button', { name: '作废' })).not.toBeInTheDocument();
+    expect(within(voidedRow).queryByRole('button', { name: '更正' })).not.toBeInTheDocument();
+  });
+
+  it('hides lifecycle and voucher download commands without capabilities', async () => {
+    mockCanPerform.mockImplementation(
+      (action: string, resource: string) => action === 'read' && resource === 'ledger'
+    );
+    renderWithProviders(<OperationsLedgerPage />);
+
+    expect(await screen.findByText('contract-1')).toBeInTheDocument();
+    selectFirstLedgerRow();
+    fireEvent.click(screen.getByRole('button', { name: '流水明细' }));
+
+    const activeRow = (await screen.findByText('flow-active')).closest('tr');
+    if (activeRow == null) {
+      throw new Error('active payment flow row missing');
+    }
+    expect(within(activeRow).queryByRole('button', { name: '作废' })).not.toBeInTheDocument();
+    expect(within(activeRow).queryByRole('button', { name: '更正' })).not.toBeInTheDocument();
+    expect(within(activeRow).queryByRole('button', { name: '上传凭证' })).not.toBeInTheDocument();
+    expect(
+      within(activeRow).queryByRole('button', { name: 'receipt.pdf' })
+    ).not.toBeInTheDocument();
+    expect(within(activeRow).getByText('receipt.pdf')).toBeInTheDocument();
   });
 });

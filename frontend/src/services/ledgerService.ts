@@ -9,8 +9,14 @@ import type {
   LedgerRecalculateResult,
   OperationalPaymentFlow,
   OperationalPaymentFlowCreate,
+  OperationalPaymentFlowDetail,
   PaymentAllocation,
   PaymentAllocationCreate,
+  PaymentFlowCorrectionPayload,
+  PaymentFlowVoidPayload,
+  PaymentFlowTargetQuery,
+  PaymentVoucherAttachment,
+  PaymentVoucherDownloadAudit,
   ServiceFeeGeneratePayload,
   ServiceFeeGenerateResult,
   ServiceFeeLedger,
@@ -95,6 +101,145 @@ export class LedgerService {
 
       if (!result.success || result.data == null) {
         throw new Error(`创建经营收付流水失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async listPaymentFlows(params: PaymentFlowTargetQuery): Promise<OperationalPaymentFlowDetail[]> {
+    try {
+      const result = await apiClient.get<OperationalPaymentFlowDetail[]>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOWS,
+        {
+          params,
+          cache: false,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`查询经营收付流水失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async voidPaymentFlow(
+    flowId: string,
+    payload: PaymentFlowVoidPayload
+  ): Promise<OperationalPaymentFlow> {
+    try {
+      const result = await apiClient.post<OperationalPaymentFlow>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOW_VOID(flowId),
+        payload,
+        { retry: false, smartExtract: true }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`作废经营收付流水失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async correctPaymentFlow(
+    flowId: string,
+    payload: PaymentFlowCorrectionPayload
+  ): Promise<OperationalPaymentFlow> {
+    try {
+      const result = await apiClient.post<OperationalPaymentFlow>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOW_CORRECT(flowId),
+        payload,
+        { retry: false, smartExtract: true }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`更正经营收付流水失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async downloadPaymentFlowVoucher(flowId: string, attachmentId: string): Promise<Blob> {
+    try {
+      const result = await apiClient.get<Blob>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOW_VOUCHER_DOWNLOAD(flowId, attachmentId),
+        {
+          cache: false,
+          retry: false,
+          responseType: 'blob',
+          smartExtract: false,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`下载收付流水凭证失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async uploadPaymentFlowVoucher(flowId: string, file: File): Promise<PaymentVoucherAttachment> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await apiClient.post<PaymentVoucherAttachment>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOW_VOUCHERS(flowId),
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          retry: false,
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`上传收付流水凭证失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async listPaymentFlowVoucherDownloadAudits(
+    flowId: string
+  ): Promise<PaymentVoucherDownloadAudit[]> {
+    try {
+      const result = await apiClient.get<PaymentVoucherDownloadAudit[]>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOW_VOUCHER_DOWNLOAD_AUDITS(flowId),
+        {
+          cache: false,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`查询收付流水凭证下载审计失败: ${result.error}`);
       }
 
       return result.data;
@@ -249,6 +394,18 @@ export class LedgerService {
     const link = document.createElement('a');
     link.href = url;
     link.download = `operations-ledger.${extension}`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  triggerPaymentFlowVoucherDownload(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();

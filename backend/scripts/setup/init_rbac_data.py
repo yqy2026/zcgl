@@ -68,6 +68,7 @@ BUSINESS_RESOURCES = {
     "contract",
     "contract_group",
     "ledger",
+    "ledger_voucher",
     "analytics",
     "excel_config",
     "audit",
@@ -107,6 +108,7 @@ ROLE_PERMISSION_MATRIX: dict[str, callable] = {
                 "contract",
                 "contract_group",
                 "ledger",
+                "ledger_voucher",
             }
             and p.action in {"create", "read", "update", "delete"}
         )
@@ -161,8 +163,10 @@ BASIC_PERMISSIONS_DATA = [
     ("contract_group", "create", "创建合同组", "创建新合同组"),
     ("contract_group", "update", "更新合同组", "更新合同组信息"),
     ("contract_group", "delete", "删除合同组", "删除合同组"),
+    ("ledger", "read", "查看经营台账", "查看经营台账与收付流水"),
     ("ledger", "create", "创建经营台账", "创建经营台账收款流水与费用台账"),
     ("ledger", "update", "更新经营台账", "更新经营台账分配与匹配状态"),
+    ("ledger_voucher", "read", "下载收付流水凭证", "下载收付流水凭证并记录审计证据"),
     # 分析权限
     ("analytics", "read", "查看分析", "查看分析信息"),
     ("analytics", "export", "导出分析", "导出分析数据"),

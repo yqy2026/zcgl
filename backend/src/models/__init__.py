@@ -20,6 +20,7 @@ from .associations import (  # noqa: F401  # noqa: F401
     contract_scan_document_links,
     property_cert_assets,
 )
+from .attachment import Attachment  # noqa: F401
 from .auth import AuditLog, User, UserSession  # noqa: F401
 from .certificate_party_relation import (  # noqa: F401
     CertificatePartyRelation,
@@ -105,6 +106,7 @@ from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
 from .user_party_binding import RelationType, UserPartyBinding  # noqa: F401
 
 __all__ = [
+    "Attachment",
     "Asset",
     "AssetManagementHistory",
     "AssetHistory",

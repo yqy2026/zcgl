@@ -657,3 +657,520 @@ async def test_save_allocations_resets_removed_target_paid_amount(mock_db) -> No
         "entry-new",
     }
     assert mock_get_ledger_entries.await_args.kwargs["for_update"] is True
+
+
+async def test_void_flow_removes_its_allocations_from_paid_totals(mock_db) -> None:
+    """作废必须在同一事务内锁定流水，并立即重算受影响台账。"""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    flow = SimpleNamespace(
+        flow_id="flow-1",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("1000.00"),
+        status="active",
+        status_changed_by=None,
+        status_changed_at=None,
+        status_change_reason=None,
+    )
+    allocation = SimpleNamespace(
+        target_type="contract_ledger_entry",
+        target_id="entry-1",
+        year_month="2026-07",
+        amount=Decimal("1000.00"),
+    )
+    entry = _contract_ledger_target(
+        entry_id="entry-1",
+        paid_amount=Decimal("1000.00"),
+        payment_status="paid",
+    )
+
+    with (
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+            new=AsyncMock(return_value=flow),
+        ) as mock_get_flow,
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.list_payment_allocations_by_flow",
+            new=AsyncMock(return_value=[allocation]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_ledger_entries_by_ids",
+            new=AsyncMock(return_value=[entry]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.sum_active_allocations_by_target",
+            new=AsyncMock(return_value=Decimal("0")),
+        ),
+    ):
+        result = await payment_flow_service.void_flow(
+            mock_db,
+            flow_id="flow-1",
+            reason="重复登记",
+            actor_id="user-1",
+        )
+
+    assert result is flow
+    assert flow.status == "voided"
+    assert flow.status_changed_by == "user-1"
+    assert flow.status_change_reason == "重复登记"
+    assert flow.status_changed_at is not None
+    assert entry.paid_amount == Decimal("0")
+    assert entry.payment_status == "unpaid"
+    mock_get_flow.assert_awaited_once_with(mock_db, flow_id="flow-1", for_update=True)
+    mock_db.commit.assert_awaited_once()
+
+
+async def test_void_flow_requires_a_nonblank_actor(mock_db) -> None:
+    """审计操作人为空时必须在读取或修改流水前失败。"""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    with pytest.raises(
+        BusinessValidationError,
+        match="payment flow lifecycle actor is required",
+    ):
+        await payment_flow_service.void_flow(
+            mock_db,
+            flow_id="flow-1",
+            reason="重复登记",
+            actor_id="  ",
+        )
+
+    mock_db.commit.assert_not_awaited()
+    mock_db.rollback.assert_not_awaited()
+
+
+async def test_correct_flow_replaces_active_flow_in_one_transaction(mock_db) -> None:
+    """更正必须保留原流水，并以单次提交创建可追溯的新流水。"""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    original = SimpleNamespace(
+        flow_id="flow-original",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("1000.00"),
+        status="active",
+        status_changed_by=None,
+        status_changed_at=None,
+        status_change_reason=None,
+    )
+    replacement = SimpleNamespace(
+        flow_id="flow-replacement",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("900.00"),
+        status="active",
+        corrected_from_flow_id="flow-original",
+    )
+    original_allocation = SimpleNamespace(
+        target_type="contract_ledger_entry",
+        target_id="entry-1",
+        year_month="2026-07",
+        amount=Decimal("1000.00"),
+    )
+    entry = _contract_ledger_target(
+        entry_id="entry-1",
+        amount_due=Decimal("1000.00"),
+        paid_amount=Decimal("1000.00"),
+        payment_status="paid",
+    )
+
+    with (
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+            new=AsyncMock(return_value=original),
+        ) as mock_get_flow,
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.list_payment_allocations_by_flow",
+            new=AsyncMock(return_value=[original_allocation]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_ledger_entries_by_ids",
+            new=AsyncMock(return_value=[entry]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.create_payment_flow",
+            new=AsyncMock(return_value=replacement),
+        ) as mock_create,
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.replace_payment_allocations",
+            new=AsyncMock(return_value=[SimpleNamespace(allocation_id="allocation-new")]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.sum_active_allocations_by_target",
+            new=AsyncMock(return_value=Decimal("900.00")),
+        ),
+    ):
+        result = await payment_flow_service.correct_flow(
+            mock_db,
+            flow_id="flow-original",
+            reason="金额录入错误",
+            actor_id="user-1",
+            replacement_data={
+                "flow_type": "terminal_rent_receipt",
+                "occurred_on": "2026-07-02",
+                "amount": Decimal("900.00"),
+            },
+            allocations=[
+                {
+                    "target_type": "contract_ledger_entry",
+                    "target_id": "entry-1",
+                    "year_month": "2026-07",
+                    "amount": Decimal("900.00"),
+                }
+            ],
+        )
+
+    assert result is replacement
+    assert original.status == "corrected"
+    assert original.status_changed_by == "user-1"
+    assert original.status_change_reason == "金额录入错误"
+    assert original.status_changed_at is not None
+    assert entry.paid_amount == Decimal("900.00")
+    assert entry.payment_status == "partial"
+    assert mock_get_flow.await_args_list[0].kwargs["for_update"] is True
+    assert mock_create.await_args.kwargs["data"]["corrected_from_flow_id"] == (
+        "flow-original"
+    )
+    assert mock_create.await_args.kwargs["commit"] is False
+    mock_db.commit.assert_awaited_once()
+    mock_db.rollback.assert_not_awaited()
+
+
+async def test_correct_flow_rejects_moving_fact_to_another_scope(mock_db) -> None:
+    """A correction fixes a fact; it must not move that fact to another scope."""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    original = SimpleNamespace(
+        flow_id="flow-original",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("1000.00"),
+        status="active",
+        status_changed_by=None,
+        status_changed_at=None,
+        status_change_reason=None,
+    )
+    original_allocation = SimpleNamespace(
+        target_type="contract_ledger_entry",
+        target_id="entry-original",
+        year_month="2026-07",
+        amount=Decimal("1000.00"),
+    )
+    original_entry = _contract_ledger_target(entry_id="entry-original")
+    other_project_entry = _contract_ledger_target(
+        entry_id="entry-other-project",
+        project_id="project-2",
+    )
+
+    with (
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+            new=AsyncMock(return_value=original),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.list_payment_allocations_by_flow",
+            new=AsyncMock(return_value=[original_allocation]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_ledger_entries_by_ids",
+            new=AsyncMock(return_value=[original_entry, other_project_entry]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.create_payment_flow",
+            new=AsyncMock(),
+        ) as mock_create,
+    ):
+        with pytest.raises(
+            BusinessValidationError,
+            match="replacement allocations must remain in original project, owner, operator, and currency scope",
+        ):
+            await payment_flow_service.correct_flow(
+                mock_db,
+                flow_id="flow-original",
+                reason="wrong target",
+                actor_id="user-1",
+                replacement_data={
+                    "flow_type": "terminal_rent_receipt",
+                    "occurred_on": "2026-07-02",
+                    "amount": Decimal("1000.00"),
+                },
+                allocations=[
+                    {
+                        "target_type": "contract_ledger_entry",
+                        "target_id": "entry-other-project",
+                        "year_month": "2026-07",
+                        "amount": Decimal("1000.00"),
+                    }
+                ],
+            )
+
+    mock_create.assert_not_awaited()
+    mock_db.commit.assert_not_awaited()
+    mock_db.rollback.assert_awaited_once()
+
+
+async def test_correct_flow_locks_original_and_replacement_targets_in_stable_order(
+    mock_db,
+) -> None:
+    """A single sorted lock set prevents opposite corrections from deadlocking."""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    original = SimpleNamespace(
+        flow_id="flow-original",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("1000.00"),
+        status="active",
+        status_changed_by=None,
+        status_changed_at=None,
+        status_change_reason=None,
+    )
+    replacement = SimpleNamespace(
+        flow_id="flow-replacement",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("1000.00"),
+        status="active",
+    )
+    original_allocation = SimpleNamespace(
+        target_type="contract_ledger_entry",
+        target_id="entry-z",
+        year_month="2026-07",
+        amount=Decimal("1000.00"),
+    )
+    original_entry = _contract_ledger_target(entry_id="entry-z")
+    replacement_entry = _contract_ledger_target(entry_id="entry-a")
+
+    with (
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+            new=AsyncMock(return_value=original),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.list_payment_allocations_by_flow",
+            new=AsyncMock(return_value=[original_allocation]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_ledger_entries_by_ids",
+            new=AsyncMock(return_value=[replacement_entry, original_entry]),
+        ) as mock_get_entries,
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.create_payment_flow",
+            new=AsyncMock(return_value=replacement),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.replace_payment_allocations",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.sum_active_allocations_by_target",
+            new=AsyncMock(return_value=Decimal("1000.00")),
+        ),
+    ):
+        await payment_flow_service.correct_flow(
+            mock_db,
+            flow_id="flow-original",
+            reason="wrong target",
+            actor_id="user-1",
+            replacement_data={
+                "flow_type": "terminal_rent_receipt",
+                "occurred_on": "2026-07-02",
+                "amount": Decimal("1000.00"),
+            },
+            allocations=[
+                {
+                    "target_type": "contract_ledger_entry",
+                    "target_id": "entry-a",
+                    "year_month": "2026-07",
+                    "amount": Decimal("1000.00"),
+                }
+            ],
+        )
+
+    mock_get_entries.assert_awaited_once_with(
+        mock_db,
+        entry_ids=["entry-a", "entry-z"],
+        for_update=True,
+    )
+
+
+async def test_correct_flow_rejects_changing_payment_flow_type(mock_db) -> None:
+    """Changing receipt/payment semantics requires a separate fact, not correction."""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    original = SimpleNamespace(
+        flow_id="flow-original",
+        flow_type="terminal_rent_receipt",
+        amount=Decimal("1000.00"),
+        status="active",
+    )
+    with patch(
+        "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+        new=AsyncMock(return_value=original),
+    ):
+        with pytest.raises(
+            BusinessValidationError,
+            match="replacement payment flow type must match original payment flow type",
+        ):
+            await payment_flow_service.correct_flow(
+                mock_db,
+                flow_id="flow-original",
+                reason="wrong type",
+                actor_id="user-1",
+                replacement_data={
+                    "flow_type": "upstream_cost_payment",
+                    "occurred_on": "2026-07-02",
+                    "amount": Decimal("1000.00"),
+                },
+                allocations=[],
+            )
+
+    mock_db.commit.assert_not_awaited()
+    mock_db.rollback.assert_awaited_once()
+
+
+@pytest.mark.parametrize("status", ["voided", "corrected"])
+async def test_void_flow_rejects_repeated_terminal_action(
+    mock_db,
+    status: str,
+) -> None:
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    flow = SimpleNamespace(flow_id="flow-1", status=status)
+    with patch(
+        "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+        new=AsyncMock(return_value=flow),
+    ):
+        with pytest.raises(
+            BusinessValidationError,
+            match="only active payment flows can be voided",
+        ):
+            await payment_flow_service.void_flow(
+                mock_db,
+                flow_id="flow-1",
+                reason="重复操作",
+                actor_id="user-1",
+            )
+
+    mock_db.commit.assert_not_awaited()
+    mock_db.rollback.assert_awaited_once()
+
+
+async def test_correct_flow_rejects_voided_flow(mock_db) -> None:
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    flow = SimpleNamespace(flow_id="flow-1", status="voided")
+    with patch(
+        "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+        new=AsyncMock(return_value=flow),
+    ):
+        with pytest.raises(
+            BusinessValidationError,
+            match="only active payment flows can be corrected",
+        ):
+            await payment_flow_service.correct_flow(
+                mock_db,
+                flow_id="flow-1",
+                reason="尝试更正",
+                actor_id="user-1",
+                replacement_data={
+                    "flow_type": "terminal_rent_receipt",
+                    "occurred_on": "2026-07-02",
+                    "amount": Decimal("900.00"),
+                },
+                allocations=[],
+            )
+
+    mock_db.commit.assert_not_awaited()
+    mock_db.rollback.assert_awaited_once()
+
+
+async def test_correct_flow_rejects_copying_vouchers_from_original(mock_db) -> None:
+    """更正后继不能引用仍归原流水所有的凭证元数据。"""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    with pytest.raises(
+        BusinessValidationError,
+        match="replacement voucher attachments must be uploaded after correction",
+    ):
+        await payment_flow_service.correct_flow(
+            mock_db,
+            flow_id="flow-original",
+            reason="金额错误",
+            actor_id="user-1",
+            replacement_data={
+                "flow_type": "terminal_rent_receipt",
+                "occurred_on": "2026-07-02",
+                "amount": Decimal("900.00"),
+                "voucher_attachment_ids": ["attachment-original"],
+            },
+            allocations=[],
+        )
+
+    mock_db.commit.assert_not_awaited()
+    mock_db.rollback.assert_not_awaited()
+
+
+async def test_correct_flow_rolls_back_when_replacement_allocation_fails(
+    mock_db,
+) -> None:
+    """新分摊失败时，原流水的终态变更不得提交。"""
+    from src.services.contract.payment_flow_service import payment_flow_service
+
+    original = SimpleNamespace(
+        flow_id="flow-original",
+        flow_type="terminal_rent_receipt",
+        status="active",
+        status_changed_by=None,
+        status_changed_at=None,
+        status_change_reason=None,
+    )
+    replacement = SimpleNamespace(flow_id="flow-replacement")
+    original_allocation = SimpleNamespace(
+        target_type="contract_ledger_entry",
+        target_id="entry-1",
+        year_month="2026-07",
+        amount=Decimal("1000.00"),
+    )
+    entry = _contract_ledger_target(entry_id="entry-1")
+
+    with (
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_payment_flow",
+            new=AsyncMock(return_value=original),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.list_payment_allocations_by_flow",
+            new=AsyncMock(return_value=[original_allocation]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.get_ledger_entries_by_ids",
+            new=AsyncMock(return_value=[entry]),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.create_payment_flow",
+            new=AsyncMock(return_value=replacement),
+        ),
+        patch(
+            "src.services.contract.payment_flow_service.contract_group_crud.replace_payment_allocations",
+            new=AsyncMock(side_effect=BusinessValidationError("allocation failed")),
+        ),
+    ):
+        with pytest.raises(BusinessValidationError, match="allocation failed"):
+            await payment_flow_service.correct_flow(
+                mock_db,
+                flow_id="flow-original",
+                reason="金额错误",
+                actor_id="user-1",
+                replacement_data={
+                    "flow_type": "terminal_rent_receipt",
+                    "occurred_on": "2026-07-02",
+                    "amount": Decimal("900.00"),
+                },
+                allocations=[
+                    {
+                        "target_type": "contract_ledger_entry",
+                        "target_id": "entry-1",
+                        "year_month": "2026-07",
+                        "amount": Decimal("900.00"),
+                    }
+                ],
+            )
+
+    mock_db.commit.assert_not_awaited()
+    mock_db.rollback.assert_awaited_once()

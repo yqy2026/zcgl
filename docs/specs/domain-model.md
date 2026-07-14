@@ -46,7 +46,7 @@
 | PropertyCertificate | 资产产权证照记录，作为资产详情内能力维护 |
 | CertificatePartyRelation | 产权证与 Party 权利人的关系 |
 | ScanExtractionSession | 合同或产权证扫描件解析辅助补录的临时会话 |
-| Attachment | 资产、合同、产权证的附件 / 扫描件统一承载对象 |
+| Attachment | 资产、合同、产权证和收付流水凭证的通用附件元数据 |
 | Notification | 站内业务提醒与系统通知（提醒非工单，只有已读 / 未读） |
 
 ## 4. 字段契约
@@ -381,11 +381,15 @@
 | `counterparty_id` | string | 否 | 对方主体；终端租户、产权方或运营方 |
 | `voucher_attachment_ids` | string[] | 否 | 可选凭证附件；不上传不阻断登记 |
 | `notes` | text | 否 | 备注 |
-| `status` | enum | 是 | 当前登记链路写 `active`；`voided` / `corrected` 及原流水关联由后续状态机实现，见 `docs/issues/2026-07-10-payment-flow-lifecycle-and-voucher-audit.md` |
+| `status` | enum | 是 | `active`、`voided`、`corrected`；客户端不得直接写入，作废/更正只能走显式动作 |
+| `corrected_from_flow_id` | string | 否 | 更正产生的新 `active` 流水指向原流水；唯一约束保证一条原流水最多有一个更正后继 |
+| `status_changed_by` | string | 条件 | `voided` / `corrected` 必填，由服务端从认证用户固化；`active` 必须为空 |
+| `status_changed_at` | datetime | 条件 | `voided` / `corrected` 必填；`active` 必须为空 |
+| `status_change_reason` | text | 条件 | `voided` / `corrected` 必填且非空白；`active` 必须为空 |
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
 
-约束：流水是实收/实付事实来源。经营分析默认按 `PaymentAllocation.year_month` / 台账账期归属，流水 `occurred_on` 只用于查看实际发生日期。MVP 不对接银行流水、支付通道或财务总账。
+约束：流水是实收/实付事实来源。经营分析默认按 `PaymentAllocation.year_month` / 台账账期归属，流水 `occurred_on` 只用于查看实际发生日期。只有 `active` 流水的分摊参与实收/实付汇总；作废把原流水转为 `voided` 并在同一事务内重算受影响台账，更正把原流水转为 `corrected`、创建唯一的新 `active` 流水及其分摊并完成重算。更正不得改变流水类型，也不得把事实迁移到不同项目、产权方、运营方或币种；新旧分摊目标必须合并后按稳定 ID 顺序一次加锁。重复终态动作与并发第二次更正必须失败，不删除原流水或原分摊。原流水凭证继续归属原流水以保留历史证据，更正请求不得把旧凭证 ID 复制给新流水；新流水凭证在更正成功后单独上传。MVP 不对接银行流水、支付通道或财务总账。
 
 ### 4.14.2 PaymentAllocation
 
@@ -518,20 +522,24 @@ Concurrency and scope constraints: replacing allocations locks the payment flow 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `id` | string | 是 | 附件主键 |
-| `owner_type` | enum | 是 | `asset`、`contract`、`property_certificate` |
+| `owner_type` | enum | 是 | `asset`、`contract`、`property_certificate`、`payment_flow` |
 | `owner_id` | string | 是 | 所属业务对象 ID |
 | `file_name` | string | 是 | 文件名；仅作展示与日志字段，不作为 MVP 筛选条件 |
 | `file_type` | enum | 是 | 仅接受 PDF、JPG/JPEG、PNG；其他类型拒绝 |
 | `file_size` | number | 是 | 单文件大小上限 20MB，超限拒绝并提示压缩或拆分 |
 | `file_hash` | string | 否 | 用于同名或相同哈希的疑似重复提示 |
+| `storage_key` | string | 是 | 服务端生成的唯一相对存储键，不接受客户端路径 |
+| `created_by` | string | 是 | 上传人，由服务端从认证用户固化 |
+| `created_at` | datetime | 是 | 上传时间 |
 
 约束：
 
 - **预览**跟随所属对象查看权限，PDF 内嵌预览、JPG/PNG 图片预览，不单独记操作日志；预览失败只提示「预览失败，可下载查看」，不阻断保存、附件保留或扫描件解析；MVP 不做批注、旋转、裁剪、全文搜索或 OCR 原文高亮。
-- **下载**是独立资料外流动作，必须校验独立下载权限（≠ 查看权限）；记轻量下载日志（下载人、下载时间、附件），不记下载原因、来源页 / 入口、客户端 IP 或设备信息，不触发审批或告警；下载日志仅在系统操作日志 / 审计查询、详情不默认展示；MVP 只支持单附件下载，不做打包下载。
+- **下载**是独立资料外流动作，必须校验独立下载权限（≠ 查看权限）；收付流水凭证使用 `ledger_voucher:read`，并在确认附件属于当前流水且流水冻结归属位于当前主体范围后下载。轻量下载日志记录下载人、流水、附件、下载时间和结果（`success` / `not_found`），其中 `success` 表示服务端已授权且文件已就绪，不声明客户端已完整接收；不记下载原因、来源页 / 入口、客户端 IP 或设备信息，不触发审批或告警。未通过主体范围校验的用户不得读取附件或审计元数据。下载日志仅在系统操作日志 / 审计查询、详情不默认展示；MVP 只支持单附件下载，不做打包下载。
 - **追加 / 替换 / 删除**：替换不保留旧档，删除不记原因；删到最后一份被阻止（产权证、合同补录附件均须 ≥1）。变更日志记附件 ID、文件名、动作类型、操作人、操作时间，不记原因、不留旧文件内容、不做差异追踪。
 - **疑似重复**只提示「疑似重复附件」、不展示命中依据、默认不追加，用户显式追加即确认、不二次弹窗、不阻断保存。
 - 附件上传后不自动触发解析（上传与解析是两个独立动作）。MVP 不做附件版本管理、替换审批、差异追踪、备注字段、维护来源字段、容量配额、打包下载、批量解析 / 确认或复杂上传队列。
+- 通用 `attachments` 元数据当前首先用于 `payment_flow` 凭证；流水凭证上传执行 20MB 有界读取，并对 PDF/JPEG/PNG 校验 MIME、扩展名和固定文件头，即使可选 magic 依赖不可用也不得接受伪装类型。既有资产、合同和产权证附件接口及存量文件不在本次流水生命周期任务中迁移。
 
 ### 4.23 ScanExtractionSession
 

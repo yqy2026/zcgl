@@ -135,6 +135,12 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 | 合同/协议台账 | `GET /api/v1/contracts/{contract_id}/ledger` | 查询单合同/协议台账，返回账期、四类视图归属、应收/应付、实收/实付、未收/未付和派生状态 |
 | 收付流水登记 | `POST /api/v1/ledger/payment-flows` | 创建轻量收付流水，支持 `terminal_rent_receipt`、`service_fee_receipt`、`upstream_cost_payment`；请求字段包含发生日期、金额、备注和可选凭证附件，登记人由服务端从认证用户固化、客户端不得指定；返回流水主键、类型、发生日期、金额、登记人、对方主体、凭证附件、备注、状态和时间戳 |
 | 收付流水分摊 | `POST /api/v1/ledger/payment-flows/{flow_id}/allocations` | 一笔流水可人工分摊到多个账期，系统校验分摊金额合计等于流水金额；账期归属按租金账期，流水发生日期仅用于查询、导出和审计；返回分摊主键、流水 ID、目标类型、目标 ID、账期、金额和时间戳 |
+| 收付流水明细 | `GET /api/v1/ledger/payment-flows?target_type={type}&target_id={id}` | 按单个租金或服务费台账目标返回关联流水、分摊和已授权凭证元数据；查询目标先按冻结项目/产权方/运营方归属做主体范围校验，不提供跨类型混排入口 |
+| 收付流水作废 | `POST /api/v1/ledger/payment-flows/{flow_id}/void` | 仅允许 `active` 流水；原因必填，操作人由服务端固化；原流水转 `voided`，其分摊不再参与汇总，并在同一事务内重算全部受影响台账 |
+| 收付流水更正 | `POST /api/v1/ledger/payment-flows/{flow_id}/correct` | 仅允许 `active` 流水；原因、新流水和完整新分摊必填；新流水类型及项目/产权方/运营方/币种范围必须与原流水一致，新旧分摊目标按稳定顺序一次加锁；同一事务把原流水转 `corrected`、创建通过 `corrected_from_flow_id` 关联的唯一新 `active` 流水并重算新旧目标；不得直接写 `status`、`paid_amount` 或复制原流水凭证 ID，新流水凭证在更正成功后单独上传 |
+| 收付流水凭证上传 | `POST /api/v1/ledger/payment-flows/{flow_id}/vouchers` | 仅允许为当前主体范围内的 `active` 流水上传单个 PDF/JPG/JPEG/PNG，最大 20MB；入口只做 `20MB + 1 byte` 有界读取，并校验 MIME、扩展名、固定文件头和可疑内容，伪装类型失败暴露；返回受限附件元数据，不返回存储路径 |
+| 收付流水凭证下载 | `GET /api/v1/ledger/payment-flows/{flow_id}/vouchers/{attachment_id}/download` | 使用独立 `ledger_voucher:read` 权限并再次校验流水冻结主体范围与附件归属；记录用户、流水、附件、时间及 `success` / `not_found` 结果 |
+| 凭证下载审计 | `GET /api/v1/ledger/payment-flows/{flow_id}/voucher-download-audits` | 仅向可读取该流水冻结主体范围的用户返回轻量下载证据；响应不暴露存储路径、客户端 IP 或设备信息 |
 | 经营台账查询 | `GET /api/v1/ledger/entries` | 支持项目上下文和全局上下文；按合同租金台账视图 `ledger_view=terminal_collection/operator_income/operator_cost`、`project_id`、资产、主体、合同/协议、账期、有效收付流水发生日期 `flow_occurred_on_start/end` 和派生支付状态查询，作为全局“经营台账”入口的数据源；响应包含 `ledger_views` 与 `flow_occurred_on_dates`。服务费结算由 `ServiceFeeLedger` 与服务费生成/分摊路径承载，不复用合同租金台账响应暗中混排 |
 | 经营台账导出 | `GET /api/v1/ledger/entries/export` | 按当前经营台账筛选条件导出查询结果；导出列包含 `ledger_views`、账期 `year_month` 和有效流水发生日期集合 `flow_occurred_on_dates` |
 | 台账跟进状态 | `PATCH /api/v1/ledger/entries/{entry_id}/follow-up` | 仅维护终端租户收缴视图的轻量跟进字段：`follow_up_status`、`next_follow_up_date`、`follow_up_note`；不修改台账金额或派生支付状态 |
@@ -146,7 +152,7 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 
 实收/实付唯一写路径是「创建收付流水 → 保存账期分摊」。旧 `PATCH /api/v1/contracts/{contract_id}/ledger/batch-update-status` 已下线，不提供直接改写累计 `paid_amount` 的兼容入口。
 
-Authorization boundary: ledger ABAC rules admit the configured role/action pair; service methods then fail closed against each ledger row's frozen owner/operator attribution. Project and contract-group access alone never authorizes historical rows whose frozen attribution is outside the active party scope. Allocation replacement locks the payment flow and all affected target rows, while service-fee reconciliation locks its target row, so allocation totals and reconciliation cannot race to overwrite each other.
+Authorization boundary: ledger ABAC rules admit the configured role/action pair; service methods then fail closed against each ledger row's frozen owner/operator attribution. Project and contract-group access alone never authorizes historical rows whose frozen attribution is outside the active party scope. Allocation replacement and payment-flow void/correction lock the payment flow and all affected target rows, while service-fee reconciliation locks its target row, so allocation totals, terminal lifecycle actions, and reconciliation cannot race to overwrite each other. Voucher download additionally requires `ledger_voucher:read`; ledger read alone is insufficient for file download.
 
 Payment-flow creation records an authenticated actor but has no ledger target and therefore does not alter any receivable/payable balance. Party-scope authorization is mandatory when allocations bind that flow to ledger targets; a flow cannot affect ledger totals until the allocation service validates every target's frozen project/owner/operator scope.
 

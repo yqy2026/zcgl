@@ -42,6 +42,7 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "ContractAuditLog": ("contract_group.py", "ContractAuditLog"),
     "LeaseContractDetail": ("contract_group.py", "LeaseContractDetail"),
     "AgencyAgreementDetail": ("contract_group.py", "AgencyAgreementDetail"),
+    "Attachment": ("attachment.py", "Attachment"),
     "PropertyCertificate": ("property_certificate.py", "PropertyCertificate"),
     "Ownership": ("ownership.py", "Ownership"),
     "Party": ("party.py", "Party"),

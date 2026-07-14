@@ -95,8 +95,49 @@ export interface OperationalPaymentFlow {
   voucher_attachment_ids?: string[] | null;
   notes?: string | null;
   status: 'active' | 'voided' | 'corrected' | string;
+  corrected_from_flow_id?: string | null;
+  status_changed_by?: string | null;
+  status_changed_at?: string | null;
+  status_change_reason?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface PaymentFlowVoidPayload {
+  reason: string;
+}
+
+export interface PaymentFlowCorrectionPayload {
+  reason: string;
+  replacement: OperationalPaymentFlowCreate;
+  allocations: PaymentAllocationCreate[];
+}
+
+export interface PaymentFlowTargetQuery {
+  target_type: PaymentAllocationTargetType;
+  target_id: string;
+}
+
+export interface PaymentVoucherAttachment {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+}
+
+export interface PaymentVoucherDownloadAudit {
+  log_id: string;
+  user_id: string;
+  flow_id: string;
+  attachment_id: string;
+  file_name?: string | null;
+  downloaded_at: string;
+  result: 'success' | 'not_found';
+}
+
+export interface OperationalPaymentFlowDetail extends OperationalPaymentFlow {
+  allocations: PaymentAllocation[];
+  voucher_attachments: PaymentVoucherAttachment[];
 }
 
 export interface PaymentAllocationCreate {

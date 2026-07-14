@@ -225,6 +225,180 @@ describe('LedgerService', () => {
     expect(allocations[0].allocation_id).toBe('allocation-1');
   });
 
+  it('lists payment flows for one allocation target', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          flow_id: 'flow-1',
+          flow_type: 'terminal_rent_receipt',
+          occurred_on: '2026-05-10',
+          amount: '1000.00',
+          registered_by: 'operator',
+          status: 'active',
+          corrected_from_flow_id: null,
+          status_changed_by: null,
+          status_changed_at: null,
+          status_change_reason: null,
+          allocations: [],
+          voucher_attachments: [],
+        },
+      ],
+    });
+
+    const result = await service.listPaymentFlows({
+      target_type: 'contract_ledger_entry',
+      target_id: 'entry-1',
+    });
+
+    expect(apiClient.get).toHaveBeenCalledWith('/ledger/payment-flows', {
+      params: {
+        target_type: 'contract_ledger_entry',
+        target_id: 'entry-1',
+      },
+      cache: false,
+      retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+      smartExtract: true,
+    });
+    expect(result[0].flow_id).toBe('flow-1');
+  });
+
+  it('voids an active payment flow with an explicit reason', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: {
+        flow_id: 'flow-1',
+        flow_type: 'terminal_rent_receipt',
+        occurred_on: '2026-05-10',
+        amount: '1000.00',
+        registered_by: 'operator',
+        status: 'voided',
+        status_change_reason: '重复登记',
+      },
+    });
+
+    const result = await service.voidPaymentFlow('flow-1', { reason: '重复登记' });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/ledger/payment-flows/flow-1/void',
+      { reason: '重复登记' },
+      { retry: false, smartExtract: true }
+    );
+    expect(result.status).toBe('voided');
+  });
+
+  it('corrects a payment flow with one atomic replacement payload', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: {
+        flow_id: 'flow-2',
+        flow_type: 'terminal_rent_receipt',
+        occurred_on: '2026-05-11',
+        amount: '900.00',
+        registered_by: 'operator',
+        status: 'active',
+        corrected_from_flow_id: 'flow-1',
+      },
+    });
+    const payload = {
+      reason: '金额录入错误',
+      replacement: {
+        flow_type: 'terminal_rent_receipt' as const,
+        occurred_on: '2026-05-11',
+        amount: '900.00',
+        counterparty_id: 'tenant-1',
+      },
+      allocations: [
+        {
+          target_type: 'contract_ledger_entry' as const,
+          target_id: 'entry-1',
+          year_month: '2026-05',
+          amount: '900.00',
+        },
+      ],
+    };
+
+    const result = await service.correctPaymentFlow('flow-1', payload);
+
+    expect(apiClient.post).toHaveBeenCalledWith('/ledger/payment-flows/flow-1/correct', payload, {
+      retry: false,
+      smartExtract: true,
+    });
+    expect(result.corrected_from_flow_id).toBe('flow-1');
+  });
+
+  it('downloads a voucher only through the audited payment-flow endpoint', async () => {
+    const blob = new Blob(['voucher']);
+    vi.mocked(apiClient.get).mockResolvedValue({ success: true, data: blob });
+
+    const result = await service.downloadPaymentFlowVoucher('flow-1', 'attachment-1');
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/ledger/payment-flows/flow-1/vouchers/attachment-1/download',
+      {
+        cache: false,
+        retry: false,
+        responseType: 'blob',
+        smartExtract: false,
+      }
+    );
+    expect(result).toBe(blob);
+  });
+
+  it('uploads a voucher as the payment-flow file field', async () => {
+    const file = new File(['voucher'], 'receipt.pdf', { type: 'application/pdf' });
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: {
+        id: 'attachment-1',
+        file_name: 'receipt.pdf',
+        file_type: 'application/pdf',
+        file_size: 7,
+      },
+    });
+
+    const result = await service.uploadPaymentFlowVoucher('flow-1', file);
+
+    const [url, body, options] = vi.mocked(apiClient.post).mock.calls[0];
+    expect(url).toBe('/ledger/payment-flows/flow-1/vouchers');
+    expect(body).toBeInstanceOf(FormData);
+    expect((body as FormData).get('file')).toBe(file);
+    expect(options).toEqual({
+      headers: { 'Content-Type': 'multipart/form-data' },
+      retry: false,
+      smartExtract: true,
+    });
+    expect(result.file_name).toBe('receipt.pdf');
+  });
+
+  it('lists voucher download audit evidence for one payment flow', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          log_id: 'audit-1',
+          user_id: 'user-1',
+          flow_id: 'flow-1',
+          attachment_id: 'attachment-1',
+          file_name: 'receipt.pdf',
+          downloaded_at: '2026-05-12T10:00:00Z',
+        },
+      ],
+    });
+
+    const result = await service.listPaymentFlowVoucherDownloadAudits('flow-1');
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/ledger/payment-flows/flow-1/voucher-download-audits',
+      {
+        cache: false,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      }
+    );
+    expect(result[0].log_id).toBe('audit-1');
+  });
+
   it('lists service-fee ledgers by contract group', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       success: true,

@@ -958,6 +958,15 @@ class OperationalPaymentFlow(Base):
             "status IN ('active', 'voided', 'corrected')",
             name="ck_operational_payment_flow_status",
         ),
+        CheckConstraint(
+            "(status = 'active' AND status_changed_by IS NULL "
+            "AND status_changed_at IS NULL AND status_change_reason IS NULL) OR "
+            "(status IN ('voided', 'corrected') AND status_changed_by IS NOT NULL "
+            "AND btrim(status_changed_by) <> '' AND status_changed_at IS NOT NULL "
+            "AND status_change_reason IS NOT NULL "
+            "AND btrim(status_change_reason) <> '')",
+            name="ck_operational_payment_flow_lifecycle_audit",
+        ),
     )
 
     flow_id: Mapped[str] = mapped_column(
@@ -993,6 +1002,21 @@ class OperationalPaymentFlow(Base):
         nullable=False,
         default=OperationalPaymentFlowStatus.ACTIVE.value,
     )
+    corrected_from_flow_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("operational_payment_flows.flow_id"),
+        nullable=True,
+        unique=True,
+    )
+    status_changed_by: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+    status_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+    status_change_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
@@ -1009,6 +1033,18 @@ class OperationalPaymentFlow(Base):
         "PaymentAllocation",
         back_populates="flow",
         cascade="all, delete-orphan",
+    )
+    corrected_from: Mapped["OperationalPaymentFlow | None"] = relationship(
+        "OperationalPaymentFlow",
+        remote_side=[flow_id],
+        foreign_keys=[corrected_from_flow_id],
+        back_populates="correction",
+    )
+    correction: Mapped["OperationalPaymentFlow | None"] = relationship(
+        "OperationalPaymentFlow",
+        foreign_keys=[corrected_from_flow_id],
+        back_populates="corrected_from",
+        uselist=False,
     )
 
 
