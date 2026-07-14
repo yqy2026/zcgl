@@ -64,7 +64,7 @@ def upgrade() -> None:
                     SELECT 1 FROM abac_policy_rules WHERE id = :rule_id
                 )
                 """
-            ),
+            ).bindparams(sa.bindparam("rule_id", type_=sa.String())),
             {
                 "rule_id": rule_id,
                 "policy_id": policy_id,
