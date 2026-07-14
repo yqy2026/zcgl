@@ -214,9 +214,11 @@ class AuthzPermissionChecker:
         user_id: str,
     ) -> dict[str, Any]:
         try:
-            subject_context = await self.authz_service.context_builder.build_subject_context(
-                db,
-                user_id=user_id,
+            subject_context = (
+                await self.authz_service.context_builder.build_subject_context(
+                    db,
+                    user_id=user_id,
+                )
             )
         except Exception:
             self.logger.exception(

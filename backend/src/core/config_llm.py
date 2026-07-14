@@ -313,9 +313,7 @@ class LlmSettings(BaseModel):
     def validate_wecom_configuration(self) -> LlmSettings:
         """Validate WeCom application-message configuration."""
         if self.WECOM_ENABLED and (
-            not self.WECOM_CORP_ID
-            or not self.WECOM_AGENT_ID
-            or not self.WECOM_SECRET
+            not self.WECOM_CORP_ID or not self.WECOM_AGENT_ID or not self.WECOM_SECRET
         ):
             logger.warning(
                 "WeCom is enabled but WECOM_CORP_ID / WECOM_AGENT_ID / "

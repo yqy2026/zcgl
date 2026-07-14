@@ -73,7 +73,8 @@ async def get_current_user(
     Cookie-only authentication. Tokens are read from httpOnly cookies.
     """
     return await identity_service.resolve_current_user(
-        auth_token=auth_token,
+        # The request-provided JWT is not a hardcoded credential.
+        auth_token=auth_token,  # nosec B106
         db=db,
         missing_token_message="无效的认证凭据",
         invalid_token_message="无效的认证凭据",
@@ -102,7 +103,8 @@ async def get_current_user_from_cookie(
         unauthorized: If no valid token found or user is inactive/locked
     """
     return await identity_service.resolve_current_user(
-        auth_token=auth_token,
+        # The request-provided JWT is not a hardcoded credential.
+        auth_token=auth_token,  # nosec B106
         db=db,
         missing_token_message="Not authenticated",
         invalid_token_message="Invalid token",
@@ -171,7 +173,6 @@ class AuthzPermissionChecker(_AuthzPermissionChecker):
             current_user=current_user,
             db=db,
         )
-
 
 
 def require_authz(

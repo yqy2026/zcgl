@@ -192,7 +192,11 @@ class PaymentFlowService:
             setattr(
                 flow,
                 "voucher_attachments",
-                [attachment for attachment in attachments if attachment.id in linked_ids],
+                [
+                    attachment
+                    for attachment in attachments
+                    if attachment.id in linked_ids
+                ],
             )
         return flows
 
@@ -402,7 +406,9 @@ class PaymentFlowService:
             if _enum_value(getattr(original, "status", None)) != (
                 OperationalPaymentFlowStatus.ACTIVE.value
             ):
-                raise BusinessValidationError("only active payment flows can be corrected")
+                raise BusinessValidationError(
+                    "only active payment flows can be corrected"
+                )
 
             original_flow_type = _enum_value(original.flow_type)
             replacement_flow_type = _enum_value(replacement_data.get("flow_type"))
@@ -427,8 +433,7 @@ class PaymentFlowService:
                 )
             original_target_type = self._expected_target_type(original_flow_type)
             if any(
-                row["target_type"] != original_target_type
-                for row in replacement_rows
+                row["target_type"] != original_target_type for row in replacement_rows
             ):
                 raise BusinessValidationError(
                     "payment flow type does not match allocation target type"
@@ -474,8 +479,7 @@ class PaymentFlowService:
                 row["target_id"]: targets[row["target_id"]] for row in original_rows
             }
             replacement_targets = {
-                row["target_id"]: targets[row["target_id"]]
-                for row in replacement_rows
+                row["target_id"]: targets[row["target_id"]] for row in replacement_rows
             }
             self._validate_target_periods(
                 rows=replacement_rows,

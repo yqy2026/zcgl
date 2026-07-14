@@ -50,7 +50,11 @@ class PropertyCertificate(Base):
     )
 
     certificate_number: Mapped[str] = mapped_column(
-        String(100), unique=True, nullable=False, index=True, comment="Certificate number"
+        String(100),
+        unique=True,
+        nullable=False,
+        index=True,
+        comment="Certificate number",
     )
     certificate_type: Mapped[CertificateType] = mapped_column(
         SQLEnum(CertificateType), nullable=False, index=True, comment="Certificate type"
@@ -140,12 +144,17 @@ class PropertyCertificateAttachment(Base):
         String(255), nullable=False, comment="Original or display file name."
     )
     storage_key: Mapped[str] = mapped_column(
-        String(500), nullable=False, index=True, comment="Stable attachment storage key."
+        String(500),
+        nullable=False,
+        index=True,
+        comment="Stable attachment storage key.",
     )
     content_type: Mapped[str | None] = mapped_column(
         String(100), comment="Attachment content type."
     )
-    file_size: Mapped[int | None] = mapped_column(Integer, comment="File size in bytes.")
+    file_size: Mapped[int | None] = mapped_column(
+        Integer, comment="File size in bytes."
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

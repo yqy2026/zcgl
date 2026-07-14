@@ -313,8 +313,7 @@ async def list_payment_flows(
             party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return [
-            OperationalPaymentFlowDetailResponse.model_validate(item)
-            for item in result
+            OperationalPaymentFlowDetailResponse.model_validate(item) for item in result
         ]
     except BaseBusinessError:
         raise
@@ -449,13 +448,14 @@ async def list_payment_flow_voucher_download_audits(
             party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return [
-            PaymentVoucherDownloadAuditResponse.model_validate(item)
-            for item in result
+            PaymentVoucherDownloadAuditResponse.model_validate(item) for item in result
         ]
     except BaseBusinessError:
         raise
     except Exception as exc:
-        raise internal_error("查询经营收付流水凭证审计失败", original_error=exc) from exc
+        raise internal_error(
+            "查询经营收付流水凭证审计失败", original_error=exc
+        ) from exc
 
 
 @router.post(
@@ -576,8 +576,7 @@ async def correct_payment_flow(
             actor_id=user_id,
             replacement_data=payload.replacement.model_dump(mode="json"),
             allocations=[
-                allocation.model_dump(mode="json")
-                for allocation in payload.allocations
+                allocation.model_dump(mode="json") for allocation in payload.allocations
             ],
             current_user_id=user_id,
             party_filter=build_party_filter_from_scope_context(_scope_ctx),

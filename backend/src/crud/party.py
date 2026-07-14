@@ -558,7 +558,9 @@ class CRUDParty:
             self._decrypt_contact_object(contact)
         return contacts
 
-    def _encrypt_contact_update_data(self, update_data: dict[str, Any]) -> dict[str, Any]:
+    def _encrypt_contact_update_data(
+        self, update_data: dict[str, Any]
+    ) -> dict[str, Any]:
         encrypted_data: dict[str, Any] = {}
         for field_name, value in update_data.items():
             if field_name in self.sensitive_data_handler.ALL_PII_FIELDS:
