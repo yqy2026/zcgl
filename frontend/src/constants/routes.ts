@@ -13,7 +13,7 @@ export const BASE_PATHS = {
   CONTRACT_CENTER: '/contract-center',
   PROJECT: '/project',
   SYSTEM: '/system',
-  FINANCE: '/finance',
+  OPERATIONS: '/operations',
   DOCUMENTS: '/documents',
 } as const;
 
@@ -21,8 +21,8 @@ export const ANALYTICS_ROUTES = {
   OVERVIEW: '/analytics',
 } as const;
 
-export const FINANCE_ROUTES = {
-  LEDGER: '/finance/ledger',
+export const OPERATIONS_ROUTES = {
+  LEDGER: '/operations/ledger',
 } as const;
 
 // 资产资源路由
@@ -240,10 +240,10 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     ],
   },
   {
-    path: FINANCE_ROUTES.LEDGER,
-    title: '财务台账',
+    path: OPERATIONS_ROUTES.LEDGER,
+    title: '经营台账',
     icon: 'account-book',
-    breadcrumb: ['财务台账'],
+    breadcrumb: ['经营台账'],
     permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
@@ -328,7 +328,7 @@ export const ROUTES = {
   CONTRACT_CENTER_ROUTES,
   SEARCH_ROUTES,
   ANALYTICS_ROUTES,
-  FINANCE_ROUTES,
+  OPERATIONS_ROUTES,
   CUSTOMER_ROUTES,
   SYSTEM_ROUTES,
   OTHER_ROUTES,

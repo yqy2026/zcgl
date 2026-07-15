@@ -1282,6 +1282,13 @@ class ContractGroupService:
             asset_ids=obj_in.asset_ids or None,
             commit=False,
         )
+        for rent_term in obj_in.rent_terms:
+            await self._create_rent_term_record(
+                db,
+                contract_id=created_contract.contract_id,
+                obj_in=rent_term,
+                commit=False,
+            )
         await ledger_service_v2.generate_ledger_on_activation(
             db,
             contract_id=created_contract.contract_id,
@@ -1711,6 +1718,38 @@ class ContractGroupService:
 
     # ─── Rent Terms ─────────────────────────────────────────────────────
 
+    @staticmethod
+    async def _create_rent_term_record(
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        obj_in: ContractRentTermCreate,
+        commit: bool,
+    ) -> ContractRentTerm:
+        now = _utcnow()
+        return await contract_group_crud.create_rent_term(
+            db,
+            data={
+                "rent_term_id": str(uuid.uuid4()),
+                "contract_id": contract_id,
+                "sort_order": obj_in.sort_order,
+                "start_date": obj_in.start_date,
+                "end_date": obj_in.end_date,
+                "monthly_rent": obj_in.monthly_rent,
+                "management_fee": obj_in.management_fee,
+                "other_fees": obj_in.other_fees,
+                "total_monthly_amount": _compute_total_monthly_amount(
+                    obj_in.monthly_rent,
+                    obj_in.management_fee,
+                    obj_in.other_fees,
+                ),
+                "notes": obj_in.notes,
+                "created_at": now,
+                "updated_at": now,
+            },
+            commit=commit,
+        )
+
     async def create_rent_term(
         self,
         db: AsyncSession,
@@ -1720,29 +1759,10 @@ class ContractGroupService:
         commit: bool = True,
     ) -> ContractRentTerm:
         await self._require_draft_contract_for_mutation(db, contract_id=contract_id)
-        now = _utcnow()
-        total_monthly_amount = _compute_total_monthly_amount(
-            obj_in.monthly_rent,
-            obj_in.management_fee,
-            obj_in.other_fees,
-        )
-        data = {
-            "rent_term_id": str(uuid.uuid4()),
-            "contract_id": contract_id,
-            "sort_order": obj_in.sort_order,
-            "start_date": obj_in.start_date,
-            "end_date": obj_in.end_date,
-            "monthly_rent": obj_in.monthly_rent,
-            "management_fee": obj_in.management_fee,
-            "other_fees": obj_in.other_fees,
-            "total_monthly_amount": total_monthly_amount,
-            "notes": obj_in.notes,
-            "created_at": now,
-            "updated_at": now,
-        }
-        return await contract_group_crud.create_rent_term(
+        return await self._create_rent_term_record(
             db,
-            data=data,
+            contract_id=contract_id,
+            obj_in=obj_in,
             commit=commit,
         )
 

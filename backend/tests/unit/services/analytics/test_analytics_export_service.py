@@ -1,4 +1,4 @@
-﻿"""
+"""
 测试 AnalyticsExportService (分析导出映射服务)
 """
 
@@ -23,19 +23,22 @@ class TestAnalyticsExportService:
                 "customer_entity_count": 2,
                 "customer_contract_count": 3,
                 "metrics_version": "req-ana-001-v2",
+                "period_attribution_label": "按租金账期归属，流水发生日期仅用于查询、导出和审计",
             }
         )
 
         metrics = [row["metric"] for row in rows]
-        assert metrics[-6:] == [
+        assert metrics[-7:] == [
             "总收入（经营口径）",
             "自营租金收入",
             "代理服务费收入",
             "客户主体数",
             "客户合同数",
             "口径版本",
+            "账期归属口径",
         ]
-        assert rows[-1]["value"] == "req-ana-001-v2"
+        assert rows[-2]["value"] == "req-ana-001-v2"
+        assert rows[-1]["value"] == "按租金账期归属，流水发生日期仅用于查询、导出和审计"
         assert rows[-1]["unit"] == ""
 
     def test_render_csv_should_return_tabular_text_with_header_and_blank_version(self):
@@ -59,9 +62,12 @@ class TestAnalyticsExportService:
         assert lines[0] == "分组,指标,数值,单位"
         assert "总览,总收入（经营口径）,1200.00,元" in lines
         assert "总览,口径版本,," in lines
+        assert "总览,账期归属口径,," in lines
         assert '"total_income"' not in content
 
-    def test_build_customer_breakdown_rows_should_split_customers_and_counterparties(self):
+    def test_build_customer_breakdown_rows_should_split_customers_and_counterparties(
+        self,
+    ):
         service = AnalyticsExportService()
 
         rows = service.build_customer_breakdown_rows(

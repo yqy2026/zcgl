@@ -1,13 +1,436 @@
 import importlib
+from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import GroupRelationType, RevenueMode
 
 pytestmark = pytest.mark.asyncio
+
+
+async def test_list_contract_group_entries_should_return_agency_service_fees(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    service_fee_entries = [
+        SimpleNamespace(
+            service_fee_entry_id="service-fee-1",
+            source_ledger_ids=["rent-ledger-1"],
+            year_month="2026-05",
+        )
+    ]
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=service_fee_entries),
+        ) as mock_list,
+    ):
+        result = await service.list_entries(mock_db, group_id="group-1")
+
+    assert result == service_fee_entries
+    mock_list.assert_awaited_once_with(mock_db, group_id="group-1")
+
+
+async def test_list_entries_should_filter_project_results_by_party_scope(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    visible_entry = SimpleNamespace(
+        service_fee_entry_id="service-fee-visible",
+        attributed_owner_party_id="owner-1",
+        attributed_operator_party_id="operator-1",
+    )
+    hidden_entry = SimpleNamespace(
+        service_fee_entry_id="service-fee-hidden",
+        attributed_owner_party_id="other-owner",
+        attributed_operator_party_id="other-operator",
+    )
+
+    with patch(
+        "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_attributed_project",
+        new=AsyncMock(return_value=[visible_entry, hidden_entry]),
+    ) as mock_list:
+        result = await service.list_entries(
+            mock_db,
+            project_id="project-1",
+            current_user_id="user-1",
+            party_filter=PartyFilter(
+                party_ids=["owner-1"],
+                filter_mode="owner",
+                owner_party_ids=["owner-1"],
+            ),
+        )
+
+    assert result == [visible_entry]
+    mock_list.assert_awaited_once_with(mock_db, project_id="project-1")
+
+
+async def test_list_contract_group_entries_should_allow_scoped_party(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    visible_entry = SimpleNamespace(
+        service_fee_entry_id="service-fee-1",
+        attributed_owner_party_id="owner-1",
+        attributed_operator_party_id="operator-1",
+    )
+    hidden_historical_entry = SimpleNamespace(
+        service_fee_entry_id="service-fee-hidden",
+        attributed_owner_party_id="other-owner",
+        attributed_operator_party_id="other-operator",
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[visible_entry, hidden_historical_entry]),
+        ) as mock_list,
+    ):
+        result = await service.list_entries(
+            mock_db,
+            group_id="group-1",
+            current_user_id="user-1",
+            party_filter=PartyFilter(
+                party_ids=["operator-1"],
+                filter_mode="manager",
+                manager_party_ids=["operator-1"],
+            ),
+        )
+
+    assert result == [visible_entry]
+    mock_list.assert_awaited_once_with(mock_db, group_id="group-1")
+
+
+async def test_list_contract_group_entries_should_hide_out_of_scope_group(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ) as mock_list,
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await service.list_entries(
+                mock_db,
+                group_id="group-1",
+                current_user_id="user-1",
+                party_filter=PartyFilter(
+                    party_ids=["other-owner"],
+                    filter_mode="owner",
+                    owner_party_ids=["other-owner"],
+                ),
+            )
+
+    mock_list.assert_not_awaited()
+
+
+async def test_list_contract_group_entries_should_hide_empty_all_scope(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ) as mock_list,
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await service.list_entries(
+                mock_db,
+                group_id="group-1",
+                current_user_id="user-1",
+                party_filter=PartyFilter(
+                    party_ids=[],
+                    filter_mode="any",
+                    owner_party_ids=[],
+                    manager_party_ids=[],
+                ),
+            )
+
+    mock_list.assert_not_awaited()
+
+
+async def test_sync_contract_group_should_hide_out_of_scope_group(mock_db) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    party_filter = PartyFilter(
+        party_ids=["other-owner"],
+        filter_mode="owner",
+        owner_party_ids=["other-owner"],
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(),
+        ) as mock_contracts,
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await service.sync_contract_group(
+                mock_db,
+                group_id="group-1",
+                current_user_id="user-1",
+                party_filter=party_filter,
+            )
+
+    mock_contracts.assert_not_awaited()
+
+
+async def test_sync_contract_group_should_ignore_out_of_scope_historical_sources(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.1000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+    )
+    hidden_source = _source_entry(attributed_owner_party_id="other-owner")
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[hidden_source]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.create_service_fee_entry",
+            new=AsyncMock(),
+        ) as mock_create,
+    ):
+        result = await service.sync_contract_group(
+            mock_db,
+            group_id="group-1",
+            current_user_id="user-1",
+            party_filter=PartyFilter(
+                party_ids=["owner-1"],
+                filter_mode="owner",
+                owner_party_ids=["owner-1"],
+            ),
+        )
+
+    assert result == {"created": 0, "updated": 0, "voided": 0, "source_mismatches": 0}
+    mock_create.assert_not_awaited()
+
+
+async def test_sync_should_filter_each_source_before_manager_scope_aggregation(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-1",
+        operator_party_id="operator-1",
+    )
+    entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.1000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+    )
+    visible_source = _source_entry(
+        entry_id="entry-visible",
+        paid_amount=Decimal("500.00"),
+        attributed_owner_party_id="owner-1",
+        attributed_operator_party_id="operator-1",
+    )
+    hidden_source = _source_entry(
+        entry_id="entry-hidden",
+        paid_amount=Decimal("900.00"),
+        attributed_owner_party_id="owner-1",
+        attributed_operator_party_id="operator-hidden",
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[visible_source, hidden_source]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.create_service_fee_entry",
+            new=AsyncMock(),
+        ) as mock_create,
+    ):
+        await service.sync_contract_group(
+            mock_db,
+            group_id="group-1",
+            current_user_id="user-1",
+            party_filter=PartyFilter(
+                party_ids=["operator-1"],
+                filter_mode="manager",
+                manager_party_ids=["operator-1"],
+            ),
+        )
+
+    created_data = mock_create.await_args.kwargs["data"]
+    assert created_data["source_ledger_ids"] == ["entry-visible"]
+    assert created_data["calculation_base_amount"] == Decimal("500.00")
+
+
+async def test_list_contract_group_entries_should_skip_non_agency_group(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    lease_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.LEASE,
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=lease_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+        ) as mock_list,
+    ):
+        result = await service.list_entries(mock_db, group_id="group-1")
+
+    assert result == []
+    mock_list.assert_not_awaited()
+
+
+async def test_list_contract_group_entries_should_raise_when_group_missing(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+
+    with patch(
+        "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+        new=AsyncMock(return_value=None),
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await service.list_entries(mock_db, group_id="missing")
 
 
 async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(
@@ -81,13 +504,15 @@ async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(
     ):
         result = await service.sync_contract_group(mock_db, group_id="group-1")
 
-    assert result == {"created": 1, "updated": 0, "voided": 0}
+    assert result == {"created": 1, "updated": 0, "voided": 0, "source_mismatches": 0}
     assert created_payloads[0]["contract_group_id"] == "group-1"
     assert created_payloads[0]["agency_contract_id"] == "contract-direct"
-    assert created_payloads[0]["source_ledger_id"] == "entry-001"
-    assert created_payloads[0]["amount_due"] == Decimal("200.00")
-    assert created_payloads[0]["paid_amount"] == Decimal("50.00")
-    assert created_payloads[0]["payment_status"] == "partial"
+    assert created_payloads[0]["agency_agreement_contract_id"] == "contract-entrust"
+    assert created_payloads[0]["source_ledger_ids"] == ["entry-001"]
+    assert created_payloads[0]["calculation_base_amount"] == Decimal("500.00")
+    assert created_payloads[0]["amount_due"] == Decimal("50.00")
+    assert created_payloads[0]["paid_amount"] == Decimal("0")
+    assert created_payloads[0]["payment_status"] == "unpaid"
     assert created_payloads[0]["service_fee_ratio"] == Decimal("0.1000")
     assert created_payloads[0]["attributed_project_id"] == "project-001"
     assert created_payloads[0]["attributed_owner_party_id"] == "owner-001"
@@ -95,7 +520,150 @@ async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(
     assert created_payloads[0]["attributed_asset_ids"] == ["asset-001"]
 
 
-async def test_sync_should_update_service_fee_attribution_from_source_ledger(
+async def test_sync_should_select_service_fee_ratio_by_rent_ledger_month(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+    )
+    old_entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust-old",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 6, 30),
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.2000")),
+    )
+    current_entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust-current",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        effective_from=date(2026, 7, 1),
+        effective_to=None,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.3000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+    )
+    source_entry = SimpleNamespace(
+        entry_id="entry-001",
+        year_month="2026-05",
+        amount_due=Decimal("2000.00"),
+        paid_amount=Decimal("500.00"),
+        payment_status="partial",
+        currency_code="CNY",
+        attributed_project_id="project-001",
+        attributed_owner_party_id="owner-001",
+        attributed_operator_party_id="operator-001",
+        attributed_asset_ids=["asset-001"],
+    )
+    created_payloads: list[dict] = []
+
+    async def _create_service_fee_entry(db, *, data, commit=False):  # noqa: ANN001
+        created_payloads.append(data)
+        return SimpleNamespace(**data)
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(
+                return_value=[
+                    old_entrusted_contract,
+                    current_entrusted_contract,
+                    direct_contract,
+                ]
+            ),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[source_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[]),
+            create=True,
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.create_service_fee_entry",
+            new=_create_service_fee_entry,
+            create=True,
+        ),
+    ):
+        result = await service.sync_contract_group(mock_db, group_id="group-1")
+
+    assert result == {"created": 1, "updated": 0, "voided": 0, "source_mismatches": 0}
+    assert created_payloads[0]["agency_agreement_contract_id"] == "contract-entrust-old"
+    assert created_payloads[0]["service_fee_ratio"] == Decimal("0.2000")
+    assert created_payloads[0]["calculation_base_amount"] == Decimal("500.00")
+    assert created_payloads[0]["amount_due"] == Decimal("100.00")
+
+
+async def test_sync_should_reject_source_month_crossing_service_fee_ratio_interval(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+    )
+    mid_month_entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust-current",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        effective_from=date(2026, 7, 15),
+        effective_to=None,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.3000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+    )
+    source_entry = SimpleNamespace(
+        entry_id="entry-001",
+        year_month="2026-07",
+        amount_due=Decimal("2000.00"),
+        paid_amount=Decimal("500.00"),
+        payment_status="partial",
+        currency_code="CNY",
+        attributed_project_id="project-001",
+        attributed_owner_party_id="owner-001",
+        attributed_operator_party_id="operator-001",
+        attributed_asset_ids=["asset-001"],
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[mid_month_entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[source_entry]),
+        ),
+    ):
+        with pytest.raises(BusinessValidationError, match="split rent ledger period"):
+            await service.sync_contract_group(mock_db, group_id="group-1")
+
+
+async def test_sync_should_preserve_existing_service_fee_when_source_changes(
     mock_db,
 ) -> None:
     service_fee_module = importlib.import_module(
@@ -130,16 +698,18 @@ async def test_sync_should_update_service_fee_attribution_from_source_ledger(
         attributed_asset_ids=["asset-new"],
     )
     existing_entry = SimpleNamespace(
-        source_ledger_id="entry-001",
+        agency_agreement_contract_id="contract-entrust",
+        source_ledger_ids=["entry-old"],
+        calculation_base_amount=Decimal("2000.00"),
         amount_due=Decimal("200.00"),
-        paid_amount=Decimal("50.00"),
+        paid_amount=Decimal("0.00"),
         payment_status="partial",
         currency_code="CNY",
         service_fee_ratio=Decimal("0.1000"),
         year_month="2026-05",
         agency_contract_id="contract-direct",
         attributed_project_id="project-old",
-        attributed_owner_party_id="owner-old",
+        attributed_owner_party_id="owner-new",
         attributed_operator_party_id="operator-old",
         attributed_asset_ids=["asset-old"],
         updated_at=None,
@@ -166,8 +736,443 @@ async def test_sync_should_update_service_fee_attribution_from_source_ledger(
     ):
         result = await service.sync_contract_group(mock_db, group_id="group-1")
 
-    assert result == {"created": 0, "updated": 1, "voided": 0}
-    assert existing_entry.attributed_project_id == "project-new"
+    assert result == {"created": 0, "updated": 0, "voided": 0, "source_mismatches": 1}
+    assert existing_entry.source_ledger_ids == ["entry-old"]
+    assert existing_entry.calculation_base_amount == Decimal("2000.00")
+    assert existing_entry.amount_due == Decimal("200.00")
+    assert existing_entry.attributed_project_id == "project-old"
     assert existing_entry.attributed_owner_party_id == "owner-new"
-    assert existing_entry.attributed_operator_party_id == "operator-new"
-    assert existing_entry.attributed_asset_ids == ["asset-new"]
+    assert existing_entry.attributed_operator_party_id == "operator-old"
+    assert existing_entry.attributed_asset_ids == ["asset-old"]
+    assert existing_entry.updated_at is None
+
+
+async def test_sync_should_not_create_duplicate_when_source_key_changes(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-current",
+        operator_party_id="operator-001",
+    )
+    entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.1000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+    )
+    source_entry = _source_entry(
+        entry_id="entry-current",
+        attributed_owner_party_id="owner-current",
+    )
+    existing_entry = _existing_service_fee_entry(
+        source_ledger_ids=["entry-current"],
+        attributed_owner_party_id="owner-previous",
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[source_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[existing_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.create_service_fee_entry",
+            new=AsyncMock(),
+        ) as mock_create,
+    ):
+        with pytest.raises(
+            BusinessValidationError,
+            match="unrestricted service fee reconciliation",
+        ):
+            await service.sync_contract_group(
+                mock_db,
+                group_id="group-1",
+                current_user_id="user-current",
+                party_filter=PartyFilter(
+                    party_ids=["owner-current"],
+                    filter_mode="owner",
+                    owner_party_ids=["owner-current"],
+                ),
+            )
+        result = await service.sync_contract_group(mock_db, group_id="group-1")
+
+    assert result["created"] == 0
+    assert result["source_mismatches"] == 1
+    mock_create.assert_not_awaited()
+
+
+def _source_entry(**overrides) -> SimpleNamespace:  # noqa: ANN003
+    data = {
+        "entry_id": "entry-001",
+        "year_month": "2026-05",
+        "amount_due": Decimal("500.00"),
+        "due_date": date(2026, 5, 1),
+        "paid_amount": Decimal("500.00"),
+        "payment_status": "partial",
+        "currency_code": "CNY",
+        "attributed_project_id": "project-001",
+        "attributed_owner_party_id": "owner-001",
+        "attributed_operator_party_id": "operator-001",
+        "attributed_asset_ids": ["asset-001"],
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def _rent_term(**overrides) -> SimpleNamespace:  # noqa: ANN003
+    data = {
+        "start_date": date(2026, 5, 1),
+        "end_date": date(2026, 5, 31),
+        "monthly_rent": Decimal("500.00"),
+        "total_monthly_amount": Decimal("500.00"),
+        "sort_order": 1,
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def _existing_service_fee_entry(**overrides) -> SimpleNamespace:  # noqa: ANN003
+    data = {
+        "service_fee_entry_id": "fee-001",
+        "contract_group_id": "group-1",
+        "agency_contract_id": "contract-direct",
+        "agency_agreement_contract_id": "contract-entrust",
+        "source_ledger_ids": ["entry-001"],
+        "calculation_base_amount": Decimal("500.00"),
+        "amount_due": Decimal("50.00"),
+        "paid_amount": Decimal("0.00"),
+        "payment_status": "unpaid",
+        "currency_code": "CNY",
+        "service_fee_ratio": Decimal("0.1000"),
+        "year_month": "2026-05",
+        "attributed_project_id": "project-001",
+        "attributed_owner_party_id": "owner-001",
+        "attributed_operator_party_id": "operator-001",
+        "attributed_asset_ids": ["asset-001"],
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+async def _find_service_fee_source_mismatches(
+    mock_db,
+    *,
+    source_entry: SimpleNamespace,
+    existing_entries: list[SimpleNamespace],
+    rent_terms: list[SimpleNamespace] | None = None,
+):
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+    )
+    entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.1000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+        lease_detail=SimpleNamespace(payment_cycle="monthly"),
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[source_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_rent_terms_by_contract",
+            new=AsyncMock(return_value=rent_terms or [_rent_term()]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=existing_entries),
+            create=True,
+        ),
+    ):
+        return await service.find_source_mismatches(mock_db, group_id="group-1")
+
+
+async def test_find_source_mismatches_should_report_preserved_service_fee_source_change(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(
+            entry_id="entry-new",
+            attributed_project_id="project-new",
+            attributed_operator_party_id="operator-new",
+            attributed_asset_ids=["asset-new"],
+        ),
+        existing_entries=[
+            _existing_service_fee_entry(
+                source_ledger_ids=["entry-old"],
+                calculation_base_amount=Decimal("2000.00"),
+                amount_due=Decimal("200.00"),
+                attributed_project_id="project-old",
+                attributed_operator_party_id="operator-old",
+                attributed_asset_ids=["asset-old"],
+            )
+        ],
+    )
+
+    assert [
+        (item.service_fee_entry_id, item.year_month, item.reason) for item in mismatches
+    ] == [("fee-001", "2026-05", "service_fee_source_changed")]
+
+
+async def test_find_source_mismatches_should_report_stale_source_rent_entry(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(amount_due=Decimal("1000.00")),
+        existing_entries=[_existing_service_fee_entry()],
+        rent_terms=[
+            _rent_term(
+                monthly_rent=Decimal("1200.00"),
+                total_monthly_amount=Decimal("1200.00"),
+            )
+        ],
+    )
+
+    assert [
+        (item.service_fee_entry_id, item.year_month, item.reason) for item in mismatches
+    ] == [("fee-001", "2026-05", "service_fee_source_ledger_stale_after_correction")]
+
+
+async def test_find_source_mismatches_should_ignore_service_fee_payment_status_change(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(),
+        existing_entries=[_existing_service_fee_entry(payment_status="paid")],
+    )
+
+    assert mismatches == []
+
+
+async def test_find_source_mismatches_should_ignore_voided_service_fee_entries(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(
+            entry_id="entry-new",
+            attributed_project_id="project-new",
+            attributed_operator_party_id="operator-new",
+            attributed_asset_ids=["asset-new"],
+        ),
+        existing_entries=[
+            _existing_service_fee_entry(
+                service_fee_entry_id="fee-voided",
+                source_ledger_ids=["entry-old"],
+                calculation_base_amount=Decimal("2000.00"),
+                amount_due=Decimal("200.00"),
+                payment_status="voided",
+                attributed_project_id="project-old",
+                attributed_operator_party_id="operator-old",
+                attributed_asset_ids=["asset-old"],
+            )
+        ],
+    )
+
+    assert mismatches == []
+
+
+async def _reconcile_service_fee_source(
+    mock_db,
+    *,
+    source_entry: SimpleNamespace,
+    existing_entry: SimpleNamespace,
+    allocated_amount: Decimal = Decimal("0.00"),
+    party_filter: PartyFilter | None = None,
+):
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+        owner_party_id="owner-001",
+        operator_party_id="operator-001",
+    )
+    entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.1000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+        lease_detail=SimpleNamespace(payment_cycle="monthly"),
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get_service_fee_entries_by_ids",
+            new=AsyncMock(return_value=[existing_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[source_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_rent_terms_by_contract",
+            new=AsyncMock(return_value=[_rent_term()]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.sum_active_allocations_by_target",
+            new=AsyncMock(return_value=allocated_amount),
+        ),
+    ):
+        return await service.reconcile_source(
+            mock_db,
+            entry_id="fee-001",
+            reason="确认采用当前租金台账来源",
+            current_user_id="user-1" if party_filter is not None else None,
+            party_filter=party_filter,
+        )
+
+
+async def test_reconcile_source_should_replace_frozen_source_with_current_bucket(
+    mock_db,
+) -> None:
+    existing_entry = _existing_service_fee_entry(
+        source_ledger_ids=["entry-old"],
+        calculation_base_amount=Decimal("1000.00"),
+        amount_due=Decimal("100.00"),
+        attributed_project_id="project-old",
+        attributed_operator_party_id="operator-old",
+        attributed_asset_ids=["asset-old"],
+    )
+
+    result = await _reconcile_service_fee_source(
+        mock_db,
+        source_entry=_source_entry(entry_id="entry-current"),
+        existing_entry=existing_entry,
+        allocated_amount=Decimal("20.00"),
+        party_filter=PartyFilter(
+            party_ids=["owner-001"],
+            filter_mode="owner",
+            owner_party_ids=["owner-001"],
+        ),
+    )
+
+    assert result is existing_entry
+    assert existing_entry.source_ledger_ids == ["entry-current"]
+    assert existing_entry.calculation_base_amount == Decimal("500.00")
+    assert existing_entry.amount_due == Decimal("50.00")
+    assert existing_entry.paid_amount == Decimal("20.00")
+    assert existing_entry.payment_status == "partial"
+    assert existing_entry.attributed_project_id == "project-001"
+    assert existing_entry.attributed_operator_party_id == "operator-001"
+    assert existing_entry.attributed_asset_ids == ["asset-001"]
+    assert existing_entry.updated_at is not None
+    mock_db.flush.assert_awaited_once()
+    mock_db.commit.assert_awaited_once()
+
+
+async def test_reconcile_source_should_rekey_to_unique_current_bucket(mock_db) -> None:
+    existing_entry = _existing_service_fee_entry(
+        source_ledger_ids=["entry-current"],
+        attributed_owner_party_id="owner-previous",
+    )
+
+    result = await _reconcile_service_fee_source(
+        mock_db,
+        source_entry=_source_entry(
+            entry_id="entry-current",
+            attributed_owner_party_id="owner-current",
+        ),
+        existing_entry=existing_entry,
+    )
+
+    assert result.attributed_owner_party_id == "owner-current"
+    assert result.source_ledger_ids == ["entry-current"]
+
+
+async def test_reconcile_source_should_reject_amount_below_registered_receipts(
+    mock_db,
+) -> None:
+    existing_entry = _existing_service_fee_entry(
+        source_ledger_ids=["entry-old"],
+        calculation_base_amount=Decimal("1000.00"),
+        amount_due=Decimal("100.00"),
+    )
+
+    with pytest.raises(
+        BusinessValidationError,
+        match="below active allocated receipts",
+    ):
+        await _reconcile_service_fee_source(
+            mock_db,
+            source_entry=_source_entry(entry_id="entry-current"),
+            existing_entry=existing_entry,
+            allocated_amount=Decimal("60.00"),
+        )
+
+    mock_db.commit.assert_not_awaited()
+
+
+async def test_reconcile_source_should_hide_out_of_scope_entry(mock_db) -> None:
+    with pytest.raises(ResourceNotFoundError):
+        await _reconcile_service_fee_source(
+            mock_db,
+            source_entry=_source_entry(entry_id="entry-current"),
+            existing_entry=_existing_service_fee_entry(source_ledger_ids=["entry-old"]),
+            party_filter=PartyFilter(
+                party_ids=["other-owner"],
+                filter_mode="owner",
+                owner_party_ids=["other-owner"],
+            ),
+        )
+
+    mock_db.commit.assert_not_awaited()

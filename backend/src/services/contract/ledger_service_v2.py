@@ -18,12 +18,19 @@ from src.core.exception_handler import (
 )
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import (
     Contract,
     ContractGroup,
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
+    GroupRelationType,
+    LedgerView,
+)
+from src.services.contract.ledger_scope import (
+    assert_resource_in_scope,
+    resolve_ledger_party_filter,
 )
 
 logger = logging.getLogger(__name__)
@@ -136,11 +143,49 @@ def _has_registered_receipt(entry: Any) -> bool:
     return _as_decimal(getattr(entry, "paid_amount", Decimal("0"))) > 0
 
 
+def _has_active_payment_allocation(entry: Any) -> bool:
+    try:
+        return int(getattr(entry, "active_allocation_count", 0) or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def has_recalculation_protected_payment_fact(entry: Any) -> bool:
+    return _has_registered_receipt(entry) or _has_active_payment_allocation(entry)
+
+
+def _manual_resolution_reason(
+    entry: Any,
+    *,
+    outside_current_terms: bool = False,
+) -> str:
+    if _has_active_payment_allocation(entry) and not _has_registered_receipt(entry):
+        if outside_current_terms:
+            return "allocated_entry_outside_current_terms"
+        return "allocated_entry_requires_manual_resolution"
+    if outside_current_terms:
+        return "paid_or_partial_entry_outside_current_terms"
+    return "paid_or_partial_entry_requires_manual_resolution"
+
+
 def _parse_year_month(year_month: str) -> date | None:
     try:
         return datetime.strptime(f"{year_month}-01", "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def _parse_optional_date(value: date | datetime | str | None) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError as exc:
+        raise BusinessValidationError("date filters must use ISO date format") from exc
 
 
 def find_stale_paid_or_partial_ledger_entries(
@@ -149,12 +194,12 @@ def find_stale_paid_or_partial_ledger_entries(
     ledger_entries: list[ContractLedgerEntry],
     payment_cycle: str,
 ) -> list[StalePaidLedgerEntry]:
-    """Derive paid/partial entries that need manual correction after term changes."""
+    """Derive protected ledger entries that need manual correction after term changes."""
     stale_entries: list[StalePaidLedgerEntry] = []
     target_year_month_set = set(_expand_year_months(rent_terms))
 
     for entry in ledger_entries:
-        if not _has_registered_receipt(entry):
+        if not has_recalculation_protected_payment_fact(entry):
             continue
         payment_status = str(getattr(entry, "payment_status", "") or "").strip()
 
@@ -165,7 +210,7 @@ def find_stale_paid_or_partial_ledger_entries(
                     entry_id=str(getattr(entry, "entry_id", "")),
                     year_month=year_month,
                     payment_status=payment_status,
-                    reason="paid_or_partial_entry_outside_current_terms",
+                    reason=_manual_resolution_reason(entry, outside_current_terms=True),
                 )
             )
             continue
@@ -177,7 +222,7 @@ def find_stale_paid_or_partial_ledger_entries(
                     entry_id=str(getattr(entry, "entry_id", "")),
                     year_month=year_month,
                     payment_status=payment_status,
-                    reason="paid_or_partial_entry_requires_manual_resolution",
+                    reason=_manual_resolution_reason(entry),
                 )
             )
             continue
@@ -197,7 +242,7 @@ def find_stale_paid_or_partial_ledger_entries(
                     entry_id=str(getattr(entry, "entry_id", "")),
                     year_month=year_month,
                     payment_status=payment_status,
-                    reason="paid_or_partial_entry_requires_manual_resolution",
+                    reason=_manual_resolution_reason(entry),
                 )
             )
 
@@ -213,6 +258,21 @@ def _asset_ids_from(items: list[Any] | None) -> list[str]:
         if asset_id is not None:
             asset_ids.append(str(asset_id))
     return asset_ids
+
+
+def derive_ledger_views_for_contract(contract: Contract) -> list[str]:
+    """Map contract business role to operations-ledger view memberships."""
+    relation_type = getattr(contract, "group_relation_type", None)
+    if relation_type in {GroupRelationType.DOWNSTREAM, "DOWNSTREAM", "??"}:
+        return [
+            LedgerView.TERMINAL_COLLECTION.value,
+            LedgerView.OPERATOR_INCOME.value,
+        ]
+    if relation_type in {GroupRelationType.DIRECT_LEASE, "DIRECT_LEASE", "??"}:
+        return [LedgerView.TERMINAL_COLLECTION.value]
+    if relation_type in {GroupRelationType.UPSTREAM, "UPSTREAM", "??"}:
+        return [LedgerView.OPERATOR_COST.value]
+    return []
 
 
 class ContractLedgerServiceV2:
@@ -261,6 +321,7 @@ class ContractLedgerServiceV2:
         is_tax_included: bool,
         tax_rate: Decimal | None,
         attribution: LedgerAttributionSnapshot,
+        ledger_views: list[str],
         now: datetime,
     ) -> dict[str, Any]:
         return {
@@ -269,6 +330,7 @@ class ContractLedgerServiceV2:
             "year_month": year_month,
             "due_date": due_date,
             "amount_due": amount_due,
+            "ledger_views": ledger_views,
             "currency_code": currency_code,
             "is_tax_included": is_tax_included,
             "tax_rate": tax_rate,
@@ -316,6 +378,9 @@ class ContractLedgerServiceV2:
         now = _utcnow()
         payment_cycle = lease_detail.payment_cycle or "月付"
         attribution: LedgerAttributionSnapshot | None = None
+        ledger_views = derive_ledger_views_for_contract(contract)
+        if not ledger_views:
+            raise BusinessValidationError("??????????????")
 
         for year_month in all_year_months:
             if year_month in existing_year_months:
@@ -343,6 +408,7 @@ class ContractLedgerServiceV2:
                     is_tax_included=contract.is_tax_included,
                     tax_rate=contract.tax_rate,
                     attribution=attribution,
+                    ledger_views=ledger_views,
                     now=now,
                 ),
                 commit=False,
@@ -380,22 +446,33 @@ class ContractLedgerServiceV2:
         self,
         db: AsyncSession,
         *,
+        ledger_view: str | None = None,
+        project_id: str | None = None,
         asset_id: str | None = None,
         party_id: str | None = None,
         contract_id: str | None = None,
         year_month_start: str | None = None,
         year_month_end: str | None = None,
+        flow_occurred_on_start: date | datetime | str | None = None,
+        flow_occurred_on_end: date | datetime | str | None = None,
         payment_status: str | None = None,
         include_voided: bool = False,
         offset: int = 0,
         limit: int = 20,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
+        normalized_flow_occurred_on_start = _parse_optional_date(flow_occurred_on_start)
+        normalized_flow_occurred_on_end = _parse_optional_date(flow_occurred_on_end)
         if not any(
             [
+                project_id is not None,
                 asset_id is not None,
                 party_id is not None,
                 contract_id is not None,
                 year_month_start is not None,
+                normalized_flow_occurred_on_start is not None,
+                normalized_flow_occurred_on_end is not None,
             ]
         ):
             raise BusinessValidationError(
@@ -408,15 +485,34 @@ class ContractLedgerServiceV2:
         ):
             raise BusinessValidationError("开始账期不能晚于结束账期")
 
+        if (
+            normalized_flow_occurred_on_start is not None
+            and normalized_flow_occurred_on_end is not None
+            and normalized_flow_occurred_on_start > normalized_flow_occurred_on_end
+        ):
+            raise BusinessValidationError(
+                "flow occurred start date cannot be after end date"
+            )
+
+        resolved_party_filter = await resolve_ledger_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
         items, total = await contract_group_crud.query_ledger_entries(
             db,
+            ledger_view=ledger_view,
+            project_id=project_id,
             asset_id=asset_id,
             party_id=party_id,
             contract_id=contract_id,
             year_month_start=year_month_start,
             year_month_end=year_month_end,
+            flow_occurred_on_start=normalized_flow_occurred_on_start,
+            flow_occurred_on_end=normalized_flow_occurred_on_end,
             payment_status=payment_status,
             include_voided=include_voided,
+            party_filter=resolved_party_filter,
             offset=offset,
             limit=limit,
         )
@@ -453,6 +549,9 @@ class ContractLedgerServiceV2:
         payment_cycle = getattr(lease_detail, "payment_cycle", None) or "月付"
         now = _utcnow()
         attribution: LedgerAttributionSnapshot | None = None
+        ledger_views = derive_ledger_views_for_contract(contract)
+        if not ledger_views:
+            raise BusinessValidationError("??????????????")
         existing_by_month = {entry.year_month: entry for entry in existing_entries}
         target_year_months = _expand_year_months(rent_terms)
         target_year_month_set = set(target_year_months)
@@ -489,6 +588,7 @@ class ContractLedgerServiceV2:
                         is_tax_included=contract.is_tax_included,
                         tax_rate=contract.tax_rate,
                         attribution=attribution,
+                        ledger_views=ledger_views,
                         now=now,
                     ),
                     commit=False,
@@ -512,13 +612,13 @@ class ContractLedgerServiceV2:
             if not requires_update:
                 continue
 
-            if _has_registered_receipt(existing_entry):
+            if has_recalculation_protected_payment_fact(existing_entry):
                 skipped_entries.append(
                     {
                         "entry_id": existing_entry.entry_id,
                         "year_month": existing_entry.year_month,
                         "payment_status": existing_entry.payment_status,
-                        "reason": "paid_or_partial_entry_requires_manual_resolution",
+                        "reason": _manual_resolution_reason(existing_entry),
                     }
                 )
                 continue
@@ -533,13 +633,13 @@ class ContractLedgerServiceV2:
                 continue
             if existing_entry.payment_status == "voided":
                 continue
-            if _has_registered_receipt(existing_entry):
+            if has_recalculation_protected_payment_fact(existing_entry):
                 skipped_entries.append(
                     {
                         "entry_id": existing_entry.entry_id,
                         "year_month": existing_entry.year_month,
                         "payment_status": existing_entry.payment_status,
-                        "reason": "paid_or_partial_entry_requires_manual_resolution",
+                        "reason": _manual_resolution_reason(existing_entry),
                     }
                 )
                 continue
@@ -559,21 +659,43 @@ class ContractLedgerServiceV2:
             "skipped_entries": skipped_entries,
         }
 
-    async def batch_update_status(
+    async def update_follow_up(
         self,
         db: AsyncSession,
         *,
-        contract_id: str,
-        entry_ids: list[str],
-        paid_amount: Decimal,
-        notes: str | None = None,
-    ) -> list[ContractLedgerEntry]:
-        return await contract_group_crud.batch_update_ledger_status(
+        entry_id: str,
+        follow_up_status: str | None,
+        next_follow_up_date: date | None = None,
+        follow_up_note: str | None = None,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
+    ) -> ContractLedgerEntry:
+        entry = await contract_group_crud.get_ledger_entry_by_id(db, entry_id=entry_id)
+        if entry is None:
+            raise ResourceNotFoundError("台账条目不存在")
+
+        resolved_party_filter = await resolve_ledger_party_filter(
             db,
-            contract_id=contract_id,
-            entry_ids=entry_ids,
-            paid_amount=paid_amount,
-            notes=notes,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        assert_resource_in_scope(
+            entry,
+            party_filter=resolved_party_filter,
+            resource_type="台账条目",
+            resource_id=entry_id,
+        )
+
+        ledger_views = set(getattr(entry, "ledger_views", []) or [])
+        if LedgerView.TERMINAL_COLLECTION.value not in ledger_views:
+            raise OperationNotAllowedError("仅终端租户收缴台账可维护跟进状态")
+
+        return await contract_group_crud.update_ledger_follow_up(
+            db,
+            entry=entry,
+            follow_up_status=follow_up_status,
+            next_follow_up_date=next_follow_up_date,
+            follow_up_note=follow_up_note,
         )
 
     async def reverse_correction_source_entries(
@@ -595,7 +717,7 @@ class ContractLedgerServiceV2:
                 continue
             if entry.payment_status == "voided":
                 continue
-            if _has_registered_receipt(entry):
+            if has_recalculation_protected_payment_fact(entry):
                 raise OperationNotAllowedError("存在已支付账期，需先人工处理")
             entry.payment_status = "voided"
             entry.updated_at = now

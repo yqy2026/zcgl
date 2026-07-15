@@ -36,8 +36,6 @@ from ....schemas.contract_group import (
     ContractGroupCreate,
     ContractGroupDetail,
     ContractGroupUpdate,
-    ContractLedgerBatchUpdateRequest,
-    ContractLedgerEntryResponse,
     ContractLedgerListResponse,
     ContractLifecycleAction,
     ContractRentTermCreate,
@@ -954,40 +952,3 @@ async def get_contract_ledger(
         raise
     except Exception as exc:
         raise internal_error("查询合同台账失败", original_error=exc) from exc
-
-
-@router.patch(
-    "/contracts/{contract_id}/ledger/batch-update-status",
-    response_model=list[ContractLedgerEntryResponse],
-    summary="批量登记合同台账实收金额",
-)
-async def batch_update_contract_ledger_status(
-    contract_id: str,
-    payload: ContractLedgerBatchUpdateRequest,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="update",
-                resource_type="contract",
-                resource_id="{contract_id}",
-            )
-        ),
-    ] = None,
-) -> list[Any]:
-    _ = current_user
-    _ = _authz
-    try:
-        return await ledger_service_v2.batch_update_status(
-            db,
-            contract_id=contract_id,
-            entry_ids=payload.entry_ids,
-            paid_amount=payload.paid_amount,
-            notes=payload.notes,
-        )
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("批量更新合同台账失败", original_error=exc) from exc

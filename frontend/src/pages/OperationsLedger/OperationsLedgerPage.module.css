@@ -1,6 +1,10 @@
+.pageStack {
+  width: 100%;
+}
+
 .toolbar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--spacing-md);
   align-items: end;
 }
@@ -16,6 +20,14 @@
   font-size: var(--font-size-sm);
 }
 
+.toolbarActions {
+  grid-column: 1 / -1;
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
 .summaryRow {
   margin-bottom: var(--spacing-lg);
 }
@@ -26,14 +38,30 @@
   border-radius: var(--radius-lg);
 }
 
+.serviceFeeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.serviceFeeTableCard {
+  grid-column: 1 / -1;
+}
+
+.serviceFeeSummary {
+  margin-bottom: var(--spacing-md);
+}
+
 @media (max-width: var(--breakpoint-lg)) {
-  .toolbar {
+  .toolbar,
+  .serviceFeeGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: var(--breakpoint-sm)) {
-  .toolbar {
+  .toolbar,
+  .serviceFeeGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

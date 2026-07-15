@@ -26,6 +26,7 @@ def test_pdf_import_service_module_avoids_datetime_utcnow() -> None:
 
     assert "datetime.utcnow(" not in content
 
+
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -34,11 +35,7 @@ def test_pdf_import_service_module_avoids_datetime_utcnow() -> None:
 @pytest.fixture
 def pdf_service():
     """创建 PDFImportService 实例"""
-    with patch(
-        "src.services.document.pdf_import_service.get_llm_contract_extractor",
-        return_value=MagicMock(),
-    ):
-        return PDFImportService()
+    return PDFImportService()
 
 
 @pytest.fixture
@@ -75,8 +72,19 @@ class TestPDFImportServiceInit:
     def test_initialization(self, pdf_service):
         """测试初始化"""
         assert pdf_service.regex_extractor is not None
-        assert pdf_service.llm_extractor is not None
+        assert pdf_service._llm_extractor is None
         assert pdf_service.task_queue is not None
+
+    def test_llm_extractor_is_initialized_on_first_use(self, pdf_service):
+        extractor = MagicMock()
+        with patch(
+            "src.services.document.pdf_import_service.get_llm_contract_extractor",
+            return_value=extractor,
+        ) as mock_get_extractor:
+            assert pdf_service.llm_extractor is extractor
+            assert pdf_service.llm_extractor is extractor
+
+        mock_get_extractor.assert_called_once_with()
 
     def test_class_semaphore_initialized(self):
         """测试类级别信号量初始化"""
@@ -768,28 +776,31 @@ class TestConfirmImport:
                         "rent_description": "第二阶段",
                     },
                 ],
-            }
+            },
         }
 
-        with patch(
-            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
-            new=AsyncMock(return_value=mock_import_session),
-        ), patch(
-            "src.services.document.pdf_import_service.party_service.get_party",
-            new=AsyncMock(side_effect=[operator_party, owner_party]),
-        ), patch(
-            "src.services.document.pdf_import_service.contract_group_service.generate_group_code",
-            new=AsyncMock(return_value="GRP-OPERATOR-202603-0001"),
-        ), patch(
-            "src.services.document.pdf_import_service.contract_group_service.create_contract_group",
-            new=AsyncMock(return_value=created_group),
-        ) as mock_create_group, patch(
-            "src.services.document.pdf_import_service.contract_group_service.add_contract_to_group",
-            new=AsyncMock(return_value=created_contract),
-        ) as mock_add_contract, patch(
-            "src.services.document.pdf_import_service.contract_group_service.create_rent_term",
-            new=AsyncMock(),
-        ) as mock_create_rent_term:
+        with (
+            patch(
+                "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+                new=AsyncMock(return_value=mock_import_session),
+            ),
+            patch(
+                "src.services.document.pdf_import_service.party_service.get_party",
+                new=AsyncMock(side_effect=[operator_party, owner_party]),
+            ),
+            patch(
+                "src.services.document.pdf_import_service.contract_group_service.generate_group_code",
+                new=AsyncMock(return_value="GRP-OPERATOR-202603-0001"),
+            ),
+            patch(
+                "src.services.document.pdf_import_service.contract_group_service.create_contract_group",
+                new=AsyncMock(return_value=created_group),
+            ) as mock_create_group,
+            patch(
+                "src.services.document.pdf_import_service.contract_group_service.add_contract_to_group",
+                new=AsyncMock(return_value=created_contract),
+            ) as mock_add_contract,
+        ):
             result = await pdf_service.confirm_import(
                 mock_db, "session_123", confirmed_data, user_id=1
             )
@@ -822,8 +833,9 @@ class TestConfirmImport:
         assert str(created_contract_payload.lease_detail.rent_amount) == "5000"
         assert str(created_contract_payload.lease_detail.total_deposit) == "10000"
 
-        first_rent_term = mock_create_rent_term.await_args_list[0].kwargs["obj_in"]
-        second_rent_term = mock_create_rent_term.await_args_list[1].kwargs["obj_in"]
+        assert len(created_contract_payload.rent_terms) == 2
+        first_rent_term = created_contract_payload.rent_terms[0]
+        second_rent_term = created_contract_payload.rent_terms[1]
         assert first_rent_term.sort_order == 1
         assert first_rent_term.start_date == date(2024, 1, 1)
         assert str(first_rent_term.management_fee) == "200"
@@ -836,8 +848,14 @@ class TestConfirmImport:
         assert mock_import_session.current_step == ProcessingStep.FINAL_REVIEW
         assert mock_import_session.progress_percentage == 100.0
         assert mock_import_session.completed_at is not None
-        assert mock_import_session.processing_result["created_contract_group_id"] == "group-123"
-        assert mock_import_session.processing_result["created_contract_id"] == "contract-456"
+        assert (
+            mock_import_session.processing_result["created_contract_group_id"]
+            == "group-123"
+        )
+        assert (
+            mock_import_session.processing_result["created_contract_id"]
+            == "contract-456"
+        )
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once_with(mock_import_session)
 
@@ -855,7 +873,7 @@ class TestConfirmImport:
                 "tenant_name": "Test Tenant",
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
-            }
+            },
         }
 
         with patch(
@@ -941,25 +959,32 @@ class TestConfirmImport:
             },
         }
 
-        with patch(
-            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
-            new=AsyncMock(return_value=mock_import_session),
-        ), patch(
-            "src.services.document.pdf_import_service.party_service.get_party",
-            new=AsyncMock(side_effect=[operator_party, owner_party]),
-        ), patch(
-            "src.services.document.pdf_import_service.contract_group_service.generate_group_code",
-            new=AsyncMock(return_value="GRP-OPERATOR-202603-0002"),
-        ), patch(
-            "src.services.document.pdf_import_service.contract_group_service.create_contract_group",
-            new=AsyncMock(return_value=created_group),
-        ), patch(
-            "src.services.document.pdf_import_service.contract_group_service.add_contract_to_group",
-            new=AsyncMock(return_value=created_contract),
-        ) as mock_add_contract, patch(
-            "src.services.document.pdf_import_service.contract_group_service.create_rent_term",
-            new=AsyncMock(),
-        ) as mock_create_rent_term:
+        with (
+            patch(
+                "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+                new=AsyncMock(return_value=mock_import_session),
+            ),
+            patch(
+                "src.services.document.pdf_import_service.party_service.get_party",
+                new=AsyncMock(side_effect=[operator_party, owner_party]),
+            ),
+            patch(
+                "src.services.document.pdf_import_service.contract_group_service.generate_group_code",
+                new=AsyncMock(return_value="GRP-OPERATOR-202603-0002"),
+            ),
+            patch(
+                "src.services.document.pdf_import_service.contract_group_service.create_contract_group",
+                new=AsyncMock(return_value=created_group),
+            ),
+            patch(
+                "src.services.document.pdf_import_service.contract_group_service.add_contract_to_group",
+                new=AsyncMock(return_value=created_contract),
+            ) as mock_add_contract,
+            patch(
+                "src.services.document.pdf_import_service.contract_group_service.create_rent_term",
+                new=AsyncMock(),
+            ) as mock_create_rent_term,
+        ):
             result = await pdf_service.confirm_import(
                 mock_db, "session_agency_123", confirmed_data, user_id=1
             )

@@ -105,9 +105,7 @@ async def upload_pdf_file(
 
         if too_large:
             temp_file_path.unlink(missing_ok=True)
-            raise bad_request(
-                f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-            )
+            raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
 
         logger.info("PDF文件已保存: %s, size=%s", temp_file_path, total_size)
 

@@ -31,7 +31,9 @@ def _job_steps(job: dict[str, Any]) -> Iterable[dict[str, Any]]:
     return []
 
 
-def _jobs_running_alembic_upgrade(workflow: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _jobs_running_alembic_upgrade(
+    workflow: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
     jobs = workflow.get("jobs")
     if not isinstance(jobs, dict):
         return {}
@@ -61,16 +63,22 @@ def _step_by_name(job: dict[str, Any], step_name: str) -> dict[str, Any]:
 
 def test_ci_jobs_running_alembic_should_define_required_env() -> None:
     workflow = _load_ci_workflow()
-    required_env = {"SECRET_KEY", "PHASE4_TENANT_NOT_NULL_DECISION"}
+    required_env = {
+        "SECRET_KEY",
+        "DATA_ENCRYPTION_KEY",
+        "PHASE4_TENANT_NOT_NULL_DECISION",
+    }
+    global_env = workflow.get("env")
+    assert isinstance(global_env, dict)
 
     missing_by_job: dict[str, list[str]] = {}
     for job_name, job in _jobs_running_alembic_upgrade(workflow).items():
-        env = job.get("env")
-        if not isinstance(env, dict):
-            missing_by_job[job_name] = sorted(required_env)
-            continue
+        job_env = job.get("env")
+        if job_env is not None:
+            assert isinstance(job_env, dict)
 
-        missing = sorted(required_env.difference(env))
+        effective_env = {**global_env, **(job_env or {})}
+        missing = sorted(required_env.difference(effective_env))
         if missing:
             missing_by_job[job_name] = missing
 
@@ -144,7 +152,9 @@ def test_import_e2e_targets_should_only_reference_existing_backend_specs() -> No
 
     referenced_tests = {
         match
-        for match in re.findall(r"tests/e2e/[A-Za-z0-9_./-]+\.py", makefile_text + "\n" + script_text)
+        for match in re.findall(
+            r"tests/e2e/[A-Za-z0-9_./-]+\.py", makefile_text + "\n" + script_text
+        )
     }
     missing_tests = sorted(
         str(path)
@@ -183,6 +193,18 @@ def test_import_e2e_targets_should_only_reference_existing_frontend_specs() -> N
     )
 
 
+def test_import_e2e_targets_should_exclude_frozen_property_certificate_routes() -> None:
+    repo_root = _repo_root()
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    script_text = (repo_root / "scripts" / "dev" / "run_import_e2e.sh").read_text(
+        encoding="utf-8"
+    )
+    target_text = makefile_text + "\n" + script_text
+
+    assert "test_property_certificate_import_e2e.py" not in target_text
+    assert "property-certificate-import-success.spec.ts" not in target_text
+
+
 def test_frontend_e2e_job_should_install_full_browser_matrix() -> None:
     workflow = _load_ci_workflow()
     frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
@@ -203,6 +225,22 @@ def test_frontend_e2e_seed_should_provision_non_admin_role() -> None:
 
     assert "ensure_regular_role" in seed_script
     assert 'Role.name == "user"' in seed_script
+
+
+def test_frontend_e2e_party_seed_should_only_use_party_model_fields() -> None:
+    workflow = _load_ci_workflow()
+    frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
+    seed_step = _step_by_name(frontend_e2e_job, "Seed admin user for E2E")
+    seed_script = str(seed_step.get("run", ""))
+
+    party_constructor = re.search(
+        r"party = Party\((?P<fields>.*?)\n\s*\)", seed_script, flags=re.DOTALL
+    )
+    assert party_constructor is not None
+    party_fields = party_constructor.group("fields")
+
+    assert "created_by=" not in party_fields
+    assert "updated_by=" not in party_fields
 
 
 def test_workflows_should_not_pin_deprecated_node20_action_majors() -> None:

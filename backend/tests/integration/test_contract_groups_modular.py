@@ -17,6 +17,7 @@ from src.models.pdf_import_session import (
     ProcessingStep,
     SessionStatus,
 )
+from src.models.project import Project
 
 pytestmark = pytest.mark.integration
 
@@ -68,12 +69,12 @@ class TestContractGroupRoutes:
             "/api/v1/contracts/{contract_id}/rent-terms",
             "/api/v1/contracts/{contract_id}/rent-terms/{rent_term_id}",
             "/api/v1/contracts/{contract_id}/ledger",
-            "/api/v1/contracts/{contract_id}/ledger/batch-update-status",
         ]
 
         for route in required_paths:
             assert route in paths
         assert "/api/v1/contracts/{contract_id}/expire" not in paths
+        assert "/api/v1/contracts/{contract_id}/ledger/batch-update-status" not in paths
 
     def test_retired_contract_paths_are_not_registered(
         self, authenticated_client: TestClient
@@ -156,6 +157,16 @@ class TestContractGroupRoutes:
         db_session.refresh(lessee_party)
         db_session.refresh(owner_party)
 
+        project = Project(
+            project_name="M2 集成测试项目",
+            project_code="M2-INT-PROJECT",
+            status="active",
+            manager_party_id=operator_party.id,
+        )
+        db_session.add(project)
+        db_session.commit()
+        db_session.refresh(project)
+
         import_session = PDFImportSession(
             session_id="session-m2-contract-ledger-flow",
             original_filename="m2-contract.pdf",
@@ -181,11 +192,12 @@ class TestContractGroupRoutes:
             json={
                 "session_id": import_session.session_id,
                 "confirmed_data": {
+                    "project_id": project.id,
                     "contract_number": "M2-INT-20260309-001",
                     "tenant_name": "M2 集成测试租户",
-                    "start_date": "2026-01-01",
-                    "end_date": "2026-03-31",
-                    "sign_date": "2026-01-01",
+                    "start_date": "2099-01-01",
+                    "end_date": "2099-03-31",
+                    "sign_date": "2099-01-01",
                     "monthly_rent_base": "10000.00",
                     "total_deposit": "5000.00",
                     "payment_cycle": "月付",
@@ -205,8 +217,8 @@ class TestContractGroupRoutes:
                     },
                     "rent_terms": [
                         {
-                            "start_date": "2026-01-01",
-                            "end_date": "2026-03-31",
+                            "start_date": "2099-01-01",
+                            "end_date": "2099-03-31",
                             "monthly_rent": "10000.00",
                             "management_fee": "500.00",
                             "other_fees": "0.00",
@@ -218,7 +230,7 @@ class TestContractGroupRoutes:
             headers=csrf_headers,
         )
 
-        assert confirm_response.status_code == 200
+        assert confirm_response.status_code == 200, confirm_response.text
         confirm_payload = confirm_response.json()
         assert confirm_payload["success"] is True
         contract_group_id = confirm_payload["contract_group_id"]
@@ -251,14 +263,14 @@ class TestContractGroupRoutes:
         ledger_payload = ledger_response.json()
         assert ledger_payload["total"] == 3
         assert [item["year_month"] for item in ledger_payload["items"]] == [
-            "2026-01",
-            "2026-02",
-            "2026-03",
+            "2099-01",
+            "2099-02",
+            "2099-03",
         ]
         assert [item["due_date"] for item in ledger_payload["items"]] == [
-            "2026-01-01",
-            "2026-02-01",
-            "2026-03-01",
+            "2099-01-01",
+            "2099-02-01",
+            "2099-03-01",
         ]
         assert all(
             item["payment_status"] == "unpaid" for item in ledger_payload["items"]

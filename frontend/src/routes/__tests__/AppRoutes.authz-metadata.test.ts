@@ -4,7 +4,7 @@ import {
   CONTRACT_CENTER_ROUTES,
   CONTRACT_GROUP_ROUTES,
   ANALYTICS_ROUTES,
-  FINANCE_ROUTES,
+  OPERATIONS_ROUTES,
   PROJECT_ROUTES,
   SYSTEM_ROUTES,
 } from '@/constants/routes';
@@ -33,7 +33,7 @@ describe('AppRoutes authz metadata', () => {
       [CONTRACT_GROUP_ROUTES.EDIT_PATH, 'contract_group:update'],
       [CONTRACT_GROUP_ROUTES.NEW_CONTRACT_PATH, 'contract_group:create'],
       [ANALYTICS_ROUTES.OVERVIEW, 'analytics:read'],
-      [FINANCE_ROUTES.LEDGER, 'contract:read'],
+      [OPERATIONS_ROUTES.LEDGER, 'contract:read'],
     ]);
 
     const protectedRouteMap = new Map(protectedRoutes.map(route => [route.path, route]));

@@ -15,6 +15,11 @@ from ..models.contract_group import (
     ContractDirection,
     ContractLifecycleStatus,
     GroupRelationType,
+    LedgerFollowUpStatus,
+    LedgerView,
+    OperationalPaymentFlowStatus,
+    OperationalPaymentFlowType,
+    PaymentAllocationTargetType,
     RevenueMode,
 )
 
@@ -198,6 +203,28 @@ class AgencyDetailResponse(AgencyDetailCreate):
 # ===================== Contract =====================
 
 
+class ContractRentTermCreate(BaseModel):
+    """创建租金条款入参。"""
+
+    sort_order: int = Field(..., ge=1)
+    start_date: date
+    end_date: date
+    monthly_rent: Decimal = Field(..., ge=0)
+    management_fee: Decimal = Field(Decimal("0"), ge=0)
+    other_fees: Decimal = Field(Decimal("0"), ge=0)
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "ContractRentTermCreate":
+        if self.end_date < self.start_date:
+            raise PydanticCustomError(
+                "invalid_rent_term_date_range",
+                "租金条款结束日期不得早于开始日期",
+                {},
+            )
+        return self
+
+
 class ContractCreate(BaseModel):
     """创建合同入参"""
 
@@ -220,6 +247,10 @@ class ContractCreate(BaseModel):
     asset_ids: list[str] = Field(default_factory=list, description="关联资产 ID 列表")
     lease_detail: LeaseDetailCreate | None = Field(None, description="租赁合同明细")
     agency_detail: AgencyDetailCreate | None = Field(None, description="代理协议明细")
+    rent_terms: list[ContractRentTermCreate] = Field(
+        default_factory=list,
+        description="初始租金条款，与合同在同一事务内落库",
+    )
 
     @model_validator(mode="after")
     def validate_date_range(self) -> "ContractCreate":
@@ -338,28 +369,6 @@ class AuditLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ContractRentTermCreate(BaseModel):
-    """创建租金条款入参。"""
-
-    sort_order: int = Field(..., ge=1)
-    start_date: date
-    end_date: date
-    monthly_rent: Decimal = Field(..., ge=0)
-    management_fee: Decimal = Field(Decimal("0"), ge=0)
-    other_fees: Decimal = Field(Decimal("0"), ge=0)
-    notes: str | None = None
-
-    @model_validator(mode="after")
-    def validate_date_range(self) -> "ContractRentTermCreate":
-        if self.end_date < self.start_date:
-            raise PydanticCustomError(
-                "invalid_rent_term_date_range",
-                "租金条款结束日期不得早于开始日期",
-                {},
-            )
-        return self
-
-
 class ContractRentTermUpdate(BaseModel):
     """更新租金条款入参。"""
 
@@ -413,11 +422,16 @@ class ContractLedgerEntryResponse(BaseModel):
     year_month: str
     due_date: date
     amount_due: Decimal
+    ledger_views: list[LedgerView]
+    flow_occurred_on_dates: list[date] = Field(default_factory=list)
     currency_code: str
     is_tax_included: bool
     tax_rate: Decimal | None
     payment_status: str
     paid_amount: Decimal
+    follow_up_status: LedgerFollowUpStatus | None = None
+    next_follow_up_date: date | None = None
+    follow_up_note: str | None = None
     attributed_project_id: str | None = None
     attributed_owner_party_id: str | None = None
     attributed_operator_party_id: str | None = None
@@ -432,6 +446,15 @@ class ContractLedgerEntryResponse(BaseModel):
 class LedgerAggregateQueryParams(BaseModel):
     """跨合同台账聚合查询参数。"""
 
+    ledger_view: (
+        Literal[
+            "terminal_collection",
+            "operator_income",
+            "operator_cost",
+        ]
+        | None
+    ) = Field(None, description="经营台账视图")
+    project_id: str | None = Field(None, min_length=1, description="项目 ID")
     asset_id: str | None = Field(None, min_length=1, description="资产 ID")
     party_id: str | None = Field(None, min_length=1, description="主体 ID")
     contract_id: str | None = Field(None, min_length=1, description="合同 ID")
@@ -444,6 +467,14 @@ class LedgerAggregateQueryParams(BaseModel):
         None,
         pattern=r"^\d{4}-\d{2}$",
         description="结束账期，格式 YYYY-MM",
+    )
+    flow_occurred_on_start: date | None = Field(
+        None,
+        description="收付流水发生日期开始",
+    )
+    flow_occurred_on_end: date | None = Field(
+        None,
+        description="收付流水发生日期结束",
     )
     payment_status: (
         Literal[
@@ -462,15 +493,18 @@ class LedgerAggregateQueryParams(BaseModel):
     def validate_filters(self) -> "LedgerAggregateQueryParams":
         if not any(
             [
+                self.project_id is not None,
                 self.asset_id is not None,
                 self.party_id is not None,
                 self.contract_id is not None,
                 self.year_month_start is not None,
+                self.flow_occurred_on_start is not None,
+                self.flow_occurred_on_end is not None,
             ]
         ):
             raise PydanticCustomError(
                 "missing_ledger_filters",
-                "asset_id、party_id、contract_id、year_month_start 至少需要一个筛选条件",
+                "project_id、asset_id、party_id、contract_id、year_month_start、flow_occurred_on_start 至少需要一个筛选条件",
                 {},
             )
         if (
@@ -481,6 +515,16 @@ class LedgerAggregateQueryParams(BaseModel):
             raise PydanticCustomError(
                 "invalid_year_month_range",
                 "开始账期不能晚于结束账期",
+                {},
+            )
+        if (
+            self.flow_occurred_on_start is not None
+            and self.flow_occurred_on_end is not None
+            and self.flow_occurred_on_start > self.flow_occurred_on_end
+        ):
+            raise PydanticCustomError(
+                "invalid_flow_occurred_on_range",
+                "flow occurred start date cannot be after end date",
                 {},
             )
         return self
@@ -504,14 +548,14 @@ class LedgerExportQueryParams(LedgerAggregateQueryParams):
     )
 
 
-class ContractLedgerBatchUpdateRequest(BaseModel):
-    """批量登记合同台账实收金额。"""
+class LedgerFollowUpUpdateRequest(BaseModel):
+    """Update lightweight terminal-collection follow-up fields."""
 
     model_config = ConfigDict(extra="forbid")
 
-    entry_ids: list[str] = Field(..., min_length=1)
-    paid_amount: Decimal = Field(..., ge=0, description="实收金额")
-    notes: str | None = None
+    follow_up_status: LedgerFollowUpStatus | None = None
+    next_follow_up_date: date | None = None
+    follow_up_note: str | None = Field(None, max_length=500)
 
 
 class LedgerRecalculateSkippedEntry(BaseModel):
@@ -530,6 +574,160 @@ class LedgerRecalculateResponse(BaseModel):
     updated: int = Field(..., ge=0)
     voided: int = Field(..., ge=0)
     skipped_entries: list[LedgerRecalculateSkippedEntry] = Field(default_factory=list)
+
+
+class OperationalPaymentFlowCreate(BaseModel):
+    """Request body for creating an operational payment flow."""
+
+    flow_type: OperationalPaymentFlowType
+    occurred_on: date
+    amount: Decimal = Field(..., gt=0)
+    counterparty_id: str | None = None
+    voucher_attachment_ids: list[str] | None = None
+    notes: str | None = None
+
+
+class OperationalPaymentFlowResponse(BaseModel):
+    """Response payload for an operational payment flow."""
+
+    flow_id: str
+    flow_type: OperationalPaymentFlowType
+    occurred_on: date
+    amount: Decimal
+    registered_by: str
+    counterparty_id: str | None = None
+    voucher_attachment_ids: list[str] | None = None
+    notes: str | None = None
+    status: OperationalPaymentFlowStatus
+    corrected_from_flow_id: str | None = None
+    status_changed_by: str | None = None
+    status_changed_at: datetime | None = None
+    status_change_reason: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentVoucherAttachmentResponse(BaseModel):
+    """Downloadable voucher metadata exposed with a payment flow."""
+
+    id: str
+    file_name: str
+    file_type: str
+    file_size: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentVoucherDownloadAuditResponse(BaseModel):
+    """Scoped evidence for one voucher download attempt."""
+
+    log_id: str
+    user_id: str
+    flow_id: str
+    attachment_id: str
+    file_name: str | None = None
+    downloaded_at: datetime
+    result: Literal["success", "not_found"]
+
+
+class PaymentAllocationCreate(BaseModel):
+    """Request row for allocating one payment flow to a ledger period."""
+
+    target_type: PaymentAllocationTargetType
+    target_id: str = Field(..., min_length=1)
+    year_month: str = Field(..., pattern=r"^\d{4}-\d{2}$")
+    amount: Decimal = Field(..., gt=0)
+
+
+class PaymentAllocationSaveRequest(BaseModel):
+    """Request body for replacing allocations for one flow."""
+
+    allocations: list[PaymentAllocationCreate] = Field(..., min_length=1)
+
+
+class PaymentFlowLifecycleActionRequest(BaseModel):
+    """Reason required for a payment-flow terminal action."""
+
+    reason: str = Field(..., min_length=1, max_length=500)
+
+
+class PaymentFlowCorrectionRequest(PaymentFlowLifecycleActionRequest):
+    """Atomic replacement payload for one active payment flow."""
+
+    replacement: OperationalPaymentFlowCreate
+    allocations: list[PaymentAllocationCreate] = Field(..., min_length=1)
+
+
+class PaymentAllocationResponse(BaseModel):
+    """Response payload for a payment allocation."""
+
+    allocation_id: str
+    flow_id: str
+    target_type: PaymentAllocationTargetType
+    target_id: str
+    year_month: str
+    amount: Decimal
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OperationalPaymentFlowDetailResponse(OperationalPaymentFlowResponse):
+    """Payment flow with allocations and authorized voucher metadata."""
+
+    allocations: list[PaymentAllocationResponse] = Field(default_factory=list)
+    voucher_attachments: list[PaymentVoucherAttachmentResponse] = Field(
+        default_factory=list
+    )
+
+
+class ServiceFeeLedgerResponse(BaseModel):
+    """Response payload for a monthly service-fee ledger entry."""
+
+    service_fee_entry_id: str
+    contract_group_id: str
+    agency_contract_id: str
+    agency_agreement_contract_id: str
+    source_ledger_ids: list[str]
+    year_month: str
+    amount_due: Decimal
+    paid_amount: Decimal
+    payment_status: str
+    currency_code: str
+    service_fee_ratio: Decimal
+    calculation_base_amount: Decimal
+    attributed_project_id: str | None = None
+    attributed_owner_party_id: str | None = None
+    attributed_operator_party_id: str | None = None
+    attributed_asset_ids: list[str] | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceFeeGenerateRequest(BaseModel):
+    """Request body for generating monthly service-fee ledger entries."""
+
+    contract_group_id: str = Field(..., min_length=1)
+
+
+class ServiceFeeSourceReconcileRequest(BaseModel):
+    """Explicit operator confirmation for adopting the current source facts."""
+
+    reason: str = Field(..., min_length=1, max_length=500)
+
+
+class ServiceFeeGenerateResponse(BaseModel):
+    """Result summary for monthly service-fee generation."""
+
+    created: int = Field(..., ge=0)
+    updated: int = Field(..., ge=0)
+    voided: int = Field(..., ge=0)
+    source_mismatches: int = Field(..., ge=0)
 
 
 class LedgerCompensationFailure(BaseModel):

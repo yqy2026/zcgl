@@ -65,6 +65,10 @@ class TestAssetModelCreation:
     def test_asset_code_column_is_required(self):
         assert Asset.__table__.c.asset_code.nullable is False
 
+    def test_manager_party_column_is_nullable_for_unprojected_assets(self):
+        """运营方只从项目派生，未归项目的资产不应被历史列约束阻断。"""
+        assert Asset.__table__.c.manager_party_id.nullable is True
+
     @pytest.fixture
     def engine(self):
         """Create database engine for testing"""

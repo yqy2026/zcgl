@@ -1,9 +1,11 @@
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
 
 from src.core.exception_handler import BusinessValidationError
+from src.crud.query_builder import PartyFilter
 from src.services.contract.ledger_service_v2 import ledger_service_v2
 
 pytestmark = pytest.mark.asyncio
@@ -15,21 +17,33 @@ async def test_query_ledger_entries_delegates_filters_and_pagination() -> None:
         SimpleNamespace(entry_id="entry-002"),
     ]
 
+    party_filter = PartyFilter(
+        party_ids=["operator-001"],
+        filter_mode="manager",
+        manager_party_ids=["operator-001"],
+    )
+
     with patch(
         "src.services.contract.ledger_service_v2.contract_group_crud.query_ledger_entries",
         new=AsyncMock(return_value=(items, 2)),
     ) as mock_query:
         result = await ledger_service_v2.query_ledger_entries(
             AsyncMock(),
+            ledger_view="terminal_collection",
+            project_id="project-001",
             asset_id="asset-001",
             party_id="party-001",
             contract_id="contract-001",
             year_month_start="2026-01",
             year_month_end="2026-03",
+            flow_occurred_on_start=date(2026, 2, 1),
+            flow_occurred_on_end=date(2026, 2, 28),
             payment_status="partial",
             include_voided=True,
             offset=10,
             limit=50,
+            current_user_id="user-001",
+            party_filter=party_filter,
         )
 
     assert result == {
@@ -40,15 +54,20 @@ async def test_query_ledger_entries_delegates_filters_and_pagination() -> None:
     }
     mock_query.assert_awaited_once_with(
         ANY,
+        ledger_view="terminal_collection",
+        project_id="project-001",
         asset_id="asset-001",
         party_id="party-001",
         contract_id="contract-001",
         year_month_start="2026-01",
         year_month_end="2026-03",
+        flow_occurred_on_start=date(2026, 2, 1),
+        flow_occurred_on_end=date(2026, 2, 28),
         payment_status="partial",
         include_voided=True,
         offset=10,
         limit=50,
+        party_filter=party_filter,
     )
 
 
@@ -88,4 +107,17 @@ async def test_query_ledger_entries_rejects_inverted_year_month_range() -> None:
             contract_id="contract-001",
             year_month_start="2026-03",
             year_month_end="2026-01",
+        )
+
+
+async def test_query_ledger_entries_rejects_inverted_flow_date_range() -> None:
+    with pytest.raises(
+        BusinessValidationError,
+        match="flow occurred start date cannot be after end date",
+    ):
+        await ledger_service_v2.query_ledger_entries(
+            AsyncMock(),
+            contract_id="contract-001",
+            flow_occurred_on_start=date(2026, 3, 1),
+            flow_occurred_on_end=date(2026, 1, 1),
         )

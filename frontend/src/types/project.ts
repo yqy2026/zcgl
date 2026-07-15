@@ -123,6 +123,23 @@ export interface ProjectLedgerSummaryResponse {
   overdue_amount: string;
   service_fee_receivable: string;
   service_fee_received: string;
+  terminal_collection: ProjectLedgerMetricGroup;
+  operator_income: ProjectLedgerMetricGroup;
+  operator_cost: ProjectLedgerMetricGroup;
+  service_fee_settlement: ProjectLedgerMetricGroup;
+  operating_result: ProjectOperatingResultSummary;
+}
+
+export interface ProjectLedgerMetricGroup {
+  amount_due: string;
+  paid_amount: string;
+  outstanding_amount: string;
+  overdue_amount: string;
+}
+
+export interface ProjectOperatingResultSummary {
+  accrual_net_amount: string;
+  cash_net_amount: string;
 }
 
 export interface ProjectRiskItem {

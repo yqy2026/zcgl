@@ -245,6 +245,7 @@ const AssetAnalyticsPage: React.FC = () => {
                 counterparty_entity_breakdown: analyticsData.counterparty_entity_breakdown,
                 counterparty_contract_breakdown: analyticsData.counterparty_contract_breakdown,
                 metrics_version: analyticsData.metrics_version,
+                period_attribution_label: analyticsData.period_attribution_label,
               }}
               loading={loading}
             />

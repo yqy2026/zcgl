@@ -101,7 +101,10 @@ class WecomService:
         return await self.send_notification(f"【{title}】\n{content}", touser=touser)
 
     async def _get_access_token(self) -> str:
-        if self._access_token is not None and datetime.now(UTC) < self._access_token.expires_at:
+        if (
+            self._access_token is not None
+            and datetime.now(UTC) < self._access_token.expires_at
+        ):
             return self._access_token.value
 
         body = await self._fetch_access_token()
@@ -112,7 +115,7 @@ class WecomService:
             )
 
         token = str(body.get("access_token") or "").strip()
-        if token == "":
+        if not token:
             raise RuntimeError("WeCom gettoken returned blank access_token")
 
         expires_in = int(body.get("expires_in") or 7200)

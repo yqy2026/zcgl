@@ -23,6 +23,12 @@ def test_contract_entity_should_map_to_new_contract_model() -> None:
     assert module.ENTITY_MODEL_MAP["Contract"] == ("contract_group.py", "Contract")
 
 
+def test_attachment_entity_should_map_to_generic_attachment_model() -> None:
+    module = _load_module()
+
+    assert module.ENTITY_MODEL_MAP["Attachment"] == ("attachment.py", "Attachment")
+
+
 def test_compute_drifts_should_include_contract_entity() -> None:
     module = _load_module()
 

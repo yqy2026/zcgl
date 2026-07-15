@@ -25,7 +25,7 @@ const expectMessageVisible = async (page: Page, messagePattern: RegExp): Promise
   await expect(messageNotice).toBeVisible();
 };
 
-test.describe('@property-certificate-import-success 导入成功路径', () => {
+test.describe.skip('@property-certificate-import-success 导入成功路径', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
   });

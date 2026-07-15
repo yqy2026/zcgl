@@ -41,8 +41,10 @@ from ...schemas.project import (
     ProjectContractRelationItem,
     ProjectContractRelationsResponse,
     ProjectCreate,
+    ProjectLedgerMetricGroup,
     ProjectLedgerSummaryResponse,
     ProjectMonthlyTrendItem,
+    ProjectOperatingResultSummary,
     ProjectResponse,
     ProjectRiskItem,
     ProjectRisksResponse,
@@ -53,9 +55,11 @@ from ...schemas.project import (
 )
 from ...services.code_segments import build_party_code_segment
 from ...services.contract.contract_group_service import calculate_derived_status
+from ...services.contract.ledger_scope import is_resource_in_scope
 from ...services.contract.ledger_service_v2 import (
     find_stale_paid_or_partial_ledger_entries,
 )
+from ...services.contract.service_fee_ledger_service import service_fee_ledger_service
 from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
@@ -259,6 +263,13 @@ class ProjectService:
         except Exception:
             return Decimal(0)
 
+    @staticmethod
+    def _has_active_ledger_allocation(entry: Any) -> bool:
+        try:
+            return int(getattr(entry, "active_allocation_count", 0) or 0) > 0
+        except (TypeError, ValueError):
+            return False
+
     @classmethod
     def _unpaid_amount_from_entry(cls, entry: Any) -> Decimal:
         amount_due = cls._as_decimal(getattr(entry, "amount_due", None))
@@ -292,6 +303,37 @@ class ProjectService:
             "paid_amount": Decimal(0),
             "overdue_amount": Decimal(0),
         }
+
+    @staticmethod
+    def _empty_ledger_metric_group() -> dict[str, Decimal]:
+        return {
+            "amount_due": Decimal(0),
+            "paid_amount": Decimal(0),
+            "overdue_amount": Decimal(0),
+        }
+
+    @staticmethod
+    def _ledger_views(entry: Any) -> set[str]:
+        raw_views = getattr(entry, "ledger_views", []) or []
+        if isinstance(raw_views, str):
+            raw_views = [raw_views]
+        return {str(getattr(view, "value", view)).strip() for view in raw_views}
+
+    @classmethod
+    def _ledger_metric_group_response(
+        cls,
+        amounts: dict[str, Decimal],
+    ) -> ProjectLedgerMetricGroup:
+        amount_due = cls._quantize_money(amounts["amount_due"])
+        paid_amount = cls._quantize_money(amounts["paid_amount"])
+        return ProjectLedgerMetricGroup(
+            amount_due=amount_due,
+            paid_amount=paid_amount,
+            outstanding_amount=cls._quantize_money(
+                max(amount_due - paid_amount, Decimal(0))
+            ),
+            overdue_amount=cls._quantize_money(amounts["overdue_amount"]),
+        )
 
     @staticmethod
     def _empty_trend_amounts() -> dict[str, Decimal]:
@@ -391,7 +433,9 @@ class ProjectService:
     async def _resolve_operator_party_for_code(
         self, db: AsyncSession, obj_in: ProjectCreate
     ) -> tuple[str | None, str | None]:
-        operator_party_id = (obj_in.manager_party_id or obj_in.organization_id or "").strip()
+        operator_party_id = (
+            obj_in.manager_party_id or obj_in.organization_id or ""
+        ).strip()
         if operator_party_id == "":
             raise OperationNotAllowedError(
                 "自动生成 project_code 必须提供运营方 manager_party_id",
@@ -441,9 +485,10 @@ class ProjectService:
                     reason="project_party_relations_write_removed",
                 )
             if not obj_in.project_code:
-                operator_party_id, operator_party_code = (
-                    await self._resolve_operator_party_for_code(db, obj_in)
-                )
+                (
+                    operator_party_id,
+                    operator_party_code,
+                ) = await self._resolve_operator_party_for_code(db, obj_in)
                 obj_in.project_code = await self.generate_project_code(
                     db,
                     obj_in.project_name,
@@ -615,7 +660,7 @@ class ProjectService:
                 "自动生成 project_code 必须提供运营方 party.code",
                 reason="project_operator_code_required",
             )
-        year_month = datetime.now(UTC).strftime("%Y%m")
+        year_month = self._utcnow_naive().strftime("%Y%m")
         segment = build_party_code_segment(operator_party_code)
         prefix = f"PRJ-{segment}-{year_month}-"
         await project_crud.acquire_code_generation_lock(db, prefix=prefix)
@@ -876,11 +921,18 @@ class ProjectService:
         party_filter: PartyFilter | None = None,
     ) -> ProjectRisksResponse:
         """获取项目风险提示。"""
+        resolved_party_filter = await self._resolve_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        if self._is_fail_closed_party_filter(resolved_party_filter):
+            raise ResourceNotFoundError("项目", project_id)
         relations = await self.get_project_contract_relations(
             db=db,
             project_id=project_id,
             current_user_id=current_user_id,
-            party_filter=party_filter,
+            party_filter=resolved_party_filter,
         )
 
         items: list[ProjectRiskItem] = []
@@ -1001,13 +1053,22 @@ class ProjectService:
                         contract_id=str(getattr(contract, "contract_id")),
                     )
                 )
-                paid_or_partial_entries = [
+                ledger_entries = [
+                    entry
+                    for entry in ledger_entries
+                    if is_resource_in_scope(
+                        entry,
+                        party_filter=resolved_party_filter,
+                    )
+                ]
+                protected_payment_entries = [
                     entry
                     for entry in ledger_entries
                     if str(getattr(entry, "payment_status", "") or "").strip()
                     in {"paid", "partial"}
+                    or self._has_active_ledger_allocation(entry)
                 ]
-                if paid_or_partial_entries:
+                if protected_payment_entries:
                     rent_terms = await contract_group_crud.list_rent_terms_by_contract(
                         db,
                         contract_id=str(getattr(contract, "contract_id")),
@@ -1022,7 +1083,7 @@ class ProjectService:
                     )
                     stale_entries = find_stale_paid_or_partial_ledger_entries(
                         rent_terms=rent_terms,
-                        ledger_entries=paid_or_partial_entries,
+                        ledger_entries=protected_payment_entries,
                         payment_cycle=payment_cycle,
                     )
                     if stale_entries:
@@ -1061,24 +1122,21 @@ class ProjectService:
             if relation.revenue_mode != RevenueMode.AGENCY.value:
                 continue
 
-            service_fee_entries = (
-                await contract_group_crud.list_service_fee_entries_by_group(
-                    db,
-                    group_id=relation.contract_relation_id,
-                )
+            source_mismatches = await service_fee_ledger_service.find_source_mismatches(
+                db,
+                group_id=relation.contract_relation_id,
+                current_user_id=current_user_id,
+                party_filter=resolved_party_filter,
             )
-            service_fee_overdue_amount = Decimal(0)
-            for service_fee_entry in service_fee_entries:
-                service_fee_overdue_amount += self._overdue_amount_from_entry(
-                    service_fee_entry,
-                    today,
-                )
-            if service_fee_overdue_amount > Decimal(0):
+            if source_mismatches:
                 add_risk(
                     relation,
-                    risk_type="payment_overdue",
-                    message=f"代理服务费逾期未收 {format_money(service_fee_overdue_amount)}",
-                    severity="high",
+                    risk_type="service_fee_source_mismatch",
+                    message=(
+                        f"{relation.display_name} 存在 "
+                        f"{len(source_mismatches)} 条服务费台账来源租金不一致"
+                    ),
+                    severity="warning",
                 )
 
         active_assets, _summary = await self._load_project_active_assets(
@@ -1141,41 +1199,37 @@ class ProjectService:
             )
         )
 
-        receivable_amount = Decimal(0)
-        payable_amount = Decimal(0)
-        received_amount = Decimal(0)
-        paid_amount = Decimal(0)
-        overdue_amount = Decimal(0)
-        service_fee_receivable = Decimal(0)
-        service_fee_received = Decimal(0)
+        terminal_collection = self._empty_ledger_metric_group()
+        operator_income = self._empty_ledger_metric_group()
+        operator_cost = self._empty_ledger_metric_group()
+        service_fee_settlement = self._empty_ledger_metric_group()
         today = self._today()
 
         for entry in ledger_entries:
+            if not is_resource_in_scope(
+                entry,
+                party_filter=resolved_party_filter,
+            ):
+                continue
             payment_status = str(getattr(entry, "payment_status", "") or "").strip()
             if payment_status == "voided":
                 continue
 
-            revenue_mode, relation_type = self._ledger_entry_context(entry)
-            is_payable_contract = (
-                revenue_mode == RevenueMode.LEASE
-                and relation_type == GroupRelationType.UPSTREAM
-            )
-            is_receivable_contract = (
-                revenue_mode == RevenueMode.LEASE
-                and relation_type == GroupRelationType.DOWNSTREAM
-            )
-            if not (is_payable_contract or is_receivable_contract):
-                continue
-
             amount_due = self._as_decimal(getattr(entry, "amount_due", None))
             entry_paid_amount = self._as_decimal(getattr(entry, "paid_amount", None))
-            if is_payable_contract:
-                payable_amount += amount_due
-                paid_amount += entry_paid_amount
-            else:
-                receivable_amount += amount_due
-                received_amount += entry_paid_amount
-                overdue_amount += self._overdue_amount_from_entry(entry, today)
+            ledger_views = self._ledger_views(entry)
+            if "terminal_collection" in ledger_views:
+                terminal_collection["amount_due"] += amount_due
+                terminal_collection["paid_amount"] += entry_paid_amount
+                terminal_collection["overdue_amount"] += (
+                    self._overdue_amount_from_entry(entry, today)
+                )
+            if "operator_income" in ledger_views:
+                operator_income["amount_due"] += amount_due
+                operator_income["paid_amount"] += entry_paid_amount
+            if "operator_cost" in ledger_views:
+                operator_cost["amount_due"] += amount_due
+                operator_cost["paid_amount"] += entry_paid_amount
 
         service_fee_entries = (
             await contract_group_crud.list_service_fee_entries_by_attributed_project(
@@ -1184,6 +1238,11 @@ class ProjectService:
             )
         )
         for service_fee_entry in service_fee_entries:
+            if not is_resource_in_scope(
+                service_fee_entry,
+                party_filter=resolved_party_filter,
+            ):
+                continue
             payment_status = str(
                 getattr(service_fee_entry, "payment_status", "") or ""
             ).strip()
@@ -1196,23 +1255,38 @@ class ProjectService:
             entry_paid_amount = self._as_decimal(
                 getattr(service_fee_entry, "paid_amount", None)
             )
-            service_fee_receivable += amount_due
-            service_fee_received += entry_paid_amount
-            receivable_amount += amount_due
-            received_amount += entry_paid_amount
-            overdue_amount += self._overdue_amount_from_entry(
-                service_fee_entry,
-                today,
-            )
+            service_fee_settlement["amount_due"] += amount_due
+            service_fee_settlement["paid_amount"] += entry_paid_amount
+            operator_income["amount_due"] += amount_due
+            operator_income["paid_amount"] += entry_paid_amount
+
+        terminal_response = self._ledger_metric_group_response(terminal_collection)
+        income_response = self._ledger_metric_group_response(operator_income)
+        cost_response = self._ledger_metric_group_response(operator_cost)
+        service_fee_response = self._ledger_metric_group_response(
+            service_fee_settlement
+        )
 
         return ProjectLedgerSummaryResponse(
-            receivable_amount=self._quantize_money(receivable_amount),
-            payable_amount=self._quantize_money(payable_amount),
-            received_amount=self._quantize_money(received_amount),
-            paid_amount=self._quantize_money(paid_amount),
-            overdue_amount=self._quantize_money(overdue_amount),
-            service_fee_receivable=self._quantize_money(service_fee_receivable),
-            service_fee_received=self._quantize_money(service_fee_received),
+            receivable_amount=income_response.amount_due,
+            payable_amount=cost_response.amount_due,
+            received_amount=income_response.paid_amount,
+            paid_amount=cost_response.paid_amount,
+            overdue_amount=terminal_response.overdue_amount,
+            service_fee_receivable=service_fee_response.amount_due,
+            service_fee_received=service_fee_response.paid_amount,
+            terminal_collection=terminal_response,
+            operator_income=income_response,
+            operator_cost=cost_response,
+            service_fee_settlement=service_fee_response,
+            operating_result=ProjectOperatingResultSummary(
+                accrual_net_amount=self._quantize_money(
+                    income_response.amount_due - cost_response.amount_due
+                ),
+                cash_net_amount=self._quantize_money(
+                    income_response.paid_amount - cost_response.paid_amount
+                ),
+            ),
         )
 
     async def get_project_tenants(
@@ -1300,39 +1374,46 @@ class ProjectService:
         suppress_customer_metrics: bool = False,
     ) -> ProjectAnalyticsResponse:
         """获取项目维度分析摘要，按经营模式分区。"""
+        resolved_party_filter = await self._resolve_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        if self._is_fail_closed_party_filter(resolved_party_filter):
+            raise ResourceNotFoundError("椤圭洰", project_id)
         should_suppress_customer_metrics = (
             suppress_customer_metrics
-            or getattr(party_filter, "filter_mode", None) == "any"
+            or getattr(resolved_party_filter, "filter_mode", None) == "any"
         )
         _, asset_summary = await self.get_project_active_assets(
             db=db,
             project_id=project_id,
             current_user_id=current_user_id,
-            party_filter=party_filter,
+            party_filter=resolved_party_filter,
         )
         relations = await self.get_project_contract_relations(
             db=db,
             project_id=project_id,
             current_user_id=current_user_id,
-            party_filter=party_filter,
+            party_filter=resolved_party_filter,
         )
         ledger_summary = await self.get_project_ledger_summary(
             db=db,
             project_id=project_id,
             current_user_id=current_user_id,
-            party_filter=party_filter,
+            party_filter=resolved_party_filter,
         )
         tenants = await self.get_project_tenants(
             db=db,
             project_id=project_id,
             current_user_id=current_user_id,
-            party_filter=party_filter,
+            party_filter=resolved_party_filter,
         )
         risks = await self.get_project_risks(
             db=db,
             project_id=project_id,
             current_user_id=current_user_id,
-            party_filter=party_filter,
+            party_filter=resolved_party_filter,
         )
 
         mode_meta = {
@@ -1374,6 +1455,11 @@ class ProjectService:
             )
         )
         for entry in ledger_entries:
+            if not is_resource_in_scope(
+                entry,
+                party_filter=resolved_party_filter,
+            ):
+                continue
             payment_status = str(getattr(entry, "payment_status", "") or "").strip()
             if payment_status == "voided":
                 continue
@@ -1417,6 +1503,11 @@ class ProjectService:
             )
         )
         for service_fee_entry in service_fee_entries:
+            if not is_resource_in_scope(
+                service_fee_entry,
+                party_filter=resolved_party_filter,
+            ):
+                continue
             payment_status = str(
                 getattr(service_fee_entry, "payment_status", "") or ""
             ).strip()

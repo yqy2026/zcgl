@@ -10,8 +10,12 @@ from pydantic import BaseModel, ConfigDict, Field
 class PropertyCertificateFields(BaseModel):
     """Extracted property certificate fields."""
 
-    certificate_number: str | None = Field(default=None, description="Certificate number")
-    registration_date: date | None = Field(default=None, description="Registration date")
+    certificate_number: str | None = Field(
+        default=None, description="Certificate number"
+    )
+    registration_date: date | None = Field(
+        default=None, description="Registration date"
+    )
     owner_name: str | None = Field(default=None, description="Owner name")
     owner_id_type: str | None = Field(default=None, description="Owner ID type")
     owner_id_number: str | None = Field(default=None, description="Owner ID number")
@@ -21,8 +25,12 @@ class PropertyCertificateFields(BaseModel):
     land_area: str | None = Field(default=None, description="Land area")
     floor_info: str | None = Field(default=None, description="Floor info")
     land_use_type: str | None = Field(default=None, description="Land use type")
-    land_use_term_start: date | None = Field(default=None, description="Land use term start")
-    land_use_term_end: date | None = Field(default=None, description="Land use term end")
+    land_use_term_start: date | None = Field(
+        default=None, description="Land use term start"
+    )
+    land_use_term_end: date | None = Field(
+        default=None, description="Land use term end"
+    )
     co_ownership: str | None = Field(default=None, description="Co-ownership")
     restrictions: str | None = Field(default=None, description="Restrictions")
     remarks: str | None = Field(default=None, description="Remarks")
@@ -50,7 +58,9 @@ class PropertyCertificateUploadResponse(BaseModel):
 
     session_id: str = Field(description="Session ID")
     asset_ids: list[str] = []
-    certificate_type: str = Field(default="property_cert", description="Certificate type")
+    certificate_type: str = Field(
+        default="property_cert", description="Certificate type"
+    )
     extracted_data: dict[str, Any] = Field(default_factory=dict)
     confidence_score: float = Field(ge=0.0, le=1.0, description="Confidence score")
     asset_matches: list[dict[str, Any]] = Field(default_factory=list)
@@ -70,7 +80,9 @@ class CertificateImportConfirm(BaseModel):
     should_create_new_asset: bool = Field(default=False)
     owners: list[dict[str, Any]] = Field(default_factory=list)
     holder_party_ids: list[str] = Field(default_factory=list)
-    attachments: list["PropertyCertificateAttachmentInput"] = Field(default_factory=list)
+    attachments: list["PropertyCertificateAttachmentInput"] = Field(
+        default_factory=list
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -110,7 +122,9 @@ class PropertyCertificateBase(BaseModel):
     co_ownership: str | None = Field(default=None)
     restrictions: str | None = Field(default=None)
     remarks: str | None = Field(default=None)
-    organization_id: str | None = Field(default=None, description="Deprecated organization ID")
+    organization_id: str | None = Field(
+        default=None, description="Deprecated organization ID"
+    )
 
 
 class PropertyCertificateCreate(PropertyCertificateBase):
@@ -140,7 +154,9 @@ class PropertyCertificateUpdate(BaseModel):
     co_ownership: str | None = Field(default=None)
     restrictions: str | None = Field(default=None)
     remarks: str | None = Field(default=None)
-    organization_id: str | None = Field(default=None, description="Deprecated organization ID")
+    organization_id: str | None = Field(
+        default=None, description="Deprecated organization ID"
+    )
     extraction_confidence: float | None = Field(default=None)
     extraction_source: str | None = Field(default=None)
     asset_ids: list[str] | None = Field(default=None)
@@ -175,7 +191,9 @@ class PropertyOwnerBase(BaseModel):
     id_number: str | None = Field(default=None)
     phone: str | None = Field(default=None)
     address: str | None = Field(default=None)
-    organization_id: str | None = Field(default=None, description="Deprecated organization ID")
+    organization_id: str | None = Field(
+        default=None, description="Deprecated organization ID"
+    )
     asset_ids: list[str] = []
 
 
@@ -194,7 +212,9 @@ class PropertyOwnerUpdate(BaseModel):
     id_number: str | None = Field(default=None)
     phone: str | None = Field(default=None)
     address: str | None = Field(default=None)
-    organization_id: str | None = Field(default=None, description="Deprecated organization ID")
+    organization_id: str | None = Field(
+        default=None, description="Deprecated organization ID"
+    )
     asset_ids: list[str] = []
 
 

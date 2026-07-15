@@ -142,7 +142,9 @@ class CRUDPropertyCertificate(
         self._add_owner_relations(db, certificate_id=db_obj.id, owner_ids=owner_ids)
 
         if asset_ids:
-            asset_result = await db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
+            asset_result = await db.execute(
+                select(Asset).where(Asset.id.in_(asset_ids))
+            )
             assets: list[Asset] = list(asset_result.scalars().all())
             if assets:
                 db_obj.assets.extend(assets)
@@ -195,7 +197,9 @@ class CRUDPropertyCertificate(
             )
 
         if asset_ids is not None:
-            asset_result = await db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
+            asset_result = await db.execute(
+                select(Asset).where(Asset.id.in_(asset_ids))
+            )
             db_obj.assets = list(asset_result.scalars().all())
 
         if attachments is not None:

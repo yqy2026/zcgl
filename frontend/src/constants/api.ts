@@ -154,9 +154,20 @@ export const CONTRACT_GROUP_API = {
 export const LEDGER_API = {
   ENTRIES: '/ledger/entries',
   EXPORT: '/ledger/entries/export',
+  PAYMENT_FLOWS: '/ledger/payment-flows',
+  PAYMENT_FLOW_ALLOCATIONS: (flowId: string) => `/ledger/payment-flows/${flowId}/allocations`,
+  PAYMENT_FLOW_VOID: (flowId: string) => `/ledger/payment-flows/${flowId}/void`,
+  PAYMENT_FLOW_CORRECT: (flowId: string) => `/ledger/payment-flows/${flowId}/correct`,
+  PAYMENT_FLOW_VOUCHERS: (flowId: string) => `/ledger/payment-flows/${flowId}/vouchers`,
+  PAYMENT_FLOW_VOUCHER_DOWNLOAD: (flowId: string, attachmentId: string) =>
+    `/ledger/payment-flows/${flowId}/vouchers/${attachmentId}/download`,
+  PAYMENT_FLOW_VOUCHER_DOWNLOAD_AUDITS: (flowId: string) =>
+    `/ledger/payment-flows/${flowId}/voucher-download-audits`,
+  SERVICE_FEES: '/ledger/service-fees',
+  SERVICE_FEES_GENERATE: '/ledger/service-fees/generate',
+  SERVICE_FEE_RECONCILE: (entryId: string) => `/ledger/service-fees/${entryId}/reconcile`,
+  ENTRY_FOLLOW_UP: (entryId: string) => `/ledger/entries/${entryId}/follow-up`,
   CONTRACT_RECALCULATE: (contractId: string) => `/contracts/${contractId}/ledger/recalculate`,
-  CONTRACT_BATCH_UPDATE_STATUS: (contractId: string) =>
-    `/contracts/${contractId}/ledger/batch-update-status`,
 } as const;
 
 // 数据统计API

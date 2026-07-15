@@ -5,11 +5,13 @@ CRUD helpers for ContractGroup（合同组）。
 """
 
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any, TypedDict
 
-from sqlalchemy import Select, and_, func, select
+from sqlalchemy import Select, and_, case, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm.attributes import set_committed_value
 
 from ..models.asset import Asset
 from ..models.associations import contract_assets, contract_group_assets
@@ -20,10 +22,12 @@ from ..models.contract_group import (
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
+    OperationalPaymentFlow,
+    PaymentAllocation,
     ServiceFeeLedger,
-    derive_ledger_payment_status,
 )
 from ..models.project_asset import ProjectAsset
+from .query_builder import PartyFilter
 
 
 def _utcnow() -> datetime:
@@ -41,6 +45,147 @@ class ContractAssetIdsByGroupRow(TypedDict):
 
 class CRUDContractGroup:
     """ContractGroup CRUD 操作。"""
+
+    @staticmethod
+    def _attribution_scope_clause(model: Any, party_filter: PartyFilter) -> Any:
+        general_ids = {
+            normalized
+            for value in party_filter.party_ids
+            if (normalized := str(value).strip()) != ""
+        }
+        owner_ids = (
+            {
+                normalized
+                for value in party_filter.owner_party_ids
+                if (normalized := str(value).strip()) != ""
+            }
+            if party_filter.owner_party_ids is not None
+            else general_ids
+        )
+        manager_ids = (
+            {
+                normalized
+                for value in party_filter.manager_party_ids
+                if (normalized := str(value).strip()) != ""
+            }
+            if party_filter.manager_party_ids is not None
+            else general_ids
+        )
+        conditions: list[Any] = []
+        if party_filter.filter_mode in {"owner", "any"} and owner_ids:
+            conditions.append(model.attributed_owner_party_id.in_(sorted(owner_ids)))
+        if party_filter.filter_mode in {"manager", "any"} and manager_ids:
+            conditions.append(
+                model.attributed_operator_party_id.in_(sorted(manager_ids))
+            )
+        if not conditions:
+            return false()
+        if len(conditions) == 1:
+            return conditions[0]
+        return or_(*conditions)
+
+    @staticmethod
+    def _ledger_allocation_totals_subquery() -> Any:
+        return (
+            select(
+                PaymentAllocation.target_id.label("target_id"),
+                func.coalesce(func.sum(PaymentAllocation.amount), 0).label(
+                    "paid_amount"
+                ),
+                func.count(PaymentAllocation.allocation_id).label("allocation_count"),
+                func.array_agg(func.distinct(OperationalPaymentFlow.occurred_on)).label(
+                    "flow_occurred_on_dates"
+                ),
+            )
+            .join(
+                OperationalPaymentFlow,
+                OperationalPaymentFlow.flow_id == PaymentAllocation.flow_id,
+            )
+            .where(
+                PaymentAllocation.target_type == "contract_ledger_entry",
+                OperationalPaymentFlow.status == "active",
+            )
+            .group_by(PaymentAllocation.target_id)
+            .subquery()
+        )
+
+    @staticmethod
+    def _ledger_payment_status_expr(paid_amount: Any) -> Any:
+        return case(
+            (ContractLedgerEntry._payment_status == "voided", "voided"),
+            (paid_amount <= 0, "unpaid"),
+            (paid_amount < ContractLedgerEntry.amount_due, "partial"),
+            else_="paid",
+        )
+
+    @staticmethod
+    def _apply_ledger_payment_facts(
+        entry: ContractLedgerEntry,
+        *,
+        paid_amount: Any,
+        payment_status: Any,
+        allocation_count: Any = 0,
+        flow_occurred_on_dates: Any = None,
+    ) -> ContractLedgerEntry:
+        set_committed_value(
+            entry,
+            "paid_amount",
+            Decimal(str(paid_amount if paid_amount is not None else 0)),
+        )
+        set_committed_value(entry, "_payment_status", str(payment_status))
+        setattr(
+            entry,
+            "active_allocation_count",
+            int(allocation_count if allocation_count is not None else 0),
+        )
+        if flow_occurred_on_dates is None:
+            normalized_flow_dates: list[Any] = []
+        elif isinstance(flow_occurred_on_dates, (list, tuple, set)):
+            normalized_flow_dates = list(flow_occurred_on_dates)
+        else:
+            normalized_flow_dates = [flow_occurred_on_dates]
+        setattr(entry, "flow_occurred_on_dates", normalized_flow_dates)
+        return entry
+
+    @classmethod
+    def _apply_ledger_payment_facts_from_row(cls, row: Any) -> ContractLedgerEntry:
+        allocation_count = row[3] if len(row) > 3 else 0
+        flow_occurred_on_dates = row[4] if len(row) > 4 else None
+        return cls._apply_ledger_payment_facts(
+            row[0],
+            paid_amount=row[1],
+            payment_status=row[2],
+            allocation_count=allocation_count,
+            flow_occurred_on_dates=flow_occurred_on_dates,
+        )
+
+    @staticmethod
+    def _ledger_flow_date_exists_clause(
+        *,
+        flow_occurred_on_start: date | None,
+        flow_occurred_on_end: date | None,
+    ) -> Any:
+        stmt = (
+            select(PaymentAllocation.allocation_id)
+            .join(
+                OperationalPaymentFlow,
+                OperationalPaymentFlow.flow_id == PaymentAllocation.flow_id,
+            )
+            .where(
+                PaymentAllocation.target_type == "contract_ledger_entry",
+                PaymentAllocation.target_id == ContractLedgerEntry.entry_id,
+                OperationalPaymentFlow.status == "active",
+            )
+        )
+        if flow_occurred_on_start is not None:
+            stmt = stmt.where(
+                OperationalPaymentFlow.occurred_on >= flow_occurred_on_start
+            )
+        if flow_occurred_on_end is not None:
+            stmt = stmt.where(
+                OperationalPaymentFlow.occurred_on <= flow_occurred_on_end
+            )
+        return stmt.exists()
 
     @staticmethod
     def _ownership_contracts_stmt(ownership_id: str) -> Select[tuple[str]]:
@@ -260,9 +405,16 @@ class CRUDContractGroup:
         db: AsyncSession,
         ownership_id: str,
     ) -> float:
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
         stmt = (
-            select(func.coalesce(func.sum(ContractLedgerEntry.paid_amount), 0))
+            select(func.coalesce(func.sum(allocated_paid_amount), 0))
+            .select_from(ContractLedgerEntry)
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
             .where(
                 ContractLedgerEntry.attributed_owner_party_id == ownership_id,
                 Contract.data_status == "正常",
@@ -275,26 +427,26 @@ class CRUDContractGroup:
         db: AsyncSession,
         ownership_id: str,
     ) -> float:
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
+        overdue_amount = func.greatest(
+            ContractLedgerEntry.amount_due - allocated_paid_amount,
+            0,
+        )
         stmt = (
-            select(
-                func.coalesce(
-                    func.sum(
-                        func.greatest(
-                            ContractLedgerEntry.amount_due
-                            - ContractLedgerEntry.paid_amount,
-                            0,
-                        )
-                    ),
-                    0,
-                )
-            )
+            select(func.coalesce(func.sum(overdue_amount), 0))
+            .select_from(ContractLedgerEntry)
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
             .where(
                 ContractLedgerEntry.attributed_owner_party_id == ownership_id,
                 Contract.data_status == "正常",
                 ContractLedgerEntry._payment_status != "voided",
                 ContractLedgerEntry.due_date < _today(),
-                ContractLedgerEntry.paid_amount < ContractLedgerEntry.amount_due,
+                allocated_paid_amount < ContractLedgerEntry.amount_due,
             )
         )
         return float((await db.execute(stmt)).scalar() or 0)
@@ -430,12 +582,28 @@ class CRUDContractGroup:
         *,
         contract_id: str,
     ) -> list[ContractLedgerEntry]:
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
+        allocation_payment_status = self._ledger_payment_status_expr(
+            allocated_paid_amount
+        ).label("allocation_payment_status")
         stmt = (
-            select(ContractLedgerEntry)
+            select(
+                ContractLedgerEntry,
+                allocated_paid_amount.label("allocation_paid_amount"),
+                allocation_payment_status,
+                allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
+            )
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
             .where(ContractLedgerEntry.contract_id == contract_id)
             .order_by(ContractLedgerEntry.year_month.asc())
         )
-        return list((await db.execute(stmt)).scalars().all())
+        rows = (await db.execute(stmt)).all()
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
     async def list_ledger_entries_by_attributed_project(
         self,
@@ -443,9 +611,24 @@ class CRUDContractGroup:
         *,
         project_id: str,
     ) -> list[ContractLedgerEntry]:
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
+        allocation_payment_status = self._ledger_payment_status_expr(
+            allocated_paid_amount
+        ).label("allocation_payment_status")
         stmt = (
-            select(ContractLedgerEntry)
+            select(
+                ContractLedgerEntry,
+                allocated_paid_amount.label("allocation_paid_amount"),
+                allocation_payment_status,
+                allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
+            )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
             .options(
                 joinedload(ContractLedgerEntry.contract).joinedload(
                     Contract.contract_group
@@ -461,7 +644,8 @@ class CRUDContractGroup:
                 ContractLedgerEntry.entry_id.asc(),
             )
         )
-        return list((await db.execute(stmt)).scalars().all())
+        rows = (await db.execute(stmt)).all()
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
     async def get_ledger_by_contract(
         self,
@@ -473,15 +657,32 @@ class CRUDContractGroup:
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[ContractLedgerEntry], int]:
-        stmt = select(ContractLedgerEntry).where(
-            ContractLedgerEntry.contract_id == contract_id
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
+        allocation_payment_status = self._ledger_payment_status_expr(
+            allocated_paid_amount
+        ).label("allocation_payment_status")
+
+        stmt = (
+            select(
+                ContractLedgerEntry,
+                allocated_paid_amount.label("allocation_paid_amount"),
+                allocation_payment_status,
+                allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
+            )
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
+            .where(ContractLedgerEntry.contract_id == contract_id)
         )
         if year_month_start is not None:
             stmt = stmt.where(ContractLedgerEntry.year_month >= year_month_start)
         if year_month_end is not None:
             stmt = stmt.where(ContractLedgerEntry.year_month <= year_month_end)
 
-        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_stmt = select(func.count()).select_from(stmt.order_by(None).subquery())
         total: int = (await db.execute(count_stmt)).scalar_one()
 
         items_stmt = (
@@ -489,27 +690,54 @@ class CRUDContractGroup:
             .offset(offset)
             .limit(limit)
         )
-        items = list((await db.execute(items_stmt)).scalars().all())
+        rows = (await db.execute(items_stmt)).all()
+        items = [self._apply_ledger_payment_facts_from_row(row) for row in rows]
         return items, total
 
     async def query_ledger_entries(
         self,
         db: AsyncSession,
         *,
+        ledger_view: str | None = None,
+        project_id: str | None = None,
         asset_id: str | None = None,
         party_id: str | None = None,
         contract_id: str | None = None,
         year_month_start: str | None = None,
         year_month_end: str | None = None,
+        flow_occurred_on_start: date | None = None,
+        flow_occurred_on_end: date | None = None,
         payment_status: str | None = None,
         include_voided: bool = False,
+        party_filter: PartyFilter | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[ContractLedgerEntry], int]:
-        stmt = select(ContractLedgerEntry).join(
-            Contract, ContractLedgerEntry.contract_id == Contract.contract_id
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
+        allocation_payment_status = self._ledger_payment_status_expr(
+            allocated_paid_amount
+        ).label("allocation_payment_status")
+
+        stmt = (
+            select(
+                ContractLedgerEntry,
+                allocated_paid_amount.label("allocation_paid_amount"),
+                allocation_payment_status,
+                allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
+            )
+            .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
         )
 
+        if ledger_view is not None:
+            stmt = stmt.where(ContractLedgerEntry.ledger_views.contains([ledger_view]))
+        if project_id is not None:
+            stmt = stmt.where(ContractLedgerEntry.attributed_project_id == project_id)
         if asset_id is not None:
             stmt = stmt.where(
                 ContractLedgerEntry.attributed_asset_ids.contains([asset_id])
@@ -525,14 +753,25 @@ class CRUDContractGroup:
             stmt = stmt.where(ContractLedgerEntry.year_month >= year_month_start)
         if year_month_end is not None:
             stmt = stmt.where(ContractLedgerEntry.year_month <= year_month_end)
+        if flow_occurred_on_start is not None or flow_occurred_on_end is not None:
+            stmt = stmt.where(
+                self._ledger_flow_date_exists_clause(
+                    flow_occurred_on_start=flow_occurred_on_start,
+                    flow_occurred_on_end=flow_occurred_on_end,
+                )
+            )
         if payment_status is not None:
-            stmt = stmt.where(ContractLedgerEntry.payment_status == payment_status)
+            stmt = stmt.where(allocation_payment_status == payment_status)
         if not include_voided:
             stmt = stmt.where(ContractLedgerEntry._payment_status != "voided")
+        if party_filter is not None:
+            stmt = stmt.where(
+                self._attribution_scope_clause(ContractLedgerEntry, party_filter)
+            )
 
         stmt = stmt.where(Contract.data_status == "正常")
 
-        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_stmt = select(func.count()).select_from(stmt.order_by(None).subquery())
         total: int = (await db.execute(count_stmt)).scalar_one()
 
         items_stmt = (
@@ -544,7 +783,8 @@ class CRUDContractGroup:
             .offset(offset)
             .limit(limit)
         )
-        items = list((await db.execute(items_stmt)).scalars().all())
+        rows = (await db.execute(items_stmt)).all()
+        items = [self._apply_ledger_payment_facts_from_row(row) for row in rows]
         return items, total
 
     async def get_overdue_with_contract_async(
@@ -553,13 +793,29 @@ class CRUDContractGroup:
         *,
         today: Any,
     ) -> list[ContractLedgerEntry]:
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
+        allocation_payment_status = self._ledger_payment_status_expr(
+            allocated_paid_amount
+        ).label("allocation_payment_status")
         stmt = (
-            select(ContractLedgerEntry)
+            select(
+                ContractLedgerEntry,
+                allocated_paid_amount.label("allocation_paid_amount"),
+                allocation_payment_status,
+                allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
+            )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
             .where(
                 ContractLedgerEntry._payment_status != "voided",
+                ContractLedgerEntry.ledger_views.contains(["terminal_collection"]),
                 ContractLedgerEntry.due_date < today,
-                ContractLedgerEntry.paid_amount < ContractLedgerEntry.amount_due,
+                allocated_paid_amount < ContractLedgerEntry.amount_due,
                 Contract.data_status == "正常",
             )
             .options(
@@ -571,7 +827,8 @@ class CRUDContractGroup:
             )
             .order_by(ContractLedgerEntry.due_date.asc())
         )
-        return list((await db.execute(stmt)).scalars().all())
+        rows = (await db.execute(stmt)).all()
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
     async def get_due_soon_with_contract_async(
         self,
@@ -580,14 +837,30 @@ class CRUDContractGroup:
         today: Any,
         warning_date: Any,
     ) -> list[ContractLedgerEntry]:
+        allocation_totals = self._ledger_allocation_totals_subquery()
+        allocated_paid_amount = func.coalesce(allocation_totals.c.paid_amount, 0)
+        allocation_payment_status = self._ledger_payment_status_expr(
+            allocated_paid_amount
+        ).label("allocation_payment_status")
         stmt = (
-            select(ContractLedgerEntry)
+            select(
+                ContractLedgerEntry,
+                allocated_paid_amount.label("allocation_paid_amount"),
+                allocation_payment_status,
+                allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
+            )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .outerjoin(
+                allocation_totals,
+                allocation_totals.c.target_id == ContractLedgerEntry.entry_id,
+            )
             .where(
                 ContractLedgerEntry._payment_status != "voided",
+                ContractLedgerEntry.ledger_views.contains(["terminal_collection"]),
                 ContractLedgerEntry.due_date <= warning_date,
                 ContractLedgerEntry.due_date >= today,
-                ContractLedgerEntry.paid_amount <= 0,
+                allocated_paid_amount <= 0,
                 Contract.data_status == "正常",
             )
             .options(
@@ -599,45 +872,38 @@ class CRUDContractGroup:
             )
             .order_by(ContractLedgerEntry.due_date.asc())
         )
-        return list((await db.execute(stmt)).scalars().all())
+        rows = (await db.execute(stmt)).all()
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
-    async def batch_update_ledger_status(
+    async def get_ledger_entry_by_id(
         self,
         db: AsyncSession,
         *,
-        contract_id: str,
-        entry_ids: list[str],
-        paid_amount: Any | None = None,
-        notes: str | None = None,
-        commit: bool = True,
-    ) -> list[ContractLedgerEntry]:
-        if not entry_ids:
-            return []
-
-        stmt = (
-            select(ContractLedgerEntry)
-            .where(
-                ContractLedgerEntry.contract_id == contract_id,
-                ContractLedgerEntry.entry_id.in_(entry_ids),
-            )
-            .order_by(ContractLedgerEntry.year_month.asc())
+        entry_id: str,
+    ) -> ContractLedgerEntry | None:
+        stmt = select(ContractLedgerEntry).where(
+            ContractLedgerEntry.entry_id == entry_id
         )
-        entries = list((await db.execute(stmt)).scalars().all())
-        for entry in entries:
-            if paid_amount is not None:
-                entry.paid_amount = paid_amount
-            entry.payment_status = derive_ledger_payment_status(
-                amount_due=entry.amount_due,
-                paid_amount=entry.paid_amount,
-                stored_status=entry.payment_status,
-            )
-            if notes is not None:
-                entry.notes = notes
-            entry.updated_at = _utcnow()
+        return (await db.execute(stmt)).scalars().first()
 
+    async def update_ledger_follow_up(
+        self,
+        db: AsyncSession,
+        *,
+        entry: ContractLedgerEntry,
+        follow_up_status: str | None,
+        next_follow_up_date: date | None,
+        follow_up_note: str | None,
+        commit: bool = True,
+    ) -> ContractLedgerEntry:
+        entry.follow_up_status = follow_up_status
+        entry.next_follow_up_date = next_follow_up_date
+        entry.follow_up_note = follow_up_note
+        entry.updated_at = _utcnow()
+        db.add(entry)
         if commit:
             await db.commit()
-        return entries
+        return entry
 
     async def has_contract_ledger_entries(
         self,
@@ -659,7 +925,6 @@ class CRUDContractGroup:
     ) -> list[ServiceFeeLedger]:
         stmt = (
             select(ServiceFeeLedger)
-            .options(selectinload(ServiceFeeLedger.source_ledger))
             .where(ServiceFeeLedger.contract_group_id == group_id)
             .order_by(ServiceFeeLedger.year_month.asc())
         )
@@ -678,7 +943,6 @@ class CRUDContractGroup:
                 joinedload(ServiceFeeLedger.agency_contract).joinedload(
                     Contract.contract_group
                 ),
-                selectinload(ServiceFeeLedger.source_ledger),
             )
             .where(
                 ServiceFeeLedger.attributed_project_id == project_id,
@@ -706,6 +970,153 @@ class CRUDContractGroup:
             await db.commit()
             await db.refresh(entry)
         return entry
+
+    async def create_payment_flow(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = True,
+    ) -> OperationalPaymentFlow:
+        flow = OperationalPaymentFlow(**data)
+        db.add(flow)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(flow)
+        return flow
+
+    async def get_payment_flow(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+        for_update: bool = False,
+    ) -> OperationalPaymentFlow | None:
+        stmt = select(OperationalPaymentFlow).where(
+            OperationalPaymentFlow.flow_id == flow_id
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return (await db.execute(stmt)).scalars().first()
+
+    async def list_payment_allocations_by_flow(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+    ) -> list[PaymentAllocation]:
+        stmt = select(PaymentAllocation).where(PaymentAllocation.flow_id == flow_id)
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def list_payment_flows_by_target(
+        self,
+        db: AsyncSession,
+        *,
+        target_type: str,
+        target_id: str,
+    ) -> list[OperationalPaymentFlow]:
+        stmt = (
+            select(OperationalPaymentFlow)
+            .join(
+                PaymentAllocation,
+                PaymentAllocation.flow_id == OperationalPaymentFlow.flow_id,
+            )
+            .where(
+                PaymentAllocation.target_type == target_type,
+                PaymentAllocation.target_id == target_id,
+            )
+            .options(selectinload(OperationalPaymentFlow.allocations))
+            .distinct()
+            .order_by(
+                OperationalPaymentFlow.created_at.desc(),
+                OperationalPaymentFlow.flow_id.desc(),
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def replace_payment_allocations(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+        rows: list[dict[str, Any]],
+        commit: bool = False,
+    ) -> list[PaymentAllocation]:
+        await db.execute(
+            PaymentAllocation.__table__.delete().where(
+                PaymentAllocation.flow_id == flow_id
+            )
+        )
+        allocations: list[PaymentAllocation] = []
+        for row in rows:
+            allocation = PaymentAllocation()
+            allocation.flow_id = flow_id
+            allocation.target_type = str(row["target_type"])
+            allocation.target_id = str(row["target_id"])
+            allocation.year_month = str(row["year_month"])
+            allocation.amount = row["amount"]
+            allocations.append(allocation)
+            db.add(allocation)
+        await db.flush()
+        if commit:
+            await db.commit()
+            for allocation in allocations:
+                await db.refresh(allocation)
+        return allocations
+
+    async def get_ledger_entries_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        entry_ids: list[str],
+        for_update: bool = False,
+    ) -> list[ContractLedgerEntry]:
+        if not entry_ids:
+            return []
+        stmt = select(ContractLedgerEntry).where(
+            ContractLedgerEntry.entry_id.in_(entry_ids)
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_service_fee_entries_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        entry_ids: list[str],
+        for_update: bool = False,
+    ) -> list[ServiceFeeLedger]:
+        if not entry_ids:
+            return []
+        stmt = select(ServiceFeeLedger).where(
+            ServiceFeeLedger.service_fee_entry_id.in_(entry_ids)
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def sum_active_allocations_by_target(
+        self,
+        db: AsyncSession,
+        *,
+        target_type: str,
+        target_id: str,
+    ) -> Decimal:
+        stmt = (
+            select(func.coalesce(func.sum(PaymentAllocation.amount), 0))
+            .join(
+                OperationalPaymentFlow,
+                OperationalPaymentFlow.flow_id == PaymentAllocation.flow_id,
+            )
+            .where(
+                PaymentAllocation.target_type == target_type,
+                PaymentAllocation.target_id == target_id,
+                OperationalPaymentFlow.status == "active",
+            )
+        )
+        return Decimal(str((await db.execute(stmt)).scalar() or 0))
 
     async def _replace_assets(
         self,

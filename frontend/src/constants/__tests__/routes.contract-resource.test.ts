@@ -66,10 +66,10 @@ describe('rental route config contract resources', () => {
 
   it('exposes global analytics route metadata outside asset management', () => {
     expect(ROUTES.ANALYTICS_ROUTES.OVERVIEW).toBe('/analytics');
-    expect(ROUTES.FINANCE_ROUTES.LEDGER).toBe('/finance/ledger');
+    expect(ROUTES.OPERATIONS_ROUTES.LEDGER).toBe('/operations/ledger');
 
     const analyticsSection = ROUTE_CONFIG.find(route => route.path === '/analytics');
-    const financeSection = ROUTE_CONFIG.find(route => route.path === '/finance/ledger');
+    const operationsLedgerSection = ROUTE_CONFIG.find(route => route.path === '/operations/ledger');
     const assetsSection = ROUTE_CONFIG.find(route => route.path === '/assets');
 
     expect(analyticsSection).toMatchObject({
@@ -77,9 +77,9 @@ describe('rental route config contract resources', () => {
       title: '经营分析',
       permissions: [{ resource: 'analytics', action: 'read' }],
     });
-    expect(financeSection).toMatchObject({
-      path: '/finance/ledger',
-      title: '财务台账',
+    expect(operationsLedgerSection).toMatchObject({
+      path: '/operations/ledger',
+      title: '经营台账',
       permissions: [{ resource: 'contract', action: 'read' }],
     });
     expect(assetsSection?.children).not.toEqual(

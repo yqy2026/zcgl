@@ -25,6 +25,7 @@ class AnalyticsExportService:
         ("客户主体数", ("customer_entity_count",), "个"),
         ("客户合同数", ("customer_contract_count",), "份"),
         ("口径版本", ("metrics_version",), ""),
+        ("账期归属口径", ("period_attribution_label",), ""),
     )
     _DISTRIBUTION_SECTIONS: tuple[
         tuple[str, str, tuple[str, ...], tuple[str, ...], str], ...
@@ -167,10 +168,11 @@ class AnalyticsExportService:
         counterparty_contract_breakdown = analytics_data.get(
             "counterparty_contract_breakdown"
         )
-        if not isinstance(entity_breakdown, dict) and not isinstance(
-            contract_breakdown, dict
-        ) and not isinstance(counterparty_entity_breakdown, dict) and not isinstance(
-            counterparty_contract_breakdown, dict
+        if (
+            not isinstance(entity_breakdown, dict)
+            and not isinstance(contract_breakdown, dict)
+            and not isinstance(counterparty_entity_breakdown, dict)
+            and not isinstance(counterparty_contract_breakdown, dict)
         ):
             return []
 

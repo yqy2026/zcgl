@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.core.exception_handler import BusinessValidationError, OperationNotAllowedError
-from src.models.contract_group import ContractLifecycleStatus
+from src.models.contract_group import ContractLifecycleStatus, GroupRelationType
 from src.services.contract.ledger_service_v2 import (
     find_stale_paid_or_partial_ledger_entries,
     ledger_service_v2,
@@ -26,6 +26,7 @@ def _make_contract(
     contract.contract_group_id = "group-ledger"
     contract.contract_id = contract_id
     contract.status = status
+    contract.group_relation_type = GroupRelationType.DOWNSTREAM
     contract.currency_code = "CNY"
     contract.is_tax_included = True
     contract.tax_rate = Decimal("0.09")
@@ -70,6 +71,7 @@ def _make_entry(
     due_date: date,
     payment_status: str = "unpaid",
     paid_amount: str = "0",
+    active_allocation_count: int = 0,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         entry_id=entry_id,
@@ -78,6 +80,7 @@ def _make_entry(
         due_date=due_date,
         payment_status=payment_status,
         paid_amount=Decimal(paid_amount),
+        active_allocation_count=active_allocation_count,
         updated_at=None,
     )
 
@@ -132,6 +135,46 @@ async def test_find_stale_paid_or_partial_ledger_entries_derives_manual_correcti
             "partial",
             "paid_or_partial_entry_outside_current_terms",
         ),
+    ]
+
+
+async def test_find_stale_paid_or_partial_ledger_entries_includes_allocated_entries() -> (
+    None
+):
+    rent_terms = [
+        _make_rent_term(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+            monthly_rent="1000.00",
+            total_monthly_amount="1200.00",
+        )
+    ]
+    allocated_entry = _make_entry(
+        entry_id="entry-allocated",
+        year_month="2026-01",
+        amount_due="1000.00",
+        due_date=date(2026, 1, 1),
+        payment_status="unpaid",
+        paid_amount="0",
+        active_allocation_count=1,
+    )
+
+    stale_entries = find_stale_paid_or_partial_ledger_entries(
+        rent_terms=rent_terms,
+        ledger_entries=[allocated_entry],
+        payment_cycle="鏈堜粯",
+    )
+
+    assert [
+        (entry.entry_id, entry.year_month, entry.payment_status, entry.reason)
+        for entry in stale_entries
+    ] == [
+        (
+            "entry-allocated",
+            "2026-01",
+            "unpaid",
+            "allocated_entry_requires_manual_resolution",
+        )
     ]
 
 
@@ -513,6 +556,74 @@ async def test_recalculate_ledger_skips_partial_entry() -> None:
     # partial 条目的金额不应被修改
     assert partial_entry.amount_due == Decimal("500.00")
     assert partial_entry.paid_amount == Decimal("200.00")
+
+
+async def test_recalculate_ledger_skips_entry_with_active_allocation_marker() -> None:
+    contract = _make_contract()
+    rent_terms = [
+        _make_rent_term(
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+            monthly_rent="800.00",
+            total_monthly_amount="1000.00",
+        )
+    ]
+    allocated_entry = _make_entry(
+        entry_id="entry-allocated",
+        year_month="2026-08",
+        amount_due="500.00",
+        due_date=date(2026, 8, 1),
+        payment_status="unpaid",
+        paid_amount="0",
+        active_allocation_count=1,
+    )
+    mock_db = MagicMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
+    contract_group = _make_contract_group()
+
+    with (
+        patch(
+            "src.services.contract.ledger_service_v2.contract_crud.get",
+            new=AsyncMock(return_value=contract),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.list_rent_terms_by_contract",
+            new=AsyncMock(return_value=rent_terms),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[allocated_entry]),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.get_with_assets",
+            new=AsyncMock(return_value=contract_group),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.create_ledger_entry",
+            new=AsyncMock(),
+        ),
+    ):
+        result = await ledger_service_v2.recalculate_ledger(
+            mock_db,
+            contract_id="contract-ledger",
+        )
+
+    assert result == {
+        "created": 0,
+        "updated": 0,
+        "voided": 0,
+        "skipped_entries": [
+            {
+                "entry_id": "entry-allocated",
+                "year_month": "2026-08",
+                "payment_status": "unpaid",
+                "reason": "allocated_entry_requires_manual_resolution",
+            }
+        ],
+    }
+    assert allocated_entry.amount_due == Decimal("500.00")
+    assert allocated_entry.due_date == date(2026, 8, 1)
 
 
 async def test_recalculate_ledger_updates_due_date_only_when_amount_unchanged() -> None:

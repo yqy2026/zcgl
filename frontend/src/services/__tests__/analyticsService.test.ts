@@ -235,6 +235,36 @@ describe('AnalyticsService', () => {
             upstream_lease: 2,
             entrusted_operation: 7,
           },
+          operational_metric_groups: {
+            terminal_collection: {
+              label: '终端租户收缴',
+              amount_due: '1800.00',
+              paid_amount: '1100.00',
+              outstanding_amount: '700.00',
+              collection_rate: '61.11',
+            },
+            operator_income: {
+              label: '运营方收入',
+              amount_due: '1080.00',
+              paid_amount: '640.00',
+              outstanding_amount: '440.00',
+              collection_rate: '59.26',
+            },
+            operator_cost: {
+              label: '运营方成本',
+              amount_due: '300.00',
+              paid_amount: '100.00',
+              outstanding_amount: '200.00',
+              payment_rate: '33.33',
+            },
+            operating_result: {
+              label: '经营结果',
+              accrual_net_amount: '780.00',
+              cash_net_amount: '540.00',
+            },
+          },
+          period_attribution_basis: 'rent_year_month',
+          period_attribution_label: '按租金账期归属，流水发生日期仅用于查询、导出和审计',
         },
       });
 
@@ -258,6 +288,28 @@ describe('AnalyticsService', () => {
         upstream_lease: 2,
         entrusted_operation: 7,
       });
+      expect(result.data?.operational_metric_groups?.operator_income).toEqual({
+        label: '运营方收入',
+        amount_due: 1080,
+        paid_amount: 640,
+        outstanding_amount: 440,
+        collection_rate: 59.26,
+        payment_rate: null,
+        accrual_net_amount: 0,
+        cash_net_amount: 0,
+      });
+      expect(result.data?.operational_metric_groups?.operating_result).toEqual({
+        label: '经营结果',
+        amount_due: 0,
+        paid_amount: 0,
+        outstanding_amount: 0,
+        collection_rate: null,
+        payment_rate: null,
+        accrual_net_amount: 780,
+        cash_net_amount: 540,
+      });
+      expect(result.data?.period_attribution_basis).toBe('rent_year_month');
+      expect(result.data?.period_attribution_label).toContain('流水发生日期');
     });
 
     it('保留项目和经营模式分析拆分字段', async () => {

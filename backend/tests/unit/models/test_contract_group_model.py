@@ -16,6 +16,8 @@ from src.models.contract_group import (
     ContractLifecycleStatus,
     ContractScanDocument,
     GroupRelationType,
+    OperationalPaymentFlow,
+    PaymentAllocation,
     RevenueMode,
     ServiceFeeLedger,
     derive_ledger_payment_status,
@@ -101,6 +103,57 @@ class TestEnumColumnStorageStrategy:
     def test_contract_has_party_name_snapshot_columns(self) -> None:
         assert Contract.__table__.c["lessor_name_snapshot"].nullable is True
         assert Contract.__table__.c["lessee_name_snapshot"].nullable is True
+
+    def test_contract_ledger_has_operations_view_and_follow_up_columns(self) -> None:
+        columns = ContractLedgerEntry.__table__.c
+
+        assert "ledger_views" in columns
+        assert columns["ledger_views"].nullable is False
+        assert "follow_up_status" in columns
+        assert "next_follow_up_date" in columns
+        assert "follow_up_note" in columns
+
+    def test_payment_flow_and_allocation_models_exist(self) -> None:
+        assert OperationalPaymentFlow.__tablename__ == "operational_payment_flows"
+        assert PaymentAllocation.__tablename__ == "payment_allocations"
+        assert OperationalPaymentFlow.__table__.c["amount"].nullable is False
+        assert PaymentAllocation.__table__.c["flow_id"].nullable is False
+
+    def test_payment_flow_amount_has_positive_constraint(self) -> None:
+        constraint_sql = " ".join(
+            str(constraint.sqltext)
+            for constraint in OperationalPaymentFlow.__table__.constraints
+            if hasattr(constraint, "sqltext")
+        )
+
+        assert "amount > 0" in constraint_sql
+
+    def test_payment_flow_lifecycle_is_traceable_and_single_successor(self) -> None:
+        columns = OperationalPaymentFlow.__table__.c
+
+        assert columns["corrected_from_flow_id"].nullable is True
+        assert columns["corrected_from_flow_id"].unique is True
+        assert columns["status_changed_by"].nullable is True
+        assert columns["status_changed_at"].nullable is True
+        assert columns["status_change_reason"].nullable is True
+
+        constraint_sql = " ".join(
+            str(constraint.sqltext)
+            for constraint in OperationalPaymentFlow.__table__.constraints
+            if hasattr(constraint, "sqltext")
+        )
+        assert "status = 'active'" in constraint_sql
+        assert "status_change_reason IS NOT NULL" in constraint_sql
+        assert "btrim(status_changed_by) <> ''" in constraint_sql
+        assert "btrim(status_change_reason) <> ''" in constraint_sql
+
+    def test_service_fee_ledger_uses_monthly_aggregate_source_columns(self) -> None:
+        columns = ServiceFeeLedger.__table__.c
+
+        assert "agency_agreement_contract_id" in columns
+        assert "source_ledger_ids" in columns
+        assert "calculation_base_amount" in columns
+        assert "source_ledger_id" not in columns
 
     def test_contract_scan_document_model_and_link_table_exist(self) -> None:
         assert ContractScanDocument.__tablename__ == "contract_scan_documents"

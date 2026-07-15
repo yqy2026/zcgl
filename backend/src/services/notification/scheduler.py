@@ -95,9 +95,12 @@ class NotificationSchedulerService:
         except Exception as e:
             notification.is_sent_wecom = False
             notification.wecom_sent_at = None
-            notification.wecom_send_error = f"WeCom application message exception: {str(e)}"
+            notification.wecom_send_error = (
+                f"WeCom application message exception: {str(e)}"
+            )
             await self.db.commit()
             return False
+
     async def _create_and_send_notification(
         self,
         recipient_id: str,
@@ -233,23 +236,25 @@ class NotificationSchedulerService:
         ledger_ids_by_priority: dict[str, list[str]] = {}
         for alert in ledger_alerts:
             priority = str(alert["priority"])
-            ledger_ids_by_priority.setdefault(priority, []).append(str(alert["ledger_id"]))
+            ledger_ids_by_priority.setdefault(priority, []).append(
+                str(alert["ledger_id"])
+            )
             recipient_ids_by_priority.setdefault(priority, set()).update(
                 alert["recipient_ids"]
             )
 
         existing_pairs_by_priority: dict[str, set[tuple[str, str]]] = {}
         for priority, ledger_ids in ledger_ids_by_priority.items():
-            existing_pairs_by_priority[priority] = (
-                await notification_service.find_existing_notification_pairs_async(
-                    self.db,
-                    recipient_ids=sorted(recipient_ids_by_priority.get(priority, set())),
-                    related_entity_type="contract_ledger_entry",
-                    related_entity_ids=ledger_ids,
-                    notification_type=notification_type,
-                    priority=priority,
-                    created_since=None,
-                )
+            existing_pairs_by_priority[
+                priority
+            ] = await notification_service.find_existing_notification_pairs_async(
+                self.db,
+                recipient_ids=sorted(recipient_ids_by_priority.get(priority, set())),
+                related_entity_type="contract_ledger_entry",
+                related_entity_ids=ledger_ids,
+                notification_type=notification_type,
+                priority=priority,
+                created_since=None,
             )
         return existing_pairs_by_priority
 
@@ -297,23 +302,23 @@ class NotificationSchedulerService:
             if days_remaining == 0:
                 notification_type = NotificationType.CONTRACT_EXPIRED
                 priority = NotificationPriority.URGENT
-                title = "合同已到期"
-                content = f"合同 {contract.contract_number}（{tenant_name}）已于今日到期，请及时处理"
+                title = "合同/协议已到期"
+                content = f"合同/协议 {contract.contract_number}（{tenant_name}）已于今日到期，请及时处理"
             elif days_remaining <= 7:
                 notification_type = NotificationType.CONTRACT_EXPIRING
                 priority = NotificationPriority.URGENT
-                title = f"合同即将到期（{days_remaining}天）"
-                content = f"合同 {contract.contract_number}（{tenant_name}）将在{days_remaining}天后到期"
+                title = f"合同/协议即将到期（{days_remaining}天）"
+                content = f"合同/协议 {contract.contract_number}（{tenant_name}）将在{days_remaining}天后到期"
             elif days_remaining <= 15:
                 notification_type = NotificationType.CONTRACT_EXPIRING
                 priority = NotificationPriority.HIGH
-                title = f"合同即将到期（{days_remaining}天）"
-                content = f"合同 {contract.contract_number}（{tenant_name}）将在{days_remaining}天后到期"
+                title = f"合同/协议即将到期（{days_remaining}天）"
+                content = f"合同/协议 {contract.contract_number}（{tenant_name}）将在{days_remaining}天后到期"
             else:
                 notification_type = NotificationType.CONTRACT_EXPIRING
                 priority = NotificationPriority.NORMAL
-                title = f"合同即将到期（{days_remaining}天）"
-                content = f"合同 {contract.contract_number}（{tenant_name}）将在{days_remaining}天后到期"
+                title = f"合同/协议即将到期（{days_remaining}天）"
+                content = f"合同/协议 {contract.contract_number}（{tenant_name}）将在{days_remaining}天后到期"
 
             contract_id = str(contract.contract_id)
             contract_alerts.append(
@@ -337,7 +342,10 @@ class NotificationSchedulerService:
             )
 
         existing_pairs_by_tier_key: dict[tuple[str, str], set[tuple[str, str]]] = {}
-        for (notification_type, priority), contract_ids in contract_ids_by_tier_key.items():
+        for (
+            notification_type,
+            priority,
+        ), contract_ids in contract_ids_by_tier_key.items():
             existing_pairs_by_tier_key[
                 (notification_type, priority)
             ] = await notification_service.find_existing_notification_pairs_async(
@@ -439,11 +447,9 @@ class NotificationSchedulerService:
                     ),
                 }
             )
-        existing_pairs_by_priority = (
-            await self._find_existing_ledger_pairs_by_priority(
-                ledger_alerts=ledger_alerts,
-                notification_type=NotificationType.PAYMENT_OVERDUE,
-            )
+        existing_pairs_by_priority = await self._find_existing_ledger_pairs_by_priority(
+            ledger_alerts=ledger_alerts,
+            notification_type=NotificationType.PAYMENT_OVERDUE,
         )
 
         for ledger_alert in ledger_alerts:
@@ -533,11 +539,9 @@ class NotificationSchedulerService:
                     ),
                 }
             )
-        existing_pairs_by_priority = (
-            await self._find_existing_ledger_pairs_by_priority(
-                ledger_alerts=ledger_alerts,
-                notification_type=NotificationType.PAYMENT_DUE,
-            )
+        existing_pairs_by_priority = await self._find_existing_ledger_pairs_by_priority(
+            ledger_alerts=ledger_alerts,
+            notification_type=NotificationType.PAYMENT_DUE,
         )
 
         for ledger_alert in ledger_alerts:

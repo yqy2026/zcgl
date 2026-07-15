@@ -417,11 +417,13 @@ class TestAnalyticsService:
                 MagicMock(
                     year_month="2026-05",
                     amount_due=Decimal("150.00"),
+                    paid_amount=Decimal("120.00"),
                     payment_status="paid",
                 ),
                 MagicMock(
                     year_month="2026-06",
                     amount_due=Decimal("50.00"),
+                    paid_amount=Decimal("0.00"),
                     payment_status="unpaid",
                 ),
             ],
@@ -459,7 +461,162 @@ class TestAnalyticsService:
             "upstream_lease": 0,
             "entrusted_operation": 1,
         }
+        assert metrics["period_attribution_basis"] == "rent_year_month"
+        assert "流水发生日期" in metrics["period_attribution_label"]
         assert metrics["metrics_version"]
+
+    def test_calculate_operational_metrics_should_return_operations_ledger_groups(
+        self, analytics_service
+    ):
+        lease_group = MagicMock(revenue_mode=RevenueMode.LEASE, data_status="正常")
+        lease_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        lease_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+
+        agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
+        agency_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        agency_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+
+        downstream_contract = MagicMock(
+            contract_id="contract-downstream",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            contract_group=lease_group,
+            lease_detail=MagicMock(),
+            agency_detail=None,
+            ledger_entries=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("1000.00"),
+                    paid_amount=Decimal("600.00"),
+                    payment_status="partial",
+                    ledger_views=["terminal_collection", "operator_income"],
+                )
+            ],
+            service_fee_ledgers=[],
+            lessor_party_id="operator-party",
+            lessee_party_id="customer-1",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        direct_contract = MagicMock(
+            contract_id="contract-direct",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            contract_group=agency_group,
+            lease_detail=MagicMock(),
+            agency_detail=None,
+            ledger_entries=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("800.00"),
+                    paid_amount=Decimal("500.00"),
+                    payment_status="partial",
+                    ledger_views=["terminal_collection"],
+                )
+            ],
+            service_fee_ledgers=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("80.00"),
+                    paid_amount=Decimal("40.00"),
+                    payment_status="partial",
+                )
+            ],
+            lessor_party_id="owner-party",
+            lessee_party_id="customer-2",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        upstream_contract = MagicMock(
+            contract_id="contract-upstream",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.UPSTREAM,
+            contract_group=lease_group,
+            lease_detail=MagicMock(),
+            agency_detail=None,
+            ledger_entries=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("300.00"),
+                    paid_amount=Decimal("100.00"),
+                    payment_status="partial",
+                    ledger_views=["operator_cost"],
+                )
+            ],
+            service_fee_ledgers=[],
+            lessor_party_id="owner-party",
+            lessee_party_id="operator-party",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        draft_contract_should_not_count = MagicMock(
+            contract_id="contract-draft",
+            status=ContractLifecycleStatus.DRAFT,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            contract_group=lease_group,
+            lease_detail=MagicMock(),
+            agency_detail=None,
+            ledger_entries=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("999999.00"),
+                    paid_amount=Decimal("999999.00"),
+                    payment_status="paid",
+                    ledger_views=["terminal_collection", "operator_income"],
+                )
+            ],
+            service_fee_ledgers=[],
+        )
+
+        metrics = analytics_service._calculate_operational_metrics(
+            [
+                downstream_contract,
+                direct_contract,
+                upstream_contract,
+                draft_contract_should_not_count,
+            ],
+            {"date_from": "2026-05-01", "date_to": "2026-05-31"},
+        )
+
+        groups = metrics["operational_metric_groups"]
+        assert groups["terminal_collection"] == {
+            "label": "终端租户收缴",
+            "amount_due": 1800.0,
+            "paid_amount": 1100.0,
+            "outstanding_amount": 700.0,
+            "collection_rate": 61.11,
+        }
+        assert groups["operator_income"] == {
+            "label": "运营方收入",
+            "amount_due": 1080.0,
+            "paid_amount": 640.0,
+            "outstanding_amount": 440.0,
+            "collection_rate": 59.26,
+        }
+        assert groups["operator_cost"] == {
+            "label": "运营方成本",
+            "amount_due": 300.0,
+            "paid_amount": 100.0,
+            "outstanding_amount": 200.0,
+            "payment_rate": 33.33,
+        }
+        assert groups["operating_result"] == {
+            "label": "经营结果",
+            "accrual_net_amount": 780.0,
+            "cash_net_amount": 540.0,
+        }
 
     def test_calculate_operational_metrics_counts_only_terminal_customer_entities(
         self, analytics_service
@@ -633,11 +790,13 @@ class TestAnalyticsService:
                 MagicMock(
                     year_month="2026-05",
                     amount_due=Decimal("150.00"),
+                    paid_amount=Decimal("120.00"),
                     payment_status="paid",
                 ),
                 MagicMock(
                     year_month="2026-06",
                     amount_due=Decimal("50.00"),
+                    paid_amount=Decimal("0.00"),
                     payment_status="unpaid",
                 ),
             ],
@@ -710,6 +869,7 @@ class TestAnalyticsService:
                 MagicMock(
                     year_month="2026-05",
                     amount_due=Decimal("150.00"),
+                    paid_amount=Decimal("120.00"),
                     payment_status="paid",
                 )
             ],
@@ -797,6 +957,7 @@ class TestAnalyticsService:
                 MagicMock(
                     year_month="2026-05",
                     amount_due=Decimal("120.00"),
+                    paid_amount=Decimal("80.00"),
                     payment_status="paid",
                     attributed_project_id="project-1",
                 )
@@ -898,4 +1059,7 @@ class TestAnalyticsService:
         assert "customer_contract_count" in result
         assert "project_breakdown" in result
         assert "mode_breakdown" in result
+        assert "operational_metric_groups" in result
+        assert "period_attribution_basis" in result
+        assert "period_attribution_label" in result
         assert "metrics_version" in result

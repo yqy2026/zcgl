@@ -101,6 +101,48 @@ class GroupRelationType(str, enum.Enum):
     DIRECT_LEASE = "直租"
 
 
+class LedgerView(str, enum.Enum):
+    """Business views exposed by the operations ledger."""
+
+    TERMINAL_COLLECTION = "terminal_collection"
+    OPERATOR_INCOME = "operator_income"
+    OPERATOR_COST = "operator_cost"
+
+
+class LedgerFollowUpStatus(str, enum.Enum):
+    """Lightweight follow-up status for terminal-collection entries."""
+
+    PENDING_FOLLOW_UP = "pending_follow_up"
+    CONTACTED = "contacted"
+    PROMISED_PAYMENT = "promised_payment"
+    DISPUTED = "disputed"
+    OFFLINE_RECEIVED_PENDING_ENTRY = "offline_received_pending_entry"
+    DEFERRED = "deferred"
+
+
+class OperationalPaymentFlowType(str, enum.Enum):
+    """Supported operational receipt/payment flow types."""
+
+    TERMINAL_RENT_RECEIPT = "terminal_rent_receipt"
+    SERVICE_FEE_RECEIPT = "service_fee_receipt"
+    UPSTREAM_COST_PAYMENT = "upstream_cost_payment"
+
+
+class OperationalPaymentFlowStatus(str, enum.Enum):
+    """Minimal operational payment flow lifecycle."""
+
+    ACTIVE = "active"
+    VOIDED = "voided"
+    CORRECTED = "corrected"
+
+
+class PaymentAllocationTargetType(str, enum.Enum):
+    """Allocation target ledger entry types."""
+
+    CONTRACT_LEDGER_ENTRY = "contract_ledger_entry"
+    SERVICE_FEE_LEDGER = "service_fee_ledger"
+
+
 class ContractLifecycleStatus(str, enum.Enum):
     """Contract lifecycle status."""
 
@@ -440,6 +482,14 @@ class Contract(Base):
     service_fee_ledgers: Mapped[list["ServiceFeeLedger"]] = relationship(
         "ServiceFeeLedger",
         back_populates="agency_contract",
+        foreign_keys="ServiceFeeLedger.agency_contract_id",
+    )
+    agency_agreement_service_fee_ledgers: Mapped[list["ServiceFeeLedger"]] = (
+        relationship(
+            "ServiceFeeLedger",
+            back_populates="agency_agreement_contract",
+            foreign_keys="ServiceFeeLedger.agency_agreement_contract_id",
+        )
     )
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -744,6 +794,16 @@ class ContractLedgerEntry(Base):
             "year_month",
             name="uq_contract_ledger_entry_month",
         ),
+        CheckConstraint(
+            "jsonb_typeof(ledger_views) = 'array'",
+            name="ck_contract_ledger_entry_ledger_views_array",
+        ),
+        CheckConstraint(
+            "follow_up_status IS NULL OR follow_up_status IN ("
+            "'pending_follow_up', 'contacted', 'promised_payment', "
+            "'disputed', 'offline_received_pending_entry', 'deferred')",
+            name="ck_contract_ledger_entry_follow_up_status",
+        ),
     )
 
     entry_id: Mapped[str] = mapped_column(
@@ -773,6 +833,12 @@ class ContractLedgerEntry(Base):
         nullable=False,
         comment="Amount due.",
     )
+    ledger_views: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        comment="Operations ledger view memberships.",
+    )
     currency_code: Mapped[str] = mapped_column(
         String(10),
         nullable=False,
@@ -797,6 +863,21 @@ class ContractLedgerEntry(Base):
         DECIMAL(15, 2),
         nullable=False,
         default=Decimal("0"),
+    )
+    follow_up_status: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="Terminal-collection follow-up status.",
+    )
+    next_follow_up_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+        comment="Next terminal-collection follow-up date.",
+    )
+    follow_up_note: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Terminal-collection follow-up note.",
     )
     attributed_project_id: Mapped[str | None] = mapped_column(
         String,
@@ -860,14 +941,181 @@ class ContractLedgerEntry(Base):
         return _ledger_payment_status_expression(cls)
 
 
+class OperationalPaymentFlow(Base):
+    """Lightweight operational receipt/payment flow."""
+
+    __tablename__ = "operational_payment_flows"
+    __table_args__ = (
+        CheckConstraint(
+            "amount > 0", name="ck_operational_payment_flow_amount_positive"
+        ),
+        CheckConstraint(
+            "flow_type IN ("
+            "'terminal_rent_receipt', 'service_fee_receipt', 'upstream_cost_payment')",
+            name="ck_operational_payment_flow_type",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'voided', 'corrected')",
+            name="ck_operational_payment_flow_status",
+        ),
+        CheckConstraint(
+            "(status = 'active' AND status_changed_by IS NULL "
+            "AND status_changed_at IS NULL AND status_change_reason IS NULL) OR "
+            "(status IN ('voided', 'corrected') AND status_changed_by IS NOT NULL "
+            "AND btrim(status_changed_by) <> '' AND status_changed_at IS NOT NULL "
+            "AND status_change_reason IS NOT NULL "
+            "AND btrim(status_change_reason) <> '')",
+            name="ck_operational_payment_flow_lifecycle_audit",
+        ),
+    )
+
+    flow_id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    flow_type: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        index=True,
+        comment="Operational payment flow type.",
+    )
+    occurred_on: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        comment="Actual receipt/payment date.",
+    )
+    amount: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False)
+    registered_by: Mapped[str] = mapped_column(String(100), nullable=False)
+    counterparty_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+    )
+    voucher_attachment_ids: Mapped[list[str] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=OperationalPaymentFlowStatus.ACTIVE.value,
+    )
+    corrected_from_flow_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("operational_payment_flows.flow_id"),
+        nullable=True,
+        unique=True,
+    )
+    status_changed_by: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+    status_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+    status_change_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+    allocations: Mapped[list["PaymentAllocation"]] = relationship(
+        "PaymentAllocation",
+        back_populates="flow",
+        cascade="all, delete-orphan",
+    )
+    corrected_from: Mapped["OperationalPaymentFlow | None"] = relationship(
+        "OperationalPaymentFlow",
+        remote_side=[flow_id],
+        foreign_keys=[corrected_from_flow_id],
+        back_populates="correction",
+    )
+    correction: Mapped["OperationalPaymentFlow | None"] = relationship(
+        "OperationalPaymentFlow",
+        foreign_keys=[corrected_from_flow_id],
+        back_populates="corrected_from",
+        uselist=False,
+    )
+
+
+class PaymentAllocation(Base):
+    """Manual allocation from one flow to ledger periods."""
+
+    __tablename__ = "payment_allocations"
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_payment_allocation_amount_positive"),
+        CheckConstraint(
+            "target_type IN ('contract_ledger_entry', 'service_fee_ledger')",
+            name="ck_payment_allocation_target_type",
+        ),
+        CheckConstraint(
+            "year_month ~ '^\\d{4}-\\d{2}$'",
+            name="ck_payment_allocation_year_month_format",
+        ),
+    )
+
+    allocation_id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    flow_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("operational_payment_flows.flow_id"),
+        nullable=False,
+        index=True,
+    )
+    target_type: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    target_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    year_month: Mapped[str] = mapped_column(String(7), nullable=False, index=True)
+    amount: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+    flow: Mapped["OperationalPaymentFlow"] = relationship(
+        "OperationalPaymentFlow",
+        back_populates="allocations",
+    )
+
+
 class ServiceFeeLedger(Base):
-    """Agency-mode service fee ledger."""
+    """Agency-mode monthly service fee ledger."""
 
     __tablename__ = "service_fee_ledgers"
     __table_args__ = (
         UniqueConstraint(
-            "source_ledger_id",
-            name="uq_service_fee_ledger_source",
+            "contract_group_id",
+            "agency_agreement_contract_id",
+            "attributed_owner_party_id",
+            "year_month",
+            name="uq_service_fee_ledger_monthly_scope",
+        ),
+        CheckConstraint(
+            "jsonb_typeof(source_ledger_ids) = 'array'",
+            name="ck_service_fee_ledger_source_ids_array",
+        ),
+        CheckConstraint(
+            "calculation_base_amount >= 0",
+            name="ck_service_fee_ledger_calculation_base_nonnegative",
         ),
     )
 
@@ -887,13 +1135,20 @@ class ServiceFeeLedger(Base):
         ForeignKey("contracts.contract_id"),
         nullable=False,
         index=True,
+        comment="Direct-lease contract ID.",
     )
-    source_ledger_id: Mapped[str] = mapped_column(
+    agency_agreement_contract_id: Mapped[str] = mapped_column(
         String,
-        ForeignKey("contract_ledger_entries.entry_id"),
+        ForeignKey("contracts.contract_id"),
         nullable=False,
-        unique=True,
         index=True,
+        comment="Entrusted agency agreement contract ID.",
+    )
+    source_ledger_ids: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        comment="Source direct-lease rent ledger entry IDs.",
     )
     year_month: Mapped[str] = mapped_column(String(7), nullable=False)
     amount_due: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False)
@@ -917,31 +1172,36 @@ class ServiceFeeLedger(Base):
         DECIMAL(5, 4),
         nullable=False,
     )
+    calculation_base_amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2),
+        nullable=False,
+        default=Decimal("0"),
+    )
     attributed_project_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("projects.id"),
         nullable=True,
         index=True,
-        comment="Frozen project attribution inherited from the source rent ledger.",
+        comment="Frozen project attribution inherited from source rent ledgers.",
     )
     attributed_owner_party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
         nullable=True,
         index=True,
-        comment="Frozen owner party attribution inherited from the source rent ledger.",
+        comment="Frozen owner party attribution inherited from source rent ledgers.",
     )
     attributed_operator_party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
         nullable=True,
         index=True,
-        comment="Frozen operator party attribution inherited from the source rent ledger.",
+        comment="Frozen operator party attribution inherited from source rent ledgers.",
     )
     attributed_asset_ids: Mapped[list[str] | None] = mapped_column(
         JSONB,
         nullable=True,
-        comment="Frozen asset IDs inherited from the source rent ledger.",
+        comment="Frozen asset IDs inherited from source rent ledgers.",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -962,9 +1222,12 @@ class ServiceFeeLedger(Base):
     agency_contract: Mapped["Contract"] = relationship(
         "Contract",
         back_populates="service_fee_ledgers",
+        foreign_keys=[agency_contract_id],
     )
-    source_ledger: Mapped["ContractLedgerEntry"] = relationship(
-        "ContractLedgerEntry",
+    agency_agreement_contract: Mapped["Contract"] = relationship(
+        "Contract",
+        back_populates="agency_agreement_service_fee_ledgers",
+        foreign_keys=[agency_agreement_contract_id],
     )
 
     @hybrid_property

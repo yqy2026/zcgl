@@ -190,7 +190,8 @@ async def get_current_user(
 ) -> User:
     """Get current authenticated user from the httpOnly auth cookie."""
     return await resolve_current_user(
-        auth_token=auth_token,
+        # The request-provided JWT is not a hardcoded credential.
+        auth_token=auth_token,  # nosec B106
         db=db,
         missing_token_message="无效的认证凭据",
         invalid_token_message="无效的认证凭据",
@@ -206,7 +207,8 @@ async def get_current_user_from_cookie(
 ) -> User:
     """Get current authenticated user from the httpOnly auth cookie."""
     return await resolve_current_user(
-        auth_token=auth_token,
+        # The request-provided JWT is not a hardcoded credential.
+        auth_token=auth_token,  # nosec B106
         db=db,
         missing_token_message="Not authenticated",
         invalid_token_message="Invalid token",

@@ -95,9 +95,9 @@ export const MENU_ITEMS: MenuProps['items'] = [
     ],
   },
   {
-    key: '/finance/ledger',
+    key: '/operations/ledger',
     icon: <AccountBookOutlined />,
-    label: '财务台账',
+    label: '经营台账',
   },
   {
     key: '/customer-center',
@@ -184,8 +184,8 @@ export function getSelectedKeys(pathname: string): string[] {
   if (pathname.startsWith('/contract-groups/')) {
     return [MENU_ACTION_KEYS.CONTRACT_CENTER_LIST];
   }
-  if (pathname === '/finance/ledger' || pathname.startsWith('/finance/ledger/')) {
-    return ['/finance/ledger'];
+  if (pathname === '/operations/ledger' || pathname.startsWith('/operations/ledger/')) {
+    return ['/operations/ledger'];
   }
   if (pathname === '/project' || pathname.startsWith('/project/')) {
     return [MENU_ACTION_KEYS.PROJECT_LIST];

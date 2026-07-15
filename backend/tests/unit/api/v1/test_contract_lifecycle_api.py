@@ -8,7 +8,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import ValidationError
 
 pytestmark = pytest.mark.api
 
@@ -34,7 +33,6 @@ def test_route_paths_cover_minimal_lifecycle_and_rent_term_endpoints() -> None:
         "/contracts/{contract_id}/rent-terms",
         "/contracts/{contract_id}/rent-terms/{rent_term_id}",
         "/contracts/{contract_id}/ledger",
-        "/contracts/{contract_id}/ledger/batch-update-status",
     }
     retired = {
         "/contract-groups/{group_id}/submit-review",
@@ -42,6 +40,7 @@ def test_route_paths_cover_minimal_lifecycle_and_rent_term_endpoints() -> None:
         "/contracts/{contract_id}/approve",
         "/contracts/{contract_id}/reject",
         "/contracts/{contract_id}/expire",
+        "/contracts/{contract_id}/ledger/batch-update-status",
     }
     assert required.issubset(paths), f"缺少路径: {required - paths}"
     assert retired.isdisjoint(paths)
@@ -246,50 +245,3 @@ async def test_get_contract_ledger_delegates_to_service() -> None:
 
     assert result is response
     mock_query_ledger.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_batch_update_contract_ledger_delegates_to_service() -> None:
-    mod = _module()
-    endpoint = getattr(mod, "batch_update_contract_ledger_status", None)
-    schema_module = import_module("src.schemas.contract_group")
-    request_schema = getattr(schema_module, "ContractLedgerBatchUpdateRequest", None)
-    payload = request_schema(
-        entry_ids=["entry-001", "entry-002"],
-        paid_amount="2000.00",
-        notes="批量回款",
-    )
-    response = [MagicMock(entry_id="entry-001"), MagicMock(entry_id="entry-002")]
-
-    with patch(
-        "src.api.v1.contracts.contract_groups.ledger_service_v2.batch_update_status",
-        new=AsyncMock(return_value=response),
-    ) as mock_batch_update:
-        result = await endpoint(
-            contract_id="contract-001",
-            payload=payload,
-            db=AsyncMock(),
-            current_user=MagicMock(id="user-001"),
-            _authz=None,
-        )
-
-    assert result is response
-    mock_batch_update.assert_awaited_once_with(
-        mock_batch_update.await_args.args[0],
-        contract_id="contract-001",
-        entry_ids=["entry-001", "entry-002"],
-        paid_amount=payload.paid_amount,
-        notes="批量回款",
-    )
-
-
-def test_batch_update_contract_ledger_rejects_payment_status_input() -> None:
-    schema_module = import_module("src.schemas.contract_group")
-    request_schema = getattr(schema_module, "ContractLedgerBatchUpdateRequest", None)
-
-    with pytest.raises(ValidationError):
-        request_schema(
-            entry_ids=["entry-001"],
-            payment_status="paid",
-            paid_amount="2000.00",
-        )

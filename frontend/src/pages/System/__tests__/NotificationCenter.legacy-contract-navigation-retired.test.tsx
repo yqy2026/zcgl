@@ -136,8 +136,8 @@ describe('NotificationCenter legacy contract navigation retirement', () => {
       items: [
         {
           id: 'notif-1',
-          title: '合同到期提醒',
-          content: '请处理合同续签事项',
+          title: '合同/协议到期提醒',
+          content: '请处理合同/协议续签事项',
           type: 'contract_expiring',
           is_read: false,
           priority: 'normal',
@@ -162,13 +162,13 @@ describe('NotificationCenter legacy contract navigation retirement', () => {
     try {
       renderWithProviders(<NotificationCenter />);
 
-      expect(await screen.findByText('合同到期提醒')).toBeInTheDocument();
-      fireEvent.click(screen.getByText('合同到期提醒'));
+      expect(await screen.findByText('合同/协议到期提醒')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('合同/协议到期提醒'));
 
       await waitFor(() => {
         expect(notificationService.markAsRead).toHaveBeenCalledWith('notif-1');
         expect(MessageManager.info).toHaveBeenCalledWith(
-          '合同通知详情入口迁移中，请改从新 contract/contract-group 页面处理'
+          '合同/协议通知详情入口迁移中，请改从合同中心页面处理'
         );
       });
       const stderr = formatStderrWrites(stderrWriteSpy.mock.calls);
