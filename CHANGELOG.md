@@ -4,6 +4,10 @@
 
 ### 2026-07-15
 - chore(ci): remove the duplicate `Make CI Gate` job so E2E jobs wait only for their actual backend/frontend test prerequisites. Pull-request and push E2E runs now exercise Chromium by default; the complete Firefox, WebKit, and mobile matrix runs nightly at 02:00 Asia/Shanghai or when selected in manual dispatch. Vitest and Playwright remain single-worker because their current configurations document unresolved parallel-test flakiness.
+- docs(research): 新增 RapidOCR 扫描 PDF 适配评估，基于官方仓库、文档与 PyPI 元数据核对图像 OCR/PDF 渲染边界、输出结构、性能证据、依赖与许可证、维护状态及离线部署风险；结合当前合同与产权证解析需求，建议将 RapidOCR 作为 `PyMuPDF -> 本地 OCR -> 文本 LLM/规则 -> 低置信视觉回退` 的候选 OCR 层，并要求以真实扫描件字段级基准决定是否采用，不将其单独视为合同结构化解析器。
+- docs(plan): 新增 RapidOCR + DeepSeek 单一 LLM 文档解析收口方案，明确 PyMuPDF 页面级路由、本地 OCR、规则优先与可选 DeepSeek 文本抽取边界；将真实样本基线、临时候选证据、失败后手工补录、旧 Qwen/GLM/Zhipu/Hunyuan 与错误 DeepSeek 托管视觉路径物理删除、依赖和文件校验治理纳入分阶段验收。
+- fix(redis): 本地开发统一使用 Compose Redis 的宿主机端口 `16379`，新增 `redis-up` / `redis-down` / `redis-health` Make 目标；启用 Redis 后初始化连接失败将直接阻止后端启动，不再静默降级为进程内缓存，并同步环境示例与启动文档。
+
 ### 2026-07-14
 - fix(asset): 对齐 ADR-0010 的运营方派生语义与数据库约束。`assets.manager_party_id` 仍是只读兼容列且无项目资产应为空，现新增迁移解除历史 `NOT NULL` 约束，并在 ORM/迁移契约测试中锁定；避免资产创建路径因已被忽略的独立 manager 输入而触发数据库完整性错误。同步修正前端 E2E 种子对 `Party` 已删除审计字段的写入，并使产权证冻结路由用例与其他后端冻结用例保持一致。验证：迁移契约 `4 passed`、后端 E2E `30 passed, 15 skipped`（产权证 frozen route）以及一次从初始 revision 到新 head 的临时 PostgreSQL 迁移均通过。
 - feat(operations-ledger): complete the payment-flow lifecycle. Active flows can now be voided or atomically corrected with authenticated actor/reason/timestamp evidence, one-successor enforcement, rollback on replacement failure, and immediate recalculation of every affected rent or service-fee ledger. Corrections preserve flow type and frozen project/owner/operator/currency scope, and acquire one stable ordered lock set across old and replacement targets. Added scoped flow-detail APIs and capability-gated `/operations/ledger` controls; terminal flows expose no further lifecycle action, and corrected flows keep their original vouchers instead of creating cross-owner attachment references.

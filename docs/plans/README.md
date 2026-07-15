@@ -8,6 +8,7 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
+| [2026-07-15-rapidocr-deepseek-document-extraction-plan.md](2026-07-15-rapidocr-deepseek-document-extraction-plan.md) | RapidOCR 本地 OCR + DeepSeek 单一 LLM 文档解析收口 | 📋 待评审 | 先跑真实样本基线，再替换 GLM-OCR 并物理删除多 provider 残留 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案

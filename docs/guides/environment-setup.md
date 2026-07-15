@@ -128,13 +128,21 @@ TEST_DATABASE_URL=postgresql+psycopg://username:password@host:5432/test_database
 
 #### 4. Redis 缓存配置
 ```bash
-# 是否启用 Redis
-REDIS_ENABLED=false
-REDIS_HOST=localhost
-REDIS_PORT=6379
+# 本地推荐使用 docker-compose.override.yml 中的 Redis
+REDIS_ENABLED=true
+REDIS_HOST=127.0.0.1
+REDIS_PORT=16379
 REDIS_DB=0
 REDIS_PASSWORD=
 ```
+
+```bash
+make redis-up
+make redis-health  # 返回 PONG
+make redis-down
+```
+
+宿主机后端连接 `127.0.0.1:16379`；完整 Compose 中的后端容器连接 `redis:6379`。Redis 明确启用后连接失败会阻止后端启动，不会静默降级为内存缓存。仅在确实不需要验证分布式缓存、鉴权失效广播和持久化 Token 黑名单的单进程场景中，才显式设置 `REDIS_ENABLED=false`。
 
 **Redis 使用场景**:
 - 会话存储
@@ -503,12 +511,16 @@ psql "$DATABASE_URL" -c "SELECT 1;"
 **问题**: Redis 连接错误
 **解决**:
 ```bash
-# 如果不需要 Redis，禁用它
-REDIS_ENABLED=false
+# Docker daemon 必须先启动
+make redis-up
+make redis-health  # 应返回 PONG
 
-# 或检查 Redis 服务
-redis-cli ping  # 应返回 PONG
+# 宿主机启动后端时使用 Compose 映射端口
+REDIS_HOST=127.0.0.1
+REDIS_PORT=16379
 ```
+
+如果当前任务明确不需要 Redis，设置 `REDIS_ENABLED=false` 后重启后端；不要在 `REDIS_ENABLED=true` 时依赖内存降级。
 
 ---
 

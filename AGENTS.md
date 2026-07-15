@@ -1,9 +1,9 @@
 # AGENTS.md
 
 本文件为 AI Coding Agents 提供项目上下文与执行约束（Single Source of Truth）。
-每次修改后请先复核没问题后更新 `CHANGELOG.md`。
+产生文件改动时请先复核没问题后更新 `CHANGELOG.md`；只读调研不需要更新。
 项目目前在从0到1阶段的开发中，不要做兼容操作，充分暴露问题，打牢系统基础。
-**Last Updated**: 2026-06-03（明确 API 路由注册边界与 registry 自注册护栏）
+**Last Updated**: 2026-06-23（收口命令、CHANGELOG/SSOT 触发边界与文件保护护栏）
 
 ---
 
@@ -24,12 +24,21 @@
 2. 涉及行为变更或 bug 修复时，已先补失败测试或复现用例，再完成修复；纯文档/配置任务至少完成相应校验。
 3. 已运行受影响范围内的校验命令；能跑 `make check` 时优先跑，至少保证相关 lint、type-check、test、docs-lint 或定向验证完成。
 4. 涉及需求、字段、接口、计划状态时，已同步 SSOT 文档与代码证据。
-5. `CHANGELOG.md` 已更新。
+5. 产生文件改动时，`CHANGELOG.md` 已更新；只读调研不需要更新。
 6. 回复中已补充边界情况与建议测试用例。
 
 ### Codex 项目默认配置
 - 长期稳定的项目规则放在本文件
 - 操作型说明放在 `docs/guides/`
+
+### 执行与变更边界
+
+- 优先运行 `Makefile` 中已有目标；`Makefile` 已封装后端虚拟环境 Python 路径。
+- 脱离 `make` 手工执行后端工具时，使用 `cd backend && uv run --frozen --extra dev <cmd>`；禁止用系统 `python/pip` 安装依赖或绕过项目环境。
+- 只读调研、检查、方案输出不更新 `CHANGELOG.md`；任何文件改动必须更新 `CHANGELOG.md`。
+- 只有涉及需求、字段、接口、鉴权、数据范围、计划状态或实现证据时，才同步 `docs/prd.md`、`docs/specs/*`、`docs/traceability/*`、`docs/plans/*` 等 SSOT 文档。
+- 未经用户明确要求，不读取、复制或提交 `.env` 等本地密钥文件；允许按任务需要修改 `.env.example`。
+- 未经用户明确要求，不清理或重写 `uploads/`、`logs/`、`output/`、`reports/`、`test-results/`、`node_modules/`、`backend/.venv/` 等本地数据、产物或依赖目录。
 
 ### Sub-agent 使用授权
 
@@ -62,7 +71,7 @@ make check          # lint + UI guard + type-check + test + build + backend-impo
 make docs-lint      # 仅跑 SSOT 完整性检查
 ```
 
-> ⚠️ 后端命令统一用 `uv run <cmd>`，禁止直接使用系统 `python/pip` 或 Anaconda。虚拟环境：`backend/.venv`（`uv sync --frozen` 安装依赖）。
+> ⚠️ 优先使用上方 `make` 目标；手工执行后端命令时用 `uv run --frozen --extra dev <cmd>`，禁止直接使用系统 `python/pip` 或 Anaconda。虚拟环境：`backend/.venv`（`uv sync --frozen` 安装依赖）。
 
 ---
 
@@ -106,6 +115,7 @@ docs/ scripts/ Makefile
 - ✅ 新 API 使用 `route_registry.register_router()` 注册；历史 `api_router.include_router()` 仅作为既有 v1 聚合内部布线
 - ❌ 已在模块内调用 `route_registry.register_router()` 的路由，不得再被 `api_router.include_router()` 二次聚合，避免产生双公共入口
 - ✅ API 路径统一 `/api/v1/*`
+- 参考现有自注册示例：`backend/src/api/v1/authz.py`、`backend/src/api/v1/party.py`；`backend/src/api/v1/__init__.py` 只负责导入自注册模块以触发注册，不能二次 include 已自注册路由
 
 ### 前端状态管理
 
@@ -222,7 +232,7 @@ docs/traceability/requirements-trace.md  ← 实现状态、代码证据、测�
           ↓
   make check                              ← 全量门禁（含 docs-lint）
           ↓
-  CHANGELOG.md 更新（每次改动强制）
+  CHANGELOG.md 更新（每次文件改动强制；只读调研例外）
 ```
 
 ### make check 门禁
@@ -242,6 +252,7 @@ docs-lint 覆盖：①旧文档引用守卫 ②代码证据死链检测 ③`plan
 | 技术方案完结 | 将 `docs/plans/` 文件移入 `docs/archive/backend-plans/`，更新 `plans/README.md` |
 | 需求状态变更 | 产品事实修改 `docs/prd.md`；实现状态修改 `docs/traceability/requirements-trace.md` |
 | 任何上述改动 | 更新 `CHANGELOG.md` |
+| 只读调研 / 仅输出方案 | 不更新 `CHANGELOG.md`，除非同时产生文件改动 |
 
 ---
 
@@ -268,10 +279,11 @@ docs-lint 覆盖：①旧文档引用守卫 ②代码证据死链检测 ③`plan
 4. 单文档 >800 行须拆分；新建子目录必须同时创建 `README.md`
 5. 内容修改后同步更新 `CHANGELOG.md`
 
-# 12-rule
+## 12-rule
 
 These rules apply to every task in this project unless explicitly overridden.
 Bias: caution over speed on non-trivial work. Use judgment on trivial tasks.
+Execution priority: when context is limited, first satisfy Rule 8 (read before writing), Rule 3 (surgical changes), Rule 9 (tests encode intent), Rule 11 (match conventions), and Rule 12 (fail loud).
 
 ## Rule 1 — Think Before Coding
 State assumptions explicitly. If uncertain, ask rather than guess.
@@ -330,3 +342,10 @@ If you genuinely think a convention is harmful, surface it. Don't fork silently.
 "Completed" is wrong if anything was skipped silently.
 "Tests pass" is wrong if any were skipped.
 Default to surfacing uncertainty, not hiding it.
+
+1. Fail Fast / Errors Never Pass Silently：不要在代码里藏兜底逻辑来吞掉错误、隐藏问题。出了问题就应该让它爆出来，否则你永远找不到真实问题。
+2. Fix the Cause, Not the Symptom / Don't Paper Over Bugs：当一个问题出现时，不要用各种 small fix、针对性补丁来掩盖它。必须定位真实根因，彻底修复。在 bug 上糊纸只会让系统积累你不知道的危险暗病。
+3. Make It Observable：即使问题很难定位，也绝不要偷懒做表面修复。应该给项目增加充分的日志和可观测性，保证下次问题再现时你有足够信息去定位。问题无法修复时，只需要诚实告诉我信息不足、需新增日志，不要假装修好了。
+4. Design for Debugging / Traceability：始终注意在关键路径上给自己留足排查日志，确保每一个关键节点都是可追溯的。
+5. Living Documentation / Single Source of Truth：当项目关键技术栈或产品方向发生变更时，同步更新 agents.md。文档必须随代码一起演进，不能让它变成过时的谎言。
+6. Don't Break Mainline：大规模重构或实验性改动前，必须先切新分支。
