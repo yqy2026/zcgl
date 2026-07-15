@@ -1,4 +1,5 @@
 .PHONY: help setup setup-backend setup-frontend dev dev-backend dev-frontend \
+	redis-up redis-down redis-health \
 	lint lint-backend lint-frontend scan-frontend scan-frontend-report type-check type-check-e2e \
 	test test-backend test-frontend test-frontend-ci test-e2e test-e2e-backend test-e2e-frontend \
 	test-e2e-import test-e2e-import-backend test-e2e-import-frontend \
@@ -19,6 +20,9 @@ help:
 	@echo "  dev               Run backend and frontend dev servers"
 	@echo "  dev-backend       Run backend dev server"
 	@echo "  dev-frontend      Run frontend dev server"
+	@echo "  redis-up          Start the local Docker Redis service"
+	@echo "  redis-down        Stop the local Docker Redis service"
+	@echo "  redis-health      Verify the local Docker Redis service"
 	@echo "  lint-backend      Run Ruff for backend"
 	@echo "  check-migration-naming Validate Alembic migration filename convention"
 	@echo "  lint-frontend     Run Oxlint for frontend"
@@ -64,6 +68,15 @@ dev-backend:
 
 dev-frontend:
 	cd frontend && pnpm dev
+
+redis-up:
+	docker compose up -d redis
+
+redis-down:
+	docker compose stop redis
+
+redis-health:
+	docker compose exec -T redis redis-cli ping
 
 lint: lint-backend lint-frontend
 

@@ -27,6 +27,7 @@ except ImportError:  # pragma: no cover
 
 from ..constants.performance_constants import CacheTTL
 from .config import settings
+from .exception_handler import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -321,8 +322,22 @@ def _create_default_backend() -> CacheBackend:
                 db=settings.REDIS_DB,
                 password=settings.REDIS_PASSWORD,
             )
-        except Exception as e:
-            logger.warning(f"Redis缓存初始化失败，已降级为内存缓存: {e}")
+        except Exception as exc:
+            logger.critical(
+                "Redis is enabled but unavailable at %s:%s/%s",
+                settings.REDIS_HOST,
+                settings.REDIS_PORT,
+                settings.REDIS_DB,
+            )
+            raise ConfigurationError(
+                "Redis 已启用但连接失败",
+                config_key="REDIS_ENABLED",
+                details={
+                    "host": settings.REDIS_HOST,
+                    "port": settings.REDIS_PORT,
+                    "db": settings.REDIS_DB,
+                },
+            ) from exc
     return MemoryCache()
 
 
