@@ -29,7 +29,7 @@ const readBooleanEnv = (name: string, fallbackValue: boolean): boolean => {
 const isCI = readNodeEnv('CI') != null;
 const baseUrl = readNodeEnv('BASE_URL') ?? 'http://127.0.0.1:5173';
 const testEnvironment = readNodeEnv('NODE_ENV') ?? 'test';
-const enableFullMatrix = readBooleanEnv('E2E_FULL_MATRIX', isCI);
+const enableFullMatrix = readBooleanEnv('E2E_FULL_MATRIX', false);
 const resolvedWorkers = (() => {
   const rawWorkers = readNodeEnv('E2E_WORKERS');
   if (rawWorkers == null || rawWorkers === '') {

@@ -1,11 +1,20 @@
 name: CI Pipeline
 
 on:
+  schedule:
+    # Run the expensive cross-browser suite nightly at 02:00 Asia/Shanghai.
+    - cron: '0 18 * * *'
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop, "feature/*", "hotfix/*"]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      e2e_full_matrix:
+        description: Run Firefox, WebKit, and mobile E2E projects in addition to Chromium
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -478,110 +487,13 @@ jobs:
         retention-days: 7
 
   # ===========================
-  # Make Gate (ruff + tsgo + test)
-  # ===========================
-  make-quality-gate:
-    name: Make CI Gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    needs: [backend-lint, frontend-lint]
-    env:
-      ENVIRONMENT: testing
-      TESTING_MODE: "true"
-      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
-      PHASE4_TENANT_NOT_NULL_DECISION: "B"
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
-      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: zcgl_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d zcgl_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-
-    - name: Setup Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 10
-
-    - name: Cache uv dependencies
-      uses: actions/cache@v5
-      with:
-        path: |
-          ~/.cache/uv
-          ~/.local/share/uv
-        key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-uv-
-
-    - name: Get pnpm store directory
-      id: pnpm-cache-make
-      shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-    - name: Setup pnpm cache
-      uses: actions/cache@v5
-      with:
-        path: ${{ steps.pnpm-cache-make.outputs.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libmagic1 postgresql-client
-
-    - name: Install backend dependencies
-      run: |
-        cd backend
-        pip install uv --upgrade
-        uv sync --all-extras
-
-    - name: Install frontend dependencies
-      run: |
-        cd frontend
-        pnpm install --frozen-lockfile
-
-    - name: Initialize test database
-      run: |
-        cd backend
-        uv run alembic upgrade head
-
-    - name: Run Make CI gate
-      run: make ci-gate
-
-  # ===========================
   # Frontend E2E Tests (BLOCKING)
   # ===========================
   frontend-e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [backend-test, frontend-test, make-quality-gate]
+    needs: [backend-test, frontend-test]
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
@@ -594,6 +506,7 @@ jobs:
       E2E_LOGOUT_USERNAME: e2e_logout_admin
       E2E_LOGOUT_PASSWORD: Logout123!@#
       E2E_REQUIRE_AUTH_STATE: "true"
+      E2E_FULL_MATRIX: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.e2e_full_matrix) }}
       BASE_URL: http://127.0.0.1:5173
       VITE_API_BASE_URL: http://127.0.0.1:8002/api/v1
     services:
@@ -1071,7 +984,7 @@ jobs:
     name: Import E2E Regression
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [backend-test, frontend-test, make-quality-gate]
+    needs: [backend-test, frontend-test]
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
@@ -1528,7 +1441,7 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [backend-test, backend-e2e, frontend-test, frontend-e2e, import-e2e, make-quality-gate, api-consistency]
+    needs: [backend-test, backend-e2e, frontend-test, frontend-e2e, import-e2e, api-consistency]
     if: always()
 
     steps:
@@ -1553,7 +1466,6 @@ jobs:
         echo "| Frontend Tests | ${{ needs.frontend-test.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Frontend E2E Tests | ${{ needs.frontend-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Import E2E Regression | ${{ needs.import-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Make CI Gate | ${{ needs.make-quality-gate.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| API Consistency | ${{ needs.api-consistency.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## 📊 Coverage Targets" >> $GITHUB_STEP_SUMMARY
