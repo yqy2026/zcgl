@@ -313,6 +313,7 @@ class Asset(Base):
         String,
         ForeignKey("parties.id"),
         index=True,
+        nullable=True,
         comment="经营管理方主体ID",
     )
     # Phase4 兼容别名：旧字段语义映射到主体字段

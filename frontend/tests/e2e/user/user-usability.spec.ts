@@ -33,12 +33,6 @@ const CORE_ROUTE_CASES: UsabilityRouteCase[] = [
     titlePattern: /项目管理/i,
     readySelectors: ['.ant-table', '.ant-empty'],
   },
-  {
-    path: '/property-certificates',
-    urlPattern: /\/property-certificates$/,
-    titlePattern: /产权证管理/i,
-    readySelectors: ['.ant-table', '.ant-empty'],
-  },
 ];
 
 const isLocatorVisible = async (locator: Locator): Promise<boolean> =>
@@ -127,16 +121,6 @@ test.describe('@user-usable 用户可用性冒烟', () => {
     await createProjectButton.click();
     await expect(page.getByRole('dialog', { name: /新建项目|编辑项目/i })).toBeVisible();
 
-    await page.goto('/property-certificates');
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    const createCertificateButton = page.getByRole('button', { name: /新建产权证/ }).first();
-    if (await isLocatorVisible(createCertificateButton)) {
-      await createCertificateButton.click();
-    } else {
-      await page.goto('/property-certificates/import');
-    }
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
   });
 });
 

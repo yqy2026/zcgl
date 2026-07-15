@@ -872,8 +872,6 @@ jobs:
                     name="E2E Legal Entity",
                     code=PARTY_CODE,
                     status="active",
-                    created_by="ci-e2e",
-                    updated_by="ci-e2e",
                 )
                 db.add(party)
                 await db.commit()

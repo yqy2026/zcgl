@@ -66,7 +66,7 @@ test.describe('@user-usable 导入入口校验', () => {
     }
   });
 
-  test('property certificate import should reject unsupported file type before request', async ({
+  test.skip('property certificate import should reject unsupported file type before request', async ({
     page,
   }) => {
     await page.goto('/property-certificates/import');
@@ -77,7 +77,7 @@ test.describe('@user-usable 导入入口校验', () => {
     await expectMessageVisible(page, /只支持 PDF、JPG、PNG 格式/);
   });
 
-  test('property certificate import should not send request when file is oversized', async ({
+  test.skip('property certificate import should not send request when file is oversized', async ({
     page,
   }) => {
     await page.goto('/property-certificates/import');
@@ -112,7 +112,6 @@ test.describe('@user-usable 导入路由匿名拦截', () => {
     const protectedImportRoutes = [
       '/assets/import',
       ACTIVE_CONTRACT_PDF_IMPORT_PATH,
-      '/property-certificates/import',
     ];
 
     for (const route of protectedImportRoutes) {
