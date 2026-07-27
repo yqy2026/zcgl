@@ -197,6 +197,24 @@ def test_frontend_e2e_job_should_install_full_browser_matrix() -> None:
     assert "webkit" in install_script
 
 
+def test_frontend_e2e_job_should_provision_redis_for_extraction_sessions() -> None:
+    workflow = _load_ci_workflow()
+    frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
+    env = frontend_e2e_job.get("env")
+    services = frontend_e2e_job.get("services")
+
+    assert isinstance(env, dict)
+    assert isinstance(services, dict)
+    assert env.get("REDIS_ENABLED") == "true"
+    assert env.get("REDIS_HOST") == "localhost"
+    assert env.get("REDIS_PORT") == "6379"
+
+    redis_service = services.get("redis")
+    assert isinstance(redis_service, dict)
+    assert str(redis_service.get("image", "")).startswith("redis:8")
+    assert "redis-cli ping" in str(redis_service.get("options", ""))
+
+
 def test_frontend_e2e_seed_should_provision_non_admin_role() -> None:
     workflow = _load_ci_workflow()
     frontend_e2e_job = workflow["jobs"]["frontend-e2e"]

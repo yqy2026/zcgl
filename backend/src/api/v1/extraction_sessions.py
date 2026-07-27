@@ -236,10 +236,11 @@ async def create_extraction_session(
             contract_direction=contract_direction,
             group_relation_type=group_relation_type,
         )
+        workflow = _workflow()
         lifecycle = StagedFileService(_TEMP_UPLOAD_ROOT)
         staged = await lifecycle.stage_upload(file, UploadPurpose.CONTRACT_EXTRACTION)
         try:
-            return _workflow().create(staged=staged, context=context)
+            return workflow.create(staged=staged, context=context)
         except BaseBusinessError:
             raise
         except Exception as exc:

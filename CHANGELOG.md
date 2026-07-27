@@ -9,6 +9,7 @@
 
 ### 2026-07-27
 
+- fix(ci): provision Redis for contract extraction E2E sessions and fail before staging when the required distributed session store is unavailable.
 - fix(document-extraction): align contract extraction E2E coverage with the RapidOCR review-session flow and reject non-PDF files before creating an extraction session.
 - fix(document-extraction): replace production `assert` checks with explicit candidate validation and certificate-link control flow, with regression coverage so optimized Python cannot bypass the guards.
 - style(backend): format RapidOCR-cutover backend source files so the CI Ruff formatting gate passes.

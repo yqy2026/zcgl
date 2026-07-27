@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi import HTTPException
@@ -83,5 +83,38 @@ async def test_contract_session_rejects_incompatible_context_before_staging(
         )
 
     assert exc_info.value.status_code == 422
+    authorize.assert_awaited_once()
+    stage_upload.assert_not_awaited()
+
+
+async def test_contract_session_requires_redis_before_staging(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authorize = AsyncMock()
+    stage_upload = AsyncMock()
+    redis_unavailable = HTTPException(
+        status_code=503,
+        detail="distributed extraction sessions require Redis",
+    )
+    monkeypatch.setattr("src.api.v1.extraction_sessions._authorize", authorize)
+    monkeypatch.setattr(
+        "src.api.v1.extraction_sessions._workflow",
+        Mock(side_effect=redis_unavailable),
+    )
+    monkeypatch.setattr(StagedFileService, "stage_upload", stage_upload)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await create_extraction_session(
+            target_type="contract",
+            file=object(),
+            project_id="project-1",
+            revenue_mode=RevenueMode.LEASE.value,
+            contract_direction=ContractDirection.LESSOR.value,
+            group_relation_type=GroupRelationType.DOWNSTREAM.value,
+            db=AsyncMock(),
+            current_user=object(),
+        )
+
+    assert exc_info.value.status_code == 503
     authorize.assert_awaited_once()
     stage_upload.assert_not_awaited()

@@ -501,6 +501,9 @@ jobs:
       PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
+      REDIS_ENABLED: "true"
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
       E2E_ADMIN_USERNAME: admin
       E2E_ADMIN_PASSWORD: Admin123!@#
       E2E_LOGOUT_USERNAME: e2e_logout_admin
@@ -520,6 +523,15 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d zcgl_e2e_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
