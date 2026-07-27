@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { errorText, relationTypeOptionsForRevenueMode } from '../PDFImportPage';
+import { errorText, isPdfFile, relationTypeOptionsForRevenueMode } from '../PDFImportPage';
 
 describe('errorText', () => {
   it('preserves an API client error message carried by a plain object', () => {
@@ -20,5 +20,13 @@ describe('relationTypeOptionsForRevenueMode', () => {
       '\u59d4\u6258',
       '\u76f4\u79df',
     ]);
+  });
+});
+
+describe('isPdfFile', () => {
+  it('allows PDFs by MIME type or filename and rejects other files before upload', () => {
+    expect(isPdfFile({ name: 'contract', type: 'application/pdf' })).toBe(true);
+    expect(isPdfFile({ name: 'contract.pdf', type: '' })).toBe(true);
+    expect(isPdfFile({ name: 'contract.txt', type: 'text/plain' })).toBe(false);
   });
 });

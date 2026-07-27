@@ -5,11 +5,14 @@ import { describe, expect, it } from 'vitest';
 const readSource = (relativePath: string): string =>
   readFileSync(resolve(process.cwd(), relativePath), 'utf8');
 
-describe('frontend legacy contract e2e hygiene', () => {
-  it('stores the import success e2e spec under the legacy-contract directory', () => {
+const contractSessionSpecPath = 'tests/e2e/document-extraction/contract-session.spec.ts';
+
+describe('frontend contract extraction e2e hygiene', () => {
+  it('stores the contract session e2e spec under the document-extraction directory', () => {
+    expect(existsSync(resolve(process.cwd(), contractSessionSpecPath))).toBe(true);
     expect(
       existsSync(resolve(process.cwd(), 'tests/e2e/legacy-contract/import-success.spec.ts'))
-    ).toBe(true);
+    ).toBe(false);
     expect(existsSync(resolve(process.cwd(), 'tests/e2e/rental/import-success.spec.ts'))).toBe(
       false
     );
@@ -21,10 +24,12 @@ describe('frontend legacy contract e2e hygiene', () => {
     );
   });
 
-  it('keeps the import success e2e spec free from raw legacy excel import api tokens', () => {
-    const source = readSource('tests/e2e/legacy-contract/import-success.spec.ts');
+  it('keeps the contract session e2e spec on the unified extraction-session API', () => {
+    const source = readSource(contractSessionSpecPath);
 
+    expect(source).toContain('/api/v1/extraction-sessions');
     expect(source).not.toContain('/api/v1/rental-contracts/excel/import');
+    expect(source).not.toContain('/api/v1/pdf-import/upload');
   });
 
   it('keeps the import guardrails e2e spec free from raw legacy excel import api tokens', () => {
@@ -33,14 +38,14 @@ describe('frontend legacy contract e2e hygiene', () => {
     expect(source).not.toContain('/api/v1/rental-contracts/excel/import');
   });
 
-  it('keeps the import success e2e spec free from raw legacy contract filename prefixes', () => {
-    const source = readSource('tests/e2e/legacy-contract/import-success.spec.ts');
+  it('keeps the contract session e2e spec free from raw legacy contract filename prefixes', () => {
+    const source = readSource(contractSessionSpecPath);
 
     expect(source).not.toContain('rent_contract_');
   });
 
-  it('keeps the import success e2e spec free from raw legacy rental route literals', () => {
-    const source = readSource('tests/e2e/legacy-contract/import-success.spec.ts');
+  it('keeps the contract session e2e spec free from raw legacy rental route literals', () => {
+    const source = readSource(contractSessionSpecPath);
 
     expect(source).not.toContain('/rental/contracts');
   });
@@ -51,8 +56,8 @@ describe('frontend legacy contract e2e hygiene', () => {
     expect(source).not.toContain('/rental/contracts');
   });
 
-  it('keeps the import success e2e spec free from low-value rental describe tags', () => {
-    const source = readSource('tests/e2e/legacy-contract/import-success.spec.ts');
+  it('keeps the contract session e2e spec free from low-value rental describe tags', () => {
+    const source = readSource(contractSessionSpecPath);
 
     expect(source).not.toContain('@rental-import-success');
   });

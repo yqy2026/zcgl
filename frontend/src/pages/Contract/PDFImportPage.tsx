@@ -81,6 +81,9 @@ export const errorText = (error: unknown): string => {
   return 'Request failed';
 };
 
+export const isPdfFile = (file: Pick<File, 'name' | 'type'>): boolean =>
+  file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
 const PDFImportPage: React.FC = () => {
   const [form] = Form.useForm<ExtractionUploadContext>();
   const [file, setFile] = useState<File | null>(null);
@@ -250,6 +253,10 @@ const PDFImportPage: React.FC = () => {
             <Upload
               accept=".pdf,application/pdf"
               beforeUpload={upload => {
+                if (!isPdfFile(upload)) {
+                  message.error('Only PDF files are supported.');
+                  return Upload.LIST_IGNORE;
+                }
                 setFile(upload);
                 return false;
               }}
