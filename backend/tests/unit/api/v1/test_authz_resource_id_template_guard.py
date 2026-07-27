@@ -9,10 +9,7 @@ import pytest
 pytestmark = pytest.mark.api
 
 _ROUTE_METHODS = {"get", "post", "put", "delete", "patch", "options", "head"}
-_READ_WITHOUT_RESOURCE_ID_ALLOWLIST = {
-    # 批处理状态由 batch tracker + 组织可见性校验收口，不是 ABAC 资源主键详情读取。
-    "documents/pdf_batch_routes.py:get_batch_status",
-}
+_READ_WITHOUT_RESOURCE_ID_ALLOWLIST: set[str] = set()
 
 
 def _iter_api_modules() -> list[Path]:
@@ -52,7 +49,9 @@ def _extract_template_resource_ids(function_node: ast.AST) -> list[str]:
     for sub_node in ast.walk(function_node):
         if not isinstance(sub_node, ast.Call):
             continue
-        if not (isinstance(sub_node.func, ast.Name) and sub_node.func.id == "require_authz"):
+        if not (
+            isinstance(sub_node.func, ast.Name) and sub_node.func.id == "require_authz"
+        ):
             continue
         for keyword in sub_node.keywords:
             if keyword.arg != "resource_id":
@@ -139,7 +138,9 @@ def test_require_authz_resource_id_templates_should_match_route_path_params() ->
     )
 
 
-def test_read_endpoints_with_id_path_should_not_omit_resource_id_unless_allowlisted() -> None:
+def test_read_endpoints_with_id_path_should_not_omit_resource_id_unless_allowlisted() -> (
+    None
+):
     """
     read 端点若带 *_id 路径参数，默认应绑定 resource_id。
 
@@ -197,65 +198,8 @@ def test_read_endpoints_with_id_path_should_not_omit_resource_id_unless_allowlis
     )
 
 
-def test_read_without_resource_id_allowlist_should_remain_minimal() -> None:
-    """无 resource_id 的 read+*_id 端点白名单必须保持最小化。"""
-    assert _READ_WITHOUT_RESOURCE_ID_ALLOWLIST == {
-        "documents/pdf_batch_routes.py:get_batch_status",
-    }
-
-
-def test_allowlisted_pdf_batch_status_should_keep_compensating_visibility_guard() -> None:
-    """
-    allowlist 特例必须具备补偿性可见性校验：
-    - 先解析当前用户可见组织上下文；
-    - 查询 batch 时强制传入 current_user_id + accessible_organization_ids。
-    """
-    api_root = Path(__file__).resolve().parents[4] / "src" / "api" / "v1"
-    module_path = api_root / "documents" / "pdf_batch_routes.py"
-    module_source = _read_python_source(module_path)
-    module_ast = ast.parse(module_source)
-
-    target = next(
-        (
-            node
-            for node in module_ast.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-            and node.name == "get_batch_status"
-        ),
-        None,
-    )
-    assert target is not None, "未找到 get_batch_status 路由函数"
-
-    has_visibility_context_resolve = any(
-        isinstance(call, ast.Call)
-        and isinstance(call.func, ast.Name)
-        and call.func.id == "_resolve_batch_visibility_context"
-        for call in ast.walk(target)
-    )
-    assert has_visibility_context_resolve, (
-        "get_batch_status 必须调用 _resolve_batch_visibility_context 解析可见性上下文"
-    )
-
-    batch_lookup_calls = [
-        call
-        for call in ast.walk(target)
-        if isinstance(call, ast.Call)
-        and isinstance(call.func, ast.Name)
-        and call.func.id == "_get_batch_status"
-    ]
-    assert batch_lookup_calls, "get_batch_status 必须调用 _get_batch_status"
-
-    has_scoped_lookup = False
-    for call in batch_lookup_calls:
-        keyword_names = {kw.arg for kw in call.keywords if kw.arg is not None}
-        if {
-            "current_user_id",
-            "accessible_organization_ids",
-        }.issubset(keyword_names):
-            has_scoped_lookup = True
-            break
-
-    assert has_scoped_lookup, (
-        "get_batch_status 调用 _get_batch_status 时必须传入 "
-        "current_user_id 与 accessible_organization_ids"
-    )
+def test_read_without_resource_id_allowlist_should_be_empty_after_legacy_route_removal() -> (
+    None
+):
+    """No current read route may omit a resource ID."""
+    assert _READ_WITHOUT_RESOURCE_ID_ALLOWLIST == set()

@@ -451,7 +451,7 @@ class TestPostgreSQLMigrationCompleteness:
                 "organizations",
                 "users",
                 LEGACY_CONTRACTS_TABLE,
-                "contacts",
+                "party_contacts",
                 "notifications",  # tasks table doesn't exist
                 "operation_logs",
                 "roles",  # Updated from rbac_roles
@@ -466,6 +466,7 @@ class TestPostgreSQLMigrationCompleteness:
                 )
 
             assert "collection_records" not in tables
+            assert "contacts" not in tables
 
     async def test_alembic_version_table(self):
         """测试Alembic版本表存在"""

@@ -7,7 +7,6 @@ import {
   Button,
   Descriptions,
   Tag,
-  Table,
   Row,
   Col,
   Alert,
@@ -19,15 +18,15 @@ import {
   Popconfirm,
   Select,
 } from 'antd';
-import { FileTextOutlined, HomeOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { FileTextOutlined, HomeOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
-import type { PropertyOwner, CertificateType } from '@/types/propertyCertificate';
+import type { CertificateType } from '@/types/propertyCertificate';
 import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
-import type { ColumnsType } from 'antd/es/table';
 import { assetService } from '@/services/assetService';
 import type { Asset } from '@/types/asset';
 import { PageContainer } from '@/components/Common';
+import { PropertyCertificateAttachmentsPanel } from '@/components/PropertyCertificate/PropertyCertificateAttachmentsPanel';
 import styles from './PropertyCertificateDetailPage.module.css';
 
 const typeLabelMap: Record<CertificateType, string> = {
@@ -35,15 +34,6 @@ const typeLabelMap: Record<CertificateType, string> = {
   house_ownership: 'House ownership',
   land_use: 'Land use',
   other: 'Other',
-};
-
-const normalizePreviewUrl = (source?: string | null) => {
-  if (source == null) return null;
-  const trimmed = source.trim();
-  if (trimmed === '') return null;
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-  if (trimmed.startsWith('//')) return `${window.location.protocol}${trimmed}`;
-  return trimmed;
 };
 
 const PropertyCertificateDetailPage: React.FC = () => {
@@ -191,29 +181,6 @@ const PropertyCertificateDetailPage: React.FC = () => {
     }
   };
 
-  const previewUrl = normalizePreviewUrl(certificate?.extraction_source);
-
-  const ownerColumns: ColumnsType<PropertyOwner> = [
-    { title: 'Name', dataIndex: 'name', key: 'name' },
-    {
-      title: 'Type',
-      dataIndex: 'owner_type',
-      key: 'owner_type',
-      render: (val: string) => {
-        const map: Record<string, string> = {
-          individual: 'Individual',
-          organization: 'Organization',
-          joint: 'Joint',
-        };
-        return <Tag>{map[val] ?? val}</Tag>;
-      },
-    },
-    { title: 'ID type', dataIndex: 'id_type', key: 'id_type' },
-    { title: 'ID number', dataIndex: 'id_number', key: 'id_number' },
-    { title: 'Phone', dataIndex: 'phone', key: 'phone' },
-    { title: 'Address', dataIndex: 'address', key: 'address' },
-  ];
-
   return (
     <PageContainer
       title={
@@ -223,19 +190,6 @@ const PropertyCertificateDetailPage: React.FC = () => {
             <>
               <Tag icon={<FileTextOutlined />}>{certificate.certificate_number}</Tag>
               <Tag color="blue">{typeLabelMap[certificate.certificate_type]}</Tag>
-              {certificate.extraction_confidence != null && (
-                <Tag
-                  color={
-                    certificate.extraction_confidence > 0.8
-                      ? 'green'
-                      : certificate.extraction_confidence > 0.5
-                        ? 'gold'
-                        : 'default'
-                  }
-                >
-                  Confidence {(certificate.extraction_confidence * 100).toFixed(0)}%
-                </Tag>
-              )}
             </>
           )}
         </Space>
@@ -245,14 +199,6 @@ const PropertyCertificateDetailPage: React.FC = () => {
       extra={
         certificate && (
           <Space>
-            {previewUrl != null && (
-              <Button
-                icon={<EyeOutlined />}
-                onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
-              >
-                View Scan
-              </Button>
-            )}
             <Button onClick={openAssetModal}>Link Assets</Button>
             <Button icon={<EditOutlined />} onClick={openEdit}>
               Edit
@@ -316,9 +262,6 @@ const PropertyCertificateDetailPage: React.FC = () => {
                   <Descriptions.Item label="Remarks">
                     {certificate.remarks ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Source">
-                    {certificate.extraction_source ?? '-'}
-                  </Descriptions.Item>
                   <Descriptions.Item label="Created at">
                     {certificate.created_at
                       ? dayjs(certificate.created_at).format('YYYY-MM-DD')
@@ -330,17 +273,6 @@ const PropertyCertificateDetailPage: React.FC = () => {
                       : '-'}
                   </Descriptions.Item>
                 </Descriptions>
-              </Card>
-            </Col>
-
-            <Col span={24}>
-              <Card title="Owners">
-                <Table<PropertyOwner>
-                  columns={ownerColumns}
-                  dataSource={certificate.owners ?? []}
-                  rowKey="id"
-                  pagination={false}
-                />
               </Card>
             </Col>
 
@@ -362,6 +294,9 @@ const PropertyCertificateDetailPage: React.FC = () => {
                   <Alert type="info" title="No linked assets" />
                 )}
               </Card>
+            </Col>
+            <Col span={24}>
+              <PropertyCertificateAttachmentsPanel certificateId={certificate.id} />
             </Col>
           </Row>
         </Space>

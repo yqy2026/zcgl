@@ -206,7 +206,9 @@ MAX_FILE_SIZE=50MB
 # PDF处理配置
 PDF_PROCESSING_TIMEOUT=300
 # 使用 LLM Vision 提取（提供商配置在环境变量中）
-LLM_PROVIDER=qwen
+DOCUMENT_LLM_ENABLED=false
+# DEEPSEEK_API_KEY=your_deepseek_api_key
+# DEEPSEEK_MODEL=deepseek-v4-flash
 
 # 监控配置
 ENABLE_METRICS=true
@@ -793,6 +795,10 @@ WantedBy=timers.target
 - 回滚方式：先停用 cron/timer，再通过 `POST /api/v1/ledger/compensation/run` 做一次人工验证；如需回退代码，恢复到上一个已验证版本后重新启用定时任务。
 
 ### 3. 更新部署
+
+#### 破坏性结构迁移（停机窗口）
+
+零停机脚本不适用于删除表、列或旧运行时依赖的迁移。部署 `20260722_drop_legacy_document_and_prompt_schema` 前，先备份数据库并停止全部 API 实例、后台 worker 和旧版本定时任务；确认旧进程全部退出后执行 `uv run alembic upgrade head`，用 `uv run alembic current` 与 `uv run alembic heads` 确认唯一 head，再启动新版本服务。该迁移不可回滚，恢复只能使用迁移前备份。
 
 #### 零停机部署脚本
 ```bash

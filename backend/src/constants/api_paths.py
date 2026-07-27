@@ -31,22 +31,6 @@ class AssetPaths:
     FIELD_HISTORY = "/assets/{asset_id}/field-history/{field}"
 
 
-# PDF导入API路径 (统一使用连字符)
-class PDFImportPaths:
-    BASE = "/pdf-import"
-    UPLOAD = "/pdf-import/upload"
-    PROCESS = "/pdf-import/process"
-    SESSION = "/pdf-import/session/{session_id}"
-    VALIDATE = "/pdf-import/validate"
-    CONFIRM = "/pdf-import/confirm"
-    PROGRESS = "/pdf-import/progress"
-    CANCEL = "/pdf-import/cancel"
-    RETRY = "/pdf-import/retry"
-    ANALYSIS = "/pdf-import/analysis"
-    CORRECTIONS = "/pdf-import/corrections"
-    EXPORT = "/pdf-import/export"
-
-
 # 认证管理API路径
 class AuthPaths:
     BASE = "/auth"
@@ -226,7 +210,6 @@ class CustomFieldPaths:
 API_PATHS = {
     "base": BasePaths,
     "assets": AssetPaths,
-    "pdf_import": PDFImportPaths,
     "auth": AuthPaths,
     "users": UserPaths,
     "roles": RolePaths,
@@ -253,7 +236,6 @@ def dynamic_path(path_template: str, **kwargs: str) -> str:
 # 路径前缀映射
 PREFIX_MAPPING = {
     "assets": "/assets",
-    "pdf_import": "/pdf-import",
     "auth": "/auth",
     "users": "/users",
     "roles": "/roles",
@@ -275,7 +257,6 @@ PREFIX_MAPPING = {
 __all__ = [
     "BasePaths",
     "AssetPaths",
-    "PDFImportPaths",
     "AuthPaths",
     "UserPaths",
     "RolePaths",

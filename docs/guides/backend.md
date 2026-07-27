@@ -37,7 +37,7 @@
 | **认证** | Python-JOSE | 3.5+ | JWT 认证 |
 | **密码哈希** | Passlib | 1.7+ | 密码加密 |
 | **缓存** | Redis | 7.0+ | 缓存层 |
-| **PDF 处理** | LLM Vision API（Qwen/DeepSeek/GLM）, PyMuPDF（优先）, pdf2image（回退） | - , 1.24+ | 文档处理 |
+| **Document extraction** | RapidOCR, PyMuPDF, optional DeepSeek text enrichment | - | Document extraction |
 | **数据处理** | Pandas | 2.0+ | 数据分析 |
 
 **证据来源**: `backend/pyproject.toml`
@@ -56,7 +56,6 @@ backend/
 │   │       ├── contracts/  # 合同组与合同接口（当前主线）
 │   │       ├── rent_contracts/ # 历史兼容路由装配，新能力以 contracts 契约为准
 │   │       ├── system/     # 系统管理接口
-│   │       ├── llm_prompts.py # LLM Prompt 管理
 │   │       └── dependencies.py # 共享依赖注入
 │   ├── core/              # 核心功能
 │   │   ├── config.py     # 配置管理
@@ -119,10 +118,7 @@ backend/
 cd backend
 
 # 2. 安装锁定依赖
-uv sync --frozen --extra dev
-
-# 可选：PDF 处理基础依赖（如需 PDF 解析/分析）
-uv sync --frozen --extra dev --extra pdf-basic
+uv sync --frozen --extra dev --extra document-processing
 
 # 3. 配置数据库并启动开发服务器
 uv run alembic upgrade head
@@ -131,12 +127,13 @@ uv run python run_dev.py
 
 > 提示：后端命令统一使用 `uv run <cmd>`，虚拟环境为 `backend/.venv`，避免误用系统 Python、Anaconda 或全局 pip。
 
-### PDF 渲染后端策略
+### 文档处理运行时
 
-- `backend/src/services/document/pdf_to_images.py` 采用 **PyMuPDF 优先** 的 PDF 渲染路径。
-- 当 PyMuPDF 不可用时，自动回退到 `pdf2image`。
-- 若两者均不可用，将抛出明确错误：`No PDF rendering backend available. Install pymupdf or pdf2image.`。
-- 建议在测试/生产环境至少安装一种渲染后端，避免文档提取流程在预处理阶段失败。
+- 标准开发、测试和生产环境必须安装 `document-processing` 依赖组。
+- 固定运行时为 PyMuPDF 1.24.14、RapidOCR 3.9.1、ONNX Runtime 1.20.1，不存在可选 PDF 后端。
+- RapidOCR 的三份 PP-OCRv6 模型随 Python 制品离线安装；应用启动前校验版本、模型存在性、SHA-256 和引擎初始化。
+- 任一依赖或模型异常都会阻止启动，不会联网下载、回退其他 OCR provider 或按扩展名继续。
+- 可运行 `make check-document-runtime` 单独复核当前环境。
 
 ### 开发命令
 

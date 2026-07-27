@@ -123,6 +123,7 @@ def normal_user_in_db(db_session: Session, normal_user):
         db_session.query(User).filter(User.username == normal_user.username).first()
     )
     if existing_by_name:
+        normal_user.id = existing_by_name.id
         return existing_by_name
 
     user = User(
@@ -157,7 +158,7 @@ def normal_user_notification(db_session: Session, normal_user_in_db):
         created_at=datetime.now(UTC),
     )
     db_session.add(notification)
-    db_session.flush()
+    db_session.commit()
     db_session.refresh(notification)
     yield notification
 

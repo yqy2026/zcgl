@@ -8,12 +8,9 @@ export const STANDARD_SHEET_NAME = '土地物业资产数据';
 // Excel文件相关配置
 export const EXCEL_CONFIG = {
   sheetName: STANDARD_SHEET_NAME,
-  maxFileSize: 10 * 1024 * 1024, // 10MB
-  allowedExtensions: ['.xlsx', '.xls'],
-  contentTypes: [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel',
-  ],
+  maxFileSize: 100 * 1024 * 1024, // 10MB
+  allowedExtensions: ['.xlsx'],
+  contentTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
 };
 
 // 导入配置
@@ -33,7 +30,7 @@ export const EXPORT_CONFIG = {
 // 导入说明
 export const IMPORT_INSTRUCTIONS = [
   '请先下载Excel模板，按照模板格式填写数据',
-  '支持的文件格式：.xlsx, .xls',
+  '支持的文件格式：.xlsx',
   '文件大小限制：10MB以内',
   '请确保数据格式正确，避免导入失败',
   `工作表名称必须为："${STANDARD_SHEET_NAME}"`,

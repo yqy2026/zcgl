@@ -189,41 +189,18 @@ LOG_LEVEL=INFO
 LOG_FILE=logs/app.log
 ```
 
-#### 9. LLM Vision 配置
+#### 9. Document extraction configuration
+
+RapidOCR and PyMuPDF provide the required local document-text stage. DeepSeek is an optional text-only enrichment stage and must be configured only when enabled.
+
 ```bash
-# 文档视觉模型选择入口（PDF 导入、OCR 回退）
-# 建议使用提供商名: qwen | deepseek | glm | hunyuan
-# 兼容别名: glm-4v / qwen-vl-max / deepseek-vl 等（会自动归一化）
-VISION_MODEL=qwen
-
-# 文本 LLM Provider 选择（全局）
-# 默认: hunyuan（未设置 LLM_PROVIDER 时）
-LLM_PROVIDER=qwen
-# 旧变量回退：仅未设置 VISION_MODEL 时用于文档提取
-# EXTRACTION_LLM_PROVIDER=qwen
-
-# API 密钥 (根据提供商选择)
-# DASHSCOPE_API_KEY=your_qwen_api_key
+DOCUMENT_LLM_ENABLED=false
 # DEEPSEEK_API_KEY=your_deepseek_api_key
-# ZHIPU_API_KEY=your_zhipu_api_key
-# HUNYUAN_API_KEY=your_hunyuan_api_key
+# DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+# DEEPSEEK_MODEL=deepseek-v4-flash
 ```
 
-> 提示：如需使用文本 LLM（LLMService），请同时配置 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`  
-> 或对应的 `ZHIPU_MODEL` / `DASHSCOPE_MODEL` / `DEEPSEEK_MODEL` / `HUNYUAN_MODEL`（优先生效）。
-
-`VISION_MODEL` 优先级高于 `EXTRACTION_LLM_PROVIDER` 和 `LLM_PROVIDER`。provider 未配置、provider 不支持或所选 provider 缺少 API key 时，文档视觉提取会显式报错，不做静默降级。
-
-**LLM Vision 提供商**:
-| 提供商 | 说明 | 适用场景 |
-|--------|------|----------|
-| qwen | 通义千问 VL-Flash | 推荐，快速准确 |
-| deepseek | DeepSeek-VL | 高精度 |
-| glm | 智谱 GLM-4V | 中文优化 |
-| hunyuan | 腾讯混元 Vision | 2026-01 新增 |
-
-**注意**: PaddleOCR/Tesseract/NVIDIA OCR 已废弃，推荐使用 LLM Vision API。
-
+The extraction workflow does not use vision-provider selection, provider aliases, or fallback configuration. When `DOCUMENT_LLM_ENABLED=true`, all three DeepSeek values are validated at startup.
 #### 10. 性能监控配置
 ```bash
 # 是否启用性能监控

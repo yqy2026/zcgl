@@ -116,6 +116,8 @@ def test_permission_seed_should_not_recreate_retired_approval_resource() -> None
 
     assert "approval" not in seed_resources
     assert "approval" not in module.BUSINESS_RESOURCES
+    assert "llm_prompt" not in seed_resources
+    assert "llm_prompt" not in module.SYSTEM_MANAGEMENT_RESOURCES
 
 
 def test_permission_seed_should_cover_current_api_authz_pairs() -> None:

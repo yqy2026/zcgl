@@ -54,5 +54,24 @@ class AttachmentCRUD:
         )
         return list((await db.execute(stmt)).scalars().all())
 
+    async def delete_for_owner(
+        self,
+        db: AsyncSession,
+        *,
+        attachment_id: str,
+        owner_type: str,
+        owner_id: str,
+    ) -> Attachment | None:
+        attachment = await self.get_for_owner(
+            db,
+            attachment_id=attachment_id,
+            owner_type=owner_type,
+            owner_id=owner_id,
+        )
+        if attachment is None:
+            return None
+        await db.delete(attachment)
+        await db.flush()
+        return attachment
 
 attachment_crud = AttachmentCRUD()

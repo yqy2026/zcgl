@@ -1,6 +1,2 @@
-/**
- * Property Certificate Components
- */
-
-export { PropertyCertificateUpload } from './PropertyCertificateUpload';
-export { PropertyCertificateReview } from './PropertyCertificateReview';
+/** Property certificate components. */
+export { PropertyCertificateAttachmentsPanel } from './PropertyCertificateAttachmentsPanel';

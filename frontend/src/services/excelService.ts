@@ -649,14 +649,10 @@ export class ExcelService {
       logger.warn('获取支持格式失败', { error: enhancedError.message });
       // 返回默认格式
       return {
-        formats: ['xlsx', 'xls', 'csv'],
-        maxFileSize: 50 * 1024 * 1024, // 50MB
-        allowedExtensions: ['.xlsx', '.xls', '.csv'],
-        mimeTypes: [
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'application/vnd.ms-excel',
-          'text/csv',
-        ],
+        formats: ['xlsx'],
+        maxFileSize: 100 * 1024 * 1024, // 100MB
+        allowedExtensions: ['.xlsx'],
+        mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
       };
     }
   }
@@ -694,14 +690,14 @@ export class ExcelService {
     } catch {
       // 本地进行基本检查
       const extension = filename.split('.').pop()?.toLowerCase();
-      const supportedExtensions = ['xlsx', 'xls', 'csv'];
-      const maxFileSize = 50 * 1024 * 1024; // 50MB
+      const supportedExtensions = ['xlsx'];
+      const maxFileSize = 100 * 1024 * 1024; // 100MB
 
       if (extension === undefined || extension === '' || !supportedExtensions.includes(extension)) {
         return {
           supported: false,
           reason: '不支持的文件格式',
-          recommendedAction: '请使用.xlsx、.xls或.csv格式的文件',
+          recommendedAction: '请使用.xlsx、格式的文件',
         };
       }
 

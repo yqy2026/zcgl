@@ -38,12 +38,6 @@ def _request_with_reauth(
     return client.request(method, url, headers=refreshed_headers, json=json)
 
 
-def _build_project_code() -> str:
-    segment = uuid.uuid4().hex[:6].upper()
-    serial = f"{uuid.uuid4().int % 1000000:06d}"
-    return f"PRJ-{segment}-{serial}"
-
-
 @pytest.mark.integration
 def test_project_crud_real_flow(client: TestClient, test_data):
     """真实链路验证：项目 CRUD + 列表搜索。"""
@@ -53,7 +47,6 @@ def test_project_crud_real_flow(client: TestClient, test_data):
     project_name = f"IT-Real-Project-{uuid.uuid4().hex[:8]}"
     create_payload = {
         "project_name": project_name,
-        "project_code": _build_project_code(),
         "status": "active",
     }
 
@@ -78,7 +71,7 @@ def test_project_crud_real_flow(client: TestClient, test_data):
     assert detail_response.status_code == 200
     detail = detail_response.json()
     assert detail["project_name"] == project_name
-    assert detail["project_code"] == create_payload["project_code"]
+    assert detail["project_code"] == created["project_code"]
 
     update_response = client.put(
         f"/api/v1/projects/{project_id}",
@@ -92,7 +85,9 @@ def test_project_crud_real_flow(client: TestClient, test_data):
     assert delete_response.status_code == 200
     assert delete_response.json().get("message") == "项目删除成功"
 
-    after_delete_response = client.get(f"/api/v1/projects/{project_id}", headers=headers)
+    after_delete_response = client.get(
+        f"/api/v1/projects/{project_id}", headers=headers
+    )
     assert after_delete_response.status_code == 404
 
 

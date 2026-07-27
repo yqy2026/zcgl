@@ -208,46 +208,6 @@ export const EXCEL_API = {
   OWNERSHIP_TEMPLATE: '/excel/templates/ownership',
 } as const;
 
-// PDF导入API
-export const PDF_API = {
-  // PDF处理
-  UPLOAD: '/pdf-import/upload',
-
-  // 系统信息
-  INFO: '/pdf-import/info',
-  SESSIONS: '/pdf-import/sessions',
-  SESSION_PROGRESS: (sessionId: string) => `/pdf-import/progress/${sessionId}`,
-
-  // 批量处理
-  BATCH_UPLOAD: '/pdf-import/batch/upload',
-
-  // 处理状态
-  STATUS: (taskId: string) => `/pdf-import/status/${taskId}`,
-  RESULT: (taskId: string) => `/pdf-import/result/${taskId}`,
-
-  // 质量评估
-  QUALITY_ASSESSMENT: (sessionId: string) => `/pdf-import/quality/assessment/${sessionId}`,
-  QUALITY_ANALYZE: '/pdf-import/quality/analyze',
-
-  // 导入确认
-  CONFIRM_IMPORT: '/pdf-import/confirm',
-  CANCEL_SESSION: (sessionId: string) => `/pdf-import/session/${sessionId}`,
-
-  // 历史记录
-  HISTORY: '/pdf-import/history',
-  HISTORY_DETAIL: (id: string) => `/pdf-import/history/${id}`,
-
-  // 性能监控
-  PERFORMANCE_REALTIME: '/pdf-import/performance/realtime',
-  PERFORMANCE_REPORT: '/pdf-import/performance/report',
-  PERFORMANCE_HEALTH: '/pdf-import/performance/health',
-
-  // 测试端点
-  TEST_SYSTEM: '/pdf-import/test_system',
-  TEST_DETAILED: '/pdf-import/test_detailed',
-  HEALTH_CHECK: '/pdf-import/health',
-} as const;
-
 // 系统管理API
 export const SYSTEM_API = {
   // 系统设置
@@ -414,7 +374,6 @@ export const API_ENDPOINTS = {
   LEDGER: LEDGER_API,
   STATISTICS: STATISTICS_API,
   EXCEL: EXCEL_API,
-  PDF: PDF_API,
   SYSTEM: SYSTEM_API,
   BACKUP: BACKUP_API,
   TEST_COVERAGE: TEST_COVERAGE_API,

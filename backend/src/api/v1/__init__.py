@@ -1,14 +1,14 @@
 """统一API路由 - 版本化架构 (/api/v1/*)"""
 
-import logging
-from importlib import import_module
 
 from fastapi import APIRouter
 
 # --- route_registry 自注册模块加载（触发 route_registry.register_router） ---
 from . import (
     authz,  # noqa: F401
+    extraction_sessions,  # noqa: F401
     party,  # noqa: F401
+    property_certificate_attachments,  # noqa: F401
 )
 
 # 导入各个模块的路由 - Analytics
@@ -33,10 +33,8 @@ from .contracts import contract_groups_router, ledger_router
 
 # 导入各个模块的路由 - Documents
 from .documents.excel import router as excel_router
-from .documents.pdf_import import router as pdf_import_router
 
 # 导入各个模块的路由 - LLM Prompts
-from .llm_prompts import router as llm_prompts_router
 from .search import router as search_router
 
 # 导入各个模块的路由 - System
@@ -50,38 +48,6 @@ from .system.operation_logs import router as operation_logs_router
 from .system.system import router as system_router
 from .system.system_settings import router as system_settings_router
 from .system.tasks import router as tasks_router
-
-logger = logging.getLogger(__name__)
-
-
-def _load_optional_router(
-    module_path: str,
-    *,
-    missing_message: str,
-    log_level: str = "warning",
-) -> APIRouter | None:
-    """按需加载可选路由模块，降低顶部条件导入复杂度。"""
-    try:
-        module = import_module(module_path, package=__package__)
-    except ImportError as exc:
-        if log_level == "debug":
-            logger.debug(missing_message, exc)
-        else:
-            logger.warning(missing_message, exc)
-        return None
-
-    router = getattr(module, "router", None)
-    if isinstance(router, APIRouter):
-        return router
-
-    logger.warning("可选路由模块 %s 存在但未暴露 APIRouter router 变量", module_path)
-    return None
-
-
-pdf_batch_router = _load_optional_router(
-    ".documents.pdf_batch_routes",
-    missing_message="PDF batch routes not available: %s",
-)
 
 # 创建统一API路由器 - 版本化架构
 api_router = APIRouter()
@@ -137,15 +103,10 @@ api_router.include_router(system_settings_router, prefix="/system", tags=["系�
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
 api_router.include_router(backup_router, prefix="/system/backup", tags=["数据备份"])
-api_router.include_router(pdf_import_router, prefix="/pdf-import", tags=["PDF智能导入"])
-if pdf_batch_router is not None:
-    api_router.include_router(pdf_batch_router, tags=["PDF批量导入"])
 api_router.include_router(
     notifications_router, prefix="/notifications", tags=["通知管理"]
 )
 api_router.include_router(error_recovery_router, tags=["错误恢复"])
-api_router.include_router(
-    llm_prompts_router, prefix="/llm-prompts", tags=["LLM提示词管理"]
-)
+
 
 __all__ = ["api_router"]

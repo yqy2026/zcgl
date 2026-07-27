@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import uuid
 from dataclasses import dataclass
@@ -11,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import UploadFile
 
 from src.core.exception_handler import (
     BusinessValidationError,
@@ -22,16 +22,9 @@ from src.crud.operation_log import OperationLogCRUD
 from src.crud.query_builder import PartyFilter
 from src.models.attachment import Attachment
 from src.services.contract.payment_flow_service import payment_flow_service
-from src.utils import file_security
+from src.services.file_upload import StagedFileService, StoredFile, UploadPurpose
 
 operation_log_crud = OperationLogCRUD()
-
-_VOUCHER_FILE_RULES: dict[str, tuple[str, tuple[bytes, ...], str]] = {
-    ".pdf": ("application/pdf", (b"%PDF-",), "PDF"),
-    ".jpg": ("image/jpeg", (b"\xff\xd8\xff",), "JPEG"),
-    ".jpeg": ("image/jpeg", (b"\xff\xd8\xff",), "JPEG"),
-    ".png": ("image/png", (b"\x89PNG\r\n\x1a\n",), "PNG"),
-}
 
 
 @dataclass(frozen=True)
@@ -50,9 +43,7 @@ class PaymentVoucherService:
         db: AsyncSession,
         *,
         flow_id: str,
-        file_name: str,
-        content_type: str | None,
-        content: bytes,
+        file: UploadFile,
         user_id: str,
         party_filter: PartyFilter | None = None,
     ) -> Attachment:
@@ -68,59 +59,64 @@ class PaymentVoucherService:
             raise BusinessValidationError(
                 "only active payment flows can receive voucher attachments"
             )
-        validation = file_security.validate_upload_file(
-            file_name,
-            content_type,
-            len(content),
-            allowed_extensions=[".pdf", ".jpg", ".jpeg", ".png"],
-            max_size=20 * 1024 * 1024,
-        )
-        if not validation["valid"]:
-            errors = validation.get("errors") or ["附件校验失败"]
-            raise BusinessValidationError("; ".join(str(error) for error in errors))
 
-        safe_name = str(validation.get("safe_filename") or file_name)
-        self._validate_file_signature(
-            file_name=safe_name,
-            content_type=content_type,
-            content=content,
-        )
+        lifecycle = StagedFileService(self.uploads_root)
+        staged = await lifecycle.stage_upload(file, UploadPurpose.PAYMENT_VOUCHER)
         attachment_id = str(uuid.uuid4())
-        file_type = Path(safe_name).suffix.lower().lstrip(".")
-        storage_key = (
-            Path("payment_flows") / flow_id / attachment_id / safe_name
-        ).as_posix()
-        path = self._resolve_storage_path(storage_key)
+        stored: StoredFile | None = None
+        previous_attachment_ids = [
+            str(value) for value in flow.voucher_attachment_ids or []
+        ]
         try:
-            path.parent.mkdir(parents=True, exist_ok=False)
-            path.write_bytes(content)
+            stored = lifecycle.promote(
+                staged,
+                owner_type="payment_flow",
+                owner_id=flow_id,
+            )
             attachment = await attachment_crud.create(
                 db,
                 data={
                     "id": attachment_id,
                     "owner_type": "payment_flow",
                     "owner_id": flow_id,
-                    "file_name": safe_name,
-                    "file_type": file_type,
-                    "file_size": len(content),
-                    "file_hash": hashlib.sha256(content).hexdigest(),
-                    "storage_key": storage_key,
+                    "file_name": staged.original_filename,
+                    "file_type": staged.canonical_extension.lstrip("."),
+                    "file_size": staged.size_bytes,
+                    "file_hash": staged.sha256,
+                    "storage_key": stored.storage_key,
                     "created_by": user_id,
                 },
                 commit=False,
             )
             flow.voucher_attachment_ids = [
-                *(str(value) for value in flow.voucher_attachment_ids or []),
+                *previous_attachment_ids,
                 attachment_id,
             ]
             flow.updated_at = datetime.now(UTC).replace(tzinfo=None)
             await db.flush()
             await db.commit()
             return attachment
-        except Exception:
-            await db.rollback()
-            if path.is_file():
-                path.unlink()
+        except BaseException as operation_error:
+            flow.voucher_attachment_ids = previous_attachment_ids
+            cleanup_error: BaseException | None = None
+            try:
+                if stored is None:
+                    lifecycle.discard_staged(staged)
+                else:
+                    lifecycle.compensate_promotion(stored)
+            except BaseException as exc:
+                cleanup_error = exc
+
+            rollback_error: BaseException | None = None
+            try:
+                await db.rollback()
+            except BaseException as exc:
+                rollback_error = exc
+
+            if cleanup_error is not None:
+                raise cleanup_error from operation_error
+            if rollback_error is not None:
+                raise rollback_error from operation_error
             raise
 
     async def prepare_download(
@@ -237,27 +233,6 @@ class PaymentVoucherService:
         except ValueError as exc:
             raise InvalidRequestError("非法附件存储路径") from exc
         return path
-
-    @staticmethod
-    def _validate_file_signature(
-        *,
-        file_name: str,
-        content_type: str | None,
-        content: bytes,
-    ) -> None:
-        extension = Path(file_name).suffix.lower()
-        rule = _VOUCHER_FILE_RULES.get(extension)
-        if rule is None:
-            raise BusinessValidationError("unsupported payment flow voucher file type")
-        expected_mime, signatures, label = rule
-        if content_type != expected_mime:
-            raise BusinessValidationError(
-                f"voucher MIME type does not match its {label} file type"
-            )
-        if not any(content.startswith(signature) for signature in signatures):
-            raise BusinessValidationError(
-                f"voucher content does not match its {label} file type"
-            )
 
     async def _record_download(
         self,

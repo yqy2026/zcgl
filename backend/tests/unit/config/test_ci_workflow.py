@@ -116,7 +116,6 @@ def test_e2e_jobs_should_use_dedicated_test_database_names() -> None:
     expected_database_names = {
         "backend-e2e": "zcgl_e2e_test",
         "frontend-e2e": "zcgl_e2e_test",
-        "import-e2e": "zcgl_import_e2e_test",
     }
 
     for job_name, database_name in expected_database_names.items():
@@ -143,66 +142,16 @@ def test_e2e_jobs_should_use_dedicated_test_database_names() -> None:
         assert database_name in service_options
 
 
-def test_import_e2e_targets_should_only_reference_existing_backend_specs() -> None:
+def test_retired_import_e2e_targets_should_not_be_registered() -> None:
     repo_root = _repo_root()
     makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
-    script_text = (repo_root / "scripts" / "dev" / "run_import_e2e.sh").read_text(
+    workflow_text = (repo_root / ".github" / "workflows" / "ci.yml").read_text(
         encoding="utf-8"
     )
 
-    referenced_tests = {
-        match
-        for match in re.findall(
-            r"tests/e2e/[A-Za-z0-9_./-]+\.py", makefile_text + "\n" + script_text
-        )
-    }
-    missing_tests = sorted(
-        str(path)
-        for path in referenced_tests
-        if not (repo_root / "backend" / path).exists()
-    )
-
-    assert not missing_tests, (
-        "Import-focused E2E targets must not reference deleted backend specs: "
-        f"{missing_tests}"
-    )
-
-
-def test_import_e2e_targets_should_only_reference_existing_frontend_specs() -> None:
-    repo_root = _repo_root()
-    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
-    script_text = (repo_root / "scripts" / "dev" / "run_import_e2e.sh").read_text(
-        encoding="utf-8"
-    )
-
-    referenced_specs = {
-        match
-        for match in re.findall(
-            r"tests/e2e/[A-Za-z0-9_./-]+\.spec\.ts", makefile_text + "\n" + script_text
-        )
-    }
-    missing_specs = sorted(
-        str(path)
-        for path in referenced_specs
-        if not (repo_root / "frontend" / path).exists()
-    )
-
-    assert not missing_specs, (
-        "Import-focused E2E targets must not reference deleted frontend specs: "
-        f"{missing_specs}"
-    )
-
-
-def test_import_e2e_targets_should_exclude_frozen_property_certificate_routes() -> None:
-    repo_root = _repo_root()
-    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
-    script_text = (repo_root / "scripts" / "dev" / "run_import_e2e.sh").read_text(
-        encoding="utf-8"
-    )
-    target_text = makefile_text + "\n" + script_text
-
-    assert "test_property_certificate_import_e2e.py" not in target_text
-    assert "property-certificate-import-success.spec.ts" not in target_text
+    assert "test-e2e-import" not in makefile_text
+    assert "make test-e2e-import" not in workflow_text
+    assert not (repo_root / "scripts" / "dev" / "run_import_e2e.sh").exists()
 
 
 def test_frontend_e2e_job_should_install_full_browser_matrix() -> None:

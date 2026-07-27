@@ -123,7 +123,6 @@ SECURITY_CONFIG = {
     "allowed_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "max_file_size": 100 * 1024 * 1024,  # 100MB
     "rate_limit": {
-        "pdf_import": {"max_requests": 5, "time_window": 60},
         "excel": {"max_requests": 10, "time_window": 60},
         "post": {"max_requests": 30, "time_window": 60},
         "default": {"max_requests": 100, "time_window": 60}

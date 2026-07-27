@@ -402,6 +402,11 @@ export class ApiClient {
 
         stripPerspectiveHeader(config);
 
+        // Let the browser generate the multipart boundary for file uploads.
+        if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+          removeHeader(config.headers, 'Content-Type');
+        }
+
         // 执行自定义请求拦截器
         if (this.config.requestInterceptors) {
           for (const interceptor of this.config.requestInterceptors) {

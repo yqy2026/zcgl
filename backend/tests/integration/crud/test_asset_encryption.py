@@ -94,6 +94,7 @@ def sample_asset_data(db_session: Session) -> dict:
 
     return {
         "asset_name": f"测试物业-{suffix}",
+        "asset_code": f"ENC-{suffix}",
         "owner_party_id": ownership.id,
         "manager_party_id": ownership.id,
         "address": "北京市朝阳区某某街道123号",
@@ -126,6 +127,7 @@ class TestAssetCRUDEncryption:
         assert db_asset is not None
         assert db_asset.address.startswith("enc:v1:")
         assert db_asset.manager_name.startswith("enc:v1:")
+        assert db_asset.asset_code == sample_asset_data["asset_code"]
         assert db_asset.asset_name == sample_asset_data["asset_name"]
 
     async def test_get_decrypts_pii_fields(
@@ -191,11 +193,13 @@ class TestSearchEncryptedFields:
     ):
         data1 = sample_asset_data.copy()
         data1["asset_name"] = f"SearchTarget-{uuid.uuid4().hex[:6]}"
+        data1["asset_code"] = f"ENC-{uuid.uuid4().hex[:12]}"
         data1["address"] = "Test Address 123"
         await asset_crud_with_encryption.create_async(db=async_db_session, obj_in=data1)
 
         data2 = sample_asset_data.copy()
         data2["asset_name"] = f"SearchOther-{uuid.uuid4().hex[:6]}"
+        data2["asset_code"] = f"ENC-{uuid.uuid4().hex[:12]}"
         data2["address"] = "Other Address"
         await asset_crud_with_encryption.create_async(db=async_db_session, obj_in=data2)
 
@@ -238,12 +242,14 @@ class TestGracefulDegradation:
     ):
         old_data = sample_asset_data.copy()
         old_data["asset_name"] = f"MixedOld-{uuid.uuid4().hex[:6]}"
+        old_data["asset_code"] = f"ENC-{uuid.uuid4().hex[:12]}"
         await asset_crud_no_encryption.create_async(
             db=async_db_session, obj_in=old_data
         )
 
         new_data = sample_asset_data.copy()
         new_data["asset_name"] = f"MixedNew-{uuid.uuid4().hex[:6]}"
+        new_data["asset_code"] = f"ENC-{uuid.uuid4().hex[:12]}"
         await asset_crud_with_encryption.create_async(
             db=async_db_session, obj_in=new_data
         )

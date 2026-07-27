@@ -150,7 +150,7 @@ export const UX_CONFIG = {
     // 最大文件大小（MB）
     maxSize: 10,
     // 支持的文件类型
-    acceptTypes: ['.xlsx', '.xls', '.csv', '.pdf', '.jpg', '.png'],
+    acceptTypes: ['.xlsx', '.pdf', '.jpg', '.png'],
     // 是否支持拖拽上传
     dragUpload: true,
   },

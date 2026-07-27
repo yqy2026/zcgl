@@ -76,8 +76,8 @@ backend/tests/
 │   │   ├── permission/
 │   │   │   └── test_rbac_service.py # RBAC service tests
 │   │   ├── document/
-│   │   │   ├── test_pdf_import_service.py
-│   │   │   └── test_pdf_processing_service.py
+│   │   │   ├── test_extraction_sessions.py
+│   │   │   └── test_property_certificate_extraction_workflow.py
 │   │   └── test_analytics_service.py
 │   │
 │   ├── crud/                        # CRUD layer tests

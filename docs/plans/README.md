@@ -8,7 +8,6 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
-| [2026-07-15-rapidocr-deepseek-document-extraction-plan.md](2026-07-15-rapidocr-deepseek-document-extraction-plan.md) | RapidOCR 本地 OCR + DeepSeek 单一 LLM 文档解析收口 | 📋 待评审 | 先跑真实样本基线，再替换 GLM-OCR 并物理删除多 provider 残留 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案
@@ -17,6 +16,7 @@
 
 | 文件 | 主题 | 最终状态 |
 |------|------|----------|
+| 2026-07-15-rapidocr-deepseek-document-extraction-plan.md | RapidOCR 本地 OCR + DeepSeek 单一 LLM 文档解析收口 | ✅ 已完成：真实样本逐字段人工复核、授权正式确认和上下文防回归均已收口 |
 | 2026-07-06-operations-ledger-implementation.md | 经营台账与收付流水实施计划 | ✅ 已完成；最终双轴复核与全量门禁通过 |
 | 2026-06-18-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0015~0018 + ADR-0011/0012 修订） | ✅ 代码项已收口；企业微信残余项拆至 `docs/issues/2026-06-23-wecom-userid-mapping-and-send-verification.md` |
 | 2026-06-16-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0010~0014） | ✅ 已完成 |
@@ -66,7 +66,7 @@
 | 图标 | 含义 |
 |------|------|
 | 📋 待评审 | 方案已编写，等待评审确认后开始实施 |
-| 🔄 进行中 | 当前正在实施 |
+| 🔄 进行中 / 实施就绪 | 已评审，等待或正在实施 |
 | ⏸ 搁置 | 暂不实施，保留供参考 |
 | ✅ 已完成 / 已实现 | 方案已落地，已移入 archive/ |
 | ❌ 已废弃 | 被更好的方案替代，已移入 archive/ |

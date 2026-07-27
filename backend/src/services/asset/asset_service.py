@@ -1072,7 +1072,7 @@ class AssetService:
         values = await asset_crud.get_distinct_field_values(
             self.db, field_name, **query_kwargs
         )
-        return [str(value) for value in values]
+        return sorted(str(value) for value in values)
 
     async def get_ownership_entity_names(
         self,

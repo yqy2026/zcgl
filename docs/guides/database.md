@@ -150,7 +150,6 @@ backend/
 │   ├── script.py.mako          # 迁移脚本模板
 │   └── versions/               # 版本迁移文件
 │       ├── e4c9e4968dd7_initial_schema_creation.py
-│       ├── 20250118_add_user_id_to_extraction_feedback.py
 │       ├── 20250118_add_property_cert_tables.py
 │       ├── 20250120_add_security_events_table.py
 │       ├── ca5d6adb0012_add_management_entity_to_asset.py
@@ -231,6 +230,22 @@ uv run alembic upgrade head
 # 5. 验证数据完整性
 uv run python scripts/verify_migration.py
 ```
+
+#### 破坏性迁移停机流程
+
+删除表、列或旧运行时依赖的迁移不能按上面的通用回滚流程执行。以 `20260722_drop_legacy_document_and_prompt_schema` 为例，必须先完成备份并在维护窗口内按以下顺序执行：
+
+```bash
+# 1. 停止所有 API 进程、后台 worker 和旧版本定时任务，避免旧代码继续读写待删除结构
+# 2. 确认没有旧进程后执行迁移
+uv run alembic upgrade head
+
+# 3. 确认数据库只有一个 head，再启动新版本服务
+uv run alembic current
+uv run alembic heads
+```
+
+该迁移删除旧 PDF 导入、Prompt 和产权证专用附件数据，`downgrade` 会显式失败；恢复只能依靠迁移前备份，而不是执行 Alembic 回滚。
 
 ### 当前迁移版本
 ```bash

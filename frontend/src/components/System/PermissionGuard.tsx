@@ -28,7 +28,6 @@ const RESOURCE_ALIASES: Record<string, ResourceType> = {
   system_settings: 'system',
   operation_log: 'system',
   dictionary: 'system',
-  llm_prompt: 'system',
 };
 
 const normalizePermission = (permission: { resource: string; action: string }) => {

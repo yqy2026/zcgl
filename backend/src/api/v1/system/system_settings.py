@@ -26,6 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.message_constants import ErrorIDs
+from src.services.file_upload import StagedFileService, UploadPurpose
 
 from ....core.config import settings
 from ....core.exception_handler import BaseBusinessError, InternalServerError
@@ -44,6 +45,7 @@ from ....services.system_settings import (
 # 创建系统设置路由器
 router = APIRouter()
 logger = logging.getLogger(__name__)
+SYSTEM_SETTINGS_UPLOAD_ROOT = Path("temp_uploads")
 _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:system_settings:create"
 _SYSTEM_SETTINGS_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID,
@@ -729,7 +731,7 @@ async def backup_system(
         raise HTTPException(status_code=500, detail=f"系统备份失败: {str(e)}")
 
 
-@router.post("/restore", summary="恢复系统数据", response_model=SystemRestoreResponse)
+@router.post("/restore", summary="Restore system data", response_model=SystemRestoreResponse)
 async def restore_system(
     backup_file: Annotated[UploadFile, File(...)],
     db: Annotated[AsyncSession, Depends(get_async_db)],
@@ -743,60 +745,44 @@ async def restore_system(
         )
     ),
 ) -> SystemRestoreResponse:
-    """
-    恢复系统数据
+    """Restore settings from a strictly validated JSON backup."""
+    lifecycle = StagedFileService(SYSTEM_SETTINGS_UPLOAD_ROOT)
+    staged = await lifecycle.stage_upload(
+        backup_file, UploadPurpose.SYSTEM_SETTINGS_RESTORE
+    )
 
-    从备份文件恢复系统数据
-    """
     try:
-        # 验证文件类型
-        filename = backup_file.filename
-        if filename is None or not filename.endswith(".json"):
-            raise HTTPException(status_code=400, detail="备份文件必须是JSON格式")
+        backup_data: dict[str, Any] = json.loads(staged.path.read_text(encoding="utf-8"))
 
-        # 读取备份文件内容
-        content = await backup_file.read()
-        try:
-            backup_data: dict[str, Any] = json.loads(content.decode("utf-8"))
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="备份文件格式错误")
-
-        # 验证备份数据格式
-        required_fields = ["backup_time", "system_settings", "version"]
-        for field in required_fields:
-            if field not in backup_data:
-                raise HTTPException(
-                    status_code=400, detail=f"备份文件缺少必要字段: {field}"
-                )
-
-        # 恢复系统设置
         global _system_settings
-        if "system_settings" in backup_data:
-            _system_settings = SystemSettings(**backup_data["system_settings"])
+        _system_settings = SystemSettings(**backup_data["system_settings"])
 
-        # 使用统一的审计日志处理函数
         await create_audit_log_with_fallback_async(
             db=db,
             current_user=current_user,
             action="SYSTEM_RESTORE",
             resource_type="system",
             request=request,
-            backup_time=backup_data.get("backup_time"),
-            backup_file=filename,
-            restored_settings=backup_data.get("system_settings", {}),
+            backup_time=backup_data["backup_time"],
+            backup_file=staged.original_filename,
+            restored_settings=backup_data["system_settings"],
         )
 
         return SystemRestoreResponse(
             success=True,
-            message="系统数据恢复成功",
+            message="System data restored",
             restored_backup={
-                "backup_time": backup_data.get("backup_time"),
-                "version": backup_data.get("version"),
-                "filename": filename,
+                "backup_time": backup_data["backup_time"],
+                "version": backup_data["version"],
+                "filename": staged.original_filename,
             },
             timestamp=datetime.now().isoformat(),
         )
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"系统恢复失败: {str(e)}")
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"System restore failed: {exc}") from exc
+    finally:
+        lifecycle.discard_staged(staged)

@@ -1,16 +1,13 @@
-"""
-Excel 预览模块
-"""
+"""Excel preview endpoints."""
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
-from src.core.exception_handler import BusinessValidationError
 from src.database import get_async_db
 from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
@@ -20,10 +17,11 @@ from src.schemas.excel_advanced import (
     ExcelPreviewResponse,
 )
 from src.security.logging_security import security_auditor
-from src.security.security import security_middleware
 from src.services.excel import ExcelPreviewService
+from src.services.file_upload import StagedFileService, UploadPurpose
 
 router = APIRouter()
+TEMP_UPLOAD_ROOT = Path("temp_uploads")
 _ASSET_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:create"
 _ASSET_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
@@ -33,7 +31,7 @@ _ASSET_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
 
 
 @router.post(
-    "/preview/advanced", response_model=ExcelPreviewResponse, summary="高级Excel预览"
+    "/preview/advanced", response_model=ExcelPreviewResponse, summary="Advanced Excel preview"
 )
 async def preview_excel_advanced(
     file: UploadFile = File(...),
@@ -48,60 +46,52 @@ async def preview_excel_advanced(
         )
     ),
 ) -> ExcelPreviewResponse:
-    """
-    高级Excel文件预览，支持字段映射检测
-    """
-    await security_middleware.validate_file_upload(
-        file,
-        allowed_types=[
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel",
-        ],
-        max_size=DEFAULT_MAX_FILE_SIZE,
-    )
-
+    """Preview a validated XLSX file with detected field mappings."""
+    lifecycle = StagedFileService(TEMP_UPLOAD_ROOT)
+    staged = await lifecycle.stage_upload(file, UploadPurpose.EXCEL_PREVIEW)
     validation_result = {
-        "hash": f"computed_hash_{file.filename}",
+        "hash": staged.sha256,
         "validation_time": datetime.now(UTC).isoformat(),
     }
 
     security_auditor.log_security_event(
         event_type="FILE_UPLOAD_VALIDATED",
-        message=f"Excel file validated successfully: {file.filename}",
+        message=f"Excel file validated successfully: {staged.original_filename}",
         details={
-            "filename": file.filename,
-            "size": file.size,
-            "hash": validation_result.get("hash"),
-            "validation_time": validation_result.get("validation_time"),
+            "filename": staged.original_filename,
+            "size": staged.size_bytes,
+            "hash": validation_result["hash"],
+            "validation_time": validation_result["validation_time"],
         },
     )
 
-    content = await file.read()
+    try:
+        content = staged.path.read_bytes()
+        total, columns, preview_data, detected_mapping = await run_in_threadpool(
+            ExcelPreviewService.build_preview_advanced, content, request.max_rows
+        )
+        detected_field_mapping = (
+            [ExcelFieldMapping.model_validate(item) for item in detected_mapping]
+            if detected_mapping is not None
+            else None
+        )
 
-    total, columns, preview_data, detected_mapping = await run_in_threadpool(
-        ExcelPreviewService.build_preview_advanced, content, request.max_rows
-    )
-
-    detected_field_mapping = (
-        [ExcelFieldMapping.model_validate(item) for item in detected_mapping]
-        if detected_mapping is not None
-        else None
-    )
-
-    return ExcelPreviewResponse(
-        file_name=file.filename or "unknown.xlsx",
-        sheet_names=[f"Sheet{i + 1}" for i in range(1)],
-        total_rows=total,
-        columns=columns,
-        preview_data=preview_data,
-        detected_field_mapping=detected_field_mapping,
-    )
+        return ExcelPreviewResponse(
+            file_name=staged.original_filename,
+            sheet_names=[f"Sheet{i + 1}" for i in range(1)],
+            total_rows=total,
+            columns=columns,
+            preview_data=preview_data,
+            detected_field_mapping=detected_field_mapping,
+        )
+    finally:
+        lifecycle.discard_staged(staged)
 
 
-@router.post("/preview", summary="预览Excel文件内容")
+@router.post("/preview", summary="Preview Excel file content")
 async def preview_excel(
     file: UploadFile = File(...),
-    max_rows: int = Query(10, ge=1, le=100, description="预览行数"),
+    max_rows: int = Query(10, ge=1, le=100, description="Preview row count"),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -111,32 +101,22 @@ async def preview_excel(
         )
     ),
 ) -> dict[str, Any]:
-    """
-    预览Excel文件内容，用于导入前确认
-    """
-    await security_middleware.validate_file_upload(
-        file,
-        allowed_types=[
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel",
-        ],
-        max_size=DEFAULT_MAX_FILE_SIZE,
-    )
+    """Preview a validated XLSX file before import."""
+    lifecycle = StagedFileService(TEMP_UPLOAD_ROOT)
+    staged = await lifecycle.stage_upload(file, UploadPurpose.EXCEL_PREVIEW)
 
-    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-        raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
-
-    content = await file.read()
-
-    total, columns, preview_data = await run_in_threadpool(
-        ExcelPreviewService.build_preview, content, max_rows
-    )
-
-    return {
-        "message": "预览成功",
-        "filename": file.filename,
-        "total": total,
-        "preview_rows": len(preview_data),
-        "columns": columns,
-        "data": preview_data,
-    }
+    try:
+        content = staged.path.read_bytes()
+        total, columns, preview_data = await run_in_threadpool(
+            ExcelPreviewService.build_preview, content, max_rows
+        )
+        return {
+            "message": "Preview successful",
+            "filename": staged.original_filename,
+            "total": total,
+            "preview_rows": len(preview_data),
+            "columns": columns,
+            "data": preview_data,
+        }
+    finally:
+        lifecycle.discard_staged(staged)

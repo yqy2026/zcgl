@@ -8,11 +8,10 @@ STANDARD_SHEET_NAME = "土地物业资产数据"
 # Excel文件相关配置
 EXCEL_CONFIG = {
     "sheet_name": STANDARD_SHEET_NAME,
-    "max_file_size": 10 * 1024 * 1024,  # 10MB
-    "allowed_extensions": [".xlsx", ".xls"],
+    "max_file_size": 100 * 1024 * 1024,  # 100 MiB
+    "allowed_extensions": [".xlsx"],
     "content_types": [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel",
     ],
 }
 

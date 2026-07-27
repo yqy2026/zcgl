@@ -77,14 +77,6 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("asset.asset_calculator.OccupancyRateCalculator")
 
-# Document services
-try:
-    from .document.pdf_import_service import PDFImportService as PDFImportService
-
-    __all__.append("PDFImportService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("document.pdf_import_service.PDFImportService")
-
 try:
     from .excel.excel_export_service import ExcelExportService as ExcelExportService
 

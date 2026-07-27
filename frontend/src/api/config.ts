@@ -49,11 +49,7 @@ export const API_CONFIG = {
   UPLOAD: {
     MAX_SIZE: 50 * 1024 * 1024, // 50MB
     CHUNK_SIZE: 1024 * 1024, // 1MB
-    ALLOWED_TYPES: [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-      'text/csv',
-    ],
+    ALLOWED_TYPES: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
   },
 
   // 分页配置

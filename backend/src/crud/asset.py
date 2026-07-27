@@ -435,7 +435,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             obj_in_data = obj_in.model_dump()
 
         obj_in_data.update(kwargs)
-        self._clean_asset_data(obj_in_data)
+        self._clean_asset_data(obj_in_data, remove_immutable_fields=False)
 
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
         db_obj = Asset(**encrypted_data)

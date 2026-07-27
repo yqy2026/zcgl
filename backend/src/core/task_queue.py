@@ -273,12 +273,12 @@ def async_task(
 
     例子:
         @async_task(priority=TaskPriority.HIGH, max_retries=3)
-        def process_pdf_import(file_path: str, org_id: str):
+        def process_document_file(file_path: str, org_id: str):
             # PDF处理逻辑
             pass
 
         # 异步执行
-        task_id = submit_async_task(process_pdf_import, file_path, org_id)
+        task_id = submit_async_task(process_document_file, file_path, org_id)
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:

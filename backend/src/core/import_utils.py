@@ -42,7 +42,7 @@ def safe_import(
         >>> router_registry = safe_import("core.router_registry", critical=True)
 
         >>> # 可选依赖 - 允许降级
-        >>> vision_service = safe_import("services.core.qwen_vision_service", fallback=None)
+        >>> vision_service = safe_import("services.document.page_text_pipeline", fallback=None)
 
         >>> # 使用 mock 工厂
         >>> mock_redis = safe_import("redis", mock_factory=lambda: MockRedis())
@@ -105,8 +105,8 @@ def safe_import_from(
 
     Examples:
         >>> get_vision_service = safe_import_from(
-        ...     "services.core.qwen_vision_service",
-        ...     "QwenVisionService",
+        ...     "services.document.page_text_pipeline",
+        ...     "PageTextPipeline",
         ...     fallback=lambda: None
         ... )
     """

@@ -539,7 +539,7 @@ Concurrency and scope constraints: replacing allocations locks the payment flow 
 - **追加 / 替换 / 删除**：替换不保留旧档，删除不记原因；删到最后一份被阻止（产权证、合同补录附件均须 ≥1）。变更日志记附件 ID、文件名、动作类型、操作人、操作时间，不记原因、不留旧文件内容、不做差异追踪。
 - **疑似重复**只提示「疑似重复附件」、不展示命中依据、默认不追加，用户显式追加即确认、不二次弹窗、不阻断保存。
 - 附件上传后不自动触发解析（上传与解析是两个独立动作）。MVP 不做附件版本管理、替换审批、差异追踪、备注字段、维护来源字段、容量配额、打包下载、批量解析 / 确认或复杂上传队列。
-- 通用 `attachments` 元数据当前首先用于 `payment_flow` 凭证；流水凭证上传执行 20MB 有界读取，并对 PDF/JPEG/PNG 校验 MIME、扩展名和固定文件头，即使可选 magic 依赖不可用也不得接受伪装类型。既有资产、合同和产权证附件接口及存量文件不在本次流水生命周期任务中迁移。
+- 通用 `Attachment` 是产权证正式附件的唯一持久化模型，固定使用 `owner_type=property_certificate`、`owner_id=certificate_id`；产权证专用附件表/关系和客户端传入 `storage_key` 不属于目标模型。公开上传接口保持在资产/产权证域内嵌套，由服务端确定 owner；格式与资源限制使用用途 profile 做有界、fail-loud 校验。
 
 ### 4.23 ScanExtractionSession
 
@@ -549,13 +549,19 @@ Concurrency and scope constraints: replacing allocations locks the payment flow 
 |---|---|---|---|
 | `session_id` | string | 是 | 临时会话 ID；确认 / 取消 / 失败 / 放弃后不留档，不提供草稿保存、历史档案或稍后继续确认（见 §2「扫描件解析确认」）|
 | `target_type` | enum | 是 | `contract`、`property_certificate` |
-| `target_attachment_id` | string | 条件 | 产权证解析只能引用当前产权证已有附件 ID，不接收新文件上传作为解析输入 |
+| `input_mode` | enum | 是 | `upload`、`attachment_reference`；产权证新建使用前者，既有产权证解析使用后者 |
+| `target_asset_id` | string | 条件 | 产权证分支必填；新建时是发起资产上下文，既有时还用于校验产权证确实关联该资产 |
+| `target_certificate_id` | string | 条件 | 既有产权证解析必填；新建分支禁止传入 |
+| `target_attachment_id` | string | 条件 | 既有产权证解析必填，且必须属于 `target_certificate_id`；新建分支禁止传入 |
+| `staged_file_metadata` | json | 条件 | `input_mode=upload` 时由服务端生成的临时存储键、规范 MIME、大小与 SHA-256；仅会话内部可见，不返回公开临时 URL |
 | `status` | enum | 是 | 解析中、待确认、失败、超时（临时态，不作为长期记录）|
 | `candidate_fields` | json | 否 | 候选字段值、置信度、低置信标记、轻量来源证据（页码 / 文本片段 / 截图区域）、候选匹配、差异提示、建议补全字段；均临时，确认后不长期保存 |
 
 约束：
 
 - 确认写入目标对象的字段来源只取 `manual` / `ocr_prefill_confirmed` / `ocr_prefill_corrected`（见 §2「字段来源」）；候选不自动绑定 Party·Asset、不自动覆盖已保存字段（冲突仅作差异提示）。
+- 产权证新建分支恰好接收一个 PDF/JPEG/PNG 临时文件；确认时满足 §4.20 五项硬门槛，并通过可补偿的文件晋升与数据库事务一次创建产权证、资产/权利人关系和通用 `Attachment`。取消、失败、超时、过期或提交失败均清理暂存文件，不创建产权证草稿或孤儿附件。
+- 产权证既有分支不接收文件，只引用当前产权证的通用 `Attachment`；普通附件上传后不自动解析。证号冲突只允许用户显式关联既有产权证并决定是否追加本次暂存文件，不自动新建重复证号记录或绑定资产。
 - 不持久化解析工具、模型、供应商、置信度、确认时间、页码、文本片段或截图区域等元信息。
 - 同一附件重新解析废弃旧未确认候选、不留版本对比；已确认写入主数据的字段不受影响。建议补全字段不填写不阻断确认保存。
 

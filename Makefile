@@ -2,10 +2,9 @@
 	redis-up redis-down redis-health \
 	lint lint-backend lint-frontend scan-frontend scan-frontend-report type-check type-check-e2e \
 	test test-backend test-frontend test-frontend-ci test-e2e test-e2e-backend test-e2e-frontend \
-	test-e2e-import test-e2e-import-backend test-e2e-import-frontend \
 	test-integration test-coverage \
 	build-frontend backend-import check ci-gate \
-	backend-org-cov secrets migrate check-migration-naming docs-lint check-field-drift
+	backend-org-cov secrets migrate check-migration-naming check-document-runtime docs-lint check-field-drift
 
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
@@ -38,11 +37,9 @@ help:
 	@echo "  test-e2e-backend  Run backend E2E tests"
 	@echo "  test-e2e-frontend Run frontend E2E tests"
 	@echo "  test-e2e          Run backend and frontend E2E tests"
-	@echo "  test-e2e-import   Run import-focused backend+frontend E2E regression"
-	@echo "  test-e2e-import-backend  Run backend import-focused E2E tests"
-	@echo "  test-e2e-import-frontend Run frontend import-focused E2E tests"
 	@echo "  build-frontend    Build frontend"
 	@echo "  backend-import    Import backend app to validate runtime"
+	@echo "  check-document-runtime Verify pinned local OCR dependencies and model hashes"
 	@echo "  check             Run lint, tests, build, and import checks"
 	@echo "  ci-gate           Run CI gate (ruff + tsgo + unit tests)"
 	@echo "  docs-lint         Run all docs checks (authority + code-evidence + plans + field drift)"
@@ -55,7 +52,7 @@ setup:
 	@$(MAKE) -j2 setup-backend setup-frontend
 
 setup-backend:
-	cd backend && uv sync --frozen --extra dev
+	cd backend && uv sync --frozen --extra dev --extra document-processing
 
 setup-frontend:
 	cd frontend && pnpm install --frozen-lockfile
@@ -121,17 +118,6 @@ test-e2e-backend:
 test-e2e-frontend:
 	cd frontend && pnpm e2e
 
-test-e2e-import:
-	bash scripts/dev/run_import_e2e.sh
-
-test-e2e-import-backend:
-	cd backend && E2E_TEST_DATABASE_URL="$${E2E_TEST_DATABASE_URL:-$${TEST_DATABASE_URL:-}}" $(PYTHON) -m pytest \
-		tests/e2e/test_pdf_import_e2e.py -m e2e --no-cov
-
-test-e2e-import-frontend:
-	@curl -fsS http://127.0.0.1:8002/docs >/dev/null || (echo "[ERROR] Backend API is required at http://127.0.0.1:8002"; exit 2)
-	cd frontend && pnpm e2e tests/e2e/user/import-guardrails.spec.ts tests/e2e/legacy-contract/import-success.spec.ts --project=chromium
-
 build-frontend:
 	cd frontend && pnpm build
 
@@ -156,9 +142,12 @@ backend-import:
 		fi; \
 		SECRET_KEY="$$RESOLVED_SECRET_KEY" DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
-check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import docs-lint
+check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend check-document-runtime backend-import docs-lint
 
-ci-gate: lint-backend type-check test-backend test-frontend-ci
+ci-gate: lint-backend type-check test-backend test-frontend-ci check-document-runtime
+
+check-document-runtime:
+	cd backend && uv run --frozen --extra dev --extra document-processing python -c "from src.core.document_processing_runtime import validate_document_processing_runtime; validate_document_processing_runtime(); print('document runtime ok')"
 
 backend-org-cov:
 	cd backend && \

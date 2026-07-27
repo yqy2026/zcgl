@@ -238,6 +238,27 @@ describe('ApiClient', () => {
     });
   });
 
+  describe('multipart requests', () => {
+    it('removes the JSON content type so the browser can add a multipart boundary', () => {
+      const axiosInstance = client.getAxiosInstance();
+      const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+      if (!requestInterceptor) {
+        throw new Error('Request interceptor is not registered');
+      }
+
+      const uploadRequest: InternalAxiosRequestConfig = {
+        url: '/extraction-sessions',
+        method: 'post',
+        data: new FormData(),
+        headers: new AxiosHeaders({ 'Content-Type': 'application/json' }),
+      };
+
+      requestInterceptor(uploadRequest);
+
+      expect(uploadRequest.headers.get('Content-Type')).toBeUndefined();
+    });
+  });
+
   describe('缓存命中响应提取', () => {
     it('缓存命中时应继续执行分页响应提取', async () => {
       const cacheClient = new ApiClient({

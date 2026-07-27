@@ -3,6 +3,8 @@ ProjectService 集成测试 (简化版)
 只测试核心功能，避免复杂字段问题
 """
 
+import re
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,7 +47,6 @@ class TestProjectBasic:
         # 创建项目
         project_data = ProjectCreate(
             project_name="测试项目",
-            project_code="PRJ-TEST01-240001",
             status="planning",
             manager_party_id=self.manager_party_id,
         )
@@ -53,7 +54,7 @@ class TestProjectBasic:
 
         assert project.id is not None
         assert project.project_name == "测试项目"
-        assert project.project_code == "PRJ-TEST01-240001"
+        assert re.fullmatch(r"PRJ-[A-Z0-9]{4,12}-\d{6}-\d{4}", project.project_code)
 
         # 获取项目
         retrieved = await project_crud.get(self.db, project.id)
@@ -67,7 +68,6 @@ class TestProjectBasic:
             self.db,
             obj_in=ProjectCreate(
                 project_name="原始项目",
-                project_code="PRJ-TEST02-240002",
                 status="planning",
                 manager_party_id=self.manager_party_id,
             ),
@@ -88,7 +88,6 @@ class TestProjectBasic:
             self.db,
             obj_in=ProjectCreate(
                 project_name="状态测试项目",
-                project_code="PRJ-TEST03-240003",
                 status="planning",
                 manager_party_id=self.manager_party_id,
             ),
@@ -104,7 +103,6 @@ class TestProjectBasic:
             self.db,
             obj_in=ProjectCreate(
                 project_name="待删除项目",
-                project_code="PRJ-TEST04-240004",
                 status="planning",
                 manager_party_id=self.manager_party_id,
             ),

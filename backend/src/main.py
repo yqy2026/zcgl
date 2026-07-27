@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 
 # 核心依赖 - 严格导入（开发/生产环境必须存在）
 from .core.config import settings, validate_config
+from .core.document_processing_runtime import validate_document_processing_runtime
 from .core.encoding_utils import safe_print, setup_utf8_encoding
 from .core.environment import (
     get_dependency_policy,
@@ -127,6 +128,13 @@ logger.info("依赖导入完成")
 async def lifespan(app: FastAPI) -> Any:
     """应用生命周期管理器"""
     # 启动时执行
+
+    document_runtime = validate_document_processing_runtime()
+    logger.info(
+        "Document-processing runtime ready: dependencies=%s models=%s",
+        document_runtime.dependencies,
+        sorted(document_runtime.models),
+    )
 
     # Secret validation - NEW: Validate SECRET_KEY and DATA_ENCRYPTION_KEY on startup
     logger.info("Validating application secrets...")

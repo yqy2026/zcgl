@@ -156,6 +156,7 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
 
     scoped_asset = Asset(
         asset_name=f"资产作用域命中-{suffix}",
+        asset_code=f"VIS-ASSET-A-{suffix}",
         address=f"作用域地址-A-{suffix}",
         ownership_status="已确权",
         property_nature="经营类",
@@ -168,6 +169,7 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     )
     other_asset = Asset(
         asset_name=f"资产作用域隔离-{suffix}",
+        asset_code=f"VIS-ASSET-B-{suffix}",
         address=f"作用域地址-B-{suffix}",
         ownership_status="已确权",
         property_nature="经营类",
@@ -191,7 +193,7 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     missing_header_response = client.get(
         f"/api/v1/assets?page=1&page_size=20&search={suffix}"
     )
-    assert missing_header_response.status_code == 400
+    assert missing_header_response.status_code == 200
 
     response = client.get(
         f"/api/v1/assets?page=1&page_size=20&search={suffix}",

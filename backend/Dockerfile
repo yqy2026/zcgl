@@ -25,7 +25,7 @@ COPY pyproject.toml uv.lock ./
 
 # 安装依赖（跳过本地项目安装，避免依赖层受源码变动影响）
 RUN for attempt in 1 2 3; do \
-        uv sync --frozen --no-dev --no-install-project --native-tls && break; \
+        uv sync --frozen --no-dev --extra document-processing --no-install-project --native-tls && break; \
         if [ "$attempt" -eq 3 ]; then exit 1; fi; \
         echo "uv sync failed (attempt $attempt), retrying..." >&2; \
         sleep 5; \
@@ -42,6 +42,8 @@ ENV PYTHONUNBUFFERED=1 \
 # 安装运行时依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libgl1 \
+    libglib2.0-0 \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
@@ -59,6 +61,9 @@ COPY --chown=appuser:appuser src ./src
 COPY --chown=appuser:appuser alembic ./alembic
 COPY --chown=appuser:appuser alembic.ini ./
 COPY --chown=appuser:appuser scripts ./scripts
+
+# Prove the bundled OCR models and native runtime during image construction.
+RUN /app/.venv/bin/python -c "from src.core.document_processing_runtime import validate_document_processing_runtime; validate_document_processing_runtime(); print('document runtime ok')"
 
 # 创建必要的目录
 RUN mkdir -p uploads logs backups && \

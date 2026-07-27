@@ -3,7 +3,6 @@ CRUD操作模块
 """
 
 from ..models.asset import Asset
-from ..models.llm_prompt import PromptTemplate
 from ..models.ownership import Ownership
 from ..models.project import Project
 from ..models.property_certificate import PropertyCertificate
@@ -31,14 +30,12 @@ from .field_whitelist import (
     PermissionGrantWhitelist,
     PermissionWhitelist,
     ProjectWhitelist,
-    PromptTemplateWhitelist,
     PropertyCertificateWhitelist,
     ResourcePermissionWhitelist,
     SystemDictionaryWhitelist,
     UserRoleAssignmentWhitelist,
     register_whitelist,
 )
-from .llm_prompt import prompt_template_crud
 from .party import party_crud
 from .project import project_crud
 from .project_asset import project_asset_crud
@@ -49,7 +46,6 @@ register_whitelist(Asset, AssetWhitelist())
 register_whitelist(SystemDictionary, SystemDictionaryWhitelist())
 register_whitelist(AssetCustomField, AssetCustomFieldWhitelist())
 register_whitelist(Permission, PermissionWhitelist())
-register_whitelist(PromptTemplate, PromptTemplateWhitelist())
 register_whitelist(Project, ProjectWhitelist())
 register_whitelist(Ownership, OwnershipWhitelist())
 register_whitelist(PropertyCertificate, PropertyCertificateWhitelist())
@@ -75,5 +71,4 @@ __all__ = [
     "crud_authz",
     "project_asset_crud",
     "permission_grant_crud",
-    "prompt_template_crud",
 ]

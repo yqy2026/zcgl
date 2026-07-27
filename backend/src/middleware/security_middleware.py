@@ -399,11 +399,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         # Generate rate limit key
         path = request.url.path or ""
-
-        if path.startswith("/api/v1/pdf_import"):
-            # PDF导入限制
-            rate_limit_key = f"{ip}:pdf_import"
-        elif path.startswith("/api/v1/excel"):
+        if path.startswith("/api/v1/excel"):
             # Excel操作限制
             rate_limit_key = f"{ip}:excel"
         elif request.method == HTTPMethods.POST:
@@ -665,8 +661,6 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         if path and (
             path.startswith("/api/v1/excel")
-            or path.startswith("/api/v1/pdf_import")
-            or path.startswith("/api/v1/pdf-import")
         ):
             max_files = 10 if path.startswith("/api/v1/excel") else 5
             content_type = request.headers.get("content-type", "")
@@ -811,7 +805,6 @@ def setup_security_middleware(app: Any) -> None:
         + [HTTPMethods.OPTIONS, HTTPMethods.PATCH],
         "max_file_size": DEFAULT_MAX_EXCEL_FILE_SIZE,
         "rate_limit": {
-            "pdf_import": {"max_requests": 5, "time_window": 60},
             "excel": {"max_requests": 10, "time_window": 60},
             "post": {"max_requests": 30, "time_window": 60},
             "default": {"max_requests": 100, "time_window": 60},

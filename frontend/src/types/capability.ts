@@ -17,7 +17,6 @@ export type ResourceType =
   | 'error_recovery'
   | 'excel_config'
   | 'history'
-  | 'llm_prompt'
   | 'notification'
   | 'occupancy'
   | 'operation_log'

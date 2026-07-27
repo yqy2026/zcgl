@@ -387,6 +387,9 @@ DEFAULT_TEST_DATA_ENCRYPTION_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
 os.environ["DEBUG"] = "False"
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["PYDANTIC_SETTINGS_IGNORE_DOT_ENV"] = "1"
+# Unit tests must not depend on a developer's Redis process. Redis-specific
+# tests enable or mock it explicitly.
+os.environ["REDIS_ENABLED"] = "false"
 # Keep Phase 4 migration deterministic in tests unless explicitly overridden.
 os.environ.setdefault("PHASE4_TENANT_NOT_NULL_DECISION", "B")
 
