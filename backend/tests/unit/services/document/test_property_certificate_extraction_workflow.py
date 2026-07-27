@@ -150,7 +150,9 @@ async def test_new_confirmation_creates_generic_attachment_after_explicit_review
         text_source="pdf_text",
         extractor="rule",
         evidence=(
-            CandidateEvidence(page_number=1, text="certificate number", text_source="pdf_text"),
+            CandidateEvidence(
+                page_number=1, text="certificate number", text_source="pdf_text"
+            ),
         ),
         confidence_tier="high",
     )
@@ -162,7 +164,11 @@ async def test_new_confirmation_creates_generic_attachment_after_explicit_review
         target_type="property_certificate",
         staged_file_key=staged_file.storage_key,
         candidates=workflow._serialize_review(review),
-        context={**workflow._session_context(staged_file), "mode": "new", "asset_id": "asset-1"},
+        context={
+            **workflow._session_context(staged_file),
+            "mode": "new",
+            "asset_id": "asset-1",
+        },
         errors=[],
     )
 
@@ -239,6 +245,83 @@ async def test_new_confirmation_creates_generic_attachment_after_explicit_review
 
 
 @pytest.mark.asyncio
+async def test_conflict_link_confirmation_uses_requested_certificate(
+    monkeypatch, staged_file
+):
+    from src.services.document.property_certificate_extraction_workflow import (
+        PropertyCertificateExtractionWorkflow,
+    )
+
+    repository = FakeRepository()
+    lifecycle = FakeLifecycle()
+    workflow = PropertyCertificateExtractionWorkflow(
+        repository=repository,
+        pipeline=FakePipeline(),
+        reviewer=CandidateReviewService(),
+        enricher=FakeEnricher(),
+        lifecycle=lifecycle,
+    )
+    candidate = FieldCandidate(
+        field_key="certificate_number",
+        value="CERT-001",
+        text_source="pdf_text",
+        extractor="rule",
+        evidence=(
+            CandidateEvidence(
+                page_number=1, text="certificate number", text_source="pdf_text"
+            ),
+        ),
+        confidence_tier="high",
+    )
+    review = CandidateReview(
+        fields={"certificate_number": FieldCandidates((candidate,), False)}
+    )
+    repository.create(
+        session_id="session-1",
+        target_type="property_certificate",
+        staged_file_key=staged_file.storage_key,
+        candidates=workflow._serialize_review(review),
+        context={
+            **workflow._session_context(staged_file),
+            "mode": "new",
+            "asset_id": "asset-1",
+        },
+        errors=[],
+    )
+
+    calls = []
+
+    async def confirm_conflict_link(**kwargs):
+        calls.append(kwargs)
+        return "existing-certificate", None
+
+    monkeypatch.setattr(workflow, "_confirm_conflict_link", confirm_conflict_link)
+
+    db = FakeDb()
+    certificate_id = await workflow.confirm(
+        session_id="session-1",
+        actions=[
+            {
+                "field_key": "certificate_number",
+                "action": "accept_candidate",
+                "candidate_value": "CERT-001",
+            }
+        ],
+        certificate_type="other",
+        holder_party_ids=["party-1"],
+        attach_staged=True,
+        db=db,
+        current_user_id="user-1",
+        link_existing_certificate_id="existing-certificate",
+    )
+
+    assert certificate_id == "existing-certificate"
+    assert calls[0]["certificate_id"] == "existing-certificate"
+    assert db.commits == 1
+    assert repository.session is None
+
+
+@pytest.mark.asyncio
 async def test_duplicate_certificate_number_returns_conflict_and_keeps_session(
     monkeypatch, staged_file
 ):
@@ -284,7 +367,11 @@ async def test_duplicate_certificate_number_returns_conflict_and_keeps_session(
         target_type="property_certificate",
         staged_file_key=staged_file.storage_key,
         candidates=workflow._serialize_review(review),
-        context={**workflow._session_context(staged_file), "mode": "new", "asset_id": "asset-1"},
+        context={
+            **workflow._session_context(staged_file),
+            "mode": "new",
+            "asset_id": "asset-1",
+        },
         errors=[],
     )
 

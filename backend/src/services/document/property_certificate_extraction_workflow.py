@@ -170,7 +170,6 @@ class PropertyCertificateExtractionWorkflow(ContractExtractionWorkflow):
             session_id, "ready_for_review", "confirming"
         )
         stored = None
-        context: Mapping[str, str] | None = None
         try:
             review = self._deserialize_review(session["candidates"])
             reviewed = self._reviewer.apply_actions(
@@ -188,8 +187,7 @@ class PropertyCertificateExtractionWorkflow(ContractExtractionWorkflow):
                     staged=self._staged_from_session(session, context),
                     current_user_id=current_user_id,
                 )
-            elif mode == "new":
-                assert link_existing_certificate_id is not None
+            elif mode == "new" and link_existing_certificate_id is not None:
                 certificate_id, stored = await self._confirm_conflict_link(
                     db=db,
                     context=context,
@@ -229,7 +227,6 @@ class PropertyCertificateExtractionWorkflow(ContractExtractionWorkflow):
             raise
 
         staged_file_key = self._repository.delete_after_status(session_id, "confirming")
-        assert context is not None
         if stored is None and context.get("source_kind") != "existing_attachment":
             self._lifecycle.discard_path(self._staged_path(staged_file_key))
         return certificate_id

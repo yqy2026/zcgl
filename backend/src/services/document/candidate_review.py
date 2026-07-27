@@ -434,20 +434,22 @@ class CandidateReviewService:
     def _candidate(
         field_key: str, value: CandidateValue, page: PageText, line: str
     ) -> FieldCandidate:
-        assert page.text_source is not None
+        text_source = page.text_source
+        if text_source is None:
+            raise CandidateReviewError("page_text_source_required")
         return FieldCandidate(
             field_key=field_key,
             value=value,
-            text_source=page.text_source,
+            text_source=text_source,
             extractor="rule",
             evidence=(
                 CandidateEvidence(
                     page_number=page.page_number,
                     text=line[:240],
-                    text_source=page.text_source,
+                    text_source=text_source,
                 ),
             ),
-            confidence_tier="high" if page.text_source == "pdf_text" else "low",
+            confidence_tier="high" if text_source == "pdf_text" else "low",
         )
 
     @staticmethod

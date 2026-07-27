@@ -225,6 +225,19 @@ def test_duplicate_candidates_keep_the_strongest_confidence() -> None:
     assert review.fields["contract_number"].candidates[0].confidence_tier == "high"
 
 
+def test_candidate_rejects_page_without_text_source() -> None:
+    page = PageText(
+        page_number=1,
+        text_source=None,
+        text_lines=["contract number: C-001"],
+    )
+
+    with pytest.raises(CandidateReviewError, match="page_text_source_required"):
+        CandidateReviewService._candidate(
+            "contract_number", "C-001", page, page.text_lines[0]
+        )
+
+
 def test_property_certificate_enrichment_candidates_merge_without_auto_selection() -> (
     None
 ):
