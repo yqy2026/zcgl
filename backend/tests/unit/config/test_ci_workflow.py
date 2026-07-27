@@ -31,6 +31,15 @@ def _job_steps(job: dict[str, Any]) -> Iterable[dict[str, Any]]:
     return []
 
 
+def _job_dependencies(job: dict[str, Any]) -> set[str]:
+    needs = job.get("needs")
+    if isinstance(needs, str):
+        return {needs}
+    if isinstance(needs, list):
+        return {dependency for dependency in needs if isinstance(dependency, str)}
+    return set()
+
+
 def _jobs_running_alembic_upgrade(
     workflow: dict[str, Any],
 ) -> dict[str, dict[str, Any]]:
@@ -152,6 +161,29 @@ def test_retired_import_e2e_targets_should_not_be_registered() -> None:
     assert "test-e2e-import" not in makefile_text
     assert "make test-e2e-import" not in workflow_text
     assert not (repo_root / "scripts" / "dev" / "run_import_e2e.sh").exists()
+
+
+def test_ci_job_dependencies_should_not_reference_retired_jobs() -> None:
+    workflow = _load_ci_workflow()
+    jobs = workflow.get("jobs")
+    assert isinstance(jobs, dict)
+
+    missing_dependencies = {
+        job_name: sorted(_job_dependencies(job).difference(jobs))
+        for job_name, job in jobs.items()
+        if isinstance(job, dict)
+        if _job_dependencies(job).difference(jobs)
+    }
+
+    assert not missing_dependencies, (
+        "Every CI job dependency must refer to a defined job: "
+        f"{missing_dependencies}"
+    )
+
+    workflow_text = (_repo_root() / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "import-e2e" not in workflow_text
 
 
 def test_frontend_e2e_job_should_install_full_browser_matrix() -> None:
