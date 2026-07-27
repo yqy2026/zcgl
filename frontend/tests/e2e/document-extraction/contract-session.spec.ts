@@ -31,10 +31,10 @@ const ensureAuthenticatedStable = async (page: Page): Promise<void> => {
 
 const completeContractContext = async (page: Page): Promise<void> => {
   await page.getByLabel('Project ID').fill('e2e-project');
-  await page.getByLabel('Contract direction').click();
-  await page.getByRole('option', { name: 'Lessor', exact: true }).click();
-  await page.getByLabel('Contract role').click();
-  await page.getByRole('option', { name: 'Upstream', exact: true }).click();
+  await page.getByLabel('Contract direction').press('ArrowDown');
+  await page.getByLabel('Contract direction').press('Enter');
+  await page.getByLabel('Contract role').press('ArrowDown');
+  await page.getByLabel('Contract role').press('Enter');
 };
 
 test.describe('@document-extraction-session contract session creation', () => {
