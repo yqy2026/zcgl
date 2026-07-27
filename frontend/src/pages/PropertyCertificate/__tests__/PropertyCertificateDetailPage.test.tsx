@@ -26,6 +26,16 @@ vi.mock('@/services/assetService', () => ({
     getAssets: vi.fn(),
   },
 }));
+vi.mock('@/services/propertyCertificateAttachmentService', () => ({
+  propertyCertificateAttachmentService: {
+    list: vi.fn().mockResolvedValue([]),
+    append: vi.fn(),
+    replace: vi.fn(),
+    remove: vi.fn(),
+    previewUrl: vi.fn(),
+    downloadUrl: vi.fn(),
+  },
+}));
 
 const formatConsoleMessages = (calls: unknown[][]) =>
   calls
@@ -55,20 +65,7 @@ describe('PropertyCertificateDetailPage', () => {
       co_ownership: null,
       restrictions: null,
       remarks: null,
-      extraction_source: null,
-      extraction_confidence: 0.92,
       asset_ids: [],
-      owners: [
-        {
-          id: 'owner-1',
-          name: 'Test owner',
-          owner_type: 'organization',
-          id_type: 'Unified social credit code',
-          id_number: '1234567890',
-          phone: '13800000000',
-          address: 'Test address',
-        },
-      ],
       created_at: '2026-03-01',
       updated_at: '2026-03-02',
     });

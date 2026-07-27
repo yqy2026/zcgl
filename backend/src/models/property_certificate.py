@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Date, DateTime, String, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,14 +32,6 @@ class CertificateType(str, Enum):
     OTHER = "other"
 
 
-class OwnerType(str, Enum):
-    """Retained historical owner type values."""
-
-    INDIVIDUAL = "individual"
-    ORGANIZATION = "organization"
-    JOINT = "joint"
-
-
 class PropertyCertificate(Base):
     """Property certificate master record."""
 
@@ -48,7 +40,6 @@ class PropertyCertificate(Base):
     id: Mapped[str] = mapped_column(
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
-
     certificate_number: Mapped[str] = mapped_column(
         String(100),
         unique=True,
@@ -59,14 +50,6 @@ class PropertyCertificate(Base):
     certificate_type: Mapped[CertificateType] = mapped_column(
         SQLEnum(CertificateType), nullable=False, index=True, comment="Certificate type"
     )
-
-    extraction_confidence: Mapped[float | None] = mapped_column(
-        default=None, comment="LLM extraction confidence (0-1)"
-    )
-    extraction_source: Mapped[str] = mapped_column(
-        String(20), default="manual", comment="Data source: llm/manual"
-    )
-
     registration_date: Mapped[date | None] = mapped_column(
         Date, comment="Registration date"
     )
@@ -95,74 +78,17 @@ class PropertyCertificate(Base):
     )
     restrictions: Mapped[str | None] = mapped_column(Text, comment="Restrictions")
     remarks: Mapped[str | None] = mapped_column(Text, comment="Remarks")
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=_utcnow_naive, comment="Created at"
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
-        comment="Updated at",
+        DateTime, default=_utcnow_naive, onupdate=_utcnow_naive, comment="Updated at"
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="Creator ID")
 
     assets: Mapped[list[Asset]] = relationship(
-        "Asset",
-        secondary=property_cert_assets,
-        back_populates="certificates",
+        "Asset", secondary=property_cert_assets, back_populates="certificates"
     )
     party_relations: Mapped[list[CertificatePartyRelation]] = relationship(
-        "CertificatePartyRelation",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    attachments: Mapped[list[PropertyCertificateAttachment]] = relationship(
-        "PropertyCertificateAttachment",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        back_populates="certificate",
-    )
-
-
-class PropertyCertificateAttachment(Base):
-    """File attachment for a property certificate."""
-
-    __tablename__ = "property_certificate_attachments"
-
-    id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-    certificate_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("property_certificates.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-        comment="Property certificate ID.",
-    )
-    file_name: Mapped[str] = mapped_column(
-        String(255), nullable=False, comment="Original or display file name."
-    )
-    storage_key: Mapped[str] = mapped_column(
-        String(500),
-        nullable=False,
-        index=True,
-        comment="Stable attachment storage key.",
-    )
-    content_type: Mapped[str | None] = mapped_column(
-        String(100), comment="Attachment content type."
-    )
-    file_size: Mapped[int | None] = mapped_column(
-        Integer, comment="File size in bytes."
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=_utcnow_naive,
-        comment="Created at.",
-    )
-
-    certificate: Mapped[PropertyCertificate] = relationship(
-        "PropertyCertificate",
-        back_populates="attachments",
+        "CertificatePartyRelation", cascade="all, delete-orphan", passive_deletes=True
     )

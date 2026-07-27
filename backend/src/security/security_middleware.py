@@ -7,11 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import Request, UploadFile
+from fastapi import Request
 
 from ..core.config import settings
 from ..core.exception_handler import PermissionDeniedError, RateLimitError
-from .file_validation import FileValidator
 from .logging_security import security_auditor
 from .rate_limiting import RateLimiter
 
@@ -48,7 +47,6 @@ class SecurityMiddleware:
         self.rate_limiter = (
             RateLimiter(rate_limits) if isinstance(rate_limits, dict) else RateLimiter()
         )
-        self.file_validator = FileValidator()
         self.logger = logging.getLogger(__name__)
 
     async def validate_request(self, request: Request) -> bool:
@@ -103,28 +101,3 @@ class SecurityMiddleware:
         if isinstance(value, (list, set, tuple)):
             return {str(item).strip() for item in value if str(item).strip()}
         return set()
-
-    async def validate_file_upload(
-        self,
-        file: UploadFile,
-        allowed_types: list[str] | None = None,
-        max_size: int | None = None,
-    ) -> dict[str, Any]:
-        """
-        验证文件上传
-
-        Args:
-            file: 上传的文件
-            allowed_types: 允许的文件类型
-            max_size: 最大文件大小
-
-        Returns:
-            Dict: 验证结果
-        """
-        # 确保参数有默认值
-        if allowed_types is None:
-            allowed_types = []
-        if max_size is None:
-            max_size = 0
-
-        return self.file_validator.validate_upload(file, allowed_types, max_size)

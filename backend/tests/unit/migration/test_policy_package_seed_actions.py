@@ -286,7 +286,7 @@ def test_backfill_expanded_resource_types_should_match_non_base_api_authz_resour
     api_resources = _discover_api_authz_resource_types()
     non_base_api_resources = api_resources - {"asset", "project"}
 
-    retired_resources = {"collection"}
+    retired_resources = {"collection", "llm_prompt"}
 
     later_backfill_resources = {"ledger", "ledger_voucher"}
     assert (

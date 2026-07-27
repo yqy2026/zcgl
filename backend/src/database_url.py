@@ -4,13 +4,29 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from urllib.parse import urlparse
+
+from dotenv import load_dotenv
 
 from src.constants.message_constants import ErrorIDs
 
 from .core.exception_handler import ConfigurationError
 
 logger = logging.getLogger(__name__)
+
+
+def _load_database_url_from_dotenv() -> str | None:
+    """Load DATABASE_URL from the current .env without overriding process config."""
+    if os.getenv("PYDANTIC_SETTINGS_IGNORE_DOT_ENV") == "1":
+        return None
+
+    dotenv_path = Path.cwd() / ".env"
+    if not dotenv_path.is_file():
+        return None
+
+    load_dotenv(dotenv_path=dotenv_path, override=False)
+    return os.getenv("DATABASE_URL")
 
 
 def _build_safe_url(database_url: str) -> str:
@@ -61,7 +77,7 @@ def validate_postgresql_database_url(database_url: str) -> str:
 
 def get_database_url() -> str:
     """Read and validate DATABASE_URL from environment."""
-    database_url = os.getenv("DATABASE_URL")
+    database_url = os.getenv("DATABASE_URL") or _load_database_url_from_dotenv()
 
     if not database_url:
         environment = os.getenv("ENVIRONMENT", "development")

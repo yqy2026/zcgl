@@ -242,29 +242,6 @@ class TestFileUploadSecurityMiddleware:
         assert response.status_code == 400
         assert "上传文件数量超过限制" in response.body.decode("utf-8")
 
-    @pytest.mark.asyncio
-    async def test_pdf_import_file_count_limit_enforced(self):
-        """测试PDF导入文件数量限制"""
-        from src.middleware.security_middleware import FileUploadSecurityMiddleware
-
-        boundary = "testboundary"
-        body = build_multipart_body(boundary, file_count=6)
-
-        middleware = FileUploadSecurityMiddleware(app=None)
-        request = create_mock_request(url_path="/api/v1/pdf-import/upload")
-        request.headers = {
-            "content-type": f"multipart/form-data; boundary={boundary}",
-            "content-length": str(len(body)),
-        }
-        request.body = AsyncMock(return_value=body)
-
-        async def call_next(req):
-            return Response(content="test")
-
-        response = await middleware.dispatch(request, call_next)
-        assert response.status_code == 400
-        assert "上传文件数量超过限制" in response.body.decode("utf-8")
-
 
 class TestSecurityMiddlewareIntegration:
     """安全中间件集成测试"""

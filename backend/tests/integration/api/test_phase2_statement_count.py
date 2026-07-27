@@ -90,6 +90,7 @@ def _seed_assets(
     for idx in range(count):
         asset = Asset(
             asset_name=f"{name_prefix}-{idx}",
+            asset_code=f"STMT-ASSET-{uuid4().hex[:16]}",
             address=f"statement-count-address-{idx}",
             ownership_status="已确权",
             property_nature="商业",
@@ -208,7 +209,7 @@ class TestPhase2StatementCount:
 
         with SQLStatementCounter(engine) as small_counter:
             small_resp = authenticated_client.get(
-                "/api/v1/analytics/comprehensive?should_include_deleted=false&should_use_cache=false"
+                "/api/v1/analytics/comprehensive?should_include_deleted=false&should_use_cache=false&view_mode=owner",
             )
         assert small_resp.status_code == 200
 
@@ -221,7 +222,7 @@ class TestPhase2StatementCount:
         asset_crud.clear_cache()
         with SQLStatementCounter(engine) as large_counter:
             large_resp = authenticated_client.get(
-                "/api/v1/analytics/comprehensive?should_include_deleted=false&should_use_cache=false"
+                "/api/v1/analytics/comprehensive?should_include_deleted=false&should_use_cache=false&view_mode=owner",
             )
         assert large_resp.status_code == 200
         assert large_counter.count <= small_counter.count + 4

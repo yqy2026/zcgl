@@ -53,13 +53,6 @@ from .enum_field import (  # noqa: F401
     EnumFieldUsage,
     EnumFieldValue,
 )
-from .llm_prompt import (  # noqa: F401
-    ExtractionFeedback,
-    PromptMetrics,
-    PromptStatus,
-    PromptTemplate,
-    PromptVersion,
-)
 from .notification import (  # noqa: F401
     Notification,
     NotificationPriority,
@@ -82,12 +75,7 @@ from .party_role import PartyRoleBinding, PartyRoleDef  # noqa: F401
 from .project import Project  # noqa: F401
 from .project_asset import ProjectAsset  # noqa: F401
 from .project_relations import ProjectOwnershipRelation  # noqa: F401
-from .property_certificate import (  # noqa: F401
-    CertificateType,
-    OwnerType,
-    PropertyCertificate,
-    PropertyCertificateAttachment,
-)
+from .property_certificate import CertificateType, PropertyCertificate  # noqa: F401
 from .rbac import (  # noqa: F401
     Permission,
     PermissionAuditLog,
@@ -161,12 +149,6 @@ __all__ = [
     "Notification",
     "NotificationType",
     "NotificationPriority",
-    # LLM Prompt models
-    "PromptTemplate",
-    "PromptVersion",
-    "ExtractionFeedback",
-    "PromptMetrics",
-    "PromptStatus",
     "PartyType",
     "PartyReviewStatus",
     "Party",
@@ -186,9 +168,7 @@ __all__ = [
     "ABACRolePolicy",
     # Property Certificate models
     "CertificateType",
-    "OwnerType",
     "PropertyCertificate",
-    "PropertyCertificateAttachment",
     # Task models
     "AsyncTask",
     "ExcelTaskConfig",

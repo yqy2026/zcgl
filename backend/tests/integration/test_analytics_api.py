@@ -56,6 +56,7 @@ def _seed_assets_for_analytics(
         [
             Asset(
                 asset_name=f"分析资产-正常-{suffix}",
+                asset_code=f"ANALYTICS-NORMAL-{suffix}",
                 address=f"分析地址-正常-{suffix}",
                 ownership_status="已确权",
                 property_nature=unique_nature_normal,
@@ -68,6 +69,7 @@ def _seed_assets_for_analytics(
             ),
             Asset(
                 asset_name=f"分析资产-删除-{suffix}",
+                asset_code=f"ANALYTICS-DELETED-{suffix}",
                 address=f"分析地址-删除-{suffix}",
                 ownership_status="待确权",
                 property_nature=unique_nature_deleted,
@@ -93,9 +95,20 @@ class TestAnalyticsAPIContracts:
         payload = response.json()
         assert payload.get("success") is False
 
+    def test_analytics_comprehensive_rejects_all_perspective(
+        self, authenticated_client
+    ):
+        """Customer metrics require an explicit owner or manager perspective."""
+        response = authenticated_client.get("/api/v1/analytics/comprehensive")
+
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
     def test_analytics_comprehensive_endpoint_exists(self, authenticated_client):
         """综合分析端点返回统一结构。"""
-        response = authenticated_client.get("/api/v1/analytics/comprehensive")
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?view_mode=owner"
+        )
 
         assert response.status_code == 200
         payload = response.json()
@@ -110,7 +123,7 @@ class TestAnalyticsAPIContracts:
     def test_analytics_comprehensive_with_params(self, authenticated_client):
         """综合分析端点参数化请求。"""
         response = authenticated_client.get(
-            "/api/v1/analytics/comprehensive?should_include_deleted=false&should_use_cache=false"
+            "/api/v1/analytics/comprehensive?should_include_deleted=false&should_use_cache=false&view_mode=owner",
         )
 
         assert response.status_code == 200
@@ -133,11 +146,11 @@ class TestAnalyticsAPIContracts:
 
         without_deleted = authenticated_client.get(
             "/api/v1/analytics/comprehensive"
-            "?should_include_deleted=false&should_use_cache=false"
+            "?should_include_deleted=false&should_use_cache=false&view_mode=owner",
         )
         with_deleted = authenticated_client.get(
             "/api/v1/analytics/comprehensive"
-            "?should_include_deleted=true&should_use_cache=false"
+            "?should_include_deleted=true&should_use_cache=false&view_mode=owner",
         )
 
         assert without_deleted.status_code == 200

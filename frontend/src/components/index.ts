@@ -5,7 +5,6 @@ export * as Auth from './Auth';
 export * as Asset from './Asset';
 export * as Charts from './Charts';
 export * as Common from './Common';
-export * as ContractPDFImport from './Contract/PDFImport';
 export * as Dashboard from './Dashboard';
 export * as Dictionary from './Dictionary';
 export * as ErrorHandling from './ErrorHandling';

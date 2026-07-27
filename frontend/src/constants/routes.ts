@@ -71,7 +71,6 @@ export const SYSTEM_ROUTES = {
   ROLES: '/system/roles',
   ORGANIZATIONS: '/system/organizations',
   DICTIONARIES: '/system/dictionaries',
-  TEMPLATES: '/system/templates',
   LOGS: '/system/logs',
   SETTINGS: '/system/settings',
   DATA_POLICIES: '/system/data-policies',
@@ -292,11 +291,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
         path: SYSTEM_ROUTES.DICTIONARIES,
         title: '字典管理',
         permissions: [{ resource: 'dictionary', action: 'read' }],
-      },
-      {
-        path: SYSTEM_ROUTES.TEMPLATES,
-        title: '模板管理',
-        permissions: [{ resource: 'llm_prompt', action: 'read' }],
       },
       {
         path: SYSTEM_ROUTES.LOGS,

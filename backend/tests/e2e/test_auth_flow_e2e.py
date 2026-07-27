@@ -569,21 +569,38 @@ def test_logout_revokes_other_active_sessions_for_same_user(
     )
     primary_logout_headers = {"X-CSRF-Token": primary_csrf} if primary_csrf else {}
 
-    with TestClient(client.app) as secondary_client:
-        secondary_login = secondary_client.post(
-            "/api/v1/auth/login",
-            json={"identifier": "multi_session_user", "password": "MultiSess123!"},
+    primary_cookie_header = "; ".join(
+        f"{name}={value}"
+        for name, value in (
+            ("auth_token", primary_login.cookies.get("auth_token")),
+            ("refresh_token", primary_login.cookies.get("refresh_token")),
+            ("csrf_token", primary_csrf),
         )
-        assert secondary_login.status_code == 200
+        if value is not None
+    )
 
-        secondary_me_before = secondary_client.get("/api/v1/auth/me")
-        assert secondary_me_before.status_code == 200
+    secondary_login = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "multi_session_user", "password": "MultiSess123!"},
+    )
+    assert secondary_login.status_code == 200
+    secondary_auth_token = secondary_login.cookies.get("auth_token")
+    assert secondary_auth_token is not None
 
-        logout_response = client.post(
-            "/api/v1/auth/logout",
-            headers=primary_logout_headers,
-        )
-        assert logout_response.status_code == 200
+    secondary_me_before = client.get("/api/v1/auth/me")
+    assert secondary_me_before.status_code == 200
 
-        secondary_me_after = secondary_client.get("/api/v1/auth/me")
-        assert secondary_me_after.status_code == 401
+    logout_response = client.post(
+        "/api/v1/auth/logout",
+        headers={
+            **primary_logout_headers,
+            "Cookie": primary_cookie_header,
+        },
+    )
+    assert logout_response.status_code == 200
+
+    secondary_me_after = client.get(
+        "/api/v1/auth/me",
+        headers={"Cookie": f"auth_token={secondary_auth_token}"},
+    )
+    assert secondary_me_after.status_code == 401

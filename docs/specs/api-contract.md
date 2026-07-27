@@ -82,8 +82,11 @@
 | 批量操作 | `/api/v1/assets/batch-*` | 支持批量相关操作 |
 | 导入资产 | `/api/v1/assets/import` | 支持模板校验和导入；**导入行必须有可解析到既有产权方 Party 的 owner，无主行直接拒绝**（对齐 ADR-0010 owner 内在必填、ADR-0017 编号生成前置，已实施）；导入 create 走与手动创建共享的 owner 必填校验，不直接裸调 crud；`asset_code` 系统生成、模板不含该列 |
 | 资产附件 | `/api/v1/assets/{asset_id}/attachments/*` | 管理资产附件 |
-| 资产产权证 | `/api/v1/assets/{asset_id}/property-certificates/*` | 资产详情内维护产权证：列表、详情、新增、编辑、附件、轻量在线预览、扫描件解析预填。字段契约、5 项保存硬门槛、附件规则（类型/大小/上传不自动解析/预览/下载独立权限/日志/疑似重复/资产与附件 ≥1 下限）与 `warning` 风险派生见 domain-model §4.20（PropertyCertificate）、§4.21（权利人关系）、§4.22（Attachment）。**证号重复（端点专属契约）**：当前资产上下文提交的证号已存在时返回既有产权证提示、ID、当前 `asset_ids`、摘要与「当前资产详情页追加关联」确认目标，不创建新记录、不自动追加资产或附件；本次扫描件作为既有产权证附件候选返回，须确认载荷显式确认才写入、用户可取消；若既有产权证 `attachment_ids` 为空则不得取消本次附件追加（否则校验错误、拒绝追加资产关联）。保存闸门须按 domain-model §4.20 的 5 项校验，不得用解析字段校验器 `validate_extracted_fields` 代替、不得漏卡资产/附件/权利人 |
-| 产权证扫描件解析 | `/api/v1/assets/{asset_id}/property-certificates/extraction-sessions/*` | 只能对当前产权证 `attachment_ids` 中的附件发起解析、不接收新文件（需解析新文件先经附件接口上传或追加）；重新解析新结果取代旧未确认候选、不覆盖已确认字段。解析会话语义、低置信逐项处理、候选不自动绑定/覆盖、字段来源与确认写入校验统一见 §4.10 与 domain-model §2/§4.23；确认写入前须满足 domain-model §4.20 的 5 项保存硬门槛；证号重复返回既有产权证冲突契约（同上「资产产权证」行）。`should_create_new_asset` / `create_new_asset` 类载荷不属于 MVP 正式确认契约 |
+| 资产产权证 | `/api/v1/assets/{asset_id}/property-certificates/*` | 资产详情内维护产权证：列表、详情、新增、编辑、附件、轻量在线预览、扫描件解析预填。字段契约、5 项保存硬门槛、附件规则（类型/大小/上传不自动解析/预览/下载独立权限/日志/疑似重复/资产与附件 ≥1 下限）与 `warning` 风险派生见 domain-model §4.20（PropertyCertificate）、§4.21（权利人关系）、§4.22（Attachment）。**证号重复（端点专属契约）**：当前资产上下文提交的证号已存在时返回 409、既有产权证 ID/`asset_ids`/摘要与「当前资产详情页追加关联」确认目标，不创建新记录、不自动追加资产或附件；解析会话中的暂存扫描件作为既有产权证附件候选，须在同一确认端点显式选择是否追加，取消追加即清理暂存文件；若既有产权证 `attachment_ids` 为空则不得取消追加。保存闸门须按 domain-model §4.20 的 5 项校验，不得用解析字段校验器 `validate_extracted_fields` 代替、不得漏卡资产/附件/权利人 |
+| 产权证附件列表/追加 | `GET/POST /api/v1/property-certificates/{certificate_id}/attachments` | 通用 `Attachment(owner_type=property_certificate)` 的域内入口；POST 接收一个或多个 PDF/JPEG/PNG，并按文件返回成功附件或可预期校验失败，不自动解析。列表要求 `property_certificate:read`，追加要求 `property_certificate:update` |
+| 产权证附件替换/删除 | `PUT/DELETE /api/v1/property-certificates/{certificate_id}/attachments/{attachment_id}` | 替换不留旧版本；删除最后一份拒绝。要求 `property_certificate:update` / `property_certificate:delete`，并校验产权证-附件完整 owner 链 |
+| 产权证附件预览/下载 | `GET /api/v1/property-certificates/{certificate_id}/attachments/{attachment_id}/preview`、`GET /api/v1/property-certificates/{certificate_id}/attachments/{attachment_id}/download` | 预览要求 `property_certificate:read` 且不单独记日志；下载使用独立 `property_certificate:export`，并记不含路径或 PII 的轻量日志 |
+| 产权证扫描件解析 | `POST /api/v1/extraction-sessions`（新建暂存上传）和 `POST /api/v1/extraction-sessions`（既有正式附件引用） | 新建临时上传一份 PDF/JPEG/PNG；既有模式只引用通用附件、不接收文件。确认、取消与逐字段人工动作见 §4.10；`should_create_new_asset` / `create_new_asset` 不属于 MVP |
 | 租赁摘要 | `GET /api/v1/assets/{asset_id}/lease-summary` | 按上游、下游、委托、直租展示租赁情况 |
 | 经营方历史 | `GET /api/v1/assets/{asset_id}/management-history` | 返回经营方变更历史 |
 | 项目历史 | `GET /api/v1/assets/{asset_id}/project-history` | 返回项目关系历史 |
@@ -118,7 +121,7 @@
 | 合同详情 | `GET /api/v1/contracts/{contract_id}` | 返回合同基表和类型明细；暴露只读 `lessor_name_snapshot` / `lessee_name_snapshot` 作为签署时主体名称快照，历史合同显示快照名而非跟随 Party 主档改名；可返回 `field_sources` 供编辑或补录来源上下文按需查看，业务详情主视图不要求默认展示；签订日期、付款周期或备注类关键经营字段缺失时，可返回轻量补录完整性提示，不返回任务、待办或审批对象，也不阻断保存 |
 | 更新合同补录信息 | `PATCH /api/v1/contracts/{contract_id}` | 更正合同补录字段；需记录操作痕迹，已生成经营台账按规则重算或作废（重算只动未收/未付且无收付流水的条目，已有收付流水条目不静默改写、留待人工处理；MVP 无红字冲销） |
 | 合同扫描件附件 | `GET/PUT/DELETE /api/v1/contracts/{contract_id}/attachments*` | 查询、整体替换和删除盖章扫描件引用；扫描件文档按 `storage_key` 单存，多条同委托协议合同可共享引用；替换/删除只联动同合同号 + 同委托方 + 同受托方 + 正常代运营受托合同，且需对全部受影响合同逐条通过 `contract:update` 授权；复用既有 `storage_key` 时若该文档已链接到本次受影响集合外的合同，替换必须失败暴露；删除受「每合同 ≥1 盖章扫描件」保护 |
-| 合同扫描件解析 | `/api/v1/contract-groups/{group_id}/contracts/extraction-sessions/*` | 上传合同扫描件后解析合同编号、主体、资产、期间、金额、租金或服务费条款，返回字段候选值、置信度、轻量来源证据、候选匹配、匹配提示和字段来源候选；必须人工确认后创建或更新合同补录；主体候选仅限已审核 Party，资产候选仅限既有资产，候选不得自动绑定；主体未匹配已审核 Party 时只返回提示，不直接创建 Party 或写入合同主体引用；资产未匹配既有资产时只返回提示，不直接创建或绑定新资产 |
+| 合同扫描件解析 | `/api/v1/extraction-sessions/*` | 上传合同扫描件后解析合同编号、主体、资产、期间、金额、租金或服务费条款，返回字段候选值、置信度、轻量来源证据、候选匹配、匹配提示和字段来源候选；必须人工确认后创建或更新合同补录；主体候选仅限已审核 Party，资产候选仅限既有资产，候选不得自动绑定；主体未匹配已审核 Party 时只返回提示，不直接创建 Party 或写入合同主体引用；资产未匹配既有资产时只返回提示，不直接创建或绑定新资产 |
 | 合同作废 | `POST /api/v1/contracts/{contract_id}/void` | 补录错误或业务作废时保留历史记录；相关台账按规则作废（已收/部分已收条目需先人工处理；MVP 无红字冲销） |
 | 审计日志 | `GET /api/v1/contracts/{contract_id}/audit-logs` | 返回合同补录、更正、作废和台账重算操作日志 |
 
@@ -197,12 +200,15 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 创建解析会话 | `POST /api/v1/extraction-sessions` | 上传合同扫描件，或对当前产权证已有附件发起解析（`target_type=contract\|property_certificate`）；产权证只能引用现有 `attachment_ids`、不接收新文件或临时文件；重新解析新结果取代旧未确认候选、不影响已确认字段；不提供草稿创建/恢复；返回临时会话 ID。会话语义见 domain-model §4.23 |
-| 查询解析状态 | `GET /api/v1/extraction-sessions/{session_id}` | 返回候选字段、置信度、轻量来源证据、候选匹配、低置信标记、差异提示与少量建议补全字段（合同限签订日期/付款周期/备注，产权证限证载面积/期限/限制）；不返回目标对象全量字段作为确认页表单、不提供一键或批量采纳；建议补全为质量提示不作硬校验；差异提示不得致自动覆盖。详见 domain-model §2/§4.23 |
-| 确认解析结果 | `POST /api/v1/extraction-sessions/{session_id}/confirm` | 提交确认/修正/手工补齐/留空载荷、`confirmed_field_keys` 与 `field_sources`；服务端按 domain-model §2「字段来源」「扫描件解析确认」校验（每写入字段须带来源否则阻断、低置信须处理、候选不自动采纳或覆盖、主体/权利人/资产引用须用户显式选择已审核 Party 或既有资产、字段契约外临时字段拒绝、不接收 `accept_all` 类批量采纳）并按目标对象保存硬门槛（合同 ≥1 盖章扫描件；产权证按 domain-model §4.20 的 5 项）写入；产权证证号重复返回冲突契约（见 §4.3 资产产权证），既有产权证无附件且取消本次附件追加时返回附件硬门槛校验错误；确认成功清理会话、不长期保留来源证据 |
-| 取消解析会话 | `POST /api/v1/extraction-sessions/{session_id}/cancel` | 取消未确认会话，不写入业务主数据，并清理临时会话；不保留草稿，也不提供稍后继续确认入口 |
-
-解析会话语义统一见 domain-model §2「字段来源」「扫描件解析确认」与 §4.23 ScanExtractionSession：临时不留档、无草稿 / 历史档案、失败 / 超时可重试或完全手工补录、低置信逐项处理、候选不自动绑定或覆盖、未匹配已审核 Party 或既有资产只提示不在确认动作中创建、不持久化解析工具 / 模型 / 置信度 / 页码 / 截图等元信息、字段来源枚举不拆子类型；产品级规则见 PRD §6.5。合同补录须保留 ≥1 盖章扫描件，产权证须 ≥1 附件且 ≥1 既有资产关联。
+| 创建合同解析会话 | `POST /api/v1/extraction-sessions` | 合同上传使用单件临时会话。只接受明确的合同上下文与一份 PDF；`revenue_mode=lease` 仅允许 `上游/下游`，`revenue_mode=agency` 仅允许 `委托/直租`，不兼容组合在暂存文件或启动解析前返回 `422`；不提供草稿创建或恢复。 |
+| 创建产权证解析会话 | `POST /api/v1/extraction-sessions` | 新建产权证绑定资产上下文并暂存恰好一份 PDF/JPEG/PNG；确认前不创建产权证、关系或正式附件。 |
+| 创建已有产权证附件复核 | `POST /api/v1/extraction-sessions` | 只接受明确的资产和该产权证所属通用附件引用，不接收文件；要求产权证读取权限，并完整校验资产-产权证-附件 owner 链。 |
+| 查询产权证解析状态 | `GET /api/v1/extraction-sessions/{session_id}` | 返回候选字段、置信度和轻量来源证据；不返回对象全量字段、不提供一键或批量采纳。 |
+| 确认产权证新建或冲突关联 | `POST /api/v1/extraction-sessions/{session_id}/confirm` | 只提交五类逐字段人工动作和显式选择的已审核 Party；新建满足五项硬门槛后，以可补偿文件晋升和数据库事务创建产权证、关系及通用附件。证号冲突返回 409 并保留会话，只允许显式关联已有产权证及选择是否追加暂存附件。要求创建权限。 |
+| 确认已有产权证附件复核 | `POST /api/v1/extraction-sessions/{session_id}/confirm` | 只提交逐字段人工动作，不创建 Party、Asset、产权证、关系或附件；会话必须绑定同一产权证和既有正式附件，要求读取权限。 |
+| 取消产权证解析会话 | `POST /api/v1/extraction-sessions/{session_id}/cancel` | 取消新建会话会清理暂存文件；已有正式附件复核只删除临时会话，不删除正式附件。 |
+| Query extraction capabilities | `GET /api/v1/document-extraction/capabilities` | Returns target types, input methods, and public limits without provider or engine details: contract PDFs are at most 50 MiB and 50 pages; optional DeepSeek text enrichment uses consecutive batches of at most 20 pages; property-certificate PDFs remain at most 20 pages. |
+解析会话语义统一见 domain-model §2「字段来源」「扫描件解析确认」与 §4.23 ScanExtractionSession：临时不留档、无草稿 / 历史档案、失败 / 超时可重新创建会话或完全手工补录、低置信逐项处理、候选不自动绑定或覆盖、未匹配已审核 Party 或既有资产只提示不在确认动作中创建、不持久化解析工具 / 模型 / 置信度 / 页码 / 截图等元信息、字段来源枚举不拆子类型；产品级规则见 PRD §6.5。合同补录须保留 ≥1 盖章扫描件；新建产权证的暂存文件只在确认成功后晋升为通用附件，正式产权证须 ≥1 附件且 ≥1 既有资产关联。
 
 ### 4.11 审批（MVP 已删除）
 

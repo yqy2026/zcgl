@@ -354,55 +354,6 @@ class PermissionWhitelist(ModelFieldWhitelist):
     blocked_fields: ClassVar[set[str]] = set()
 
 
-# PromptTemplate Whitelist
-# ============================================================================
-
-
-class PromptTemplateWhitelist(ModelFieldWhitelist):
-    """Whitelist for PromptTemplate model."""
-
-    filter_fields: ClassVar[set[str]] = {
-        "id",
-        "name",
-        "doc_type",
-        "provider",
-        "status",
-        "version",
-        "created_by",
-        "current_version_id",
-        "parent_id",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    search_fields: ClassVar[set[str]] = {
-        "name",
-        "description",
-    }
-
-    sort_fields: ClassVar[set[str]] = {
-        "name",
-        "version",
-        "avg_accuracy",
-        "avg_confidence",
-        "total_usage",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    blocked_fields: ClassVar[set[str]] = {
-        "system_prompt",
-        "user_prompt_template",
-        "few_shot_examples",
-        "tags",
-    }
-
-
-# ============================================================================
-# Project Whitelist
-# ============================================================================
-
-
 class ProjectWhitelist(ModelFieldWhitelist):
     """Whitelist for Project model."""
 
@@ -478,7 +429,6 @@ class PropertyCertificateWhitelist(ModelFieldWhitelist):
         "id",
         "certificate_number",
         "certificate_type",
-        "extraction_source",
         "registration_date",
         "property_type",
         "land_use_type",
@@ -498,7 +448,6 @@ class PropertyCertificateWhitelist(ModelFieldWhitelist):
 
     sort_fields: ClassVar[set[str]] = {
         "certificate_number",
-        "extraction_confidence",
         "registration_date",
         DateTimeFields.CREATED_AT,
         DateTimeFields.UPDATED_AT,
@@ -775,7 +724,6 @@ def _ensure_whitelists_registered() -> None:
     try:
         from ..models.asset import Asset
         from ..models.contract_group import Contract
-        from ..models.llm_prompt import PromptTemplate
         from ..models.ownership import Ownership
         from ..models.project import Project
         from ..models.property_certificate import PropertyCertificate
@@ -797,7 +745,6 @@ def _ensure_whitelists_registered() -> None:
             (SystemDictionary, SystemDictionaryWhitelist),
             (AssetCustomField, AssetCustomFieldWhitelist),
             (Permission, PermissionWhitelist),
-            (PromptTemplate, PromptTemplateWhitelist),
             (Project, ProjectWhitelist),
             (Ownership, OwnershipWhitelist),
             (PropertyCertificate, PropertyCertificateWhitelist),

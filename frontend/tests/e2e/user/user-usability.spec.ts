@@ -112,7 +112,7 @@ test.describe('@user-usable 用户可用性冒烟', () => {
 
     await page.goto('/contract-groups/import');
     await expect(page).toHaveURL(/\/contract-groups\/import$/);
-    await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contract document review' })).toBeVisible();
 
     await page.goto('/project');
     await expect(page).toHaveURL(/\/project$/);
@@ -120,7 +120,6 @@ test.describe('@user-usable 用户可用性冒烟', () => {
     await expect(createProjectButton).toBeVisible();
     await createProjectButton.click();
     await expect(page.getByRole('dialog', { name: /新建项目|编辑项目/i })).toBeVisible();
-
   });
 });
 

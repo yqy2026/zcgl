@@ -120,17 +120,17 @@ const OptimizedAssetImport: React.FC = () => {
     fileList,
     beforeUpload: file => {
       const isExcel =
-        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-        file.type === 'application/vnd.ms-excel';
+        file.name.toLowerCase().endsWith('.xlsx') &&
+        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
       if (!isExcel) {
-        MessageManager.error('只能上传Excel文件(.xlsx, .xls)');
+        MessageManager.error('Only XLSX files are supported');
         return false;
       }
 
-      const isLt50M = file.size / 1024 / 1024 < 50;
-      if (!isLt50M) {
-        MessageManager.error('文件大小不能超过50MB');
+      const isLt100M = file.size / 1024 / 1024 < 100;
+      if (!isLt100M) {
+        MessageManager.error('文件大小不能超过100MB');
         return false;
       }
 
@@ -373,7 +373,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <p>• 支持Excel文件批量导入资产数据</p>
                   <p>• 智能数据验证和错误处理</p>
                   <p>• 实时导入进度反馈</p>
-                  <p>• 支持大文件导入 (最大50MB)</p>
+                  <p>• 支持大文件导入 (最大100MB)</p>
                   {IMPORT_INSTRUCTIONS.map((instruction, index) => (
                     <p key={instruction}>
                       {index + 1}. {instruction}
@@ -413,7 +413,7 @@ const OptimizedAssetImport: React.FC = () => {
                       </p>
                       <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
                       <p className="ant-upload-hint">
-                        支持单个文件上传，仅支持.xlsx和.xls格式，最大50MB
+                        支持单个文件上传，仅支持.xlsx格式，最大100MB
                       </p>
                     </Upload.Dragger>
                   </Space>

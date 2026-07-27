@@ -300,11 +300,11 @@ describe('AssetImport - 渲染与交互测试', () => {
       await renderAssetImport();
       const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
 
-      const invalidFile = { type: 'text/plain', size: 1024 } as File;
+      const invalidFile = { name: 'invalid.txt', type: 'text/plain', size: 1024 } as File;
       act(() => {
         expect(draggerProps.beforeUpload?.(invalidFile)).toBe(false);
       });
-      expect(messageErrorMock).toHaveBeenCalledWith('只能上传Excel文件(.xlsx, .xls)');
+      expect(messageErrorMock).toHaveBeenCalledWith('Only XLSX files are supported');
       expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '0');
       expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
     } finally {

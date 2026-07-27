@@ -4,8 +4,6 @@
  */
 
 import {
-  AUTH_API,
-  PDF_API,
   SYSTEM_API,
   ASSET_API,
   STATISTICS_API,
@@ -35,47 +33,6 @@ export interface ApiPathTestResult {
 // API路径测试套件
 export class ApiPathTester {
   private results: ApiPathTestResult[] = [];
-
-  /**
-   * 测试API路径是否符合预期模式
-   */
-  private testPath(name: string, path: string, expectedPattern: RegExp): boolean {
-    const result = expectedPattern.test(path);
-    this.results.push({
-      name,
-      path,
-      status: result ? 'pass' : 'fail',
-      expectedPattern,
-      actualValue: path,
-      error: result ? undefined : `Path "${path}" does not match expected pattern`,
-    });
-    return result;
-  }
-
-  /**
-   * 测试所有认证相关API路径
-   */
-  testAuthPaths(): void {
-    testLogger.log('🔐 Testing Authentication API paths...');
-
-    // 登录路径应该以 /auth 开头
-    this.testPath('LOGIN', AUTH_API.LOGIN, /^\/auth\/login$/);
-    this.testPath('LOGOUT', AUTH_API.LOGOUT, /^\/auth\/logout$/);
-    this.testPath('USERS', AUTH_API.USERS, /^\/auth\/users$/);
-    this.testPath('PROFILE', AUTH_API.PROFILE, /^\/auth\/me$/);
-  }
-
-  /**
-   * 测试PDF相关API路径
-   */
-  testPdfPaths(): void {
-    testLogger.log('📄 Testing PDF API paths...');
-
-    // PDF路径应该以 /pdf-import 开头
-    this.testPath('PDF_INFO', PDF_API.INFO, /^\/pdf-import\/info$/);
-    this.testPath('PDF_SESSIONS', PDF_API.SESSIONS, /^\/pdf-import\/sessions$/);
-    this.testPath('PDF_UPLOAD', PDF_API.UPLOAD, /^\/pdf-import\/upload$/);
-  }
 
   /**
    * 测试系统管理API路径
@@ -151,7 +108,6 @@ export class ApiPathTester {
     this.results = []; // 重置结果
 
     this.testAuthPaths();
-    this.testPdfPaths();
     this.testSystemPaths();
     this.testAssetPaths();
     this.testStatisticsPaths();

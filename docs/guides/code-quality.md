@@ -106,7 +106,7 @@ class AssetManager:
     """资产管理器"""
     pass
 
-class PDFImportService:
+class ExtractionSessionService:
     """PDF导入服务"""
     pass
 

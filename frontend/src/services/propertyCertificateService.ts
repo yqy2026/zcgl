@@ -8,47 +8,9 @@ import type {
   PropertyCertificate,
   PropertyCertificateCreate,
   PropertyCertificateUpdate,
-  CertificateExtractionResult,
-  CertificateImportConfirm,
 } from '@/types/propertyCertificate';
 
 export const propertyCertificateService = {
-  /**
-   * Upload and extract certificate from file
-   */
-  async uploadCertificate(file: File): Promise<CertificateExtractionResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const result = await apiClient.post<CertificateExtractionResult>(
-      '/property-certificates/upload',
-      formData,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
-    );
-    if (result.data == null) {
-      throw new Error('Failed to upload certificate');
-    }
-    return result.data;
-  },
-
-  /**
-   * Confirm import and create certificate
-   */
-  async confirmImport(
-    confirmData: CertificateImportConfirm
-  ): Promise<{ certificate_id: string; status: string }> {
-    const result = await apiClient.post<{ certificate_id: string; status: string }>(
-      '/property-certificates/confirm-import',
-      confirmData
-    );
-    if (result.data == null) {
-      throw new Error('Failed to confirm import');
-    }
-    return result.data;
-  },
-
   /**
    * List certificates
    */

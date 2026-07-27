@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import (
     BaseBusinessError,
-    BusinessValidationError,
     internal_error,
 )
 from ....database import get_async_db
@@ -45,7 +44,6 @@ from ....schemas.contract_group import (
     ServiceFeeLedgerResponse,
     ServiceFeeSourceReconcileRequest,
 )
-from ....security.file_validation import validate_upload_file
 from ....services.contract.ledger_compensation_service import (
     ledger_compensation_service,
 )
@@ -58,12 +56,6 @@ from ....services.party_scope import build_party_filter_from_scope_context
 
 router = APIRouter()
 
-PAYMENT_VOUCHER_MAX_SIZE = 20 * 1024 * 1024
-PAYMENT_VOUCHER_ALLOWED_MIME_TYPES = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-]
 
 LedgerPaymentStatus = Literal["unpaid", "paid", "partial", "voided"]
 LedgerViewFilter = Literal["terminal_collection", "operator_income", "operator_cost"]
@@ -341,22 +333,10 @@ async def upload_payment_flow_voucher(
 ) -> PaymentVoucherAttachmentResponse:
     _ = _authz
     try:
-        await validate_upload_file(
-            file,
-            allowed_types=PAYMENT_VOUCHER_ALLOWED_MIME_TYPES,
-            max_size=PAYMENT_VOUCHER_MAX_SIZE,
-        )
-        content = await file.read(PAYMENT_VOUCHER_MAX_SIZE + 1)
-        if len(content) > PAYMENT_VOUCHER_MAX_SIZE:
-            raise BusinessValidationError(
-                "payment flow voucher exceeds the 20MB size limit"
-            )
         result = await payment_voucher_service.upload_voucher(
             db,
             flow_id=flow_id,
-            file_name=file.filename or "",
-            content_type=file.content_type,
-            content=content,
+            file=file,
             user_id=str(current_user.id),
             party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )

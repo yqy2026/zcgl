@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Space, Tag, Input, Card, Typography } from 'antd';
+import { Button, Space, Tag, Input, Card } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { MessageManager } from '@/utils/messageManager';
@@ -31,21 +31,6 @@ const CERTIFICATE_TYPE_META: Record<CertificateType, TypeMeta> = {
   house_ownership: { label: 'House ownership', tone: 'success' },
   land_use: { label: 'Land use', tone: 'warning' },
   other: { label: 'Other', tone: 'error' },
-};
-
-const CONFIDENCE_THRESHOLD = {
-  high: 0.8,
-  medium: 0.5,
-};
-
-const getConfidenceMeta = (confidence: number): { tone: Tone; label: string } => {
-  if (confidence > CONFIDENCE_THRESHOLD.high) {
-    return { tone: 'success', label: 'High' };
-  }
-  if (confidence > CONFIDENCE_THRESHOLD.medium) {
-    return { tone: 'warning', label: 'Medium' };
-  }
-  return { tone: 'error', label: 'Low' };
 };
 
 export const PropertyCertificateList: React.FC = () => {
@@ -97,7 +82,6 @@ export const PropertyCertificateList: React.FC = () => {
   }, [certificateSource, loadList]);
 
   const loading = useMemo(() => isFetching || listLoading, [isFetching, listLoading]);
-  const { Text } = Typography;
   const toneClassMap: Record<Tone, string> = {
     primary: styles.tonePrimary,
     success: styles.toneSuccess,
@@ -138,27 +122,6 @@ export const PropertyCertificateList: React.FC = () => {
       dataIndex: 'building_area',
       key: 'building_area',
       render: (area: string | null) => (area != null ? `${area} sqm` : '-'),
-    },
-    {
-      title: 'Confidence',
-      dataIndex: 'extraction_confidence',
-      key: 'extraction_confidence',
-      render: (confidence: number | null) => {
-        if (confidence == null) {
-          return '-';
-        }
-        const confidenceMeta = getConfidenceMeta(confidence);
-        return (
-          <Space size={6} className={styles.inlineStatus} wrap>
-            <Tag className={[styles.statusTag, toneClassMap[confidenceMeta.tone]].join(' ')}>
-              {(confidence * 100).toFixed(0)}%
-            </Tag>
-            <Text type="secondary" className={styles.statusAssistText}>
-              {confidenceMeta.label}
-            </Text>
-          </Space>
-        );
-      },
     },
     {
       title: 'Created at',

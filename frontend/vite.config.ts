@@ -74,7 +74,8 @@ export default defineConfig(({ command: _command, mode }) => {
           changeOrigin: true,
           secure: false,
           ws: true,
-          timeout: 120000,
+          timeout: 300000,
+          proxyTimeout: 300000,
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
               console.log('proxy error', err);

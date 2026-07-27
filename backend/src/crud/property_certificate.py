@@ -1,10 +1,10 @@
-"""Property certificate CRUD operations."""
+"""Property certificate persistence with Party and Asset relations only."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import delete, false, select
+from sqlalchemy import false, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
@@ -12,12 +12,8 @@ from ..models.certificate_party_relation import (
     CertificatePartyRelation,
     CertificateRelationRole,
 )
-from ..models.property_certificate import (
-    PropertyCertificate,
-    PropertyCertificateAttachment,
-)
+from ..models.property_certificate import PropertyCertificate
 from ..schemas.property_certificate import (
-    PropertyCertificateAttachmentInput,
     PropertyCertificateCreate,
     PropertyCertificateUpdate,
 )
@@ -28,8 +24,6 @@ from .query_builder import PartyFilter
 class CRUDPropertyCertificate(
     CRUDBase[PropertyCertificate, PropertyCertificateCreate, PropertyCertificateUpdate]
 ):
-    """产权证 CRUD。"""
-
     async def get(
         self,
         db: AsyncSession,
@@ -37,32 +31,25 @@ class CRUDPropertyCertificate(
         use_cache: bool = True,
         party_filter: PartyFilter | None = None,
     ) -> PropertyCertificate | None:
-        if party_filter is not None:
-            party_ids = [
-                str(party_id).strip()
-                for party_id in party_filter.party_ids
-                if str(party_id).strip() != ""
-            ]
-            stmt = select(PropertyCertificate).where(PropertyCertificate.id == id)
-            if len(party_ids) == 0:
-                stmt = stmt.where(false())
-                return (await db.execute(stmt)).scalars().first()
-            stmt = (
-                stmt.join(
-                    CertificatePartyRelation,
-                    CertificatePartyRelation.certificate_id == PropertyCertificate.id,
-                )
-                .where(CertificatePartyRelation.party_id.in_(party_ids))
-                .distinct()
+        if party_filter is None:
+            return await super().get(
+                db=db, id=id, use_cache=use_cache, party_filter=party_filter
             )
-            return (await db.execute(stmt)).scalars().first()
-
-        return await super().get(
-            db=db,
-            id=id,
-            use_cache=use_cache,
-            party_filter=party_filter,
+        party_ids = [
+            str(value).strip() for value in party_filter.party_ids if str(value).strip()
+        ]
+        stmt = select(PropertyCertificate).where(PropertyCertificate.id == id)
+        if not party_ids:
+            return (await db.execute(stmt.where(false()))).scalars().first()
+        stmt = (
+            stmt.join(
+                CertificatePartyRelation,
+                CertificatePartyRelation.certificate_id == PropertyCertificate.id,
+            )
+            .where(CertificatePartyRelation.party_id.in_(party_ids))
+            .distinct()
         )
+        return (await db.execute(stmt)).scalars().first()
 
     async def get_multi(
         self,
@@ -74,36 +61,36 @@ class CRUDPropertyCertificate(
         party_filter: PartyFilter | None = None,
         **kwargs: Any,
     ) -> list[PropertyCertificate]:
-        if party_filter is not None:
-            party_ids = [
-                str(party_id).strip()
-                for party_id in party_filter.party_ids
-                if str(party_id).strip() != ""
-            ]
-            stmt = select(PropertyCertificate)
-            if len(party_ids) == 0:
-                stmt = stmt.where(false()).offset(skip).limit(limit)
-                return list((await db.execute(stmt)).scalars().all())
-            stmt = (
-                stmt.join(
-                    CertificatePartyRelation,
-                    CertificatePartyRelation.certificate_id == PropertyCertificate.id,
-                )
-                .where(CertificatePartyRelation.party_id.in_(party_ids))
-                .distinct()
-                .offset(skip)
-                .limit(limit)
+        if party_filter is None:
+            return await super().get_multi(
+                db,
+                skip=skip,
+                limit=limit,
+                use_cache=use_cache,
+                party_filter=party_filter,
+                **kwargs,
             )
-            return list((await db.execute(stmt)).scalars().all())
-
-        return await super().get_multi(
-            db=db,
-            skip=skip,
-            limit=limit,
-            use_cache=use_cache,
-            party_filter=party_filter,
-            **kwargs,
+        party_ids = [
+            str(value).strip() for value in party_filter.party_ids if str(value).strip()
+        ]
+        stmt = select(PropertyCertificate)
+        if not party_ids:
+            return list(
+                (await db.execute(stmt.where(false()).offset(skip).limit(limit)))
+                .scalars()
+                .all()
+            )
+        stmt = (
+            stmt.join(
+                CertificatePartyRelation,
+                CertificatePartyRelation.certificate_id == PropertyCertificate.id,
+            )
+            .where(CertificatePartyRelation.party_id.in_(party_ids))
+            .distinct()
+            .offset(skip)
+            .limit(limit)
         )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def get_by_certificate_number_async(
         self, db: AsyncSession, certificate_number: str
@@ -120,41 +107,23 @@ class CRUDPropertyCertificate(
         obj_in: PropertyCertificateCreate,
         owner_ids: list[str] | None = None,
         asset_ids: list[str] | None = None,
-        attachments: list[PropertyCertificateAttachmentInput] | None = None,
         created_by: str | None = None,
-        organization_id: str | None = None,  # DEPRECATED alias
+        organization_id: str | None = None,
         commit: bool = True,
     ) -> PropertyCertificate:
-        payload = obj_in.model_dump()
-        payload.pop("organization_id", None)
-        payload.pop("asset_ids", None)
-        payload.pop("holder_party_ids", None)
-        payload.pop("attachments", None)
-        if created_by is not None and created_by.strip() != "":
+        payload = obj_in.model_dump(exclude={"asset_ids", "holder_party_ids"})
+        if created_by:
             payload["created_by"] = created_by
-        if organization_id is not None and organization_id.strip() != "":
-            pass
-
         db_obj = PropertyCertificate(**payload)
         db.add(db_obj)
         await db.flush()
-
         self._add_owner_relations(db, certificate_id=db_obj.id, owner_ids=owner_ids)
-
         if asset_ids:
-            asset_result = await db.execute(
-                select(Asset).where(Asset.id.in_(asset_ids))
+            db_obj.assets = list(
+                (await db.execute(select(Asset).where(Asset.id.in_(asset_ids))))
+                .scalars()
+                .all()
             )
-            assets: list[Asset] = list(asset_result.scalars().all())
-            if assets:
-                db_obj.assets.extend(assets)
-
-        self._add_attachments(
-            db,
-            certificate_id=db_obj.id,
-            attachments=attachments,
-        )
-
         if commit:
             await db.commit()
         else:
@@ -170,19 +139,16 @@ class CRUDPropertyCertificate(
         obj_in: PropertyCertificateUpdate,
         owner_ids: list[str] | None = None,
         asset_ids: list[str] | None = None,
-        attachments: list[PropertyCertificateAttachmentInput] | None = None,
         commit: bool = True,
     ) -> PropertyCertificate:
-        payload = obj_in.model_dump(exclude_unset=True)
-        payload.pop("organization_id", None)
-        payload.pop("asset_ids", None)
-        payload.pop("holder_party_ids", None)
-        payload.pop("attachments", None)
-
+        payload = obj_in.model_dump(
+            exclude_unset=True, exclude={"asset_ids", "holder_party_ids"}
+        )
         for field_name, value in payload.items():
             setattr(db_obj, field_name, value)
-
         if owner_ids is not None:
+            from sqlalchemy import delete
+
             await db.execute(
                 delete(CertificatePartyRelation).where(
                     CertificatePartyRelation.certificate_id == db_obj.id,
@@ -190,30 +156,13 @@ class CRUDPropertyCertificate(
                     == CertificateRelationRole.OWNER,
                 )
             )
-            self._add_owner_relations(
-                db,
-                certificate_id=db_obj.id,
-                owner_ids=owner_ids,
-            )
-
+            self._add_owner_relations(db, certificate_id=db_obj.id, owner_ids=owner_ids)
         if asset_ids is not None:
-            asset_result = await db.execute(
-                select(Asset).where(Asset.id.in_(asset_ids))
+            db_obj.assets = list(
+                (await db.execute(select(Asset).where(Asset.id.in_(asset_ids))))
+                .scalars()
+                .all()
             )
-            db_obj.assets = list(asset_result.scalars().all())
-
-        if attachments is not None:
-            await db.execute(
-                delete(PropertyCertificateAttachment).where(
-                    PropertyCertificateAttachment.certificate_id == db_obj.id
-                )
-            )
-            self._add_attachments(
-                db,
-                certificate_id=db_obj.id,
-                attachments=attachments,
-            )
-
         db.add(db_obj)
         if commit:
             await db.commit()
@@ -224,37 +173,17 @@ class CRUDPropertyCertificate(
 
     @staticmethod
     def _add_owner_relations(
-        db: AsyncSession,
-        *,
-        certificate_id: str,
-        owner_ids: list[str] | None,
+        db: AsyncSession, *, certificate_id: str, owner_ids: list[str] | None
     ) -> None:
-        if not owner_ids:
-            return
-        normalized_owner_ids = [
-            owner_id.strip() for owner_id in owner_ids if owner_id.strip() != ""
-        ]
-        for index, owner_id in enumerate(normalized_owner_ids):
-            relation = CertificatePartyRelation()
-            relation.certificate_id = certificate_id
-            relation.party_id = owner_id
-            relation.relation_role = CertificateRelationRole.OWNER
-            relation.is_primary = index == 0
-            db.add(relation)
-
-    @staticmethod
-    def _add_attachments(
-        db: AsyncSession,
-        *,
-        certificate_id: str,
-        attachments: list[PropertyCertificateAttachmentInput] | None,
-    ) -> None:
-        if not attachments:
-            return
-        for attachment in attachments:
-            payload = attachment.model_dump()
-            payload["certificate_id"] = certificate_id
-            db.add(PropertyCertificateAttachment(**payload))
+        for index, owner_id in enumerate(owner_ids or []):
+            normalized = owner_id.strip()
+            if normalized:
+                relation = CertificatePartyRelation()
+                relation.certificate_id = certificate_id
+                relation.party_id = normalized
+                relation.relation_role = CertificateRelationRole.OWNER
+                relation.is_primary = index == 0
+                db.add(relation)
 
 
 property_certificate_crud = CRUDPropertyCertificate(PropertyCertificate)

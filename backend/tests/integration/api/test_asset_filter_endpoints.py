@@ -45,6 +45,7 @@ class TestAssetFilterEndpoints:
             [
                 Asset(
                     asset_name=f"筛选资产-A-{suffix}",
+                    asset_code=f"FILTER-A-{suffix}",
                     address="集成测试地址-A",
                     ownership_status=f"已确权-{suffix}",
                     property_nature=f"经营类-{suffix}",
@@ -55,6 +56,7 @@ class TestAssetFilterEndpoints:
                 ),
                 Asset(
                     asset_name=f"筛选资产-B-{suffix}",
+                    asset_code=f"FILTER-B-{suffix}",
                     address="集成测试地址-B",
                     ownership_status=f"待确权-{suffix}",
                     property_nature=f"非经营类-{suffix}",
@@ -65,6 +67,7 @@ class TestAssetFilterEndpoints:
                 ),
                 Asset(
                     asset_name=f"筛选资产-C-{suffix}",
+                    asset_code=f"FILTER-C-{suffix}",
                     address="集成测试地址-C",
                     ownership_status=f"已确权-{suffix}",
                     property_nature=f"经营类-{suffix}",
@@ -75,6 +78,7 @@ class TestAssetFilterEndpoints:
                 ),
                 Asset(
                     asset_name=f"筛选资产-D-{suffix}",
+                    asset_code=f"FILTER-D-{suffix}",
                     address="集成测试地址-D",
                     ownership_status=f"已确权-{suffix}",
                     property_nature=f"经营类-{suffix}",
@@ -207,9 +211,7 @@ class TestAssetFilterEndpoints:
 
         assert response.status_code == 401
 
-    def test_all_filters_consistent_structure(
-        self, authenticated_client: TestClient
-    ):
+    def test_all_filters_consistent_structure(self, authenticated_client: TestClient):
         """Test that all filter endpoints have consistent response structure"""
         endpoints = [
             "/api/v1/assets/ownership-entities",
@@ -244,7 +246,9 @@ class TestAssetFilterEndpoints:
         business_categories = authenticated_client.get(
             "/api/v1/assets/business-categories"
         ).json()
-        usage_statuses = authenticated_client.get("/api/v1/assets/usage-statuses").json()
+        usage_statuses = authenticated_client.get(
+            "/api/v1/assets/usage-statuses"
+        ).json()
         property_natures = authenticated_client.get(
             "/api/v1/assets/property-natures"
         ).json()

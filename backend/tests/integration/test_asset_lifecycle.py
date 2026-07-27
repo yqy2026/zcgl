@@ -13,6 +13,7 @@ from src.crud.asset_support import SensitiveDataHandler
 from src.models.asset import Asset
 from src.models.enum_field import EnumFieldType, EnumFieldValue
 from src.models.ownership import Ownership
+from src.models.user_party_binding import RelationType, UserPartyBinding
 from src.services.organization_permission_service import (
     invalidate_user_accessible_organizations_cache,
 )
@@ -122,7 +123,7 @@ class TestAssetLifecycle:
         db_session.commit()
 
     @staticmethod
-    def _create_ownership(db_session, suffix: str) -> Ownership:
+    def _create_ownership(db_session, suffix: str, *, user_id: str) -> Ownership:
         ownership = Ownership(
             name=f"生命周期权属方-{suffix}",
             code=f"AL-{suffix}",
@@ -130,6 +131,15 @@ class TestAssetLifecycle:
             data_status="正常",
         )
         db_session.add(ownership)
+        db_session.flush()
+        db_session.add(
+            UserPartyBinding(
+                user_id=user_id,
+                party_id=ownership.id,
+                relation_type=RelationType.OWNER,
+                is_primary=False,
+            )
+        )
         db_session.commit()
         db_session.refresh(ownership)
         return ownership
@@ -176,7 +186,9 @@ class TestAssetLifecycle:
     ) -> None:
         suffix = uuid4().hex[:8]
         self._ensure_asset_enum_data(db_session)
-        ownership = self._create_ownership(db_session, suffix)
+        ownership = self._create_ownership(
+            db_session, suffix, user_id=str(test_data["admin"].id)
+        )
         organization_id = str(test_data["organization"].id)
         payload = self._create_asset_payload(
             suffix=f"{suffix}addr-only",
@@ -207,7 +219,9 @@ class TestAssetLifecycle:
     ) -> None:
         suffix = uuid4().hex[:8]
         self._ensure_asset_enum_data(db_session)
-        ownership = self._create_ownership(db_session, suffix)
+        ownership = self._create_ownership(
+            db_session, suffix, user_id=str(test_data["admin"].id)
+        )
         organization_id = str(test_data["organization"].id)
         payload = self._create_asset_payload(
             suffix=f"{suffix}blank-address",
@@ -247,7 +261,9 @@ class TestAssetLifecycle:
     ) -> None:
         suffix = uuid4().hex[:8]
         self._ensure_asset_enum_data(db_session)
-        ownership = self._create_ownership(db_session, suffix)
+        ownership = self._create_ownership(
+            db_session, suffix, user_id=str(test_data["admin"].id)
+        )
         organization_id = str(test_data["organization"].id)
         detail = f"系统拼接地址明细-{suffix}"
         manual_address = f"伪造地址-{suffix}"
@@ -279,7 +295,7 @@ class TestAssetLifecycle:
         assert decrypted_created_address != manual_address
 
         detail_response = authenticated_client.get(f"/api/v1/assets/{created_id}")
-        assert detail_response.status_code == 200
+        assert detail_response.status_code == 200, detail_response.text
         detail_payload = detail_response.json()
         detail_address = detail_payload.get("address")
         assert isinstance(detail_address, str)
@@ -298,7 +314,9 @@ class TestAssetLifecycle:
     ) -> None:
         suffix = uuid4().hex[:8]
         self._ensure_asset_enum_data(db_session)
-        ownership = self._create_ownership(db_session, suffix)
+        ownership = self._create_ownership(
+            db_session, suffix, user_id=str(test_data["admin"].id)
+        )
         organization_id = str(test_data["organization"].id)
         payload = self._create_asset_payload(
             suffix=suffix,
@@ -318,7 +336,7 @@ class TestAssetLifecycle:
         assert created.get("asset_name") == payload["asset_name"]
 
         detail_response = authenticated_client.get(f"/api/v1/assets/{asset_id}")
-        assert detail_response.status_code == 200
+        assert detail_response.status_code == 200, detail_response.text
         detail = detail_response.json()
         assert detail.get("id") == asset_id
 
@@ -350,7 +368,9 @@ class TestAssetLifecycle:
     ) -> None:
         suffix = uuid4().hex[:8]
         self._ensure_asset_enum_data(db_session)
-        ownership = self._create_ownership(db_session, suffix)
+        ownership = self._create_ownership(
+            db_session, suffix, user_id=str(test_data["admin"].id)
+        )
         organization_id = str(test_data["organization"].id)
 
         payload_a = self._create_asset_payload(
@@ -424,7 +444,9 @@ class TestAssetLifecycle:
     ) -> None:
         suffix = uuid4().hex[:8]
         self._ensure_asset_enum_data(db_session)
-        ownership = self._create_ownership(db_session, suffix)
+        ownership = self._create_ownership(
+            db_session, suffix, user_id=str(test_data["admin"].id)
+        )
         organization_id = str(test_data["organization"].id)
         payload = self._create_asset_payload(
             suffix=suffix,

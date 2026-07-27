@@ -11,7 +11,6 @@ MODULE_PATHS = [
     "src/models/associations.py",
     "src/models/auth.py",
     "src/models/enum_field.py",
-    "src/models/llm_prompt.py",
     "src/models/notification.py",
     "src/models/ownership.py",
     "src/models/project.py",

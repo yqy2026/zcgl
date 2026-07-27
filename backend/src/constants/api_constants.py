@@ -26,7 +26,6 @@ from src.constants.api_paths import (
     HistoryPaths,
     OrganizationPaths,
     OwnershipPaths,
-    PDFImportPaths,
     ProjectPaths,
     RolePaths,
     StatisticsPaths,
@@ -182,7 +181,6 @@ __all__ = [
     # API Paths
     "BasePaths",
     "AssetPaths",
-    "PDFImportPaths",
     "AuthPaths",
     "UserPaths",
     "RolePaths",

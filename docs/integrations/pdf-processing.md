@@ -1,21 +1,19 @@
-# PDF 处理服务
+# Document Extraction
 
-## ✅ Status
-**当前状态**: Supplemental (2026-02-09)
+## Status
+Current implementation: RapidOCR and PyMuPDF produce local page text; DeepSeek is an optional text-only enrichment stage. Every extracted value is reviewed by a user before confirmation.
 
-> 说明：本页为 PDF 流程补充说明，不作为需求权威基线。  
-> 产品需求入口：`docs/prd.md`<br>
-> API 契约请参考：`docs/specs/api-contract.md`；实现证据请参考：`docs/traceability/requirements-trace.md`
+## API
+- Contract sessions: `/api/v1/extraction-sessions/contracts`
+- Property certificate sessions: `/api/v1/extraction-sessions/property-certificates`
+- Generic property certificate attachments: `/api/v1/property-certificates/{certificate_id}/attachments`
 
-## 接口入口
-- Base: `/api/v1/pdf-import`
+## Flow
+1. Stage one PDF or image.
+2. Create an extraction session and review the candidate fields.
+3. Correct fields or select an explicit conflict action.
+4. Confirm the session; the API either creates the approved record or links the approved existing record.
 
-## 典型流程
-1. 上传 PDF 文件
-2. 创建或关联处理会话
-3. 获取提取结果并确认导入
-
-## 相关代码
-- 路由入口: `backend/src/api/v1/documents/pdf_import.py`
-- 上传处理: `backend/src/api/v1/documents/pdf_upload.py`
-- 前端页面: `frontend/src/pages/Contract/ContractImportUpload.tsx`
+No legacy PDF import, batch-import, vision-provider, or Prompt-management endpoints remain.
+## Limits
+Contracts accept one PDF up to 50 MiB and 50 pages. The local page-text pipeline keeps page order and processes pages sequentially; optional DeepSeek enrichment sends text-only batches of up to 20 pages and returns one combined candidate set only when every batch validates. Property-certificate PDFs remain limited to 20 pages. All candidates still require manual review before confirmation.

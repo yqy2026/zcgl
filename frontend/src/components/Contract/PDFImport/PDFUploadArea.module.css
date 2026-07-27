@@ -1,5 +1,0 @@
-.uploadIcon {
-  --pdf-upload-icon-size: var(--spacing-xxxl);
-  color: var(--color-primary);
-  font-size: var(--pdf-upload-icon-size);
-}

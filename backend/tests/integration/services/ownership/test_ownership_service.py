@@ -50,7 +50,9 @@ class TestOwnershipCreation:
 
     async def test_create_ownership_success(self):
         ownership_data = OwnershipCreate(**self.factory.create_ownership_dict())
-        ownership = await self.service.create_ownership(self.async_db, obj_in=ownership_data)
+        ownership = await self.service.create_ownership(
+            self.async_db, obj_in=ownership_data
+        )
         assert ownership.id is not None
         assert ownership.name == "测试权属方A"
         assert ownership.code is not None
@@ -60,7 +62,9 @@ class TestOwnershipCreation:
         ownership_data = OwnershipCreate(
             **self.factory.create_ownership_dict(name="权属方B")
         )
-        ownership = await self.service.create_ownership(self.async_db, obj_in=ownership_data)
+        ownership = await self.service.create_ownership(
+            self.async_db, obj_in=ownership_data
+        )
         assert ownership.code is not None
         assert len(ownership.code) == 9
         assert ownership.code.startswith("OW")
@@ -159,7 +163,8 @@ class TestOwnershipStatusToggle:
 
     async def test_toggle_status_success(self):
         ownership = await self.service.create_ownership(
-            self.async_db, obj_in=OwnershipCreate(**self.factory.create_ownership_dict())
+            self.async_db,
+            obj_in=OwnershipCreate(**self.factory.create_ownership_dict()),
         )
         initial_status = ownership.is_active
         toggled = await self.service.toggle_status(self.async_db, id=ownership.id)
@@ -182,7 +187,8 @@ class TestOwnershipDeletion:
 
     async def test_delete_ownership_success(self):
         ownership = await self.service.create_ownership(
-            self.async_db, obj_in=OwnershipCreate(**self.factory.create_ownership_dict())
+            self.async_db,
+            obj_in=OwnershipCreate(**self.factory.create_ownership_dict()),
         )
         ownership_id = ownership.id
         deleted = await self.service.delete_ownership(self.async_db, id=ownership_id)
@@ -200,6 +206,7 @@ class TestOwnershipDeletion:
         self.db.add(
             Asset(
                 ownership_id=ownership.id,
+                asset_code=f"OWN-DEL-{ownership.id}",
                 asset_name="测试物业-ownership-delete-check",
                 address="测试地址",
                 ownership_status="已确权",

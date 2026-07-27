@@ -47,8 +47,8 @@ class TestDownloadTemplate:
 class TestExcelImportSync:
     """Tests for POST /excel/import endpoint"""
 
-    def test_import_excel_success(self, client, mock_excel_file):
-        """Test successful synchronous Excel import"""
+    def test_import_excel_rejects_invalid_xlsx_payload(self, client):
+        """Reject a file that only claims to be an XLSX document."""
         # Create a mock Excel file
         file_content = b"fake excel content"
         files = {
@@ -63,7 +63,7 @@ class TestExcelImportSync:
             "/api/v1/excel/import", files=files, data={"create_db": False}
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_import_excel_invalid_file_format(self, client):
         """Test import with invalid file format"""
@@ -250,7 +250,7 @@ class TestExcelErrorHandling:
 
         response = client.post("/api/v1/excel/import", files=files)
 
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_import_with_empty_file(self, client):
         """Test import with empty file"""

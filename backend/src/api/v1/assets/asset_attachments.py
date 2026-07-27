@@ -16,7 +16,9 @@ from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....services.asset.asset_service import AsyncAssetService
-from ....utils import file_security
+from ....services.asset.attachment_upload_service import (
+    asset_attachment_upload_service,
+)
 
 router = APIRouter()
 
@@ -39,15 +41,7 @@ def _get_asset_lookup() -> Any:
 
 def _resolve_attachment_path(asset_id: str, filename: str) -> Path:
     """Resolve a safe attachment path under the asset directory."""
-    base_dir = Path("uploads") / "attachments" / asset_id
-    safe_name = file_security.secure_filename(filename)
-    file_path = (base_dir / safe_name).resolve()
-    base_dir_resolved = base_dir.resolve()
-    try:
-        file_path.relative_to(base_dir_resolved)
-    except ValueError:
-        raise InvalidRequestError("非法文件路径")
-    return file_path
+    return asset_attachment_upload_service.resolve_path(asset_id, filename)
 
 
 @router.post(
@@ -74,56 +68,15 @@ async def upload_asset_attachments(
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
-        upload_dir = file_security.create_safe_upload_directory(
-            "uploads/attachments", asset_id
+        result = await asset_attachment_upload_service.upload_many(
+            asset_id=asset_id,
+            files=files,
         )
-        success: list[str] = []
-        failed: list[str] = []
-
-        for file in files:
-            if not file.filename:
-                failed.append("文件名不能为空")
-                continue
-
-            try:
-                content = await file.read()
-                file_size = len(content)
-                await file.seek(0)
-            except Exception:
-                content = b""
-                file_size = 0
-
-            validation = file_security.validate_upload_file(
-                file.filename,
-                file.content_type,
-                file_size,
-                allowed_extensions=[".pdf"],
-                max_size=10 * 1024 * 1024,
-            )
-
-            if not validation["valid"]:
-                errors = validation.get("errors") or []
-                failed.append("; ".join(errors) if errors else "文件验证失败")
-                continue
-
-            safe_filename = validation.get("safe_filename") or file.filename
-            file_path = upload_dir / safe_filename
-
-            try:
-                with open(file_path, "wb") as target:
-                    target.write(content)
-                success.append(safe_filename)
-            except Exception as e:
-                failed.append(str(e))
-
-        if success and failed:
-            message = f"成功上传 {len(success)} 个文件，失败 {len(failed)} 个文件"
-        elif success:
-            message = f"成功上传 {len(success)} 个文件"
-        else:
-            message = "上传失败"
-
-        return {"success": success, "failed": failed, "message": message}
+        return {
+            "success": result.success,
+            "failed": result.failed,
+            "message": result.message,
+        }
     except BaseBusinessError:
         raise
     except Exception as e:
@@ -154,7 +107,7 @@ async def get_asset_attachments(
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
-        base_dir = Path("uploads") / "attachments" / asset_id
+        base_dir = asset_attachment_upload_service.resolve_directory(asset_id)
         if not base_dir.exists():
             return []
 

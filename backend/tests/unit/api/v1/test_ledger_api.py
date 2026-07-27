@@ -336,9 +336,7 @@ def test_list_payment_flows_for_target_delegates_scope_to_service(client) -> Non
         )
 
     assert response.status_code == 200
-    assert response.json()[0]["voucher_attachments"][0]["file_name"] == (
-        "receipt.pdf"
-    )
+    assert response.json()[0]["voucher_attachments"][0]["file_name"] == ("receipt.pdf")
     mock_list.assert_awaited_once_with(
         ANY,
         target_type="contract_ledger_entry",
@@ -519,13 +517,13 @@ def test_upload_payment_flow_voucher_delegates_to_scoped_service(client) -> None
     assert response.status_code == 200
     assert response.json()["id"] == "attachment-001"
     assert mock_upload.await_args.kwargs["flow_id"] == "flow-001"
-    assert mock_upload.await_args.kwargs["content"] == b"pdf"
+    assert mock_upload.await_args.kwargs["file"].filename == "receipt.pdf"
     assert mock_upload.await_args.kwargs["user_id"] == "test_user_001"
 
 
 @pytest.mark.asyncio
-async def test_upload_payment_flow_voucher_validates_and_reads_with_hard_limit() -> None:
-    """The route must never materialize an unbounded upload in application memory."""
+async def test_upload_payment_flow_voucher_delegates_without_reading_file() -> None:
+    """Owner scope belongs in the service and must run before upload reads."""
     from src.api.v1.contracts.ledger import upload_payment_flow_voucher
 
     attachment = {
@@ -540,11 +538,6 @@ async def test_upload_payment_flow_voucher_validates_and_reads_with_hard_limit()
         read=AsyncMock(return_value=b"pdf"),
     )
     with (
-        patch(
-            "src.api.v1.contracts.ledger.validate_upload_file",
-            new=AsyncMock(return_value={"valid": True}),
-            create=True,
-        ) as mock_validate,
         patch(
             "src.api.v1.contracts.ledger.build_party_filter_from_scope_context",
             return_value=None,
@@ -564,13 +557,8 @@ async def test_upload_payment_flow_voucher_validates_and_reads_with_hard_limit()
         )
 
     assert result.id == "attachment-001"
-    mock_validate.assert_awaited_once_with(
-        file,
-        allowed_types=["application/pdf", "image/jpeg", "image/png"],
-        max_size=20 * 1024 * 1024,
-    )
-    file.read.assert_awaited_once_with(20 * 1024 * 1024 + 1)
-    assert mock_upload.await_args.kwargs["content"] == b"pdf"
+    file.read.assert_not_awaited()
+    assert mock_upload.await_args.kwargs["file"] is file
 
 
 def test_download_payment_flow_voucher_returns_audited_file(client, tmp_path) -> None:

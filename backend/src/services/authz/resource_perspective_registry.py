@@ -26,7 +26,6 @@ RESOURCE_PERSPECTIVE_REGISTRY: Final[ResourcePerspectiveMap] = {
     "excel_config": (),
     "history": (),
     "ledger": (),
-    "llm_prompt": (),
     "notification": (),
     "occupancy": (),
     "operation_log": (),
