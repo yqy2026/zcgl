@@ -20,12 +20,24 @@ class LlmSettings(BaseModel):
     WECOM_ENABLED: bool = Field(
         default=False, json_schema_extra={"env": "WECOM_ENABLED"}
     )
-    WECOM_CORP_ID: str | None = Field(default=None, json_schema_extra={"env": "WECOM_CORP_ID"})
-    WECOM_AGENT_ID: str | None = Field(default=None, json_schema_extra={"env": "WECOM_AGENT_ID"})
-    WECOM_SECRET: str | None = Field(default=None, json_schema_extra={"env": "WECOM_SECRET"})
-    WECOM_TEST_TOUSER: str | None = Field(default=None, json_schema_extra={"env": "WECOM_TEST_TOUSER"})
-    WECOM_WEBHOOK_URL: str | None = Field(default=None, json_schema_extra={"env": "WECOM_WEBHOOK_URL"})
-    WECOM_MENTION_ALL: bool = Field(default=False, json_schema_extra={"env": "WECOM_MENTION_ALL"})
+    WECOM_CORP_ID: str | None = Field(
+        default=None, json_schema_extra={"env": "WECOM_CORP_ID"}
+    )
+    WECOM_AGENT_ID: str | None = Field(
+        default=None, json_schema_extra={"env": "WECOM_AGENT_ID"}
+    )
+    WECOM_SECRET: str | None = Field(
+        default=None, json_schema_extra={"env": "WECOM_SECRET"}
+    )
+    WECOM_TEST_TOUSER: str | None = Field(
+        default=None, json_schema_extra={"env": "WECOM_TEST_TOUSER"}
+    )
+    WECOM_WEBHOOK_URL: str | None = Field(
+        default=None, json_schema_extra={"env": "WECOM_WEBHOOK_URL"}
+    )
+    WECOM_MENTION_ALL: bool = Field(
+        default=False, json_schema_extra={"env": "WECOM_MENTION_ALL"}
+    )
 
     DOCUMENT_LLM_ENABLED: bool = Field(
         default=False, json_schema_extra={"env": "DOCUMENT_LLM_ENABLED"}
@@ -71,7 +83,11 @@ class LlmSettings(BaseModel):
         if self.WECOM_ENABLED and (
             not self.WECOM_CORP_ID or not self.WECOM_AGENT_ID or not self.WECOM_SECRET
         ):
-            logger.warning("WeCom is enabled but application credentials are incomplete")
+            logger.warning(
+                "WeCom is enabled but application credentials are incomplete"
+            )
         if self.WECOM_WEBHOOK_URL:
-            logger.warning("WECOM_WEBHOOK_URL group robot delivery is retired and ignored")
+            logger.warning(
+                "WECOM_WEBHOOK_URL group robot delivery is retired and ignored"
+            )
         return self

@@ -58,14 +58,18 @@ class ContractExtractionWorkflow:
         self._enricher = enricher
         self._lifecycle = lifecycle
 
-    def create(self, *, staged: StagedFile, context: Mapping[str, str]) -> dict[str, Any]:
+    def create(
+        self, *, staged: StagedFile, context: Mapping[str, str]
+    ) -> dict[str, Any]:
         session_id = uuid4().hex
         try:
             pages = self._pipeline.extract_pdf_pages(staged.path).pages
             review = self._reviewer.build_contract_candidates(pages)
             enrichment = self._enricher.enrich("contract", pages, session_id=session_id)
             if enrichment.status == "success":
-                review = self._reviewer.merge_contract_candidates(review, enrichment.candidates)
+                review = self._reviewer.merge_contract_candidates(
+                    review, enrichment.candidates
+                )
             errors = list(review.rule_errors)
             errors.extend(page.error.code for page in pages if page.error is not None)
             if enrichment.status == "failed":
@@ -101,10 +105,14 @@ class ContractExtractionWorkflow:
         db: AsyncSession,
         current_user_id: str,
     ) -> str:
-        session = self._repository.transition(session_id, "ready_for_review", "confirming")
+        session = self._repository.transition(
+            session_id, "ready_for_review", "confirming"
+        )
         try:
             review = self._deserialize_review(session["candidates"])
-            reviewed = self._reviewer.apply_actions(review, self._deserialize_actions(actions))
+            reviewed = self._reviewer.apply_actions(
+                review, self._deserialize_actions(actions)
+            )
             values = reviewed.values
             for field_key in ("contract_number", "sign_date", "effective_from"):
                 if values.get(field_key) is None:
@@ -195,8 +203,12 @@ class ContractExtractionWorkflow:
                 {
                     "contract_group_id": group.contract_group_id,
                     "contract_number": self._string_value(values, "contract_number"),
-                    "contract_direction": ContractDirection(context["contract_direction"]),
-                    "group_relation_type": GroupRelationType(context["group_relation_type"]),
+                    "contract_direction": ContractDirection(
+                        context["contract_direction"]
+                    ),
+                    "group_relation_type": GroupRelationType(
+                        context["group_relation_type"]
+                    ),
                     "lessor_party_id": party_ids["lessor_party_id"],
                     "lessee_party_id": party_ids["lessee_party_id"],
                     "sign_date": self._date_value(values, "sign_date"),
@@ -211,7 +223,6 @@ class ContractExtractionWorkflow:
             commit=False,
         )
         return contract.contract_id
-
 
     @staticmethod
     def _require_mapping(session: Mapping[str, Any], key: str) -> Mapping[str, str]:

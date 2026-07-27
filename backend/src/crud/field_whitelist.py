@@ -354,7 +354,6 @@ class PermissionWhitelist(ModelFieldWhitelist):
     blocked_fields: ClassVar[set[str]] = set()
 
 
-
 class ProjectWhitelist(ModelFieldWhitelist):
     """Whitelist for Project model."""
 

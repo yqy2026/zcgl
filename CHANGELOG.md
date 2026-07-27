@@ -9,6 +9,7 @@
 
 ### 2026-07-27
 
+- style(backend): format RapidOCR-cutover backend source files so the CI Ruff formatting gate passes.
 - fix(ci): remove stale `import-e2e` job dependencies and summary output after retiring the legacy import E2E workflow; add a CI configuration guard that rejects undefined job dependencies.
 - docs(document-extraction): reconcile the two stale local implementation-ticket states with the completed RapidOCR cutover, archived plan, SSOT evidence, and final validation record.
 

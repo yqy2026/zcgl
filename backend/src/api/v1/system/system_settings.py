@@ -731,7 +731,9 @@ async def backup_system(
         raise HTTPException(status_code=500, detail=f"系统备份失败: {str(e)}")
 
 
-@router.post("/restore", summary="Restore system data", response_model=SystemRestoreResponse)
+@router.post(
+    "/restore", summary="Restore system data", response_model=SystemRestoreResponse
+)
 async def restore_system(
     backup_file: Annotated[UploadFile, File(...)],
     db: Annotated[AsyncSession, Depends(get_async_db)],
@@ -752,7 +754,9 @@ async def restore_system(
     )
 
     try:
-        backup_data: dict[str, Any] = json.loads(staged.path.read_text(encoding="utf-8"))
+        backup_data: dict[str, Any] = json.loads(
+            staged.path.read_text(encoding="utf-8")
+        )
 
         global _system_settings
         _system_settings = SystemSettings(**backup_data["system_settings"])
@@ -783,6 +787,8 @@ async def restore_system(
     except BaseBusinessError:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"System restore failed: {exc}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"System restore failed: {exc}"
+        ) from exc
     finally:
         lifecycle.discard_staged(staged)

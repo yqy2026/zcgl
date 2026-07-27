@@ -659,9 +659,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 
         # 检查文件数量限制
         path = request.url.path
-        if path and (
-            path.startswith("/api/v1/excel")
-        ):
+        if path and (path.startswith("/api/v1/excel")):
             max_files = 10 if path.startswith("/api/v1/excel") else 5
             content_type = request.headers.get("content-type", "")
             boundary = self._extract_multipart_boundary(content_type)

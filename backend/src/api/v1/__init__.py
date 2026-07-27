@@ -1,6 +1,5 @@
 """统一API路由 - 版本化架构 (/api/v1/*)"""
 
-
 from fastapi import APIRouter
 
 # --- route_registry 自注册模块加载（触发 route_registry.register_router） ---

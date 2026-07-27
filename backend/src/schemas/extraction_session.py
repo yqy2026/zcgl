@@ -43,20 +43,23 @@ class ExtractionSessionConfirmRequest(BaseModel):
     actions: list[ExtractionFieldAction]
     party_ids: ContractPartyIds
     asset_ids: list[str] = Field(default_factory=list)
+
+
 class PropertyCertificateExtractionConfirmRequest(BaseModel):
     """Explicit review decisions for a property-certificate extraction session."""
 
     model_config = ConfigDict(extra="forbid")
 
     actions: list[ExtractionFieldAction]
-    certificate_type: Literal[
-        "real_estate", "house_ownership", "land_use", "other"
-    ] = "other"
+    certificate_type: Literal["real_estate", "house_ownership", "land_use", "other"] = (
+        "other"
+    )
     holder_party_ids: list[str] = Field(default_factory=list)
     link_existing_certificate_id: str | None = Field(default=None, min_length=1)
     attach_staged: bool = True
 
+
 class PropertyCertificateExistingExtractionConfirmRequest(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra="forbid")
 
     actions: list[ExtractionFieldAction]

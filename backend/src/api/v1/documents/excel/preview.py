@@ -31,7 +31,9 @@ _ASSET_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
 
 
 @router.post(
-    "/preview/advanced", response_model=ExcelPreviewResponse, summary="Advanced Excel preview"
+    "/preview/advanced",
+    response_model=ExcelPreviewResponse,
+    summary="Advanced Excel preview",
 )
 async def preview_excel_advanced(
     file: UploadFile = File(...),

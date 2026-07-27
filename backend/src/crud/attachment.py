@@ -74,4 +74,5 @@ class AttachmentCRUD:
         await db.flush()
         return attachment
 
+
 attachment_crud = AttachmentCRUD()

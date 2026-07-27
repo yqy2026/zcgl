@@ -137,7 +137,13 @@ class DeepSeekTextEnricher:
             candidates = self._validate_response(
                 response.json(), document_type, version, pages
             )
-        except (TypeError, ValueError, KeyError, InvalidOperation, json.JSONDecodeError):
+        except (
+            TypeError,
+            ValueError,
+            KeyError,
+            InvalidOperation,
+            json.JSONDecodeError,
+        ):
             return DeepSeekEnrichmentResult("failed", "llm_response_invalid")
         return DeepSeekEnrichmentResult("success", None, tuple(candidates))
 
@@ -186,7 +192,10 @@ class DeepSeekTextEnricher:
             }:
                 raise ValueError("candidate_schema")
             field_key = raw["field_key"]
-            if not isinstance(field_key, str) or field_key not in _FIELDS[document_type]:
+            if (
+                not isinstance(field_key, str)
+                or field_key not in _FIELDS[document_type]
+            ):
                 raise ValueError("field")
             evidence = raw["evidence"]
             if not isinstance(evidence, dict) or set(evidence) != {
