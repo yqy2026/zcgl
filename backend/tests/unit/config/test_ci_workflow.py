@@ -176,8 +176,7 @@ def test_ci_job_dependencies_should_not_reference_retired_jobs() -> None:
     }
 
     assert not missing_dependencies, (
-        "Every CI job dependency must refer to a defined job: "
-        f"{missing_dependencies}"
+        f"Every CI job dependency must refer to a defined job: {missing_dependencies}"
     )
 
     workflow_text = (_repo_root() / ".github" / "workflows" / "ci.yml").read_text(
