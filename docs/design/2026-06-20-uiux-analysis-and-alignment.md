@@ -2,7 +2,7 @@
 
 > 本文是对当前 UI/UX 资产（已建前端 + `docs/design/` 设计稿）的全面诊断与解决方案。结论先行：**项目不缺 UI/UX——前端已建全、设计稿也有真功夫；缺的是「设计 ⟂ 减法后 MVP ⟂ 真实用户轴」三方对齐**。本方案**收口并部分取代** [`role-based-dashboard-redesign.md`](role-based-dashboard-redesign.md)（2026-06-03，已过时）。
 >
-> 关联上游：本方案承接 [`../issues/2026-06-20-prd-document-quality-analysis.md`](../issues/2026-06-20-prd-document-quality-analysis.md) 的 P6（PRD 是工程件、缺用户层）——role-dashboard 正是那个「用户层」的种子，但需对齐后才可用。
+> 关联上游：本方案承接 [`../archive/issues/2026-06-20-prd-document-quality-analysis.md`](../archive/issues/2026-06-20-prd-document-quality-analysis.md) 的 P6（PRD 是工程件、缺用户层）——role-dashboard 正是那个「用户层」的种子，但需对齐后才可用。
 
 ---
 

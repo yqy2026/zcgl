@@ -4,12 +4,14 @@
 Checks performed:
 1. Legacy dual-spec references must not reappear in active docs.
 2. Code evidence paths declared in requirements-specification.md must exist.
-3. docs/plans/ must not contain files with ✅-completed status (should be archived).
+3. docs/plans/ files must be indexed and must not contain completed status.
 4. PRD/spec documents must not contain implementation evidence or code/test paths.
 5. Traceability evidence paths must exist.
 6. Legacy requirements entries must remain jump pages without code/test paths.
 7. PRD mechanics tokens must stay in the domain model.
 8. Every active docs/issues report must be indexed exactly once by README.
+9. Local links in active docs and archive indexes must resolve.
+10. Documentation filenames must follow the repository naming convention.
 
 Run from repository root:
     python scripts/check_requirements_authority.py
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -53,7 +56,9 @@ _CODE_EVIDENCE_PATH_RE = re.compile(
 _CODE_EVIDENCE_SECTION_RE = re.compile(r"^[\s\-*]*代码证据[：:]", re.MULTILINE)
 
 # Plans ✅ status markers — a plan file containing these should be archived.
-_PLANS_COMPLETED_RE = re.compile(r"✅\s*(已完成|已实现|已采纳|Completed|Done)", re.IGNORECASE)
+_PLANS_COMPLETED_RE = re.compile(
+    r"✅\s*(已完成|已实现|已采纳|Completed|Done)", re.IGNORECASE
+)
 
 _TARGET_DOC_FORBIDDEN_PATTERNS = [
     ("代码证据", re.compile(r"代码证据")),
@@ -90,6 +95,9 @@ _PRD_MECHANICS_TOKENS = [
 ]
 
 _ACTIVE_ISSUE_LINK_RE = re.compile(r"\]\(\./([^/)]+\.md)\)")
+_MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*]\((?P<target><[^>]+>|[^)\s]+)")
+_DOC_FILENAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+$")
+_ADR_FILENAME_RE = re.compile(r"^ADR-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 
 
 def to_rel(path: Path) -> str:
@@ -106,6 +114,7 @@ def display_path(path: Path) -> str:
 # ---------------------------------------------------------------------------
 # Check 1: legacy reference guard (original check)
 # ---------------------------------------------------------------------------
+
 
 def check_legacy_references() -> list[str]:
     issues: list[str] = []
@@ -124,6 +133,7 @@ def check_legacy_references() -> list[str]:
 # Check 2: code evidence dead-link detection
 # ---------------------------------------------------------------------------
 
+
 def _extract_evidence_paths(text: str) -> list[str]:
     """Extract file paths from all '代码证据' blocks in a markdown text."""
     paths: list[str] = []
@@ -137,7 +147,9 @@ def _extract_evidence_paths(text: str) -> list[str]:
                 paths.append(m.group(1))
             elif line.strip() == "":
                 continue  # skip blank lines within block
-            elif line.startswith("#") or (line.startswith("-") and not line.strip().startswith("- `")):
+            elif line.startswith("#") or (
+                line.startswith("-") and not line.strip().startswith("- `")
+            ):
                 break  # end of evidence block
     return paths
 
@@ -145,7 +157,9 @@ def _extract_evidence_paths(text: str) -> list[str]:
 def check_code_evidence_links() -> list[str]:
     issues: list[str] = []
     if not REQUIREMENTS_SPEC.exists():
-        issues.append(f"requirements-specification.md not found at {to_rel(REQUIREMENTS_SPEC)}")
+        issues.append(
+            f"requirements-specification.md not found at {to_rel(REQUIREMENTS_SPEC)}"
+        )
         return issues
 
     text = REQUIREMENTS_SPEC.read_text(encoding="utf-8", errors="replace")
@@ -161,22 +175,57 @@ def check_code_evidence_links() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Check 3: plans/ completed-status residual detection
+# Check 3: active plan index coverage and completed-status detection
 # ---------------------------------------------------------------------------
 
-def check_plans_residual() -> list[str]:
-    issues: list[str] = []
-    if not PLANS.exists():
-        return issues
 
-    for md in PLANS.glob("*.md"):
+def check_plans_residual(
+    plans_dir: Path = PLANS,
+    index_path: Path | None = None,
+) -> list[str]:
+    issues: list[str] = []
+    if not plans_dir.exists():
+        return issues
+    resolved_index = index_path or plans_dir / "README.md"
+    if not resolved_index.exists():
+        return [f"{display_path(resolved_index)}: required plan index missing"]
+
+    index_text = resolved_index.read_text(encoding="utf-8", errors="replace")
+    indexed_paths: set[Path] = set()
+    for match in _MARKDOWN_LINK_RE.finditer(index_text):
+        target = match.group("target").strip("<>")
+        if target.startswith(("http://", "https://", "mailto:", "#", "/")):
+            continue
+        target_path = (
+            resolved_index.parent / unquote(target.split("#", 1)[0])
+        ).resolve()
+        try:
+            indexed_paths.add(target_path.relative_to(plans_dir.resolve()))
+        except ValueError:
+            continue
+
+    plan_paths: set[Path] = set()
+    for md in plans_dir.rglob("*.md"):
         if md.name.lower() == "readme.md":
             continue
+        relative_path = md.relative_to(plans_dir)
+        plan_paths.add(relative_path)
         text = md.read_text(encoding="utf-8", errors="replace")
         if _PLANS_COMPLETED_RE.search(text):
             issues.append(
-                f"docs/plans/{md.name}: contains completed (✅) status — should be moved to docs/archive/backend-plans/"
+                f"{display_path(md)}: contains completed (✅) status — should be moved "
+                "to docs/archive/backend-plans/"
             )
+
+    issues.extend(
+        f"{display_path(plans_dir / path)}: active plan is not indexed"
+        for path in sorted(plan_paths - indexed_paths)
+    )
+    issues.extend(
+        f"{display_path(resolved_index)}: active plan index points to missing file -> "
+        f"{path.as_posix()}"
+        for path in sorted(indexed_paths - plan_paths)
+    )
     return issues
 
 
@@ -184,11 +233,14 @@ def check_plans_residual() -> list[str]:
 # Check 4: target docs must not carry implementation evidence
 # ---------------------------------------------------------------------------
 
+
 def _line_number(text: str, pos: int) -> int:
     return text.count("\n", 0, pos) + 1
 
 
-def _check_forbidden_patterns(path: Path, patterns: list[tuple[str, re.Pattern[str]]]) -> list[str]:
+def _check_forbidden_patterns(
+    path: Path, patterns: list[tuple[str, re.Pattern[str]]]
+) -> list[str]:
     if not path.exists():
         return [f"{to_rel(path)}: required document missing"]
 
@@ -218,6 +270,7 @@ def check_target_doc_purity() -> list[str]:
 # Check 5: traceability evidence paths must exist
 # ---------------------------------------------------------------------------
 
+
 def check_traceability_paths() -> list[str]:
     if not TRACEABILITY.exists():
         return [f"{to_rel(TRACEABILITY)}: required document missing"]
@@ -229,13 +282,16 @@ def check_traceability_paths() -> list[str]:
         full_path = ROOT / rel_path
         if not full_path.exists():
             line = _line_number(text, match.start())
-            issues.append(f"{to_rel(TRACEABILITY)}:{line}: dead traceability path -> {rel_path}")
+            issues.append(
+                f"{to_rel(TRACEABILITY)}:{line}: dead traceability path -> {rel_path}"
+            )
     return issues
 
 
 # ---------------------------------------------------------------------------
 # Check 6: legacy requirements entries must stay jump pages
 # ---------------------------------------------------------------------------
+
 
 def check_legacy_requirements_entries() -> list[str]:
     issues: list[str] = []
@@ -253,6 +309,7 @@ def check_legacy_requirements_entries() -> list[str]:
 # ---------------------------------------------------------------------------
 # Check 7: PRD must not carry domain-model mechanics tokens
 # ---------------------------------------------------------------------------
+
 
 def check_prd_no_mechanics_tokens() -> list[str]:
     """PRD stays product-altitude; field-level mechanics belong in domain-model."""
@@ -275,6 +332,7 @@ def check_prd_no_mechanics_tokens() -> list[str]:
 # ---------------------------------------------------------------------------
 # Check 8: active issue reports and their index must stay in sync
 # ---------------------------------------------------------------------------
+
 
 def check_issue_index_coverage(
     issues_dir: Path = ISSUES,
@@ -318,8 +376,74 @@ def check_issue_index_coverage(
 
 
 # ---------------------------------------------------------------------------
+# Check 9: local Markdown links in maintained documents must resolve
+# ---------------------------------------------------------------------------
+
+
+def _maintained_markdown_files(docs_dir: Path) -> list[Path]:
+    archive_dir = docs_dir / "archive"
+    files = [path for path in docs_dir.rglob("*.md") if archive_dir not in path.parents]
+    if archive_dir.exists():
+        files.extend(archive_dir.rglob("README.md"))
+    return sorted(set(files))
+
+
+def check_local_markdown_links(
+    docs_dir: Path = DOCS,
+    repo_root: Path | None = None,
+) -> list[str]:
+    issues: list[str] = []
+    if not docs_dir.exists():
+        return [f"{display_path(docs_dir)}: required docs directory missing"]
+    resolved_root = (repo_root or docs_dir.parent).resolve()
+
+    for source in _maintained_markdown_files(docs_dir):
+        text = source.read_text(encoding="utf-8", errors="replace")
+        for match in _MARKDOWN_LINK_RE.finditer(text):
+            raw_target = match.group("target").strip("<>")
+            if raw_target.startswith(("http://", "https://", "mailto:", "#")):
+                continue
+            target = unquote(raw_target.split("#", 1)[0])
+            if not target:
+                continue
+            resolved = (
+                resolved_root / target.lstrip("/")
+                if target.startswith("/")
+                else source.parent / target
+            ).resolve()
+            if not resolved.exists():
+                line = _line_number(text, match.start())
+                issues.append(
+                    f"{display_path(source)}:{line}: broken local link -> {raw_target}"
+                )
+    return issues
+
+
+# ---------------------------------------------------------------------------
+# Check 10: documentation filenames must follow repository conventions
+# ---------------------------------------------------------------------------
+
+
+def check_document_filenames(docs_dir: Path = DOCS) -> list[str]:
+    issues: list[str] = []
+    if not docs_dir.exists():
+        return [f"{display_path(docs_dir)}: required docs directory missing"]
+
+    for path in sorted(item for item in docs_dir.rglob("*") if item.is_file()):
+        if path.name == "README.md" or _ADR_FILENAME_RE.fullmatch(path.name):
+            continue
+        if not _DOC_FILENAME_RE.fullmatch(path.name):
+            issues.append(
+                f"{display_path(path)}: filename must use lowercase letters, digits, "
+                "dots, and hyphens"
+            )
+    return issues
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     all_issues: list[str] = []
@@ -342,7 +466,7 @@ def main() -> int:
     else:
         print("  PASS")
 
-    print("=== Check 3: plans/ completed-status residual ===")
+    print("=== Check 3: active plan index and archive status ===")
     issues = check_plans_residual()
     if issues:
         all_issues.extend(issues)
@@ -389,6 +513,24 @@ def main() -> int:
 
     print("=== Check 8: active issue index coverage ===")
     issues = check_issue_index_coverage()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 9: maintained Markdown local links ===")
+    issues = check_local_markdown_links()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 10: documentation filename convention ===")
+    issues = check_document_filenames()
     if issues:
         all_issues.extend(issues)
         for i in issues:

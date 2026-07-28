@@ -298,6 +298,7 @@ $RECYCLE.BIN/
 tmp/
 temp/
 .tmp/
+.scratch/
 *.tmp
 *.temp
 .cache/

@@ -4,7 +4,7 @@
 
 **当前状态**: Supplemental (2026-04-28)
 
-本文记录资产批量读取/导出补充端点，不作为 API 权威契约。当前 API 主契约见 [`docs/specs/api-contract.md`](../specs/api-contract.md)。
+本文记录资产批量读取/导出补充端点，不作为 API 权威契约。当前 API 主契约见 [`docs/specs/api-contract.md`](../../specs/api-contract.md)。
 
 ## 概述
 

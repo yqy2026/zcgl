@@ -21,5 +21,8 @@
 
 ## 归档记录
 
-- `2026-04-27-requirements-specification-process-archive.md` — 旧 `docs/requirements-specification.md` 降级为兼容跳转页前的过程信息归档摘要。
-- `2026-04-27-requirements-appendices-process-archive.md` — 旧字段附录与模块附录降级为兼容跳转页前的过程信息归档摘要。
+- [2026-04-27-requirements-specification-process-archive.md](./2026-04-27-requirements-specification-process-archive.md) — 旧需求规格降级为兼容跳转页前的过程信息归档摘要。
+- [2026-04-27-requirements-appendices-process-archive.md](./2026-04-27-requirements-appendices-process-archive.md) — 旧字段与模块附录降级为兼容跳转页前的过程信息归档摘要。
+- [2026-04-05-role-design-clarification.md](./2026-04-05-role-design-clarification.md) — 角色、主体和权限设计的历史访谈记录。
+- [2026-04-06-architecture-restructure-decisions.md](./2026-04-06-architecture-restructure-decisions.md) — 文档体系重构前的架构决策记录。
+- [2026-04-07-requirements-specification-deep-interview.md](./2026-04-07-requirements-specification-deep-interview.md) — 旧需求规格形成过程的深度访谈快照。

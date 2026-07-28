@@ -60,5 +60,5 @@ PRD §5 与 2026-04-06 架构访谈 Q6 明文承诺：权限管理员（`perm_ad
 ## 参考
 
 - `CONTEXT.md`：`权限管理员授予边界` 词条；`显式拒绝优先` 词条
-- 访谈：`docs/interviews/2026-04-06-architecture-restructure-decisions.md` Q6（perm_admin 完全隔离）
+- 访谈：`docs/archive/requirements-decisions/2026-04-06-architecture-restructure-decisions.md` Q6（perm_admin 完全隔离）
 - 相关簇：[ADR-0002](./ADR-0002-asset-review-no-approval-workflow.md)（MVP 不做职责互斥——双人共谋豁免，与本静态授予边界互不冲突）

@@ -6,6 +6,11 @@
 |------|------|
 | [2026-07-15-rapidocr-deepseek-document-extraction-plan.md](./2026-07-15-rapidocr-deepseek-document-extraction-plan.md) | RapidOCR 本地 OCR + DeepSeek 单一 LLM 文档解析收口（已完成） |
 | [2026-07-06-operations-ledger-implementation.md](./2026-07-06-operations-ledger-implementation.md) | 经营台账与收付流水实施计划（已完成） |
+| [2026-06-19-prd-grill-code-followup.md](./2026-06-19-prd-grill-code-followup.md) | PRD Grill 代码收口清单 |
+| [2026-06-19-prd-detail-rebalance-plan.md](./2026-06-19-prd-detail-rebalance-plan.md) | PRD 详略再平衡 |
+| [2026-06-18-prd-grill-code-followup.md](./2026-06-18-prd-grill-code-followup.md) | PRD Grill 代码收口清单 |
+| [2026-06-16-prd-grill-code-followup.md](./2026-06-16-prd-grill-code-followup.md) | PRD Grill 代码收口清单 |
+| [2026-06-15-prd-grill-code-followup.md](./2026-06-15-prd-grill-code-followup.md) | PRD Grill 代码收口清单 |
 | [2026-05-31-auth-middleware-split.md](./2026-05-31-auth-middleware-split.md) | Auth middleware 拆分方案 |
 | [2026-05-29-codebase-lean-refocus-plan.md](./2026-05-29-codebase-lean-refocus-plan.md) | 代码库瘦身与业务聚焦方案 |
 | [2026-05-12-project-centered-asset-operations-plan.md](./2026-05-12-project-centered-asset-operations-plan.md) | 项目主轴资产运营全局规划 |
@@ -44,3 +49,4 @@
 | [2026-02-16-party-role-architecture-design.md](./2026-02-16-party-role-architecture-design.md) | Party-Role 组织架构设计 |
 | [2026-02-15-phone-first-login-and-username-retention.md](./2026-02-15-phone-first-login-and-username-retention.md) | 手机号优先登录与用户名保留 |
 | [2026-02-11-langextract-rollout-plan.md](./2026-02-11-langextract-rollout-plan.md) | langextract 灰度接入 PDF 链路 |
+| [2026-02-11-approval-flowable-b-plan.md](./2026-02-11-approval-flowable-b-plan.md) | Flowable 审批方案（已被当前 PRD、ADR-0002 与 ADR-0013 取代） |

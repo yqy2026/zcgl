@@ -4,7 +4,7 @@
 
 **当前状态**: Supplemental / Historical Component Note (2026-04-28)
 
-本文保留早期数据库管理器设计说明，不作为当前数据库字段、迁移或运行配置的权威来源。当前数据库配置与迁移操作以 [`docs/guides/database.md`](../guides/database.md) 为准；字段和表结构基线以 [`docs/specs/domain-model.md`](../specs/domain-model.md) 为准。
+本文保留早期数据库管理器设计说明，不作为当前数据库字段、迁移或运行配置的权威来源。当前数据库配置与迁移操作以 [`docs/guides/database.md`](../../guides/database.md) 为准；字段和表结构基线以 [`docs/specs/domain-model.md`](../../specs/domain-model.md) 为准。
 
 ## 概述
 
@@ -549,7 +549,7 @@ db_manager.reset_connection_pool()
 
 ## 相关文档
 
-- [API 总览](./api-overview.md)
-- [数据库指南](../guides/database.md)
-- [代码质量规范](../guides/code-quality.md)
-- [后端安全指南](../security/backend-security.md)
+- [API 总览](../../integrations/api-overview.md)
+- [数据库指南](../../guides/database.md)
+- [代码质量规范](../../guides/code-quality.md)
+- [后端安全指南](../../security/backend-security.md)

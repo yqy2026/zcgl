@@ -15,6 +15,7 @@
 | `backend-plans/` | 已完结或废弃的后端技术方案 |
 | `evidence/` | 阶段性门禁证据、发布证据和本地验证快照 |
 | `guides/` | 已从当前入口移除的历史指南和长版设计快照 |
+| `integrations/` | 已退出当前入口的 API 补充说明和历史组件设计 |
 | `issues/` | 已被 SSOT、代码实现或后续计划吸收的问题排查记录 |
 | `requirements-decisions/` | 需求访谈、评审、As-Built、迁移过程归档 |
 | `reviews/` | 方案或代码审阅记录归档 |

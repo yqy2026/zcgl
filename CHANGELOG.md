@@ -7,6 +7,10 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-07-28
+
+- docs(governance): consolidate Phase 3/4 evidence, historical interviews, obsolete integration notes, and the superseded Flowable plan under `docs/archive/`; simplify current navigation, normalize archive/design paths, add recursive plan, local-link, and filename guards with unit coverage, and ignore the local `.scratch/` workspace.
+
 ### 2026-07-27
 
 - fix(ci): provision Redis for contract extraction E2E sessions and fail before staging when the required distributed session store is unavailable.

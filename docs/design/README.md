@@ -5,6 +5,7 @@
 ## 目录
 
 - [UI 图](ui-mockups/README.md)
+- [早期 UI 设计原型](ui-mockups/ui-design-prototype.html)
 - [UI/UX 全面分析与对齐方案（2026-06-20）](2026-06-20-uiux-analysis-and-alignment.md) — 现状诊断 + 解决方案；收口下条
 - [角色化工作台设计方案](role-based-dashboard-redesign.md) — ⚠️ 部分过时，以上条为准
 - [核心任务流（User Journeys）](flows/README.md) — 补录链路 / 实收登记 / 风险处置

@@ -10,10 +10,8 @@
 | [auth-api.md](./auth-api.md) | 认证接口（登录、Token、权限） |
 | [assets-api.md](./assets-api.md) | 资产管理 API 补充说明；权威契约见 `docs/specs/api-contract.md` |
 | [pdf-processing.md](./pdf-processing.md) | PDF 智能提取 API |
-| [new-api-endpoints.md](./new-api-endpoints.md) | 新增 API 端点汇总 |
 
-## 系统组件
+## 历史资料
 
-| 文档 | 说明 |
-|------|------|
-| [enhanced-database-manager.md](./enhanced-database-manager.md) | 早期 EnhancedDatabaseManager 设计说明，当前配置以数据库指南为准 |
+已退出当前入口的 API 补充说明和早期组件设计见
+[`docs/archive/integrations/`](../archive/integrations/README.md)。

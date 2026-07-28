@@ -12,7 +12,6 @@
 - [领域模型契约](specs/domain-model.md)
 - [API 契约](specs/api-contract.md)
 - [需求追踪矩阵](traceability/requirements-trace.md)
-- [需求访谈与澄清记录](interviews/README.md)
 - [旧需求规格兼容入口](requirements-specification.md)
 
 ### 架构与数据库
@@ -46,8 +45,6 @@
 - [资产 API](integrations/assets-api.md)
 - [认证 API](integrations/auth-api.md)
 - [PDF 处理](integrations/pdf-processing.md)
-- [新增 API 端点](integrations/new-api-endpoints.md)
-- [增强数据库管理器](integrations/enhanced-database-manager.md)
 
 ### 安全
 - [数据加密](security/encryption.md)
@@ -65,9 +62,10 @@
 - [**方案状态索引**](plans/README.md)
 
 ## 🗂️ 历史归档
-- [归档目录说明](archive/readme.md)
+- [归档目录说明](archive/README.md)
 - `archive/evidence/` — 阶段性门禁证据、发布证据和本地验证快照
 - `archive/guides/` — 历史指南和长版设计快照
+- `archive/integrations/` — 已退出当前入口的 API 与组件说明
 - `archive/backend-plans/` — 后端已完结技术方案
 - `archive/issues/` — 已被吸收的问题排查记录
 - `archive/requirements-decisions/` — 需求访谈、评审、As-Built、迁移过程归档
@@ -88,10 +86,9 @@
 - `security/` — 安全相关（加密、后端安全、能力守卫）
 - `design/` — 产品 UI 图、可复现画板和设计评审资产
 - `plans/` — 活跃方案（进行中 + 搁置）
-- `interviews/` — 需求访谈、澄清与历史决策记录
 - `incidents/` — 事故复盘（Post-Mortem）
 - `issues/` — 项目技术债务排查记录
-- `archive/` — 历史归档（不再维护，含 backend-plans / evidence / guides / issues / requirements-decisions / reviews）
+- `archive/` — 历史归档（不再维护，含 backend-plans / evidence / guides / integrations / issues / requirements-decisions / reviews）
 
 ## 🧹 文档治理规则
 - 产品目标态变更修改 `prd.md`
