@@ -18,6 +18,7 @@ from ...middleware.auth import (
 from ...models.auth import User
 from ...schemas.party import (
     CustomerProfileResponse,
+    PartyBusinessRole,
     PartyContactCreate,
     PartyContactResponse,
     PartyCreate,
@@ -54,6 +55,7 @@ async def list_parties(
     party_type: str | None = Query(None, description="主体类型过滤"),
     status: str | None = Query(None, description="状态过滤"),
     search: str | None = Query(None, description="名称/编码模糊搜索"),
+    business_role: PartyBusinessRole | None = Query(None),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
@@ -74,6 +76,7 @@ async def list_parties(
         party_type=party_type,
         status=status,
         search=search,
+        business_role=business_role,
         current_user_id=current_user_id if current_user_id != "" else None,
     )
     return [PartyResponse.model_validate(party) for party in parties]

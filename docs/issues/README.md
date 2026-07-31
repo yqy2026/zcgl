@@ -9,7 +9,6 @@
 | 文档 | 内容 | 状态 | 下一动作 |
 |------|------|------|------|
 | [2026-06-23-wecom-userid-mapping-and-send-verification.md](./2026-06-23-wecom-userid-mapping-and-send-verification.md) | 企业微信应用消息真实发送验证与系统用户↔企业微信 `userid` 映射 | 🔄 外部验证/映射待补 | 应用消息代码与凭据 `gettoken` 已验证；真实发送待企业微信可信 IP / 域名配置，正式映射待实施 |
-| [2026-04-party-architecture-analysis.md](./2026-04-party-architecture-analysis.md) | 主体列表业务角色体验问题与旧 A+C 方案 | ⏸ 旧方案未采纳，待重新立项 | 先补产品需求与验收口径，再决定动态查询或读模型；禁止直接落旧 JSONB 缓存方案 |
 
 ## 已归档记录
 

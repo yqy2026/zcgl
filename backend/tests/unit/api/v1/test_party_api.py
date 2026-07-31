@@ -1,6 +1,6 @@
 """Party API behavior tests."""
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 from fastapi import status
@@ -135,6 +135,208 @@ def test_list_parties_should_fail_closed_when_user_has_no_bindings(
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
+
+
+def test_list_parties_should_derive_current_business_roles_within_party_scope(
+    client, db_session
+) -> None:
+    """Role slices use only current relations and respect Party scope."""
+    from src.models.asset import Asset
+    from src.models.contract_group import (
+        Contract,
+        ContractDirection,
+        ContractGroup,
+        ContractLifecycleStatus,
+        GroupRelationType,
+        RevenueMode,
+    )
+    from src.models.party import Party, PartyType
+    from src.models.project import Project
+    from src.models.user_party_binding import RelationType, UserPartyBinding
+
+    _create_user(db_session, user_id="test_user_001")
+    current_party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Current Multi-role Party",
+        code="PTY-CURRENT-001",
+        status="active",
+    )
+    direct_lease_party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Direct Lease Tenant Party",
+        code="PTY-DIRECT-001",
+        status="active",
+    )
+    expired_party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Expired Tenant Party",
+        code="PTY-EXPIRED-001",
+        status="active",
+    )
+    out_of_scope_party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Out Of Scope Tenant Party",
+        code="PTY-OUT-001",
+        status="active",
+    )
+    db_session.add_all(
+        [current_party, direct_lease_party, expired_party, out_of_scope_party]
+    )
+    db_session.flush()
+    db_session.add_all(
+        [
+            UserPartyBinding(
+                user_id="test_user_001",
+                party_id=current_party.id,
+                relation_type=RelationType.OWNER,
+                is_primary=True,
+            ),
+            UserPartyBinding(
+                user_id="test_user_001",
+                party_id=direct_lease_party.id,
+                relation_type=RelationType.OWNER,
+                is_primary=False,
+            ),
+            UserPartyBinding(
+                user_id="test_user_001",
+                party_id=expired_party.id,
+                relation_type=RelationType.OWNER,
+                is_primary=False,
+            ),
+        ]
+    )
+
+    today = date.today()
+    project = Project(
+        project_name="Current Operator Project",
+        project_code="PRJ-PTY-ROLE-0001",
+        status="active",
+        manager_party_id=current_party.id,
+    )
+    db_session.add(project)
+    db_session.flush()
+    db_session.add(
+        Asset(
+            asset_name="Current Owner Asset",
+            asset_code="AST-PTY-ROLE-0001",
+            address="Current Owner Asset Address",
+            ownership_status="confirmed",
+            property_nature="commercial",
+            usage_status="in_use",
+            owner_party_id=current_party.id,
+        )
+    )
+
+    active_group = ContractGroup(
+        contract_group_id="group-party-role-active",
+        project_id=project.id,
+        group_code="GRP-PTY-ROLE-ACTIVE",
+        revenue_mode=RevenueMode.LEASE,
+        operator_party_id=current_party.id,
+        owner_party_id=current_party.id,
+        effective_from=today - timedelta(days=1),
+    )
+    direct_lease_group = ContractGroup(
+        contract_group_id="group-party-role-direct",
+        project_id=project.id,
+        group_code="GRP-PTY-ROLE-DIRECT",
+        revenue_mode=RevenueMode.AGENCY,
+        operator_party_id=current_party.id,
+        owner_party_id=current_party.id,
+        effective_from=today - timedelta(days=1),
+    )
+    expired_group = ContractGroup(
+        contract_group_id="group-party-role-expired",
+        project_id=project.id,
+        group_code="GRP-PTY-ROLE-EXPIRED",
+        revenue_mode=RevenueMode.LEASE,
+        operator_party_id=current_party.id,
+        owner_party_id=current_party.id,
+        effective_from=today - timedelta(days=30),
+        effective_to=today - timedelta(days=1),
+    )
+    out_of_scope_group = ContractGroup(
+        contract_group_id="group-party-role-out",
+        project_id=project.id,
+        group_code="GRP-PTY-ROLE-OUT",
+        revenue_mode=RevenueMode.LEASE,
+        operator_party_id=current_party.id,
+        owner_party_id=current_party.id,
+        effective_from=today - timedelta(days=1),
+    )
+    db_session.add_all(
+        [active_group, direct_lease_group, expired_group, out_of_scope_group]
+    )
+    db_session.flush()
+    db_session.add_all(
+        [
+            Contract(
+                contract_id="contract-party-role-active",
+                contract_group_id=active_group.contract_group_id,
+                project_id=project.id,
+                contract_number="CTR-PTY-ROLE-ACTIVE",
+                contract_direction=ContractDirection.LESSOR,
+                group_relation_type=GroupRelationType.DOWNSTREAM,
+                lessor_party_id=current_party.id,
+                lessee_party_id=current_party.id,
+                effective_from=today - timedelta(days=1),
+                status=ContractLifecycleStatus.ACTIVE,
+            ),
+            Contract(
+                contract_id="contract-party-role-direct",
+                contract_group_id=direct_lease_group.contract_group_id,
+                project_id=project.id,
+                contract_number="CTR-PTY-ROLE-DIRECT",
+                contract_direction=ContractDirection.LESSOR,
+                group_relation_type=GroupRelationType.DIRECT_LEASE,
+                lessor_party_id=current_party.id,
+                lessee_party_id=direct_lease_party.id,
+                effective_from=today - timedelta(days=1),
+                status=ContractLifecycleStatus.ACTIVE,
+            ),
+            Contract(
+                contract_id="contract-party-role-expired",
+                contract_group_id=expired_group.contract_group_id,
+                project_id=project.id,
+                contract_number="CTR-PTY-ROLE-EXPIRED",
+                contract_direction=ContractDirection.LESSOR,
+                group_relation_type=GroupRelationType.DOWNSTREAM,
+                lessor_party_id=current_party.id,
+                lessee_party_id=expired_party.id,
+                effective_from=today - timedelta(days=30),
+                effective_to=today - timedelta(days=1),
+                status=ContractLifecycleStatus.ACTIVE,
+            ),
+            Contract(
+                contract_id="contract-party-role-out",
+                contract_group_id=out_of_scope_group.contract_group_id,
+                project_id=project.id,
+                contract_number="CTR-PTY-ROLE-OUT",
+                contract_direction=ContractDirection.LESSOR,
+                group_relation_type=GroupRelationType.DOWNSTREAM,
+                lessor_party_id=current_party.id,
+                lessee_party_id=out_of_scope_party.id,
+                effective_from=today - timedelta(days=1),
+                status=ContractLifecycleStatus.ACTIVE,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    response = client.get("/api/v1/parties?business_role=terminal_tenant")
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    payload_by_party_id = {item["id"]: item for item in payload}
+    assert set(payload_by_party_id) == {current_party.id, direct_lease_party.id}
+    assert payload_by_party_id[current_party.id]["business_roles"] == [
+        "owner",
+        "operator",
+        "terminal_tenant",
+    ]
+    assert payload_by_party_id[direct_lease_party.id]["business_roles"] == [
+        "terminal_tenant"
+    ]
 
 
 def test_user_party_bindings_crud_should_work(client, db_session) -> None:

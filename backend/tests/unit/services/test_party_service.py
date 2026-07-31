@@ -116,9 +116,38 @@ class TestPartyServiceScopeAndBindingBehavior:
             party_type=None,
             status=None,
             search=None,
+            business_role=None,
             scoped_party_ids=["party-1"],
         )
 
+    async def test_get_parties_should_forward_business_role_with_resolved_scope(
+        self,
+    ) -> None:
+        db = MagicMock()
+        party_crud = MagicMock()
+        party_crud.get_parties = AsyncMock(return_value=[])
+        service = PartyService(data_access=party_crud)
+
+        with patch(
+            "src.services.party.service.resolve_user_party_filter",
+            AsyncMock(return_value=PartyFilter(party_ids=["party-1"])),
+        ):
+            await service.get_parties(
+                db,
+                current_user_id="user-1",
+                business_role="terminal_tenant",
+            )
+
+        party_crud.get_parties.assert_awaited_once_with(
+            db,
+            skip=0,
+            limit=100,
+            party_type=None,
+            status=None,
+            search=None,
+            business_role="terminal_tenant",
+            scoped_party_ids=["party-1"],
+        )
     async def test_get_parties_should_not_scope_when_filter_resolver_returns_none(
         self,
     ) -> None:
@@ -140,6 +169,7 @@ class TestPartyServiceScopeAndBindingBehavior:
             party_type=None,
             status=None,
             search=None,
+            business_role=None,
             scoped_party_ids=None,
         )
 

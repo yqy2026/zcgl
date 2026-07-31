@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Form, Input, Modal, Select, Space, Table, Tag, Typography } from 'antd';
+import { Button, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from '@/components/Common/PageContainer';
@@ -11,7 +11,7 @@ import {
   type PartyCreatePayload,
   type PartyListResult,
 } from '@/services/partyService';
-import type { Party, PartyReviewStatus, PartyType } from '@/types/party';
+import type { Party, PartyBusinessRole, PartyReviewStatus, PartyType } from '@/types/party';
 import { MessageManager } from '@/utils/messageManager';
 import { parsePartyImportWorkbook } from './partyImport';
 
@@ -20,6 +20,7 @@ interface PartyFilters {
   partyType: PartyType | 'all';
   status: string | 'all';
   reviewStatus: PartyReviewStatus | 'all';
+  businessRole: PartyBusinessRole | 'all';
 }
 
 const PARTY_TYPE_OPTIONS: Array<{ label: string; value: PartyType }> = [
@@ -49,6 +50,31 @@ const REVIEW_STATUS_META: Record<PartyReviewStatus, { color: string; label: stri
   rejected: { color: 'warning', label: '已驳回' },
 };
 
+const BUSINESS_ROLE_LABELS: Record<PartyBusinessRole, string> = {
+  owner: '\u4ea7\u6743\u65b9',
+  operator: '\u8fd0\u8425\u65b9',
+  terminal_tenant: '\u7ec8\u7aef\u79df\u6237',
+};
+
+const BUSINESS_ROLE_TAG_COLORS: Record<PartyBusinessRole, string> = {
+  owner: 'gold',
+  operator: 'blue',
+  terminal_tenant: 'green',
+};
+
+const BUSINESS_ROLE_TABS: Array<{ key: PartyBusinessRole | 'all'; label: string }> = [
+  { key: 'all', label: '\u5168\u90e8' },
+  { key: 'owner', label: BUSINESS_ROLE_LABELS.owner },
+  { key: 'operator', label: BUSINESS_ROLE_LABELS.operator },
+  { key: 'terminal_tenant', label: BUSINESS_ROLE_LABELS.terminal_tenant },
+];
+
+const renderBusinessRoles = (businessRoles: PartyBusinessRole[]): React.ReactNode =>
+  businessRoles.map(businessRole => (
+    <Tag color={BUSINESS_ROLE_TAG_COLORS[businessRole]} key={businessRole}>
+      {BUSINESS_ROLE_LABELS[businessRole]}
+    </Tag>
+  ));
 const renderReviewStatus = (
   reviewStatus: PartyReviewStatus | null | undefined
 ): React.ReactNode => {
@@ -66,6 +92,7 @@ const PartyListPage: React.FC = () => {
     partyType: 'all',
     status: 'all',
     reviewStatus: 'all',
+    businessRole: 'all',
   });
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -78,9 +105,10 @@ const PartyListPage: React.FC = () => {
       search: filters.search.trim() !== '' ? filters.search.trim() : undefined,
       party_type: filters.partyType !== 'all' ? filters.partyType : undefined,
       status: filters.status !== 'all' ? filters.status : undefined,
+      business_role: filters.businessRole !== 'all' ? filters.businessRole : undefined,
       limit: 200,
     }),
-    [filters.partyType, filters.search, filters.status]
+    [filters.businessRole, filters.partyType, filters.search, filters.status]
   );
 
   const partyListQuery = useQuery<PartyListResult>({
@@ -89,6 +117,7 @@ const PartyListPage: React.FC = () => {
       queryFilters.search ?? '',
       queryFilters.party_type ?? '',
       queryFilters.status ?? '',
+      queryFilters.business_role ?? '',
     ],
     queryFn: async () => {
       return await partyService.getParties(queryFilters);
@@ -155,6 +184,12 @@ const PartyListPage: React.FC = () => {
         render: (value: PartyType) => PARTY_TYPE_LABELS[value],
       },
       {
+        title: '\u5f53\u524d\u4e1a\u52a1\u89d2\u8272',
+        dataIndex: 'business_roles',
+        key: 'business_roles',
+        render: (value: PartyBusinessRole[]) => renderBusinessRoles(value),
+      },
+      {
         title: '状态',
         dataIndex: 'status',
         key: 'status',
@@ -202,6 +237,17 @@ const PartyListPage: React.FC = () => {
   return (
     <PageContainer title="主体主档管理" subTitle="维护主体台账、审核状态与基础信息主档">
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        <Tabs
+          activeKey={filters.businessRole}
+          items={BUSINESS_ROLE_TABS}
+          onChange={value => {
+            const businessRole = value === 'all' ? 'all' : (value as PartyBusinessRole);
+            setFilters(currentFilters => ({
+              ...currentFilters,
+              businessRole,
+            }));
+          }}
+        />
         <Space wrap>
           <Input.Search
             allowClear

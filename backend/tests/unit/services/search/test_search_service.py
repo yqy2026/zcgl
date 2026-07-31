@@ -209,7 +209,7 @@ async def test_search_projects_should_build_search_result_items(
     ]
 
 
-async def test_search_contract_groups_should_use_relation_label_and_contract_center_route(
+async def test_search_contract_groups_should_use_contracts_and_agreements_label_and_contract_center_route(
     search_service,
 ):
     execute_result = SimpleNamespace(
@@ -244,7 +244,7 @@ async def test_search_contract_groups_should_use_relation_label_and_contract_cen
             "route_path": "/contract-center/group-1",
             "score": 85,
             "business_rank": 40,
-            "group_label": "合同关系",
+            "group_label": "合同与协议",
         }
     ]
 

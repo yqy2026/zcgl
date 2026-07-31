@@ -2,9 +2,11 @@
 
 export type PartyType = 'organization' | 'legal_entity' | 'individual';
 export type PartyReviewStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+export type PartyBusinessRole = 'owner' | 'operator' | 'terminal_tenant';
 
 export interface Party {
   id: string;
+  business_roles: PartyBusinessRole[];
   party_type: PartyType;
   name: string;
   code: string;
@@ -62,6 +64,7 @@ export interface CustomerProfile {
 }
 
 export interface PartyListParams {
+  business_role?: PartyBusinessRole;
   party_type?: PartyType;
   status?: string;
   search?: string;

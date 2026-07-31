@@ -22,6 +22,7 @@ from ...models.party import Party, PartyContact, PartyHierarchy, PartyReviewStat
 from ...models.party_review_log import PartyReviewLog
 from ...models.user_party_binding import UserPartyBinding
 from ...schemas.party import (
+    PartyBusinessRole,
     PartyContactCreate,
     PartyCreate,
     PartyUpdate,
@@ -96,6 +97,7 @@ class PartyService:
         party_type: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        business_role: PartyBusinessRole | None = None,
         current_user_id: str | None = None,
         party_filter: PartyFilter | None = None,
     ) -> list[Party]:
@@ -114,6 +116,7 @@ class PartyService:
             party_type=party_type,
             status=status,
             search=search,
+            business_role=business_role,
             scoped_party_ids=scoped_party_ids,
         )
 

@@ -4,6 +4,7 @@
 
 | 文档 | 内容 | 归档原因 |
 |------|------|------|
+| [2026-04-party-architecture-analysis.md](./2026-04-party-architecture-analysis.md) | Party 业务角色体验问题与旧 A+C 方案 | REQ-PTY-003 已实施当前关系实时派生；旧 JSONB 缓存方案保持拒绝 |
 | [2026-07-10-payment-flow-lifecycle-and-voucher-audit.md](./2026-07-10-payment-flow-lifecycle-and-voucher-audit.md) | 收付流水作废/更正状态机与凭证下载审计 | 生命周期、事务重算、凭证权限/审计和前端操作已实施并通过定向门禁 |
 | [2026-07-06-operations-ledger-prd-revision.md](./2026-07-06-operations-ledger-prd-revision.md) | 经营台账、收付流水、四类经营口径与服务费结算修订 | 核心口径已被 PRD/spec/traceability 和实现吸收；拆出的流水生命周期与凭证审计已在 2026-07-13 完成并归档 |
 | [2026-06-18-prd-grill-code-followup.md](./2026-06-18-prd-grill-code-followup.md) | 通知、资产/项目编码、产权证保存闸门与附件、合同号复合唯一等契约收口 | I1/I2①/I3~I9 代码项与门禁已收口；企业微信真实发送验证与正式 userid 映射拆至 `docs/issues/2026-06-23-wecom-userid-mapping-and-send-verification.md` |

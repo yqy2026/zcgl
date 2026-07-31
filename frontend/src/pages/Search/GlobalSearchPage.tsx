@@ -96,7 +96,7 @@ const GlobalSearchPage: React.FC = () => {
   return (
     <PageContainer
       title="全局搜索"
-      subTitle="按当前数据范围跨对象搜索资产、项目、合同关系、合同和客户。"
+      subTitle="按当前数据范围跨对象搜索资产、项目、合同与协议、客户。"
     >
       <div className={styles.page}>
         <Card>
@@ -104,7 +104,7 @@ const GlobalSearchPage: React.FC = () => {
             <Input.Search
               allowClear
               defaultValue={query}
-              placeholder="搜索资产、项目、合同关系、合同、客户"
+              placeholder="搜索资产、项目、合同与协议、客户"
               enterButton="搜索"
               onSearch={handleSearch}
               style={{ maxWidth: 480 }}

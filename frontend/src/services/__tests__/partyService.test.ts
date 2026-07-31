@@ -44,6 +44,21 @@ describe('PartyService', () => {
     expect(result.isTruncated).toBe(false);
   });
 
+  it('passes the business role filter to the Party list endpoint', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+
+    await service.getParties({ business_role: 'operator' });
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/parties',
+      expect.objectContaining({
+        params: expect.objectContaining({ business_role: 'operator' }),
+      })
+    );
+  });
   it('normalizes list response when backend returns paged envelope', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       success: true,

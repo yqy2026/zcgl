@@ -8,6 +8,8 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from ..models.party import PartyReviewStatus, PartyType
 from ..models.user_party_binding import RelationType
 
+PartyBusinessRole = Literal["owner", "operator", "terminal_tenant"]
+
 
 class PartyBase(BaseModel):
     """Shared Party fields."""
@@ -53,6 +55,7 @@ class PartyResponse(PartyBase):
     """Party response."""
 
     id: str
+    business_roles: list[PartyBusinessRole] = Field(default_factory=list)
     review_status: PartyReviewStatus | None = None
     review_by: str | None = None
     reviewed_at: datetime | None = None

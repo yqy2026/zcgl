@@ -43,6 +43,7 @@
 | PaymentAllocation | 收付流水到账期条目的人工分摊 |
 | ContractAuditLog | 合同操作审计日志 |
 | CustomerProfile | 客户视图档案，由 Party 和合同历史投影形成 |
+| PartyBusinessRoleSlice | 当前有效经营关系下的 Party 业务角色实时投影，不单独持久化 |
 | PropertyCertificate | 资产产权证照记录，作为资产详情内能力维护 |
 | CertificatePartyRelation | 产权证与 Party 权利人的关系 |
 | ScanExtractionSession | 合同或产权证扫描件解析辅助补录的临时会话 |
@@ -326,6 +327,17 @@
 | `risk_tags` | string[] | 否 | 风险标签，MVP 仅人工标注 |
 | `payment_term_preference` | string | 否 | 账期偏好 |
 
+### 4.12.1 PartyBusinessRoleSlice
+
+该对象是主体列表的当前业务角色投影，不是 Party 主档字段，也不替代 CustomerProfile。查询先按既有 Party 数据范围过滤，再按当前有效关系派生角色；不得把 `customer_type`、`UserPartyBinding.relation_type` 或历史合同角色当作业务角色来源。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `party_id` | string | 是 | Party 主键；“全部”列表按该值唯一 |
+| `party_name` | string | 是 | 当前 Party 主档名称 |
+| `business_roles` | enum[] | 是 | 可并列 `owner`、`operator`、`terminal_tenant`；无角色的 Party 仅在“全部”列表可见 |
+
+派生规则：`owner` 来自当前有效资产的 `owner_party_id`；`operator` 来自当前有效项目的 `manager_party_id`；`terminal_tenant` 来自当前有效下游转租或直租合同的 lessee。有效性只复用资产、项目和合同/协议既有生命周期口径；一个 Party 因多个来源命中同一角色时去重。当前切片不返回仅存在于历史合同中的角色，历史签约由 CustomerProfile 承载。
 ### 4.13 AnalyticsMetrics
 
 | 字段 | 类型 | 必填 | 规则 |

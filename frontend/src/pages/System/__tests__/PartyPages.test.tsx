@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import { Route, Routes } from 'react-router-dom';
+import type { Party } from '@/types/party';
 
 vi.mock('@/services/partyService', () => ({
   partyService: {
@@ -49,8 +50,9 @@ const formatConsoleMessages = (calls: unknown[][]) =>
     .map(value => String(value))
     .join(' ');
 
-const draftParty = {
+const draftParty: Party = {
   id: 'party-1',
+  business_roles: ['owner', 'terminal_tenant'],
   party_type: 'organization' as const,
   name: '测试主体',
   code: 'PTY-001',
@@ -140,6 +142,22 @@ describe('Party system pages', () => {
     });
   });
 
+  it('requests the selected business role slice from the server', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties" element={<PartyListPage />} />
+      </Routes>,
+      { route: '/system/parties' }
+    );
+
+    fireEvent.click(await screen.findByRole('tab', { name: '运营方' }));
+
+    await waitFor(() => {
+      expect(partyService.getParties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ business_role: 'operator' })
+      );
+    });
+  });
   it('does not emit antd deprecation warnings while rendering the party list page', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

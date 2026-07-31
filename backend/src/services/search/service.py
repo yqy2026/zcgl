@@ -269,7 +269,7 @@ class SearchService:
                 route_path=f"/contract-center/{group.contract_group_id}",
                 score=self._score_text(query, [group.group_code]),
                 business_rank=self._business_rank(query, [group.group_code]),
-                group_label="合同关系",
+                group_label="合同与协议",
             )
             for group in groups
         ]

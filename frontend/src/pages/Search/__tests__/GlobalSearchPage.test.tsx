@@ -60,9 +60,10 @@ describe('GlobalSearchPage', () => {
 
     expect(await screen.findByText('测试资产')).toBeInTheDocument();
     expect(screen.getByText('终端租户甲')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('搜索资产、项目、合同关系、合同、客户')).toBeInTheDocument();
+    expect(screen.getByText('按当前数据范围跨对象搜索资产、项目、合同与协议、客户。')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('搜索资产、项目、合同与协议、客户')).toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText('搜索资产、项目、合同关系、合同、客户、产权证')
+      screen.queryByPlaceholderText('搜索资产、项目、合同与协议、客户、产权证')
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('radio', { name: '按对象分组' }));

@@ -1,12 +1,21 @@
 """CRUD helpers for party-domain entities."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import delete, or_, select, text
+from sqlalchemy import delete, literal, or_, select, text, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..constants.business_constants import DataStatusValues
+from ..models.asset import Asset
+from ..models.contract_group import (
+    Contract,
+    ContractGroup,
+    ContractLifecycleStatus,
+    GroupRelationType,
+)
 from ..models.party import Party, PartyContact, PartyHierarchy, PartyType
+from ..models.project import Project, ProjectStatus
 from ..models.user_party_binding import UserPartyBinding
 from .asset_support import SensitiveDataHandler
 
@@ -372,6 +381,51 @@ class CRUDParty:
 
         return None
 
+    @staticmethod
+    def _current_business_role_sources(*, as_of: date) -> Any:
+        def active_dates(model: Any) -> tuple[Any, Any]:
+            return (
+                model.effective_from <= as_of,
+                or_(model.effective_to.is_(None), model.effective_to >= as_of),
+            )
+        owner_roles = select(
+            Asset.owner_party_id.label("party_id"),
+            literal("owner").label("business_role"),
+        ).where(
+            Asset.owner_party_id.is_not(None),
+            Asset.data_status.in_(DataStatusValues.get_active_asset_statuses()),
+        )
+        operator_roles = select(
+            Project.manager_party_id.label("party_id"),
+            literal("operator").label("business_role"),
+        ).where(
+            Project.manager_party_id.is_not(None),
+            Project.data_status == DataStatusValues.ASSET_NORMAL,
+            Project.status == ProjectStatus.ACTIVE.value,
+        )
+        terminal_tenant_roles = (
+            select(
+                Contract.lessee_party_id.label("party_id"),
+                literal("terminal_tenant").label("business_role"),
+            )
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(
+                Contract.lessee_party_id.is_not(None),
+                Contract.group_relation_type.in_(
+                    [GroupRelationType.DOWNSTREAM, GroupRelationType.DIRECT_LEASE]
+                ),
+                Contract.status == ContractLifecycleStatus.ACTIVE,
+                Contract.data_status == DataStatusValues.ASSET_NORMAL,
+                ContractGroup.data_status == DataStatusValues.ASSET_NORMAL,
+                *active_dates(Contract),
+                *active_dates(ContractGroup),
+            )
+        )
+        return union_all(owner_roles, operator_roles, terminal_tenant_roles).subquery()
+
     async def get_parties(
         self,
         db: AsyncSession,
@@ -381,8 +435,10 @@ class CRUDParty:
         party_type: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        business_role: str | None = None,
         scoped_party_ids: list[str] | None = None,
     ) -> list[Party]:
+        role_sources = self._current_business_role_sources(as_of=date.today())
         stmt = select(Party).where(Party.deleted_at.is_(None))
         if scoped_party_ids is not None:
             normalized_scope_ids = [
@@ -405,9 +461,45 @@ class CRUDParty:
                     Party.code.ilike(keyword),
                 )
             )
-        stmt = stmt.offset(skip).limit(limit)
-        return list((await db.execute(stmt)).scalars().all())
+        if business_role is not None:
+            stmt = stmt.where(
+                Party.id.in_(
+                    select(role_sources.c.party_id).where(
+                        role_sources.c.business_role == business_role
+                    )
+                )
+            )
+        parties = list(
+            (await db.execute(stmt.order_by(Party.id).offset(skip).limit(limit)))
+            .scalars()
+            .all()
+        )
+        if len(parties) == 0:
+            return []
 
+        party_ids = [party.id for party in parties]
+        role_rows = (
+            await db.execute(
+                select(role_sources.c.party_id, role_sources.c.business_role)
+                .where(role_sources.c.party_id.in_(party_ids))
+                .distinct()
+            )
+        ).all()
+        roles_by_party_id: dict[str, set[str]] = {}
+        for party_id, role in role_rows:
+            roles_by_party_id.setdefault(str(party_id), set()).add(str(role))
+
+        role_order = {"owner": 0, "operator": 1, "terminal_tenant": 2}
+        for party in parties:
+            setattr(
+                party,
+                "business_roles",
+                sorted(
+                    roles_by_party_id.get(str(party.id), set()),
+                    key=lambda role: role_order[role],
+                ),
+            )
+        return parties
     async def update_party(
         self,
         db: AsyncSession,

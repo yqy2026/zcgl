@@ -7,6 +7,17 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-07-30
+
+- feat(search): complete ``REQ-SCH-001`` public terminology closeout. Global search now labels ContractGroup results as ``合同与协议``, and the search page description and placeholder use the same product term. Focused backend and frontend search tests pass; the requirement trace now records complete evidence.
+
+### 2026-07-29
+
+- docs(traceability): close the stale implementation-status drift for eight requirements with complete code and test evidence. `REQ-AST-001`, `REQ-PRJ-001`, `REQ-PRJ-003`, `REQ-RNT-001`, `REQ-RNT-002`, `REQ-RNT-005`, `REQ-AUTH-001`, and `REQ-ANA-001` now record `已有证据`, not unverified completion. `REQ-SCH-001` remains in progress for the retired "合同关系" wording, and `REQ-NTF-001` remains in progress for real WeCom send validation plus the formal user-to-`userid` mapping.
+
+- docs(party): re-initiate `REQ-PTY-003` for Party business-role slices. The current Party list will derive `owner`, `operator`, and `terminal_tenant` from effective asset, project, and contract facts at query time, without a separate Customer master or persisted role cache. Added ADR-0021, an active implementation plan, glossary terms, API/domain contracts, traceability, and updated the suspended Party architecture issue to preserve the rejected legacy A+C design.
+
+- feat(party): implement `REQ-PTY-003` business-role slices. `GET /api/v1/parties` now derives `owner`, `operator`, and `terminal_tenant` from current effective asset, project, downstream-sublease, and direct-lease facts, returns `business_roles`, and applies the existing Party scope before filtering. The Party list adds server-backed role tabs and role tags; no Party role cache or Customer master was added.
 ### 2026-07-28
 
 - docs(governance): consolidate Phase 3/4 evidence, historical interviews, obsolete integration notes, and the superseded Flowable plan under `docs/archive/`; simplify current navigation, normalize archive/design paths, add recursive plan, local-link, and filename guards with unit coverage, and ignore the local `.scratch/` workspace.
