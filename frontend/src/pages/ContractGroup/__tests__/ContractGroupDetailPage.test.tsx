@@ -34,7 +34,7 @@ describe('ContractGroupDetailPage', () => {
     vi.mocked(contractGroupService.getContractGroup).mockResolvedValue({
       contract_group_id: 'group-1',
       group_code: 'GRP-TEST-202603-0001',
-      revenue_mode: 'LEASE',
+      revenue_mode: 'lease',
       operator_party_id: 'party-op',
       owner_party_id: 'party-owner',
       effective_from: '2026-03-01',
@@ -143,7 +143,7 @@ describe('ContractGroupDetailPage', () => {
     vi.mocked(contractGroupService.getContractGroup).mockResolvedValue({
       contract_group_id: 'group-3',
       group_code: 'GRP-NO-RULE-202603-0001',
-      revenue_mode: 'LEASE',
+      revenue_mode: 'lease',
       operator_party_id: 'party-op',
       owner_party_id: 'party-owner',
       effective_from: '2026-03-01',
@@ -173,7 +173,7 @@ describe('ContractGroupDetailPage', () => {
     vi.mocked(contractGroupService.getContractGroup).mockResolvedValue({
       contract_group_id: 'group-2',
       group_code: 'GRP-AGENCY-202603-0001',
-      revenue_mode: 'AGENCY',
+      revenue_mode: 'agency',
       operator_party_id: 'party-op',
       owner_party_id: 'party-owner',
       effective_from: '2026-03-01',

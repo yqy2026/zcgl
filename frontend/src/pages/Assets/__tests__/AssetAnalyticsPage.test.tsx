@@ -73,6 +73,10 @@ vi.mock('@/components/Analytics/AssetDistributionDetails', () => ({
   default: () => <div data-testid="asset-distribution-details" />,
 }));
 
+vi.mock('@/components/Analytics/ViewModeSegment', () => ({
+  default: () => <div data-testid="view-mode-segment" />,
+}));
+
 import AssetAnalyticsPage from '../AssetAnalyticsPage';
 
 describe('AssetAnalyticsPage', () => {
@@ -176,6 +180,7 @@ describe('AssetAnalyticsPage', () => {
 
   it('展示全局经营分析的项目和经营模式分区', () => {
     renderWithProviders(<AssetAnalyticsPage />, { route: '/analytics' });
+    expect(screen.getByTestId('view-mode-segment')).toBeInTheDocument();
 
     expect(screen.getByText('经营分析')).toBeInTheDocument();
     expect(screen.getByText('项目与模式分区')).toBeInTheDocument();

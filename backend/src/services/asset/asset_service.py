@@ -219,7 +219,7 @@ class AssetService:
         ownership_status: str | None = None,
         property_nature: str | None = None,
         usage_status: str | None = None,
-        ownership_id: str | None = None,
+        owner_party_id: str | None = None,
         management_entity: str | None = None,
         business_category: str | None = None,
         data_status: str | None = None,
@@ -236,8 +236,8 @@ class AssetService:
             filters["property_nature"] = property_nature
         if usage_status is not None and usage_status != "":
             filters["usage_status"] = usage_status
-        if ownership_id is not None and ownership_id != "":
-            filters["ownership_id"] = ownership_id
+        if owner_party_id is not None and owner_party_id != "":
+            filters["owner_party_id"] = owner_party_id
         if management_entity is not None and management_entity != "":
             filters["management_entity"] = management_entity
         if business_category is not None and business_category != "":

@@ -11,11 +11,11 @@ import type { ContractGroupSummaryContract } from '@/types/contractGroup';
 import type { LedgerRecalculateResult, LedgerRecalculateSkippedEntry } from '@/types/ledger';
 
 const REVENUE_MODE_META = {
-  LEASE: {
+  lease: {
     color: 'blue',
     label: '承租转租',
   },
-  AGENCY: {
+  agency: {
     color: 'cyan',
     label: '代理运营',
   },
@@ -194,7 +194,7 @@ const ContractGroupDetailPage: React.FC = () => {
     >
       {data != null && (
         <Space orientation="vertical" size={16}>
-          {data.revenue_mode === 'AGENCY' ? (
+          {data.revenue_mode === 'agency' ? (
             <Alert
               type="info"
               showIcon

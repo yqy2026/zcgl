@@ -16,6 +16,7 @@ import { AnalyticsLineChart, chartDataUtils } from '@/components/Analytics/Analy
 import AnalyticsFilters from '@/components/Analytics/AnalyticsFilters';
 import { createLogger } from '@/utils/logger';
 import { useAssetAnalytics, AnalysisDimension } from '@/hooks/useAssetAnalytics';
+import ViewModeSegment from '@/components/Analytics/ViewModeSegment';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import AssetDistributionGrid from '@/components/Analytics/AssetDistributionGrid';
 import AssetDistributionDetails from '@/components/Analytics/AssetDistributionDetails';
@@ -130,9 +131,12 @@ const AssetAnalyticsPage: React.FC = () => {
       <Card className={styles.sectionCard}>
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col xs={24} sm={12}>
-            <Typography.Title level={3} className={styles.pageTitle}>
+            <Space align="center" wrap>
+              <Typography.Title level={3} className={styles.pageTitle}>
               经营分析
-            </Typography.Title>
+              </Typography.Title>
+              <ViewModeSegment />
+            </Space>
           </Col>
           <Col xs={24} sm={12}>
             <Space wrap className={styles.headerActions}>

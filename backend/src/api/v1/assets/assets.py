@@ -163,22 +163,15 @@ async def _build_subject_scope_hint(
 
 
 async def _require_asset_collection_read_authz(
-    ownership_id: str | None = Query(None, description="权属方ID筛选"),
+    owner_party_id: str | None = Query(None, description="Owner Party ID filter"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> AuthzContext:
-    normalized_ownership_id = _normalize_optional_str(ownership_id)
+    normalized_owner_party_id = _normalize_optional_str(owner_party_id)
     resource_context: dict[str, Any] = {}
-    if normalized_ownership_id is not None:
-        resource_context["ownership_id"] = normalized_ownership_id
-        resolved_owner_party_id = await _resolve_owner_party_scope_by_ownership_id(
-            db=db,
-            ownership_id=normalized_ownership_id,
-        )
-        if resolved_owner_party_id is not None:
-            resource_context["owner_party_id"] = resolved_owner_party_id
-            resource_context["party_id"] = resolved_owner_party_id
-
+    if normalized_owner_party_id is not None:
+        resource_context["owner_party_id"] = normalized_owner_party_id
+        resource_context["party_id"] = normalized_owner_party_id
     subject_scope_hint = await _build_subject_scope_hint(
         db=db,
         user_id=str(current_user.id),
@@ -304,7 +297,7 @@ async def get_assets(
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),
-    ownership_id: str | None = Query(None, description="权属方ID筛选"),
+    owner_party_id: str | None = Query(None, description="Owner Party ID filter"),
     management_entity: str | None = Query(None, description="经营管理方筛选"),
     business_category: str | None = Query(None, description="业态类别筛选"),
     data_status: str | None = Query(None, description="数据状态筛选"),
@@ -335,7 +328,7 @@ async def get_assets(
     - **ownership_status**: 按确权状态筛选
     - **property_nature**: 按物业性质筛选
     - **usage_status**: 按使用状态筛选
-    - **ownership_id**: 按权属方ID筛选
+    - **owner_party_id**: 按产权主体 Party ID 筛选
     - **sort_field**: 排序字段
     - **sort_by**: 排序字段（兼容参数）
     - **sort_order**: 排序方向（asc/desc）
@@ -353,7 +346,7 @@ async def get_assets(
         ownership_status=ownership_status,
         property_nature=property_nature,
         usage_status=usage_status,
-        ownership_id=ownership_id,
+        owner_party_id=owner_party_id,
         management_entity=management_entity,
         business_category=business_category,
         data_status=data_status,

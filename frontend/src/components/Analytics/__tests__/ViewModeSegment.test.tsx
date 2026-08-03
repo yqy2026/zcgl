@@ -53,4 +53,28 @@ describe('ViewModeSegment', () => {
 
     expect(useDataScopeStore.getState().currentViewMode).toBe('manager');
   });
+  it('renders for admins and switches analytics perspective', () => {
+    useDataScopeStore.setState({
+      bindingTypes: [],
+      ownerPartyIds: [],
+      managerPartyIds: [],
+      isAdmin: true,
+      initialized: true,
+      isOwner: false,
+      isManager: false,
+      isDualBinding: false,
+      isSingleOwner: false,
+      isSingleManager: false,
+      currentViewMode: 'owner',
+    });
+
+    renderWithProviders(<ViewModeSegment />);
+
+    const options = screen.getAllByRole('radio');
+    expect(options).toHaveLength(2);
+
+    fireEvent.click(options[1]);
+
+    expect(useDataScopeStore.getState().currentViewMode).toBe('manager');
+  });
 });

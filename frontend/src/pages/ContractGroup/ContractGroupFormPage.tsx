@@ -39,7 +39,7 @@ type EditableFormState = {
 };
 
 const EMPTY_FORM: EditableFormState = {
-  revenue_mode: 'LEASE',
+  revenue_mode: 'lease',
   operator_party_id: '',
   owner_party_id: '',
   effective_from: '',
@@ -60,8 +60,8 @@ const EMPTY_FORM: EditableFormState = {
 };
 
 const REVENUE_MODE_OPTIONS = [
-  { label: '承租转租', value: 'LEASE' },
-  { label: '代理运营', value: 'AGENCY' },
+  { label: '承租转租', value: 'lease' },
+  { label: '代理运营', value: 'agency' },
 ] satisfies Array<{ label: string; value: RevenueMode }>;
 
 const parseJsonField = (value: string, label: string): Record<string, unknown> | undefined => {

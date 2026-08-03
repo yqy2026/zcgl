@@ -7,6 +7,12 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-07-31
+
+- fix(asset): replace active Ownership dropdown reads with Party-native owner selection. Asset list filtering and authorization now accept only `owner_party_id`, while analytics no longer requests frozen Ownership options.
+- fix(contract): align ContractGroup frontend revenue_mode values with the public API contract (lease / agency) across list, detail, creation, and filtering views, eliminating the live list rendering crash and invalid create/filter values.
+- fix(analytics): initialize administrators with a selectable analysis perspective, render the existing owner/manager switch on the routed analytics page, and defer dashboard and asset-list analytics queries until data-scope initialization. Comprehensive analytics requests and exports now refetch with the explicitly selected owner or manager view rather than the rejected implicit all view.
+
 ### 2026-07-30
 
 - feat(search): complete ``REQ-SCH-001`` public terminology closeout. Global search now labels ContractGroup results as ``合同与协议``, and the search page description and placeholder use the same product term. Focused backend and frontend search tests pass; the requirement trace now records complete evidence.

@@ -30,7 +30,7 @@ describe('ContractGroupListPage', () => {
           project_id: 'project-1',
           project_name: '项目A',
           group_code: 'GRP-TEST-202603-0001',
-          revenue_mode: 'LEASE',
+          revenue_mode: 'lease',
           contract_role_counts: {
             UPSTREAM: 1,
             DOWNSTREAM: 2,
@@ -63,7 +63,7 @@ describe('ContractGroupListPage', () => {
     expect(screen.getByText('新建合同关系')).toBeInTheDocument();
     expect(screen.queryByText('合同组管理')).not.toBeInTheDocument();
     expect(screen.queryByText('新建合同组')).not.toBeInTheDocument();
-    expect(screen.queryByText('LEASE')).not.toBeInTheDocument();
+    expect(screen.queryByText('lease')).not.toBeInTheDocument();
     expect(screen.queryByText('UPSTREAM')).not.toBeInTheDocument();
     expect(screen.queryByText('运营方主体 ID')).not.toBeInTheDocument();
     expect(screen.queryByText('产权方主体 ID')).not.toBeInTheDocument();

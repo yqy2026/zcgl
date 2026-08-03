@@ -24,6 +24,7 @@ const isAnalyticsData = (value: unknown): value is AnalyticsData => {
 
 export const useAssetAnalytics = () => {
   const initialized = useDataScopeStore(state => state.initialized);
+  const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>('area');
   const queryScopeKey = buildQueryScopeKey();
@@ -35,9 +36,9 @@ export const useAssetAnalytics = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['analytics', queryScopeKey, 'comprehensive', filters],
+    queryKey: ['analytics', queryScopeKey, 'comprehensive', currentViewMode, filters],
     queryFn: async () => {
-      const result = await analyticsService.getComprehensiveAnalytics(filters);
+      const result = await analyticsService.getComprehensiveAnalytics(filters, currentViewMode);
       logger.debug('Analytics API Result:', { result });
       return result;
     },
@@ -75,11 +76,15 @@ export const useAssetAnalytics = () => {
 
     try {
       MessageManager.loading('正在导出数据...', 0);
-      await analyticsService.downloadAnalyticsReport('excel', {
-        start_date: filters.start_date,
-        end_date: filters.end_date,
-        include_deleted: filters.include_deleted,
-      });
+      await analyticsService.downloadAnalyticsReport(
+        'excel',
+        {
+          start_date: filters.start_date,
+          end_date: filters.end_date,
+          include_deleted: filters.include_deleted,
+        },
+        currentViewMode
+      );
       MessageManager.success('数据导出成功！');
     } catch (err) {
       logger.error('导出失败:', err as Error);

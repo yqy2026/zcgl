@@ -28,7 +28,6 @@ export type { StandardApiResponse, PaginatedApiResponse } from '@/types/apiRespo
 
 const legacyOwnerEntityField = `${'ownership'}_${'entity'}` as const;
 const legacyOwnerDistributionField = `by_${'ownership'}_${'entity'}` as const;
-const legacyOwnerFilterField = `${'ownership'}_${'id'}` as const;
 
 // ==================== 字段相关接口 ====================
 
@@ -310,8 +309,6 @@ import type { OwnershipStatus, UsageStatus, PropertyNature, TenantType } from '@
 export interface AssetSearchFilters {
   project_id?: string;
   owner_party_id?: string;
-  /** @deprecated 兼容旧键名，后续统一使用 owner_party_id。 */
-  [legacyOwnerFilterField]?: string;
   ownership_status?: OwnershipStatus;
   property_nature?: PropertyNature;
   usage_status?: UsageStatus;

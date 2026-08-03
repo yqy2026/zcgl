@@ -4,7 +4,6 @@
  */
 
 import { apiClient } from '@/api/client';
-import { ownershipService } from '@/services/ownershipService';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { ASSET_API } from '@/constants/api';
 import { convertBackendToFrontend } from '@/utils/dataConversion';
@@ -19,38 +18,6 @@ import type {
   AssetUpdateRequest,
   AssetSearchFilters,
 } from './types';
-
-const LEGACY_OWNER_FILTER_KEY = `${'ownership'}_${'id'}` as const;
-
-type OwnerFilterCompatibleParams = Record<string, unknown> & {
-  owner_party_id?: unknown;
-  [LEGACY_OWNER_FILTER_KEY]?: unknown;
-};
-
-const normalizeOptionalId = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const normalized = value.trim();
-  return normalized === '' ? undefined : normalized;
-};
-
-const withOwnerFilterCompatibility = <T extends Record<string, unknown>>(params: T): T => {
-  const ownerFilterParams = params as OwnerFilterCompatibleParams;
-  const ownerPartyId = normalizeOptionalId(ownerFilterParams.owner_party_id);
-  const legacyOwnerId = normalizeOptionalId(ownerFilterParams[LEGACY_OWNER_FILTER_KEY]);
-  const normalizedOwnerId = ownerPartyId ?? legacyOwnerId;
-
-  if (normalizedOwnerId == null) {
-    return params;
-  }
-
-  return {
-    ...params,
-    owner_party_id: normalizedOwnerId,
-    [LEGACY_OWNER_FILTER_KEY]: normalizedOwnerId,
-  };
-};
 
 /**
  * 资产核心服务类
@@ -69,11 +36,11 @@ export class AssetCoreService {
       const { page_size, pageSize, ...restParams } = params ?? {};
       const legacyPageSize = typeof pageSize === 'number' ? pageSize : undefined;
       const normalizedPageSize = page_size ?? legacyPageSize ?? 20;
-      const compatibleParams = withOwnerFilterCompatibility(restParams as Record<string, unknown>);
+      const requestParams = restParams as Record<string, unknown>;
 
       const result = await apiClient.get<AssetListResponse>(ASSET_API.LIST, {
         params: {
-          ...compatibleParams,
+          ...requestParams,
           page: params?.page ?? 1,
           page_size: normalizedPageSize,
         },
@@ -105,12 +72,10 @@ export class AssetCoreService {
    */
   async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'page_size'>): Promise<Asset[]> {
     try {
-      const compatibleParams = withOwnerFilterCompatibility(
-        (params ?? {}) as Record<string, unknown>
-      );
+      const requestParams = (params ?? {}) as Record<string, unknown>;
       const result = await apiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
         params: {
-          ...compatibleParams,
+          ...requestParams,
           page_size: 10000,
         },
         cache: true,
@@ -535,13 +500,6 @@ export class AssetCoreService {
         errors: [enhancedError.message],
       };
     }
-  }
-
-  /**
-   * 获取权属方选项列表
-   */
-  async getOwnershipEntities(): Promise<Array<{ value: string; label: string }>> {
-    return ownershipService.getOwnershipSelectOptions();
   }
 
   /**

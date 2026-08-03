@@ -174,10 +174,6 @@ export class AssetService {
     return assetCoreService.validateAsset(data);
   }
 
-  async getOwnershipEntities(): Promise<Array<{ value: string; label: string }>> {
-    return assetCoreService.getOwnershipEntities();
-  }
-
   async getBusinessCategories(): Promise<string[]> {
     return assetCoreService.getBusinessCategories();
   }

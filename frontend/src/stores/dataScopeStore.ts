@@ -69,7 +69,7 @@ const resolveDefaultViewMode = (
   persistedViewMode: string | null
 ): BindingType | null => {
   if (isAdmin) {
-    return null;
+    return persistedViewMode === 'manager' ? 'manager' : 'owner';
   }
 
   const flags = computeFlags(bindingTypes);
@@ -164,7 +164,7 @@ export const useDataScopeStore = create<DataScopeState>((set, get) => ({
     const state = get();
     const nextViewMode =
       viewMode != null &&
-      ((viewMode === 'owner' && state.isOwner) || (viewMode === 'manager' && state.isManager))
+      (state.isAdmin || (viewMode === 'owner' && state.isOwner) || (viewMode === 'manager' && state.isManager))
         ? viewMode
         : resolveDefaultViewMode(state.bindingTypes, state.isAdmin, null);
 
@@ -187,11 +187,7 @@ export const useDataScopeStore = create<DataScopeState>((set, get) => ({
   },
 
   getEffectiveViewMode: () => {
-    const state = get();
-    if (state.isAdmin) {
-      return null;
-    }
-    return state.currentViewMode;
+    return get().currentViewMode;
   },
 
   getEffectivePerspective: () => {

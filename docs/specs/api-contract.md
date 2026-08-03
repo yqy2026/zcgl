@@ -73,7 +73,7 @@
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 资产列表 | `GET /api/v1/assets` | 支持分页、筛选、排序、搜索，并按主体范围过滤 |
+| 资产列表 | `GET /api/v1/assets` | 支持分页、筛选、排序、搜索，并按主体范围过滤；产权主体筛选仅接受 Party 原生 ID `owner_party_id`，不调用已冻结的 Ownership 路由 |
 | 资产详情 | `GET /api/v1/assets/{asset_id}` | 返回资产主数据和必要投影 |
 | 创建资产 | `POST /api/v1/assets` | 创建草稿资产，需通过权限和数据范围校验；`owner_party_id` 必填；`asset_code` 由系统按产权方编码段自动生成、只读，不接受客户端写入（ADR-0017，已实施） |
 | 更新资产 | `PATCH /api/v1/assets/{asset_id}` | 审核态关键字段受控，需版本冲突保护 |

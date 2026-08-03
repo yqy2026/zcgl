@@ -68,7 +68,7 @@ const assets = await assetService.getAssets({
 // 创建资产
 const newAsset = await assetService.createAsset({
   property_name: '新写字楼',
-  ownership_id: 'ownership-001',
+  owner_party_id: 'party-001',
   // ... 其他字段
 });
 
@@ -304,8 +304,8 @@ try {
 ```typescript
 // ✅ 推荐：为只读数据使用缓存
 @cached({ ttl: 10 * 60 * 1000, tags: ['reference-data'] })
-async getOwnershipEntities() {
-  return await assetService.getOwnershipEntities()
+async getBusinessCategories() {
+  return await assetService.getBusinessCategories()
 }
 
 // ❌ 不推荐：为频繁变化的数据使用长期缓存

@@ -56,7 +56,7 @@ describe('ContractGroupFormPage', () => {
     vi.mocked(contractGroupService.getContractGroup).mockResolvedValue({
       contract_group_id: 'group-1',
       group_code: 'GRP-TEST-202603-0001',
-      revenue_mode: 'LEASE',
+      revenue_mode: 'lease',
       contract_direction: 'LESSOR',
       group_relation_type: 'UPSTREAM',
       operator_party_id: 'party-op',
@@ -155,7 +155,7 @@ describe('ContractGroupFormPage', () => {
     });
 
     fireEvent.change(screen.getByLabelText('经营模式'), {
-      target: { value: 'LEASE' },
+      target: { value: 'lease' },
     });
 
     await screen.findAllByText('运营管理公司（OP-001）');
@@ -217,7 +217,7 @@ describe('ContractGroupFormPage', () => {
     await waitFor(() => {
       expect(contractGroupService.createContractGroup).toHaveBeenCalledWith({
         project_id: 'project-1',
-        revenue_mode: 'LEASE',
+        revenue_mode: 'lease',
         operator_party_id: 'party-op',
         owner_party_id: 'party-owner',
         effective_from: '2026-03-01',
@@ -283,10 +283,10 @@ describe('ContractGroupFormPage', () => {
     renderWithProviders(<ContractGroupFormPage />, { route: '/contract-center/group-1/edit' });
 
     await screen.findAllByText('编辑合同关系');
-    expect(await screen.findByLabelText('经营模式')).toHaveValue('LEASE');
+    expect(await screen.findByLabelText('经营模式')).toHaveValue('lease');
     expect(screen.getByText('承租转租')).toBeInTheDocument();
-    expect(screen.queryByText('LEASE')).not.toBeInTheDocument();
-    expect(screen.queryByText('AGENCY')).not.toBeInTheDocument();
+    expect(screen.queryByText('lease')).not.toBeInTheDocument();
+    expect(screen.queryByText('agency')).not.toBeInTheDocument();
     expect(screen.queryByText('运营方主体 ID')).not.toBeInTheDocument();
     expect(screen.queryByText('产权方主体 ID')).not.toBeInTheDocument();
   });

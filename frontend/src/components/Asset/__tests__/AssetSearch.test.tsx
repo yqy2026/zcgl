@@ -31,16 +31,7 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
-vi.mock('@/services/ownershipService', () => ({
-  ownershipService: {
-    getOwnershipSelectOptions: vi.fn(() =>
-      Promise.resolve([
-        { value: 'own-1', label: '政府' },
-        { value: 'own-2', label: '企业' },
-      ])
-    ),
-  },
-}));
+
 
 vi.mock('@/hooks/useSearchHistory', () => ({
   useSearchHistory: () => ({
@@ -60,18 +51,15 @@ vi.mock('@/hooks/useSearchHistory', () => ({
 }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useQueries: () => [
-    {
-      data: [
-        { value: 'own-1', label: '政府' },
-        { value: 'own-2', label: '企业' },
-      ],
-      isLoading: false,
-    },
-    { data: ['办公', '商业', '工业'], isLoading: false },
-  ],
+  useQueries: () => [{ data: ['办公', '商业', '工业'], isLoading: false }],
 }));
 
+
+vi.mock('@/components/Common/PartySelector', () => ({
+  default: ({ filterMode }: { filterMode?: string }) => (
+    <div data-testid="party-selector" data-filter-mode={filterMode ?? ''} />
+  ),
+}));
 // Mock Form.useForm
 const mockFormInstance = {
   getFieldsValue: vi.fn(() => ({})),
@@ -550,7 +538,7 @@ describe('AssetSearch', () => {
       expect(handleSearch).toHaveBeenCalled();
     });
 
-    it('搜索时应同时携带 owner_party_id 与 ownership_id 兼容筛选键', () => {
+    it('搜索时应只携带 Party 原生的 owner_party_id 筛选键', () => {
       const handleSearch = vi.fn();
       mockFormInstance.getFieldsValue.mockReturnValue({
         owner_party_id: 'party-123',
@@ -563,9 +551,11 @@ describe('AssetSearch', () => {
       expect(handleSearch).toHaveBeenCalledWith(
         expect.objectContaining({
           owner_party_id: 'party-123',
-          ownership_id: 'party-123',
           search: '测试关键词',
         })
+      );
+      expect(handleSearch).toHaveBeenCalledWith(
+        expect.not.objectContaining({ ownership_id: expect.any(String) })
       );
     });
 

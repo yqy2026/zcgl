@@ -98,8 +98,8 @@ describe('dataScopeStore', () => {
     useDataScopeStore.getState().initFromCapabilities(response, true);
 
     expect(useDataScopeStore.getState().isAdmin).toBe(true);
-    expect(useDataScopeStore.getState().currentViewMode).toBeNull();
-    expect(useDataScopeStore.getState().getEffectiveViewMode()).toBeNull();
+    expect(useDataScopeStore.getState().currentViewMode).toBe('owner');
+    expect(useDataScopeStore.getState().getEffectiveViewMode()).toBe('owner');
   });
 
   it('persists user-selected view mode when still allowed', () => {

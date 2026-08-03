@@ -1,14 +1,13 @@
 import React, { useMemo } from 'react';
 import { Col, Form, Input, InputNumber, DatePicker, Row, Select, Space } from 'antd';
+import PartySelector from '@/components/Common/PartySelector';
 import styles from './AdvancedSearchFields.module.css';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 interface AdvancedSearchFieldsProps {
-  ownershipOptions: Array<{ value: string; label: string }>;
   businessCategories: string[];
-  ownershipLoading?: boolean;
   businessCategoryLoading?: boolean;
   areaRange: [number, number];
   onAreaMinChange: (value: number | null) => void;
@@ -16,24 +15,12 @@ interface AdvancedSearchFieldsProps {
 }
 
 export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
-  ownershipOptions,
   businessCategories,
-  ownershipLoading = false,
   businessCategoryLoading = false,
   areaRange,
   onAreaMinChange,
   onAreaMaxChange,
 }: AdvancedSearchFieldsProps) {
-  const ownershipOptionNodes = useMemo(
-    () =>
-      ownershipOptions.map(option => (
-        <Option key={option.value} value={option.value}>
-          {option.label}
-        </Option>
-      )),
-    [ownershipOptions]
-  );
-
   const businessOptions = useMemo(
     () =>
       businessCategories.map(category => (
@@ -48,16 +35,8 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
     <>
       <Row gutter={16}>
         <Col xs={24} sm={12} md={8} lg={6}>
-          <Form.Item name="owner_party_id" label="权属方">
-            <Select
-              placeholder="选择权属方"
-              allowClear
-              showSearch
-              optionFilterProp="children"
-              loading={ownershipLoading}
-            >
-              {ownershipOptionNodes}
-            </Select>
+          <Form.Item name="owner_party_id" label="产权方">
+            <PartySelector placeholder="选择产权主体" filterMode="owner" />
           </Form.Item>
         </Col>
 

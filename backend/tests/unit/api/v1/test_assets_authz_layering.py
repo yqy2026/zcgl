@@ -28,6 +28,17 @@ def test_assets_module_should_import_authz_dependency() -> None:
     assert "require_permission(" not in module_source
 
 
+def test_asset_collection_owner_filter_should_use_party_id() -> None:
+    """Asset collection filtering must use the Party-native owner identifier."""
+    module_source = _read_module_source()
+
+    assert re.search(
+        r"async def _require_asset_collection_read_authz\(\s*owner_party_id:\s*str",
+        module_source,
+    )
+    assert re.search(r"async def get_assets\([\s\S]*?owner_party_id:\s*str", module_source)
+    assert "ownership_id: str | None = Query" not in module_source
+
 def test_assets_endpoints_should_use_authz_dependencies() -> None:
     """assets 本批关键端点应接入统一 ABAC 依赖。"""
     module_source = _read_module_source()
@@ -319,28 +330,17 @@ async def test_asset_create_authz_should_not_infer_asset_manager_scope() -> None
 
 
 @pytest.mark.asyncio
-async def test_asset_collection_read_authz_should_merge_ownership_scope_and_subject_scope() -> (
-    None
-):
-    """集合读取鉴权应合并 ownership scope 与 subject scope hint。"""
+async def test_asset_collection_read_authz_should_merge_owner_party_scope_and_subject_scope() -> None:
+    """Collection reads preserve an explicit Party owner scope over subject hints."""
     from src.api.v1.assets import assets as module
 
     mock_authz_service = MagicMock()
     mock_authz_service.check_access = AsyncMock(
-        return_value=MagicMock(
-            allowed=True,
-            reason_code="allow",
-        )
+        return_value=MagicMock(allowed=True, reason_code="allow")
     )
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
-        monkeypatch.setattr(
-            module,
-            "_resolve_owner_party_scope_by_ownership_id",
-            AsyncMock(return_value="owner-party-from-ownership"),
-            raising=False,
-        )
         monkeypatch.setattr(
             module,
             "_build_subject_scope_hint",
@@ -354,33 +354,27 @@ async def test_asset_collection_read_authz_should_merge_ownership_scope_and_subj
             raising=False,
         )
         result = await module._require_asset_collection_read_authz(  # type: ignore[attr-defined]
-            ownership_id="ownership-1",
+            owner_party_id="owner-party-1",
             current_user=MagicMock(id="user-1"),
             db=MagicMock(),
         )
 
     assert result.allowed is True
-    assert result.resource_context["ownership_id"] == "ownership-1"
-    assert result.resource_context["owner_party_id"] == "owner-party-from-ownership"
+    assert "ownership_id" not in result.resource_context
+    assert result.resource_context["owner_party_id"] == "owner-party-1"
     assert result.resource_context["manager_party_id"] == "subject-manager"
-    assert result.resource_context["party_id"] == "owner-party-from-ownership"
+    assert result.resource_context["party_id"] == "owner-party-1"
 
 
 @pytest.mark.asyncio
-async def test_asset_collection_read_authz_should_inject_subject_scope_without_ownership_filter() -> (
-    None
-):
-    """集合读取在无 ownership 参数时仍应注入 subject scope，避免无上下文拒绝。"""
+async def test_asset_collection_read_authz_should_inject_subject_scope_without_owner_filter() -> None:
+    """Collection reads without a filter still use the authenticated subject scope."""
     from src.api.v1.assets import assets as module
 
     mock_authz_service = MagicMock()
     mock_authz_service.check_access = AsyncMock(
-        return_value=MagicMock(
-            allowed=True,
-            reason_code="allow",
-        )
+        return_value=MagicMock(allowed=True, reason_code="allow")
     )
-    resolve_ownership_scope = AsyncMock(return_value=None)
     subject_scope_hint = {
         "owner_party_id": "subject-owner",
         "manager_party_id": "subject-manager",
@@ -391,18 +385,12 @@ async def test_asset_collection_read_authz_should_inject_subject_scope_without_o
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
         monkeypatch.setattr(
             module,
-            "_resolve_owner_party_scope_by_ownership_id",
-            resolve_ownership_scope,
-            raising=False,
-        )
-        monkeypatch.setattr(
-            module,
             "_build_subject_scope_hint",
             AsyncMock(return_value=subject_scope_hint),
             raising=False,
         )
         result = await module._require_asset_collection_read_authz(  # type: ignore[attr-defined]
-            ownership_id=None,
+            owner_party_id=None,
             current_user=MagicMock(id="user-1"),
             db=MagicMock(),
         )
@@ -412,11 +400,9 @@ async def test_asset_collection_read_authz_should_inject_subject_scope_without_o
     assert result.resource_context["owner_party_id"] == "subject-owner"
     assert result.resource_context["manager_party_id"] == "subject-manager"
     assert result.resource_context["party_id"] == "subject-owner"
-    assert resolve_ownership_scope.await_count == 0
 
     _args, kwargs = mock_authz_service.check_access.await_args
     assert kwargs["resource"]["party_id"] == "subject-owner"
-
 
 @pytest.mark.asyncio
 async def test_create_asset_should_backfill_owner_party_from_authz_context() -> None:

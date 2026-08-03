@@ -11,11 +11,11 @@ import type { ContractGroupListItem, GroupRelationType, RevenueMode } from '@/ty
 const PAGE_SIZE = 20;
 
 const REVENUE_MODE_META = {
-  LEASE: {
+  lease: {
     color: 'blue',
     label: '承租转租',
   },
-  AGENCY: {
+  agency: {
     color: 'cyan',
     label: '代理运营',
   },
@@ -158,8 +158,8 @@ const ContractGroupListPage: React.FC = () => {
               setOffset(0);
             }}
             options={[
-              { label: REVENUE_MODE_META.LEASE.label, value: 'LEASE' },
-              { label: REVENUE_MODE_META.AGENCY.label, value: 'AGENCY' },
+              { label: REVENUE_MODE_META.lease.label, value: 'lease' },
+              { label: REVENUE_MODE_META.agency.label, value: 'agency' },
             ]}
           />
           <Button onClick={() => navigate(CONTRACT_CENTER_ROUTES.IMPORT)}>PDF导入</Button>

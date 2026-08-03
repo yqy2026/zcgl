@@ -1,4 +1,4 @@
-export type RevenueMode = 'LEASE' | 'AGENCY';
+export type RevenueMode = 'lease' | 'agency';
 export type ContractDirection = 'LESSOR' | 'LESSEE';
 export type GroupRelationType = 'UPSTREAM' | 'DOWNSTREAM' | 'ENTRUSTED' | 'DIRECT_LEASE';
 export type ContractLifecycleStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED';

@@ -18,11 +18,7 @@ vi.mock('@/api/client', () => ({
   },
 }));
 
-vi.mock('@/services/ownershipService', () => ({
-  ownershipService: {
-    getOwnershipSelectOptions: vi.fn(),
-  },
-}));
+
 
 // Mock error handler
 vi.mock('@/utils/responseExtractor', () => ({
@@ -35,7 +31,6 @@ vi.mock('@/utils/responseExtractor', () => ({
 }));
 
 import { apiClient } from '@/api/client';
-import { ownershipService } from '@/services/ownershipService';
 
 describe('AssetCoreService', () => {
   let service: AssetCoreService;
@@ -132,7 +127,7 @@ describe('AssetCoreService', () => {
       );
     });
 
-    it('should send both owner_party_id and ownership_id when owner filter uses owner_party_id', async () => {
+    it('should send only owner_party_id when owner filter uses owner_party_id', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
@@ -151,13 +146,12 @@ describe('AssetCoreService', () => {
         expect.objectContaining({
           params: expect.objectContaining({
             owner_party_id: 'party-1',
-            ownership_id: 'party-1',
           }),
         })
       );
     });
 
-    it('should send both owner_party_id and ownership_id when owner filter uses ownership_id', async () => {
+    it('does not send ownership_id for a Party-native owner filter', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
@@ -169,19 +163,15 @@ describe('AssetCoreService', () => {
         },
       });
 
-      await service.getAssets({ ownership_id: 'party-legacy' });
+      await service.getAssets({ owner_party_id: 'party-1' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          params: expect.objectContaining({
-            owner_party_id: 'party-legacy',
-            ownership_id: 'party-legacy',
-          }),
+          params: expect.not.objectContaining({ ownership_id: expect.any(String) }),
         })
       );
     });
-
     it('should return empty list when API returns success false', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: false,
@@ -519,14 +509,14 @@ describe('AssetCoreService', () => {
         data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
       });
 
-      await service.searchAssets('测试', { ownership_id: 'own-1' });
+      await service.searchAssets('测试', { owner_party_id: 'party-1' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           params: expect.objectContaining({
             search: '测试',
-            ownership_id: 'own-1',
+            owner_party_id: 'party-1',
           }),
         })
       );
@@ -588,32 +578,6 @@ describe('AssetCoreService', () => {
   });
 
   // ==========================================================================
-  // getOwnershipEntities 测试
-  // ==========================================================================
-
-  describe('getOwnershipEntities', () => {
-    it('should return ownership entities list', async () => {
-      const mockEntities = [
-        { value: 'own-1', label: '公司A' },
-        { value: 'own-2', label: '公司B' },
-        { value: 'own-3', label: '公司C' },
-      ];
-      vi.mocked(ownershipService.getOwnershipSelectOptions).mockResolvedValue(mockEntities);
-
-      const result = await service.getOwnershipEntities();
-
-      expect(result).toEqual(mockEntities);
-      expect(result).toHaveLength(3);
-    });
-
-    it('should return empty array when no entities', async () => {
-      vi.mocked(ownershipService.getOwnershipSelectOptions).mockResolvedValue([]);
-
-      const result = await service.getOwnershipEntities();
-
-      expect(result).toEqual([]);
-    });
-  });
 
   // ==========================================================================
   // getBusinessCategories 测试
@@ -695,17 +659,17 @@ describe('AssetCoreService', () => {
         data: [],
       });
 
-      await service.getAllAssets({ ownership_id: 'own-1' });
+      await service.getAllAssets({ owner_party_id: 'party-1' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          params: expect.objectContaining({ ownership_id: 'own-1' }),
+          params: expect.objectContaining({ owner_party_id: 'party-1' }),
         })
       );
     });
 
-    it('should keep owner filter compatibility in all-assets endpoint', async () => {
+    it('should send only owner_party_id in all-assets endpoint', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: [],
@@ -718,7 +682,6 @@ describe('AssetCoreService', () => {
         expect.objectContaining({
           params: expect.objectContaining({
             owner_party_id: 'party-2',
-            ownership_id: 'party-2',
           }),
         })
       );

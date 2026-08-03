@@ -1,7 +1,5 @@
 import React from 'react';
 import { Row, Col, Typography, Select, Input } from 'antd';
-import { useQuery } from '@tanstack/react-query';
-import { ownershipService } from '@/services/ownershipService';
 import { useAnalyticsFiltersContext } from './FiltersContext';
 import styles from './Filters.module.css';
 
@@ -13,12 +11,6 @@ const { Option } = Select;
  */
 const FiltersSection: React.FC = () => {
   const { localFilters, handleFilterChange, loading, showAdvanced } = useAnalyticsFiltersContext();
-  const { data: ownershipOptions = [], isLoading: ownershipLoading } = useQuery({
-    queryKey: ['ownership-select-options'],
-    queryFn: () => ownershipService.getOwnershipSelectOptions(),
-    staleTime: 30 * 60 * 1000,
-  });
-
   if (!showAdvanced) {
     return null;
   }
@@ -137,20 +129,7 @@ const FiltersSection: React.FC = () => {
         </Select>
       </Col>
 
-      <Col xs={24} md={8}>
-        <Text strong className={styles.fieldLabel}>
-          权属主体:
-        </Text>
-        <Select
-          className={styles.fieldControl}
-          placeholder="请选择权属主体"
-          allowClear
-          value={localFilters.owner_party_id}
-          onChange={value => handleFilterChange('owner_party_id', value)}
-          loading={loading || ownershipLoading}
-          options={ownershipOptions}
-        ></Select>
-      </Col>
+
     </Row>
   );
 };

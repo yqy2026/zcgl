@@ -24,6 +24,7 @@ import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { createLogger } from '@/utils/logger';
 import { buildQueryScopeKey } from '@/utils/queryScope';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { PageContainer } from '@/components/Common';
 import { LoadingContainer } from '@/components/Common/StateContainer';
 
@@ -41,6 +42,8 @@ const AssetListPage: React.FC = () => {
     pageSize: 20,
   });
   const queryScopeKey = buildQueryScopeKey();
+  const analyticsScopeInitialized = useDataScopeStore(state => state.initialized);
+  const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
 
   const {
     data: assetsData,
@@ -86,8 +89,9 @@ const AssetListPage: React.FC = () => {
     isLoading: analyticsLoading,
     refetch: refetchAnalytics,
   } = useQuery({
-    queryKey: ['analytics', queryScopeKey, analyticsFilters],
-    queryFn: () => analyticsService.getComprehensiveAnalytics(analyticsFilters),
+    queryKey: ['analytics', queryScopeKey, currentViewMode, analyticsFilters],
+    queryFn: () => analyticsService.getComprehensiveAnalytics(analyticsFilters, currentViewMode),
+    enabled: analyticsScopeInitialized,
   });
 
   const listData = useMemo(

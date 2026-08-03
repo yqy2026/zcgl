@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@/test/utils/test-helpers';
 import { useAssetAnalytics } from '../useAssetAnalytics';
 import { analyticsService } from '@/services/analyticsService';
@@ -6,17 +6,13 @@ import { exportAnalyticsData } from '@/services/analyticsExportService';
 import { MessageManager } from '@/utils/messageManager';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 
 const formatStdoutWrites = (calls: unknown[][]) =>
   calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
-}));
-
-vi.mock('@/stores/dataScopeStore', () => ({
-  useDataScopeStore: (selector: (state: { initialized: boolean }) => boolean) =>
-    selector({ initialized: true }),
 }));
 
 // Mock dependencies
@@ -67,6 +63,19 @@ const createWrapper = () => {
 describe('useAssetAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useDataScopeStore.setState({
+      bindingTypes: [],
+      ownerPartyIds: [],
+      managerPartyIds: [],
+      isAdmin: true,
+      initialized: true,
+      isOwner: false,
+      isManager: false,
+      isDualBinding: false,
+      isSingleOwner: false,
+      isSingleManager: false,
+      currentViewMode: 'owner',
+    });
     vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue({
       success: true,
       data: {
@@ -99,6 +108,10 @@ describe('useAssetAnalytics', () => {
         occupancy_distribution: [],
       },
     });
+  });
+
+  afterEach(() => {
+    window.localStorage.removeItem('data-scope:view-mode');
   });
 
   it('should initialize with default state', () => {
@@ -136,7 +149,7 @@ describe('useAssetAnalytics', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
+    expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({}, 'owner');
     expect(result.current.analyticsData).toEqual(mockData.data);
     expect(result.current.hasData).toBe(true);
   });
@@ -158,7 +171,7 @@ describe('useAssetAnalytics', () => {
     });
 
     await waitFor(() => {
-      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({}, 'owner');
     });
 
     const queryKeys = queryClient
@@ -172,9 +185,28 @@ describe('useAssetAnalytics', () => {
           Array.isArray(queryKey) &&
           queryKey[0] === 'analytics' &&
           queryKey[1] === 'user:user-1|scope:owner,manager' &&
-          queryKey[2] === 'comprehensive'
+          queryKey[2] === 'comprehensive' &&
+          queryKey[3] === 'owner'
       )
     ).toBe(true);
+  });
+
+  it('should refetch analytics when the selected perspective changes', async () => {
+    renderHook(() => useAssetAnalytics(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({}, 'owner');
+    });
+
+    act(() => {
+      useDataScopeStore.getState().setCurrentViewMode('manager');
+    });
+
+    await waitFor(() => {
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenLastCalledWith({}, 'manager');
+    });
   });
 
   it('should update filters and refetch', async () => {
@@ -189,7 +221,10 @@ describe('useAssetAnalytics', () => {
     expect(result.current.filters).toEqual({ keyword: 'test' });
 
     await waitFor(() => {
-      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({ keyword: 'test' });
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith(
+        { keyword: 'test' },
+        'owner'
+      );
     });
   });
 
@@ -274,7 +309,7 @@ describe('useAssetAnalytics', () => {
       await result.current.handleExport();
     });
 
-    expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('excel', {});
+    expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('excel', {}, 'owner');
     expect(exportAnalyticsData).not.toHaveBeenCalled();
     expect(MessageManager.success).toHaveBeenCalledWith('数据导出成功！');
   });

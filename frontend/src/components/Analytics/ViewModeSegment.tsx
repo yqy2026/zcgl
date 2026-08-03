@@ -8,7 +8,7 @@ const ViewModeSegment: React.FC = () => {
   const currentViewMode = useDataScopeStore(state => state.currentViewMode);
   const setCurrentViewMode = useDataScopeStore(state => state.setCurrentViewMode);
 
-  if (isAdmin || !isDualBinding) {
+  if (!isAdmin && !isDualBinding) {
     return null;
   }
 

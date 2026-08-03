@@ -6,7 +6,6 @@ import type { Dayjs } from 'dayjs';
 
 import type { AssetSearchParams } from '@/types/asset';
 import { assetService } from '@/services/assetService';
-import { ownershipService } from '@/services/ownershipService';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { createLogger } from '@/utils/logger';
 import { MessageManager } from '@/utils/messageManager';
@@ -25,7 +24,6 @@ interface AssetSearchFormValues {
   usage_status?: string;
   data_status?: string;
   owner_party_id?: string;
-  ownership_id?: string;
   business_category?: string;
   areaRange?: [number, number];
   dateRange?: [Dayjs, Dayjs];
@@ -83,23 +81,9 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
   const searchQueries = useQueries({
     queries: [
       {
-        queryKey: ['ownership-entities'],
-        queryFn: async () => {
-          try {
-            return await ownershipService.getOwnershipSelectOptions();
-          } catch (error) {
-            componentLogger.warn(`获取权属方失败，返回空列表: ${String(error)}`);
-            return [];
-          }
-        },
-        staleTime: 30 * 60 * 1000,
-        retry: 0, // 不重试，立即使用默认值
-      },
-      {
         queryKey: ['business-categories'],
         queryFn: async () => {
           try {
-            // 直接从专门的API获取
             return await assetService.getBusinessCategories();
           } catch (error) {
             componentLogger.warn(`获取业态类别失败，使用默认选项: ${String(error)}`);
@@ -111,15 +95,8 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
       },
     ],
   });
-
-  // 提取查询结果
-  const ownershipOptions = searchQueries[0].data ?? [];
-  const businessCategories = searchQueries[1].data ?? [];
-
-  const ownershipLoading = searchQueries[0].isLoading;
-  const businessLoading = searchQueries[1].isLoading;
-
-  // 检查是否所有查询都已加载完成
+  const businessCategories = searchQueries[0]?.data ?? [];
+  const businessLoading = searchQueries[0]?.isLoading ?? false;
   const isLoadingQueries = searchQueries.some(query => query.isLoading);
 
   // 合并外部loading和内部查询loading
@@ -131,15 +108,11 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
       const normalizedInitialValues: Partial<AssetSearchParams> & Record<string, unknown> = {
         ...initialValues,
       };
-      const normalizedOwnerId =
-        normalizeOptionalId(initialValues.owner_party_id) ??
-        normalizeOptionalId(initialValues.ownership_id);
+      const normalizedOwnerId = normalizeOptionalId(initialValues.owner_party_id);
 
       if (normalizedOwnerId != null) {
         normalizedInitialValues.owner_party_id = normalizedOwnerId;
-        normalizedInitialValues.ownership_id = normalizedOwnerId;
       }
-
       form.setFieldsValue(normalizedInitialValues);
     }
   }, [initialValues, form]);
@@ -174,16 +147,12 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
       delete values.areaRange;
     }
 
-    const normalizedOwnerId =
-      normalizeOptionalId(values.owner_party_id) ?? normalizeOptionalId(values.ownership_id);
+    const normalizedOwnerId = normalizeOptionalId(values.owner_party_id);
     if (normalizedOwnerId != null) {
       values.owner_party_id = normalizedOwnerId;
-      values.ownership_id = normalizedOwnerId;
     } else {
       delete values.owner_party_id;
-      delete values.ownership_id;
     }
-
     // 过滤空值
     const searchParams = Object.entries(values).reduce<AssetSearchParams>((acc, [key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -327,9 +296,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
         {expanded && (
           <AdvancedSearchFields
-            ownershipOptions={ownershipOptions}
             businessCategories={businessCategories}
-            ownershipLoading={ownershipLoading}
             businessCategoryLoading={businessLoading}
             areaRange={areaRange}
             onAreaMinChange={handleAreaMinChange}

@@ -331,10 +331,10 @@ class TestTenantFilterResolution:
 
 
 class TestBuildFilters:
-    async def test_build_filters_includes_ownership_id(self) -> None:
-        filters = AssetService.build_filters(ownership_id="ownership-1")
+    async def test_build_filters_includes_owner_party_id(self) -> None:
+        filters = AssetService.build_filters(owner_party_id="party-1")
         assert filters is not None
-        assert filters["ownership_id"] == "ownership-1"
+        assert filters["owner_party_id"] == "party-1"
 
     async def test_build_filters_includes_occupancy_rate_range(self) -> None:
         filters = AssetService.build_filters(

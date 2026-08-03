@@ -35,10 +35,12 @@ const fetchDashboardData = async (viewMode: 'owner' | 'manager' | null) => {
 };
 
 export const useDashboardData = () => {
+  const initialized = useDataScopeStore(state => state.initialized);
   const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard', currentViewMode],
     queryFn: () => fetchDashboardData(currentViewMode),
+    enabled: initialized,
   });
 
   return {
