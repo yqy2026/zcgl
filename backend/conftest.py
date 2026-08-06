@@ -219,7 +219,36 @@ async def test_client_no_auth(test_db):
 
 
 @pytest.fixture
-def test_user(test_db):
+def test_organization(test_db):
+    """Create the active root organization required by human test accounts."""
+    from src.models.organization import Organization
+
+    organization = (
+        test_db.query(Organization)
+        .filter(Organization.code == "TEST-FIXTURE-ROOT")
+        .first()
+    )
+    if organization is not None:
+        return organization
+
+    organization = Organization(
+        name="Test Fixture Root Organization",
+        code="TEST-FIXTURE-ROOT",
+        type="company",
+        status="active",
+        level=1,
+        path="/TEST-FIXTURE-ROOT",
+        created_by="test-fixture",
+        updated_by="test-fixture",
+    )
+    test_db.add(organization)
+    test_db.flush()
+    test_db.refresh(organization)
+    return organization
+
+
+@pytest.fixture
+def test_user(test_db, test_organization):
     """创建测试用户"""
     from src.models.auth import User
     from src.models.rbac import Permission, Role, UserRoleAssignment
@@ -294,6 +323,8 @@ def test_user(test_db):
     # Check if user already exists to avoid UNIQUE constraint errors
     existing_user = test_db.query(User).filter(User.username == "testuser").first()
     if existing_user:
+        existing_user.organization_id = test_organization.id
+        test_db.flush()
         admin_role = ensure_role("admin", "管理员")
         ensure_assignment(existing_user, admin_role)
         return existing_user
@@ -309,6 +340,7 @@ def test_user(test_db):
         full_name="Test User",
         password_hash=password_hash,
         is_active=True,
+        organization_id=test_organization.id,
     )
     test_db.add(user)
     test_db.flush()  # Use flush instead of commit so test_db rollback can clean up
@@ -319,7 +351,7 @@ def test_user(test_db):
 
 
 @pytest.fixture
-def test_admin(test_db):
+def test_admin(test_db, test_organization):
     """创建测试管理员"""
     from src.models.auth import User
     from src.models.rbac import Permission, Role, UserRoleAssignment
@@ -394,6 +426,8 @@ def test_admin(test_db):
     # Check if admin already exists to avoid UNIQUE constraint errors
     existing_admin = test_db.query(User).filter(User.username == "admin").first()
     if existing_admin:
+        existing_admin.organization_id = test_organization.id
+        test_db.flush()
         admin_role = ensure_role("admin", "管理员")
         ensure_assignment(existing_admin, admin_role)
         return existing_admin
@@ -409,6 +443,7 @@ def test_admin(test_db):
         full_name="Admin User",
         password_hash=password_hash,
         is_active=True,
+        organization_id=test_organization.id,
     )
     test_db.add(admin)
     test_db.flush()  # Use flush instead of commit

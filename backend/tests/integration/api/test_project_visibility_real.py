@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 
 from src.models.abac import ABACPolicy, ABACPolicyRule, ABACRolePolicy
 from src.models.asset import Asset
-from src.models.auth import User
+from src.models.auth import AccountType, User
 from src.models.organization import Organization
-from src.models.party import Party, PartyType
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from src.models.project_asset import ProjectAsset
 from src.models.rbac import Role, UserRoleAssignment
@@ -90,6 +90,7 @@ def test_non_admin_project_visibility_isolation(
 ):
     """真实链路验证：非管理员仅能看到本组织项目。"""
     suffix = uuid.uuid4().hex[:8]
+    party_serial = int(suffix, 16) % 999_999
     password = "User123!@#"
     password_hash = PasswordService().get_password_hash(password)
 
@@ -111,18 +112,20 @@ def test_non_admin_project_visibility_isolation(
     db_session.flush()
 
     party_a = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Visibility Party A-{suffix}",
-        code=f"VIS-PARTY-A-{suffix}",
+        code=f"LE-{party_serial:06d}",
         external_ref=org_a.id,
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     party_b = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Visibility Party B-{suffix}",
-        code=f"VIS-PARTY-B-{suffix}",
+        code=f"LE-{party_serial + 1:06d}",
         external_ref=org_b.id,
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     db_session.add_all([party_a, party_b])
     db_session.flush()
@@ -134,7 +137,8 @@ def test_non_admin_project_visibility_isolation(
         full_name="Visibility User A",
         password_hash=password_hash,
         is_active=True,
-        default_organization_id=org_a.id,
+        account_type=AccountType.HUMAN,
+        organization_id=org_a.id,
         created_by="integration_test",
         updated_by="integration_test",
     )
@@ -145,7 +149,8 @@ def test_non_admin_project_visibility_isolation(
         full_name="Visibility User B",
         password_hash=password_hash,
         is_active=True,
-        default_organization_id=org_b.id,
+        account_type=AccountType.HUMAN,
+        organization_id=org_b.id,
         created_by="integration_test",
         updated_by="integration_test",
     )
@@ -158,13 +163,11 @@ def test_non_admin_project_visibility_isolation(
                 user_id=user_a.id,
                 party_id=party_a.id,
                 relation_type=RelationType.MANAGER,
-                is_primary=True,
             ),
             UserPartyBinding(
                 user_id=user_b.id,
                 party_id=party_b.id,
                 relation_type=RelationType.MANAGER,
-                is_primary=True,
             ),
         ]
     )
@@ -224,6 +227,7 @@ def test_owner_user_sees_projects_via_asset_relation(
     client: TestClient, db_session: Session
 ):
     suffix = uuid.uuid4().hex[:8]
+    party_serial = int(suffix, 16) % 999_999
     password = "User123!@#"
     password_hash = PasswordService().get_password_hash(password)
 
@@ -238,18 +242,20 @@ def test_owner_user_sees_projects_via_asset_relation(
     db_session.flush()
 
     owner_party = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Owner Visibility Party-{suffix}",
-        code=f"OWNER-PARTY-{suffix}",
+        code=f"LE-{party_serial:06d}",
         external_ref=org.id,
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     manager_party = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Manager Visibility Party-{suffix}",
-        code=f"MANAGER-PARTY-{suffix}",
+        code=f"LE-{party_serial + 1:06d}",
         external_ref=org.id,
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     db_session.add_all([owner_party, manager_party])
     db_session.flush()
@@ -261,7 +267,8 @@ def test_owner_user_sees_projects_via_asset_relation(
         full_name="Owner Visibility User",
         password_hash=password_hash,
         is_active=True,
-        default_organization_id=org.id,
+        account_type=AccountType.HUMAN,
+        organization_id=org.id,
         created_by="integration_test",
         updated_by="integration_test",
     )
@@ -273,7 +280,6 @@ def test_owner_user_sees_projects_via_asset_relation(
             user_id=user.id,
             party_id=owner_party.id,
             relation_type=RelationType.OWNER,
-            is_primary=True,
         )
     )
 

@@ -4,9 +4,8 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import (
@@ -20,10 +19,20 @@ from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....schemas.organization import (
-    OrganizationBatchRequest,
     OrganizationCreate,
     OrganizationHistoryResponse,
-    OrganizationMoveRequest,
+    OrganizationMoveCommitRequest,
+    OrganizationMoveCommitResponse,
+    OrganizationMovePreviewResponse,
+    OrganizationMoveProposal,
+    OrganizationPartyScopeBatchCommitRequest,
+    OrganizationPartyScopeBatchCommitResponse,
+    OrganizationPartyScopeBatchPreviewRequest,
+    OrganizationPartyScopeBatchPreviewResponse,
+    OrganizationPartyScopeCommitRequest,
+    OrganizationPartyScopeCommitResponse,
+    OrganizationPartyScopePreviewResponse,
+    OrganizationPartyScopeProposal,
     OrganizationResponse,
     OrganizationSearchRequest,
     OrganizationStatistics,
@@ -31,16 +40,15 @@ from ....schemas.organization import (
     OrganizationUpdate,
 )
 from ....services.authz import authz_service
-from ....services.organization import organization_service
+from ....services.organization import (
+    organization_move_service,
+    organization_party_scope_batch_service,
+    organization_party_scope_service,
+    organization_service,
+)
 
 router = APIRouter(tags=["组织架构管理"])
 _ORGANIZATION_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:organization:create"
-_ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:organization:batch_update"
-_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-}
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -53,9 +61,7 @@ def _normalize_optional_str(value: Any) -> str | None:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(
-        getattr(current_user, "default_organization_id", None)
-    )
+    return _normalize_optional_str(current_user.organization_id)
 
 
 async def _resolve_organization_party_id(
@@ -67,22 +73,13 @@ async def _resolve_organization_party_id(
     if normalized_organization_id is None:
         return None
 
-    from ....models.party import Party, PartyType
-
-    stmt = (
-        select(Party.id.label("party_id"))
-        .where(
-            Party.party_type == PartyType.ORGANIZATION.value,
-            or_(
-                Party.id == normalized_organization_id,
-                Party.external_ref == normalized_organization_id,
-            ),
-        )
-        .order_by(Party.id)
-        .limit(1)
+    organization = await organization_service.get_organization(
+        db,
+        org_id=normalized_organization_id,
     )
-    row = (await db.execute(stmt)).mappings().one_or_none()
-    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+    if organization is None:
+        return None
+    return _normalize_optional_str(organization.represented_party_id)
 
 
 def _build_party_scope_context(
@@ -116,8 +113,6 @@ async def _require_organization_create_authz(
             db=db,
             organization_id=scoped_organization_id,
         )
-        if scoped_party_id is None:
-            scoped_party_id = scoped_organization_id
 
     if scoped_party_id is None:
         scoped_party_id = _ORGANIZATION_CREATE_UNSCOPED_PARTY_ID
@@ -151,6 +146,26 @@ async def _require_organization_create_authz(
         allowed=True,
         reason_code=decision.reason_code,
     )
+
+
+async def _require_organization_party_scope_batch_authz(
+    *,
+    request: Request,
+    db: AsyncSession,
+    current_user: User,
+    organization_ids: tuple[str, ...],
+) -> None:
+    """Apply the normal per-Organization ABAC decision to every batch target."""
+    for organization_id in sorted(set(organization_ids)):
+        await require_authz(
+            action="manage_party_scope",
+            resource_type="organization",
+            resource_id=organization_id,
+        ).resolve(
+            request=request,
+            current_user=current_user,
+            db=db,
+        )
 
 
 @router.get(
@@ -405,6 +420,131 @@ async def create_organization(
         raise bad_request(str(e))
 
 
+@router.post(
+    "/party-scope/batch/preview",
+    response_model=OrganizationPartyScopeBatchPreviewResponse,
+)
+async def preview_organization_party_scope_batch(
+    payload: OrganizationPartyScopeBatchPreviewRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+) -> OrganizationPartyScopeBatchPreviewResponse:
+    """Preview direct represented-Party changes for independent Organizations."""
+    try:
+        await _require_organization_party_scope_batch_authz(
+            request=http_request,
+            db=db,
+            current_user=current_user,
+            organization_ids=tuple(item.organization_id for item in payload.items),
+        )
+        return await organization_party_scope_batch_service.preview(
+            db,
+            request=payload,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as e:
+        raise bad_request(str(e))
+
+
+@router.post(
+    "/party-scope/batch/commit",
+    response_model=OrganizationPartyScopeBatchCommitResponse,
+)
+async def commit_organization_party_scope_batch(
+    payload: OrganizationPartyScopeBatchCommitRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+) -> OrganizationPartyScopeBatchCommitResponse:
+    """Atomically commit a current batch represented-Party scope preview."""
+    try:
+        actor_id = str(current_user.id)
+        await _require_organization_party_scope_batch_authz(
+            request=http_request,
+            db=db,
+            current_user=current_user,
+            organization_ids=await organization_party_scope_batch_service.get_commit_organization_ids(
+                db,
+                request=payload,
+                actor_id=actor_id,
+            ),
+        )
+        return await organization_party_scope_batch_service.commit(
+            db,
+            request=payload,
+            actor_id=actor_id,
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as e:
+        raise bad_request(str(e))
+
+
+@router.post(
+    "/{org_id}/party-scope/preview",
+    response_model=OrganizationPartyScopePreviewResponse,
+)
+async def preview_organization_party_scope(
+    org_id: str,
+    proposal: OrganizationPartyScopeProposal,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="manage_party_scope",
+            resource_type="organization",
+            resource_id="{org_id}",
+        )
+    ),
+) -> OrganizationPartyScopePreviewResponse:
+    """预览组织代表主体范围变更。"""
+    try:
+        return await organization_party_scope_service.preview(
+            db,
+            organization_id=org_id,
+            proposal=proposal,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as e:
+        raise bad_request(str(e))
+
+
+@router.put(
+    "/{org_id}/party-scope",
+    response_model=OrganizationPartyScopeCommitResponse,
+)
+async def commit_organization_party_scope(
+    org_id: str,
+    request: OrganizationPartyScopeCommitRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="manage_party_scope",
+            resource_type="organization",
+            resource_id="{org_id}",
+        )
+    ),
+) -> OrganizationPartyScopeCommitResponse:
+    """提交已预览的组织代表主体范围变更。"""
+    try:
+        return await organization_party_scope_service.commit(
+            db,
+            organization_id=org_id,
+            request=request,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as e:
+        raise bad_request(str(e))
+
+
 @router.put("/{org_id}", response_model=OrganizationResponse)
 async def update_organization(
     org_id: str,
@@ -459,76 +599,63 @@ async def delete_organization(
         raise bad_request(str(e))
 
 
-@router.post("/{org_id}/move")
-async def move_organization(
+@router.post(
+    "/{org_id}/move/preview",
+    response_model=OrganizationMovePreviewResponse,
+)
+async def preview_organization_move(
     org_id: str,
-    move_request: OrganizationMoveRequest,
+    proposal: OrganizationMoveProposal,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
-            action="update", resource_type="organization", resource_id="{org_id}"
+            action="manage_party_scope",
+            resource_type="organization",
+            resource_id="{org_id}",
         )
     ),
-) -> dict[str, Any]:
-    """移动组织到新的父组织下"""
+) -> OrganizationMovePreviewResponse:
+    """Preview a sensitive Organization hierarchy move without writing it."""
     try:
-        update_dict: dict[str, Any] = {
-            "parent_id": move_request.target_parent_id,
-            "sort_order": move_request.sort_order,
-            "updated_by": move_request.updated_by,
-        }
-        update_data = OrganizationUpdate.model_validate(update_dict)
-        db_organization = await organization_service.update_organization(
-            db, org_id=org_id, obj_in=update_data
+        return await organization_move_service.preview(
+            db,
+            organization_id=org_id,
+            proposal=proposal,
+            actor_id=str(current_user.id),
         )
-        return {"message": "组织移动成功", "organization": db_organization}
     except BaseBusinessError:
         raise
     except ValueError as e:
-        if str(e).startswith("组织ID"):
-            raise not_found(str(e), resource_type="organization")
         raise bad_request(str(e))
 
 
-@router.post("/batch")
-async def batch_organization_operation(
-    batch_request: OrganizationBatchRequest,
+@router.post("/{org_id}/move", response_model=OrganizationMoveCommitResponse)
+async def commit_organization_move(
+    org_id: str,
+    request: OrganizationMoveCommitRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
-            action="update",
+            action="manage_party_scope",
             resource_type="organization",
-            resource_context=_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT,
+            resource_id="{org_id}",
         )
     ),
-) -> dict[str, Any]:
-    """批量操作组织"""
-    results: list[dict[str, str]] = []
-    errors: list[dict[str, str]] = []
-    for org_id in batch_request.organization_ids:
-        try:
-            if batch_request.action == "delete":
-                success = await organization_service.delete_organization(
-                    db, org_id=org_id, deleted_by=batch_request.updated_by
-                )
-                if success:
-                    results.append(
-                        {"id": org_id, "status": "success", "message": "删除成功"}
-                    )
-                else:
-                    errors.append({"id": org_id, "error": "组织不存在"})
-        except BaseBusinessError as e:
-            errors.append({"id": org_id, "error": str(e)})
-        except ValueError as e:
-            errors.append({"id": org_id, "error": str(e)})
-
-    return {
-        "message": f"批量操作完成，成功 {len(results)} 个，失败 {len(errors)} 个",
-        "results": results,
-        "errors": errors,
-    }
+) -> OrganizationMoveCommitResponse:
+    """Commit a current Organization move preview exactly once."""
+    try:
+        return await organization_move_service.commit(
+            db,
+            organization_id=org_id,
+            request=request,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as e:
+        raise bad_request(str(e))
 
 
 @router.post(

@@ -1,11 +1,13 @@
 # ADR-0001: Party-Role 组织架构模型
 
-**状态**: ✅ 已实施（Phase 1–3 完成，2026-02-20）  
+**状态**: ⚠️ 历史已实施，部分结论被 ADR-0022 取代（2026-08-03）
 **决策日期**: 2026-02-16  
 **实施日期**: 2026-02-16 ~ 2026-02-20  
 **方案原文**: [`archive/backend-plans/2026-02-16-party-role-architecture-design.md`](../archive/backend-plans/2026-02-16-party-role-architecture-design.md)
 
 ---
+
+> **现行边界**：Party 作为唯一业务主体主档、业务角色与主体身份分离、业务对象通过 Party ID 关联，以及 RBAC + ABAC 联合授权仍然有效。ADR-0022 已取代本文关于“Party 包含内部部门”、`PartyHierarchy` 承载组织树、`headquarters` 自动展开下级、Organization 与 Party 隐式映射，以及前端组织页改用 Party-Role API 的结论。内部 Organization、业务 Party 与用户主体范围以 [ADR-0022](./ADR-0022-organization-party-scope-boundary.md) 为准。
 
 ## 背景
 

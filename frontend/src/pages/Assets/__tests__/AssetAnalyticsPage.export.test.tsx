@@ -10,8 +10,8 @@ vi.mock('@/utils/queryScope', () => ({
 }));
 
 vi.mock('@/stores/dataScopeStore', () => ({
-  useDataScopeStore: (selector: (state: { initialized: boolean }) => unknown) =>
-    selector({ initialized: true }),
+  useDataScopeStore: (selector: (state: { initialized: boolean; getEffectiveViewMode: () => string }) => unknown) =>
+    selector({ initialized: true, getEffectiveViewMode: () => 'owner' }),
 }));
 
 vi.mock('@/hooks/useFullscreen', () => ({
@@ -169,11 +169,15 @@ describe('AssetAnalyticsPage export flow', () => {
     fireEvent.click(screen.getByRole('button', { name: /导出/ }));
 
     await waitFor(() => {
-      expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('excel', {
-        start_date: '2026-03-01',
-        end_date: '2026-03-31',
-        include_deleted: true,
-      });
+      expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith(
+        'excel',
+        {
+          start_date: '2026-03-01',
+          end_date: '2026-03-31',
+          include_deleted: true,
+        },
+        'owner'
+      );
       expect(MessageManager.success).toHaveBeenCalledWith('数据导出成功！');
     });
   });

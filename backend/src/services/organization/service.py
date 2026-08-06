@@ -56,7 +56,7 @@ class OrganizationService:
     async def get_organization(
         self, db: AsyncSession, *, org_id: str
     ) -> Organization | None:
-        return await organization_crud.get_async(db, id=org_id)
+        return await organization_crud.get_async(db, id=org_id, use_cache=False)
 
     async def get_organization_tree(
         self, db: AsyncSession, *, parent_id: str | None = None
@@ -176,7 +176,6 @@ class OrganizationService:
             type_value=update_data.get("type"),
             status_value=update_data.get("status"),
         )
-
         for field, new_value in update_data.items():
             if field == "updated_by":
                 continue
@@ -185,32 +184,10 @@ class OrganizationService:
                 old_values[field] = {"old": str(old_value), "new": str(new_value)}
 
         if "parent_id" in update_data:
-            new_parent_id = update_data["parent_id"]
-            if new_parent_id != db_obj.parent_id:
-                if new_parent_id:
-                    if await self._would_create_cycle(db, org_id, new_parent_id):
-                        raise OperationNotAllowedError(
-                            "不能将组织移动到其子组织下",
-                            reason="organization_cycle",
-                        )
-
-                    parent = await organization_crud.get_async(db, new_parent_id)
-                    if parent:
-                        object.__setattr__(db_obj, "level", (parent.level or 0) + 1)
-                        object.__setattr__(
-                            db_obj,
-                            "path",
-                            f"{parent.path}/{db_obj.id}"
-                            if parent.path
-                            else f"/{parent.id}/{db_obj.id}",
-                        )
-                    else:
-                        raise ResourceNotFoundError("组织", new_parent_id)
-                else:
-                    object.__setattr__(db_obj, "level", 1)
-                    object.__setattr__(db_obj, "path", f"/{db_obj.id}")
-
-                await self._update_children_path(db, db_obj)
+            raise OperationNotAllowedError(
+                "组织迁移必须使用预览和提交动作",
+                reason="organization_move_requires_preview",
+            )
 
         for field, value in update_data.items():
             if field != "updated_by":

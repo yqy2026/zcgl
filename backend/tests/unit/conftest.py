@@ -311,7 +311,8 @@ def client(monkeypatch, db_session):
     mock_user.role_ids = ["role-admin-id"]
     mock_user.is_admin = True
     mock_user.is_active = True
-    mock_user.default_organization_id = None
+    mock_user.account_type = "human"
+    mock_user.organization_id = "test-org-001"
 
     # Use monkeypatch to replace functions at module level
     def mock_get_current_user():
@@ -356,7 +357,17 @@ def client(monkeypatch, db_session):
     )
     monkeypatch.setattr(
         "src.security.permissions.RBACService.get_user_roles",
-        AsyncMock(return_value=[SimpleNamespace(name="admin")]),
+        AsyncMock(
+            return_value=[
+                SimpleNamespace(
+                    id="role-admin-id",
+                    name="admin",
+                    display_name="Administrator",
+                    level=0,
+                    permissions=[SimpleNamespace(resource="system", action="admin")],
+                )
+            ]
+        ),
     )
 
     # Override dependencies in FastAPI app
@@ -436,7 +447,8 @@ def admin_user():
     mock_user.role_ids = ["role-admin-id"]
     mock_user.is_admin = True
     mock_user.is_active = True
-    mock_user.default_organization_id = None
+    mock_user.account_type = "human"
+    mock_user.organization_id = "admin-org-001"
     return mock_user
 
 
@@ -453,7 +465,8 @@ def normal_user():
     mock_user.role_ids = ["role-user-id"]
     mock_user.is_admin = False
     mock_user.is_active = True
-    mock_user.default_organization_id = None
+    mock_user.account_type = "human"
+    mock_user.organization_id = "user-org-001"
     return mock_user
 
 

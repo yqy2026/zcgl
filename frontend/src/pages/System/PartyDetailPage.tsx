@@ -18,19 +18,25 @@ import { useNavigate, useParams } from 'react-router-dom';
 import PageContainer from '@/components/Common/PageContainer';
 import { SYSTEM_ROUTES } from '@/constants/routes';
 import {
+  getPartyIdentifierTypeOptions,
+  PARTY_IDENTIFIER_TYPE_LABELS,
+  PARTY_TYPE_LABELS,
+  PARTY_TYPE_OPTIONS,
+} from '@/constants/party';
+import {
   partyService,
   type PartyReviewRejectPayload,
   type PartyReviewLog,
   type PartyUpdatePayload,
 } from '@/services/partyService';
-import type { Party, PartyReviewStatus, PartyType } from '@/types/party';
+import type {
+  Party,
+  PartyLifecycleOperation,
+  PartyLifecyclePreviewResponse,
+  PartyReviewStatus,
+  PartyType,
+} from '@/types/party';
 import { MessageManager } from '@/utils/messageManager';
-
-const PARTY_TYPE_OPTIONS: Array<{ label: string; value: PartyType }> = [
-  { label: '组织', value: 'organization' },
-  { label: '法人主体', value: 'legal_entity' },
-  { label: '自然人', value: 'individual' },
-];
 
 const CUSTOMER_TYPE_OPTIONS = [
   { label: '外部', value: 'external' },
@@ -41,19 +47,6 @@ const SUBJECT_NATURE_OPTIONS = [
   { label: '企业', value: 'enterprise' },
   { label: '个人', value: 'individual' },
 ] as const;
-
-const IDENTIFIER_TYPE_OPTIONS = [
-  { label: '统一社会信用代码', value: 'USCC' },
-  { label: '身份证', value: 'CN_ID_CARD' },
-  { label: '护照', value: 'PASSPORT' },
-  { label: '其他证件', value: 'OTHER_GOV_ID' },
-] as const;
-
-const PARTY_TYPE_LABELS: Record<PartyType, string> = {
-  organization: '组织',
-  legal_entity: '法人主体',
-  individual: '自然人',
-};
 
 const REVIEW_STATUS_META: Record<PartyReviewStatus, { color: string; label: string }> = {
   draft: { color: 'default', label: '草稿' },
@@ -98,12 +91,29 @@ const parseRiskTags = (value: unknown): string[] | undefined => {
   return tags.length > 0 ? Array.from(new Set(tags)) : undefined;
 };
 
+interface PendingPartyLifecycleChange {
+  operation: PartyLifecycleOperation;
+  preview: PartyLifecyclePreviewResponse;
+  idempotencyKey: string;
+}
+
+const createIdempotencyKey = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'party-lifecycle-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+};
 const PartyDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Record<string, unknown>>();
+  const editedPartyType = Form.useWatch('party_type', form) as PartyType | undefined;
   const [rejectForm] = Form.useForm<PartyReviewRejectPayload>();
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [pendingLifecycleChange, setPendingLifecycleChange] =
+    useState<PendingPartyLifecycleChange | null>(null);
+  const [lifecycleReason, setLifecycleReason] = useState('');
+  const [lifecycleReasonError, setLifecycleReasonError] = useState(false);
   const params = useParams<{ id: string }>();
   const partyId = params.id?.trim() ?? '';
   const hasPartyId = partyId !== '';
@@ -143,12 +153,11 @@ const PartyDetailPage: React.FC = () => {
       name: party.name,
       code: party.code,
       external_ref: party.external_ref ?? undefined,
-      status: party.status,
       metadata: metadata,
       customer_type: normalizeOptionalText(metadata.customer_type),
       subject_nature: normalizeOptionalText(metadata.subject_nature),
-      identifier_type: normalizeOptionalText(metadata.identifier_type),
-      unified_identifier: normalizeOptionalText(metadata.unified_identifier),
+      identifier_type: party.identifier_type ?? undefined,
+      identifier_value: undefined,
       address: normalizeOptionalText(metadata.address),
       payment_term_preference: normalizeOptionalText(metadata.payment_term_preference),
       risk_tags_text: Array.isArray(metadata.risk_tags) ? metadata.risk_tags.join(', ') : undefined,
@@ -214,12 +223,77 @@ const PartyDetailPage: React.FC = () => {
     },
   });
 
+  const lifecyclePreviewMutation = useMutation({
+    mutationFn: async (operation: PartyLifecycleOperation) => {
+      return await partyService.previewLifecycle(partyId, { operation });
+    },
+    onSuccess: preview => {
+      setPendingLifecycleChange({
+        operation: preview.operation,
+        preview,
+        idempotencyKey: createIdempotencyKey(),
+      });
+      setLifecycleReason('');
+      setLifecycleReasonError(false);
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '预览主体状态变更失败');
+    },
+  });
+
+  const lifecycleCommitMutation = useMutation({
+    mutationFn: async () => {
+      if (pendingLifecycleChange == null) {
+        throw new Error('主体状态变更预览不存在');
+      }
+
+      const payload = {
+        preview_token: pendingLifecycleChange.preview.preview_token,
+        reason: lifecycleReason.trim(),
+        idempotency_key: pendingLifecycleChange.idempotencyKey,
+      };
+      return pendingLifecycleChange.operation === 'deactivate'
+        ? await partyService.deactivate(partyId, payload)
+        : await partyService.reactivate(partyId, payload);
+    },
+    onSuccess: async result => {
+      await syncPartyCaches(result.party);
+      await queryClient.invalidateQueries({ queryKey: ['system-party-review-logs', partyId] });
+      setPendingLifecycleChange(null);
+      setLifecycleReason('');
+      setLifecycleReasonError(false);
+      MessageManager.success(result.operation === 'deactivate' ? '主体已停用' : '主体已重新启用');
+    },
+    onError: error => {
+      MessageManager.error(
+        error instanceof Error ? error.message : '提交主体状态变更失败，请重新预览后再提交'
+      );
+    },
+  });
   const overviewItems = useMemo(
     () => [
       {
         key: 'party_type',
         label: '主体类型',
         children: party != null ? PARTY_TYPE_LABELS[party.party_type] : '-',
+      },
+      {
+        key: 'code',
+        label: '主体编码',
+        children: party?.code ?? '-',
+      },
+      {
+        key: 'identifier_type',
+        label: '统一标识类型',
+        children:
+          party?.identifier_type != null
+            ? PARTY_IDENTIFIER_TYPE_LABELS[party.identifier_type]
+            : '-',
+      },
+      {
+        key: 'identifier_display',
+        label: '统一标识',
+        children: party?.identifier_display ?? '-',
       },
       {
         key: 'status',
@@ -267,12 +341,6 @@ const PartyDetailPage: React.FC = () => {
       ...(normalizeOptionalText(values.subject_nature) != null
         ? { subject_nature: normalizeOptionalText(values.subject_nature) }
         : { subject_nature: undefined }),
-      ...(normalizeOptionalText(values.identifier_type) != null
-        ? { identifier_type: normalizeOptionalText(values.identifier_type) }
-        : { identifier_type: undefined }),
-      ...(normalizeOptionalText(values.unified_identifier) != null
-        ? { unified_identifier: normalizeOptionalText(values.unified_identifier) }
-        : { unified_identifier: undefined }),
       ...(normalizeOptionalText(values.address) != null
         ? { address: normalizeOptionalText(values.address) }
         : { address: undefined }),
@@ -284,16 +352,47 @@ const PartyDetailPage: React.FC = () => {
         : { risk_tags: undefined }),
     };
 
+    const identifierValue = normalizeOptionalText(values.identifier_value);
+    const identifierType = normalizeOptionalText(values.identifier_type);
+    if (
+      identifierValue == null &&
+      identifierType != null &&
+      identifierType !== party?.identifier_type
+    ) {
+      MessageManager.error('变更统一标识类型时必须填写新的统一标识值');
+      return;
+    }
+    if (identifierValue != null && identifierType == null) {
+      MessageManager.error('填写统一标识值时必须选择统一标识类型');
+      return;
+    }
+
     updateMutation.mutate({
       party_type: normalizedPartyType,
       name: normalizeOptionalText(values.name),
-      code: normalizeOptionalText(values.code),
+      ...(identifierValue != null
+        ? {
+            identifier_type: identifierType as PartyUpdatePayload['identifier_type'],
+            identifier_value: identifierValue,
+          }
+        : {}),
       external_ref: normalizeOptionalText(values.external_ref) ?? null,
-      status: normalizeOptionalText(values.status),
       metadata: nextMetadata,
     });
   };
 
+  const handleLifecycleCommit = (): void => {
+    if (pendingLifecycleChange == null) {
+      return;
+    }
+
+    if (lifecycleReason.trim() === '') {
+      setLifecycleReasonError(true);
+      return;
+    }
+
+    lifecycleCommitMutation.mutate();
+  };
   const handleReject = async (): Promise<void> => {
     const values = await rejectForm.validateFields();
     rejectReviewMutation.mutate(values);
@@ -352,7 +451,28 @@ const PartyDetailPage: React.FC = () => {
               </Button>
             </>
           ) : null}
-        </Space>
+          {reviewStatus === 'approved' && party != null ? (
+            party.status === 'active' ? (
+              <Button
+                danger
+                loading={lifecyclePreviewMutation.isPending}
+                onClick={() => {
+                  lifecyclePreviewMutation.mutate('deactivate');
+                }}
+              >
+                停用主体
+              </Button>
+            ) : (
+              <Button
+                loading={lifecyclePreviewMutation.isPending}
+                onClick={() => {
+                  lifecyclePreviewMutation.mutate('reactivate');
+                }}
+              >
+                重新启用主体
+              </Button>
+            )
+          ) : null}        </Space>
 
         {!hasPartyId ? <Alert type="error" title="缺少主体标识，无法加载详情" showIcon /> : null}
         {partyDetailQuery.isError ? (
@@ -383,27 +503,11 @@ const PartyDetailPage: React.FC = () => {
               <Input aria-label="主体名称" />
             </Form.Item>
             <Form.Item
-              label="主体编码"
-              name="code"
-              rules={[{ required: true, message: '请输入主体编码' }]}
-            >
-              <Input aria-label="主体编码" />
-            </Form.Item>
-            <Form.Item
               label="主体类型"
               name="party_type"
               rules={[{ required: true, message: '请选择主体类型' }]}
             >
               <Select aria-label="主体类型" options={PARTY_TYPE_OPTIONS} />
-            </Form.Item>
-            <Form.Item label="业务状态" name="status">
-              <Select
-                aria-label="业务状态"
-                options={[
-                  { label: 'active', value: 'active' },
-                  { label: 'inactive', value: 'inactive' },
-                ]}
-              />
             </Form.Item>
             <Form.Item label="外部引用" name="external_ref">
               <Input aria-label="外部引用" />
@@ -417,11 +521,16 @@ const PartyDetailPage: React.FC = () => {
             <Form.Item label="统一标识类型" name="identifier_type">
               <Select
                 aria-label="统一标识类型"
-                options={IDENTIFIER_TYPE_OPTIONS as unknown as []}
+                allowClear
+                options={getPartyIdentifierTypeOptions(editedPartyType)}
               />
             </Form.Item>
-            <Form.Item label="统一标识" name="unified_identifier">
-              <Input aria-label="统一标识" />
+            <Form.Item
+              label="新的统一标识值"
+              name="identifier_value"
+              extra="留空表示不变；自然人标识保存后只显示脱敏值"
+            >
+              <Input aria-label="新的统一标识值" />
             </Form.Item>
             <Form.Item label="地址" name="address">
               <Input.TextArea aria-label="地址" rows={3} />
@@ -480,6 +589,104 @@ const PartyDetailPage: React.FC = () => {
         </Card>
       </Space>
 
+      <Modal
+        title={
+          pendingLifecycleChange?.operation === 'deactivate'
+            ? '停用主体影响预览'
+            : '重新启用主体影响预览'
+        }
+        open={pendingLifecycleChange != null}
+        onCancel={() => {
+          if (!lifecycleCommitMutation.isPending) {
+            setPendingLifecycleChange(null);
+            setLifecycleReason('');
+            setLifecycleReasonError(false);
+          }
+        }}
+        onOk={handleLifecycleCommit}
+        okText={pendingLifecycleChange?.operation === 'deactivate' ? '确认停用' : '确认启用'}
+        cancelText="取消"
+        confirmLoading={lifecycleCommitMutation.isPending}
+        okButtonProps={{ disabled: lifecycleReason.trim() === '' }}
+        destroyOnHidden
+      >
+        {pendingLifecycleChange != null ? (
+          <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+            <Alert
+              type="warning"
+              showIcon
+              title="提交后会立即影响新引用资格和相关用户的有效数据范围"
+            />
+            <Descriptions
+              column={1}
+              size="small"
+              bordered
+              items={[
+                {
+                  key: 'status_transition',
+                  label: '状态变更',
+                  children:
+                    pendingLifecycleChange.preview.before_state.status +
+                    ' -> ' +
+                    pendingLifecycleChange.preview.after_state.status,
+                },
+                {
+                  key: 'organization_impact',
+                  label: '组织影响',
+                  children:
+                    '直接代表组织 ' +
+                    pendingLifecycleChange.preview.impact.represented_organization_count +
+                    ' 个；潜在受影响组织 ' +
+                    pendingLifecycleChange.preview.impact.potentially_affected_organization_count +
+                    ' 个',
+                },
+                {
+                  key: 'user_scope_impact',
+                  label: '用户范围影响',
+                  children:
+                    '有效绑定 ' +
+                    pendingLifecycleChange.preview.impact.current_user_binding_count +
+                    ' 条；范围变化用户 ' +
+                    pendingLifecycleChange.preview.impact.user_scope_change_count +
+                    ' 人',
+                },
+                {
+                  key: 'business_reference_impact',
+                  label: '业务引用',
+                  children:
+                    '资产 ' +
+                    pendingLifecycleChange.preview.impact.asset_reference_count +
+                    '；项目 ' +
+                    pendingLifecycleChange.preview.impact.project_reference_count +
+                    '；合同组 ' +
+                    pendingLifecycleChange.preview.impact.contract_group_reference_count +
+                    '；合同 ' +
+                    pendingLifecycleChange.preview.impact.contract_reference_count,
+                },
+              ]}
+            />
+            <Form layout="vertical">
+              <Form.Item
+                label={pendingLifecycleChange.operation === 'deactivate' ? '停用原因' : '重新启用原因'}
+                validateStatus={lifecycleReasonError ? 'error' : undefined}
+                help={lifecycleReasonError ? '请输入本次状态变更的原因' : undefined}
+              >
+                <Input.TextArea
+                  aria-label={
+                    pendingLifecycleChange.operation === 'deactivate' ? '停用原因' : '重新启用原因'
+                  }
+                  rows={4}
+                  value={lifecycleReason}
+                  onChange={event => {
+                    setLifecycleReason(event.target.value);
+                    setLifecycleReasonError(false);
+                  }}
+                />
+              </Form.Item>
+            </Form>
+          </Space>
+        ) : null}
+      </Modal>
       <Modal
         title="驳回主体审核"
         open={rejectModalOpen}

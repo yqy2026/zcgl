@@ -1,13 +1,7 @@
 import React from 'react';
 import { Button, Col, Form, Input, Modal, Row, Select, Space } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import type {
-  CreateUserData,
-  OrganizationOption,
-  RoleOption,
-  UpdateUserData,
-  User,
-} from '@/services/systemService';
+import type { CreateUserData, RoleOption, UpdateUserData, User } from '@/services/systemService';
 import styles from '../../UserManagementPage.module.css';
 
 const { Option } = Select;
@@ -16,7 +10,6 @@ interface UserFormModalProps {
   open: boolean;
   editingUser: User | null;
   form: FormInstance;
-  organizations: OrganizationOption[];
   roles: RoleOption[];
   statusOptions: Array<{ value: 'active' | 'inactive'; label: string }>;
   onCancel: () => void;
@@ -28,7 +21,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   open,
   editingUser,
   form,
-  organizations,
   roles,
   statusOptions,
   onCancel,
@@ -45,24 +37,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       width={600}
     >
       <Form form={form} layout="vertical" onFinish={onSubmit}>
-        <Row gutter={16}>
-          <Col span={24}>
-            <Form.Item
-              name="default_organization_id"
-              label="所属组织"
-              rules={[{ required: true, message: '请选择所属组织' }]}
-            >
-              <Select placeholder="请选择所属组织">
-                {organizations.map(org => (
-                  <Option key={org.id} value={org.id}>
-                    {org.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -133,18 +107,20 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
         )}
 
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态（默认活跃）">
-                {statusOptions.map(status => (
-                  <Option key={status.value} value={status.value}>
-                    {status.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
+          {editingUser != null && (
+            <Col span={12}>
+              <Form.Item name="status" label="状态">
+                <Select placeholder="请选择状态">
+                  {statusOptions.map(status => (
+                    <Option key={status.value} value={status.value}>
+                      {status.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          )}
+          <Col span={editingUser != null ? 12 : 24}>
             <Form.Item name="role_ids" label="角色">
               <Select mode="multiple" placeholder="请选择角色（可多选）">
                 {roles.map(role => (

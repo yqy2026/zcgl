@@ -39,7 +39,7 @@ def create_test_user(
     to avoid the chicken-and-egg problem of needing authentication to create users.
     """
     from src.database import Base
-    from src.models.auth import User
+    from src.models.auth import AccountType, User
     from src.models.rbac import Permission, Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
 
@@ -53,6 +53,7 @@ def create_test_user(
     if existing_email_user is not None:
         local, domain = email.split("@", 1)
         resolved_email = f"{local}+{uuid4().hex[:8]}@{domain}"
+    organization = ensure_test_organization(db_session)
     user = User(
         username=username,
         email=resolved_email,
@@ -60,6 +61,8 @@ def create_test_user(
         full_name=full_name,
         password_hash=password_service.get_password_hash(password),
         is_active=True,
+        account_type=AccountType.HUMAN,
+        organization_id=organization.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -269,7 +272,6 @@ def ensure_test_organization(db_session):
 @pytest.fixture
 def authenticated_client(client, create_test_user_factory, db_session):
     """Create an authenticated admin client using real login flow."""
-    organization = ensure_test_organization(db_session)
     user = create_test_user_factory(
         username="e2e_admin",
         email="e2e_admin@example.com",
@@ -277,10 +279,6 @@ def authenticated_client(client, create_test_user_factory, db_session):
         full_name="E2E Admin User",
         role="admin",
     )
-    user.default_organization_id = organization.id
-    db_session.add(user)
-    db_session.commit()
-
     response = client.post(
         "/api/v1/auth/login",
         json={"identifier": "e2e_admin", "password": "Admin123!@#"},

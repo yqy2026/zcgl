@@ -79,7 +79,7 @@ async def test_sync_import_uses_and_discards_validated_staging_file(
         should_skip_errors=False,
         sheet_name="Sheet",
         db=MagicMock(),
-        current_user=MagicMock(default_organization_id=None),
+        current_user=MagicMock(organization_id=None),
     )
 
     staged_path = Path(importer.import_assets_from_excel.await_args.kwargs["file_path"])
@@ -104,7 +104,7 @@ async def test_async_import_defers_staged_file_cleanup_to_background_task(
         file=_xlsx_upload(),
         request=ExcelImportRequest(),
         db=MagicMock(),
-        current_user=MagicMock(id="user-1", default_organization_id=None),
+        current_user=MagicMock(id="user-1", organization_id=None),
         task_service=task_service,
     )
 

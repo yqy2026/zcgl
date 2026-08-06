@@ -19,6 +19,7 @@ from src.models.asset import Asset
 from src.models.auth import User
 from src.schemas.asset import AssetCreate, AssetUpdate
 from src.services.asset.asset_service import AssetService
+from src.services.party_scope_resolver import EffectivePartyScope
 
 TEST_ASSET_ID = "asset_123"
 TEST_USER_ID = "user_123"
@@ -247,7 +248,7 @@ class TestGetAssets:
 
 
 class TestTenantFilterResolution:
-    async def test_resolve_party_filter_disables_legacy_default_org_fallback(self, service):
+    async def test_resolve_party_filter_uses_cutover_signature(self, service):
         resolved_filter = PartyFilter(party_ids=["party-1"])
 
         with patch(
@@ -262,18 +263,20 @@ class TestTenantFilterResolution:
             current_user_id="user-1",
             party_filter=None,
             logger=ANY,
-            allow_legacy_default_organization_fallback=False,
         )
 
     async def test_resolve_party_filter_returns_party_binding_ids(self, service):
         """测试 user_party_bindings 会被转换为 PartyFilter。"""
-        binding_1 = MagicMock()
-        binding_1.party_id = "party-1"
-        binding_2 = MagicMock()
-        binding_2.party_id = "party-2"
+        resolved_scope = EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="all",
+            owner_party_ids=["party-1"],
+            manager_party_ids=["party-2"],
+        )
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
-            new=AsyncMock(return_value=[binding_1, binding_2]),
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=resolved_scope),
         ):
             party_filter = await service._resolve_party_filter(
                 current_user_id="user-1"
@@ -284,12 +287,16 @@ class TestTenantFilterResolution:
 
     async def test_resolve_party_filter_uses_user_party_bindings(self, service):
         """应使用 user_party_bindings 解析过滤范围。"""
-        binding = MagicMock()
-        binding.party_id = "party-1"
+        resolved_scope = EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="owner",
+            owner_party_ids=["party-1"],
+        )
 
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
-            new=AsyncMock(return_value=[binding]),
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=resolved_scope),
         ):
             party_filter = await service._resolve_party_filter(
                 current_user_id="user-1"
@@ -302,12 +309,16 @@ class TestTenantFilterResolution:
         self, service
     ):
         """party binding 解析成功时应返回绑定范围。"""
-        binding = MagicMock()
-        binding.party_id = "party-1"
+        resolved_scope = EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="owner",
+            owner_party_ids=["party-1"],
+        )
 
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
-            new=AsyncMock(return_value=[binding]),
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=resolved_scope),
         ):
             party_filter = await service._resolve_party_filter(
                 current_user_id="user-1"
@@ -319,7 +330,7 @@ class TestTenantFilterResolution:
     async def test_resolve_party_filter_fail_closed_on_exception(self, service):
         """测试 party_filter 解析失败时走失败关闭策略"""
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
+            "src.services.party_scope.party_scope_resolver.resolve",
             new=AsyncMock(side_effect=RuntimeError("boom")),
         ):
             party_filter = await service._resolve_party_filter(

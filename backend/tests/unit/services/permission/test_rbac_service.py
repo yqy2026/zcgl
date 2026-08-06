@@ -25,6 +25,7 @@ from src.schemas.rbac import (
     RoleUpdate,
     UserRoleAssignmentCreate,
 )
+from src.services.party_scope_resolver import EffectivePartyScope
 from src.services.permission.rbac_service import (
     ADMIN_PERMISSION_ACTION,
     ADMIN_PERMISSION_RESOURCE,
@@ -524,7 +525,7 @@ class TestGetRoles:
 
 
 class TestTenantFilterResolution:
-    async def test_resolve_party_filter_disables_legacy_default_org_fallback(
+    async def test_resolve_party_filter_uses_cutover_signature(
         self, rbac_service
     ):
         resolved_filter = PartyFilter(party_ids=["party-1"])
@@ -543,19 +544,21 @@ class TestTenantFilterResolution:
             current_user_id="user-1",
             party_filter=None,
             logger=ANY,
-            allow_legacy_default_organization_fallback=False,
         )
 
     async def test_resolve_party_filter_returns_party_binding_ids(self, rbac_service):
         """测试 user_party_bindings 返回的 party_id 会生成 PartyFilter。"""
-        binding_1 = MagicMock()
-        binding_1.party_id = "party-1"
-        binding_2 = MagicMock()
-        binding_2.party_id = "party-2"
+        resolved_scope = EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="all",
+            owner_party_ids=["party-1"],
+            manager_party_ids=["party-2"],
+        )
 
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
-            new=AsyncMock(return_value=[binding_1, binding_2]),
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=resolved_scope),
         ):
             party_filter = await rbac_service._resolve_party_filter(
                 current_user_id="user-1"
@@ -567,7 +570,7 @@ class TestTenantFilterResolution:
     async def test_resolve_party_filter_fail_closed_on_exception(self, rbac_service):
         """测试 party_filter 解析异常时返回空组织（失败关闭）"""
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
+            "src.services.party_scope.party_scope_resolver.resolve",
             new=AsyncMock(side_effect=RuntimeError("boom")),
         ):
             party_filter = await rbac_service._resolve_party_filter(

@@ -136,17 +136,32 @@ class AuthzDecisionCache:
             if entry.expires_at < now:
                 self._l1.pop(cache_key, None)
 
-    def set_l1(self, key: str, value: dict[str, Any]) -> None:
+    def set_l1(
+        self,
+        key: str,
+        value: dict[str, Any],
+        ttl_seconds: int | None = None,
+    ) -> None:
         now = time.time()
         self._evict_expired_l1_entries(now=now)
+        effective_ttl = (
+            ttl_seconds if ttl_seconds is not None else self._l1_ttl_seconds
+        )
         self._l1[key] = _CacheEntry(
             value=value,
-            expires_at=now + self._l1_ttl_seconds,
+            expires_at=now + max(0, effective_ttl),
         )
 
-    def set(self, key: str, value: dict[str, Any]) -> None:
-        self.set_l1(key, value)
-        self._l2_backend.set(key, value, self._l2_ttl_seconds)
+    def set(
+        self,
+        key: str,
+        value: dict[str, Any],
+        ttl_seconds: int | None = None,
+    ) -> None:
+        l1_ttl = ttl_seconds if ttl_seconds is not None else self._l1_ttl_seconds
+        l2_ttl = ttl_seconds if ttl_seconds is not None else self._l2_ttl_seconds
+        self.set_l1(key, value, ttl_seconds=l1_ttl)
+        self._l2_backend.set(key, value, max(0, int(l2_ttl)))
 
     def invalidate_l1(self, key_prefix: str | None = None) -> None:
         if key_prefix is None:

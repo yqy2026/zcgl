@@ -125,14 +125,16 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
           </Col>
         </Row>
 
-        <Form.Item name="parent_id" label="上级组织">
-          <TreeSelect
-            placeholder="请选择上级组织"
-            allowClear
-            treeData={organizationTree}
-            treeDefaultExpandAll
-          />
-        </Form.Item>
+        {editingOrganization == null && (
+          <Form.Item name="parent_id" label="上级组织">
+            <TreeSelect
+              placeholder="请选择上级组织"
+              allowClear
+              treeData={organizationTree}
+              treeDefaultExpandAll
+            />
+          </Form.Item>
+        )}
 
         <Form.Item name="description" label="组织描述">
           <Input.TextArea rows={3} placeholder="请输入组织描述" />

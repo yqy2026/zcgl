@@ -58,7 +58,6 @@ async def test_require_data_scope_context_should_auto_fallback_dual_binding_anal
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -115,7 +114,6 @@ async def test_require_data_scope_context_should_reject_invalid_view_mode() -> N
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -154,7 +152,6 @@ async def test_require_data_scope_context_should_build_owner_effective_party_ids
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -192,7 +189,6 @@ async def test_require_data_scope_context_should_allow_admin_without_header() ->
                     user_id="admin-1",
                     owner_party_ids=[],
                     manager_party_ids=[],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -231,7 +227,6 @@ async def test_require_data_scope_context_should_ignore_legacy_header_and_keep_a
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -271,7 +266,6 @@ async def test_require_data_scope_context_should_ignore_view_mode_query_for_proj
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -310,7 +304,6 @@ async def test_require_data_scope_context_should_build_single_scope_when_single_
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=[],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),

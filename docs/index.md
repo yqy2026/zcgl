@@ -17,7 +17,9 @@
 ### 架构与数据库
 - [系统架构概览](architecture/system-overview.md)
 - [数据库设计基线](architecture/database-design.md)
-- [ADR-0001: Party-Role 组织架构](architecture/ADR-0001-party-role-architecture.md)
+- [架构决策记录索引](architecture/README.md)
+- [ADR-0022: Organization 与 Party 正交及主体范围单一解析](architecture/ADR-0022-organization-party-scope-boundary.md)
+- [ADR-0001: Party-Role 历史架构](architecture/ADR-0001-party-role-architecture.md)
 
 ### 规格与追踪
 - [规格文档索引](specs/README.md)

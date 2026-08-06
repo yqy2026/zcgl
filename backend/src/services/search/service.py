@@ -371,10 +371,11 @@ class SearchService:
             if party is None:
                 continue
             metadata = getattr(party, "metadata_json", None) or {}
+            identifier_display = party_service.display_identifier(party)
             searchable_values = [
                 getattr(party, "name", None),
                 getattr(party, "code", None),
-                metadata.get("unified_identifier"),
+                identifier_display,
             ]
             score = self._score_text(query, searchable_values)
             if score <= 0:
@@ -385,14 +386,14 @@ class SearchService:
                     object_id=str(party.id),
                     title=str(party.name),
                     subtitle=str(metadata.get("customer_type", "customer")),
-                    summary=str(metadata.get("unified_identifier", "")).strip() or None,
+                    summary=identifier_display,
                     keywords=["customer_name"],
                     route_path=f"/customers/{party.id}",
                     score=score,
                     business_rank=self._business_rank(
                         query,
                         [
-                            metadata.get("unified_identifier"),
+                            identifier_display,
                             getattr(party, "code", None),
                         ],
                     ),

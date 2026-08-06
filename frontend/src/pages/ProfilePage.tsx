@@ -13,11 +13,21 @@ import {
   Input,
   Skeleton,
   Typography,
+  Alert,
+  Spin,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
-import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons';
+import {
+  UserOutlined,
+  EditOutlined,
+  LockOutlined,
+  HistoryOutlined,
+  SafetyCertificateOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthService } from '@/services/authService';
+import { type UserPartyScopeView, userService } from '@/services/systemService';
 import PageContainer from '@/components/Common/PageContainer';
 import styles from './ProfilePage.module.css';
 
@@ -35,6 +45,8 @@ const ProfilePage: React.FC = () => {
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const [partyScope, setPartyScope] = useState<UserPartyScopeView | null>(null);
+  const [partyScopeLoading, setPartyScopeLoading] = useState(false);
 
   // 初始化数据
   useEffect(() => {
@@ -92,6 +104,21 @@ const ProfilePage: React.FC = () => {
   // 处理密码修改
   const handleChangePassword = (values: { oldPassword: string; newPassword: string }) => {
     changePasswordMutation.mutate(values);
+  };
+
+  const loadPartyScope = async () => {
+    setPartyScopeLoading(true);
+    try {
+      const scope = await userService.getMyPartyScope();
+      setPartyScope(scope);
+    } catch (error) {
+      MessageManager.error(
+        error instanceof Error ? error.message : '获取当前用户有效主体范围失败'
+      );
+      setPartyScope(null);
+    } finally {
+      setPartyScopeLoading(false);
+    }
   };
 
   // 获取角色显示名称
@@ -211,6 +238,72 @@ const ProfilePage: React.FC = () => {
                 </Descriptions>
               </Col>
             </Row>
+          </Card>
+        </Col>
+
+        {/* 有效主体范围 */}
+        <Col span={24}>
+          <Card
+            className={styles.sectionCard}
+            title={
+              <Space className={styles.sectionTitle}>
+                <SafetyCertificateOutlined />
+                <span>有效主体范围</span>
+              </Space>
+            }
+            extra={
+              <Button
+                icon={<ReloadOutlined />}
+                loading={partyScopeLoading}
+                aria-label="查看有效主体范围"
+                onClick={() => {
+                  void loadPartyScope();
+                }}
+              >
+                {partyScope != null ? '刷新' : '查看'}
+              </Button>
+            }
+          >
+            <Spin spinning={partyScopeLoading}>
+              {partyScope == null ? (
+                <Alert
+                  type="info"
+                  showIcon
+                  title="尚未查看"
+                  description="点击“查看”加载当前账号的有效主体范围。"
+                />
+              ) : (
+                <Descriptions bordered size="small" column={1}>
+                  <Descriptions.Item label="范围来源">
+                    {partyScope.source}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="范围模式">
+                    {partyScope.scope_mode}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="产权方主体">
+                    {partyScope.owner_party_ids.length > 0
+                      ? partyScope.owner_party_ids.join('、')
+                      : '无'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="运营方主体">
+                    {partyScope.manager_party_ids.length > 0
+                      ? partyScope.manager_party_ids.join('、')
+                      : '无'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="所属组织">
+                    {partyScope.organization_id ?? '无'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="下一时间边界">
+                    {partyScope.next_transition_at ?? '无'}
+                  </Descriptions.Item>
+                  {partyScope.error_code != null && (
+                    <Descriptions.Item label="配置异常">
+                      {partyScope.error_code}
+                    </Descriptions.Item>
+                  )}
+                </Descriptions>
+              )}
+            </Spin>
           </Card>
         </Col>
 

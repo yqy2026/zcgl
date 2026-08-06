@@ -6,13 +6,10 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
-    Index,
     String,
-    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,11 +26,10 @@ def _utcnow_naive() -> datetime:
 class RelationType(StrEnum):
     OWNER = "owner"
     MANAGER = "manager"
-    HEADQUARTERS = "headquarters"
 
 
 class UserPartyBinding(Base):
-    """Binding of a user to party with a perspective (owner/manager/headquarters)."""
+    """Binding of a user to a Party with an owner or manager perspective."""
 
     __tablename__ = "user_party_bindings"
     __table_args__ = (
@@ -41,12 +37,9 @@ class UserPartyBinding(Base):
             "valid_to IS NULL OR valid_to >= valid_from",
             name="ck_user_party_bindings_valid_range",
         ),
-        Index(
-            "uq_user_party_bindings_primary_per_relation",
-            "user_id",
-            "relation_type",
-            unique=True,
-            postgresql_where=text("is_primary = true"),
+        CheckConstraint(
+            "relation_type IN ('owner', 'manager')",
+            name="ck_user_party_bindings_relation_type",
         ),
     )
 
@@ -69,9 +62,6 @@ class UserPartyBinding(Base):
     )
     relation_type: Mapped[RelationType] = mapped_column(
         String(50), nullable=False, comment="关系类型"
-    )
-    is_primary: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, comment="是否主关系"
     )
     valid_from: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"

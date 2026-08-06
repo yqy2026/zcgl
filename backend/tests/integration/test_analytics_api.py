@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.models.asset import Asset
+from src.models.party import Party, PartyReviewStatus, PartyType
 
 pytestmark = pytest.mark.integration
 
@@ -45,12 +46,20 @@ def csrf_headers(authenticated_client: TestClient) -> dict[str, str]:
 def _seed_assets_for_analytics(
     db_session,
     *,
-    organization_id: str,
     suffix: str,
 ) -> tuple[str, str]:
     """写入可预测资产数据用于分析断言。"""
     unique_nature_normal = f"分析性质-正常-{suffix}"
     unique_nature_deleted = f"分析性质-删除-{suffix}"
+    owner_party = Party(
+        party_type=PartyType.LEGAL_ENTITY,
+        name=f"分析测试产权方-{suffix}",
+        code="LE-500001",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED,
+    )
+    db_session.add(owner_party)
+    db_session.flush()
 
     db_session.add_all(
         [
@@ -62,7 +71,7 @@ def _seed_assets_for_analytics(
                 property_nature=unique_nature_normal,
                 usage_status="出租",
                 business_category=f"分析业态-正常-{suffix}",
-                organization_id=organization_id,
+                owner_party_id=owner_party.id,
                 rentable_area=1000,
                 rented_area=800,
                 data_status="正常",
@@ -75,7 +84,7 @@ def _seed_assets_for_analytics(
                 property_nature=unique_nature_deleted,
                 usage_status="空置",
                 business_category=f"分析业态-删除-{suffix}",
-                organization_id=organization_id,
+                owner_party_id=owner_party.id,
                 rentable_area=500,
                 rented_area=0,
                 data_status="已删除",
@@ -134,13 +143,11 @@ class TestAnalyticsAPIContracts:
         self,
         authenticated_client: TestClient,
         db_session,
-        test_data,
     ) -> None:
         """include_deleted=true 应至少包含多出的已删除资产。"""
         suffix = uuid4().hex[:8]
         _seed_assets_for_analytics(
             db_session,
-            organization_id=test_data["organization"].id,
             suffix=suffix,
         )
 
@@ -208,13 +215,12 @@ class TestAnalyticsAPIContracts:
         assert isinstance(data.get("data"), list)
 
     def test_analytics_distribution_endpoint_contains_seeded_data(
-        self, authenticated_client, db_session, test_data
+        self, authenticated_client, db_session
     ):
         """分布端点应包含测试写入的唯一分类值。"""
         suffix = uuid4().hex[:8]
         unique_nature_normal, _ = _seed_assets_for_analytics(
             db_session,
-            organization_id=test_data["organization"].id,
             suffix=suffix,
         )
 

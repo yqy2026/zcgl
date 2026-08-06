@@ -26,13 +26,15 @@ from src.models.notification import Notification
 
 
 @pytest.fixture
-def admin_user_in_db(db_session: Session, admin_user):
+def admin_user_in_db(db_session: Session, admin_user, test_organization):
     """Ensure admin user exists in DB for FK constraints."""
     from src.models.auth import User
 
     # Check by ID first
     existing = db_session.query(User).filter(User.id == admin_user.id).first()
     if existing:
+        existing.organization_id = test_organization.id
+        db_session.flush()
         return existing
 
     # Check by username to avoid unique constraint violations
@@ -40,6 +42,8 @@ def admin_user_in_db(db_session: Session, admin_user):
         db_session.query(User).filter(User.username == admin_user.username).first()
     )
     if existing_by_name:
+        existing_by_name.organization_id = test_organization.id
+        db_session.flush()
         return existing_by_name
 
     user = User(
@@ -50,6 +54,7 @@ def admin_user_in_db(db_session: Session, admin_user):
         full_name="Admin User",
         password_hash="test-hash",
         is_active=True,
+        organization_id=test_organization.id,
         created_by="test-fixture",
         updated_by="test-fixture",
     )
@@ -113,10 +118,12 @@ def sample_notification(db_session: Session, admin_user_in_db):
 
 
 @pytest.fixture
-def normal_user_in_db(db_session: Session, normal_user):
+def normal_user_in_db(db_session: Session, normal_user, test_organization):
     """Ensure mocked normal user exists in DB for authz and notification queries."""
     existing = db_session.query(User).filter(User.id == normal_user.id).first()
     if existing:
+        existing.organization_id = test_organization.id
+        db_session.flush()
         return existing
 
     existing_by_name = (
@@ -124,6 +131,8 @@ def normal_user_in_db(db_session: Session, normal_user):
     )
     if existing_by_name:
         normal_user.id = existing_by_name.id
+        existing_by_name.organization_id = test_organization.id
+        db_session.flush()
         return existing_by_name
 
     user = User(
@@ -134,6 +143,7 @@ def normal_user_in_db(db_session: Session, normal_user):
         full_name="Normal User",
         password_hash="test-hash",
         is_active=True,
+        organization_id=test_organization.id,
         created_by="test-fixture",
         updated_by="test-fixture",
     )

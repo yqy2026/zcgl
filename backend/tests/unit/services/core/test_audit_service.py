@@ -452,7 +452,7 @@ class TestAuditServiceIntegration:
         admin_user = Mock(spec=User)
         admin_user.id = "admin-user-id"
         admin_user.username = "admin"
-        admin_user.default_organization_id = "org-admin"
+        admin_user.organization_id = "org-admin"
         mock_db.execute = _mock_execute_user_role(admin_user)
 
         await audit_service.create_audit_log(

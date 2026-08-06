@@ -41,11 +41,20 @@ from .....schemas.auth import (
 from .....schemas.auth import (
     UserQueryParams as UserQueryParamsSchema,
 )
+from .....schemas.user_organization_transfer import (
+    UserOrganizationTransferCommitRequest,
+    UserOrganizationTransferCommitResponse,
+    UserOrganizationTransferPreviewResponse,
+    UserOrganizationTransferProposal,
+)
 from .....security.permissions import require_any_role
 from .....services.core.audit_service import AuditService
 from .....services.core.password_service import PasswordService
 from .....services.core.session_service import AsyncSessionService
 from .....services.core.user_management_service import AsyncUserManagementService
+from .....services.core.user_organization_transfer_service import (
+    user_organization_transfer_service,
+)
 from .....services.factory import ServiceFactory, get_service_factory
 from .....services.permission.rbac_service import RBACService
 
@@ -57,49 +66,13 @@ _USER_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:user:create"
 _SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 
 
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
-
-
-def _build_party_scope_context(
-    *,
-    scoped_party_id: str,
-    organization_id: str | None = None,
-) -> dict[str, str]:
-    context: dict[str, str] = {
-        "party_id": scoped_party_id,
-        "owner_party_id": scoped_party_id,
-        "manager_party_id": scoped_party_id,
-    }
-    if organization_id is not None:
-        context["organization_id"] = organization_id
-    return context
-
-
 async def _resolve_user_create_resource_context(request: Request) -> dict[str, str]:
-    try:
-        payload = await request.json()
-    except Exception:
-        payload = {}
-
-    if not isinstance(payload, dict):
-        payload = {}
-
-    organization_id = _normalize_optional_str(payload.get("default_organization_id"))
-    scoped_party_id = (
-        organization_id
-        if organization_id is not None
-        else _USER_CREATE_UNSCOPED_PARTY_ID
-    )
-    return _build_party_scope_context(
-        scoped_party_id=scoped_party_id,
-        organization_id=organization_id,
-    )
+    del request
+    return {
+        "party_id": _USER_CREATE_UNSCOPED_PARTY_ID,
+        "owner_party_id": _USER_CREATE_UNSCOPED_PARTY_ID,
+        "manager_party_id": _USER_CREATE_UNSCOPED_PARTY_ID,
+    }
 
 
 class AuditLogCRUD:
@@ -364,6 +337,70 @@ async def get_user(
     if isinstance(factory, ServiceFactory):
         return await _build_user_response(user, factory=factory)
     return await _build_user_response(user, rbac_service=rbac_service)
+
+
+@router.post(
+    "/{user_id}/organization/preview",
+    response_model=UserOrganizationTransferPreviewResponse,
+    summary="Preview user organization transfer",
+)
+async def preview_user_organization_transfer(
+    user_id: str,
+    proposal: UserOrganizationTransferProposal,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserResponse = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="manage_party_scope",
+            resource_type="user",
+            resource_id="{user_id}",
+        )
+    ),
+) -> UserOrganizationTransferPreviewResponse:
+    """Preview a human user's organization transfer without writing it."""
+    try:
+        return await user_organization_transfer_service.preview(
+            db,
+            user_id=user_id,
+            proposal=proposal,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as exc:
+        raise bad_request(str(exc)) from exc
+
+
+@router.put(
+    "/{user_id}/organization",
+    response_model=UserOrganizationTransferCommitResponse,
+    summary="Commit user organization transfer",
+)
+async def commit_user_organization_transfer(
+    user_id: str,
+    request: UserOrganizationTransferCommitRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserResponse = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="manage_party_scope",
+            resource_type="user",
+            resource_id="{user_id}",
+        )
+    ),
+) -> UserOrganizationTransferCommitResponse:
+    """Commit a current user organization transfer preview exactly once."""
+    try:
+        return await user_organization_transfer_service.commit(
+            db,
+            user_id=user_id,
+            request=request,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as exc:
+        raise bad_request(str(exc)) from exc
 
 
 @router.put("/{user_id}", response_model=UserResponse, summary="更新用户")

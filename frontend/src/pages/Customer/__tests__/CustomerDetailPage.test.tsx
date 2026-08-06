@@ -29,7 +29,7 @@ describe('CustomerDetailPage', () => {
       contact_name: '张三',
       contact_phone: '13800000000',
       identifier_type: 'USCC',
-      unified_identifier: '91310000123456789A',
+      identifier_display: '91310000123456789A',
       address: '上海市徐汇区测试路 1 号',
       status: 'active',
       historical_contract_count: 2,

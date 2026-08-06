@@ -6,6 +6,8 @@ import {
   HistoryOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SwapOutlined,
+  TagsOutlined,
 } from '@ant-design/icons';
 import { Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -32,9 +34,13 @@ export interface OrganizationListTabProps {
   onCreate: () => void;
   onPageChange: (next: { current?: number; pageSize?: number }) => void;
   onEdit: (organization: Organization) => void;
+  onMove: (organization: Organization) => void;
   onDelete: (id: string) => Promise<void>;
   onManageBindings: (organization: Organization) => void;
   onViewHistory: (organization: Organization) => void;
+  selectedPartyScopeOrganizations: Organization[];
+  onSelectedPartyScopeOrganizationsChange: (organizations: Organization[]) => void;
+  onBatchManagePartyScope: () => void;
 }
 
 const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
@@ -53,10 +59,32 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
   onCreate,
   onPageChange,
   onEdit,
+  onMove,
   onDelete,
   onManageBindings,
   onViewHistory,
+  selectedPartyScopeOrganizations,
+  onSelectedPartyScopeOrganizationsChange,
+  onBatchManagePartyScope,
 }) => {
+  const selectedPartyScopeOrganizationIds = useMemo(
+    () => selectedPartyScopeOrganizations.map(organization => organization.id),
+    [selectedPartyScopeOrganizations]
+  );
+
+  const rowSelection = useMemo(
+    () => ({
+      selectedRowKeys: selectedPartyScopeOrganizationIds,
+      onChange: (_selectedRowKeys: React.Key[], selectedRows: Organization[]) => {
+        onSelectedPartyScopeOrganizationsChange(selectedRows);
+      },
+      getCheckboxProps: (record: Organization) => ({
+        disabled: record.status !== 'active',
+      }),
+    }),
+    [onSelectedPartyScopeOrganizationsChange, selectedPartyScopeOrganizationIds]
+  );
+
   const columns = useMemo<ColumnsType<Organization>>(
     () => [
       {
@@ -111,6 +139,17 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
                 编辑
               </Button>
             )}
+            {!isReadOnlyMode && (
+              <Button
+                type="text"
+                icon={<SwapOutlined />}
+                onClick={() => onMove(record)}
+                className={styles.tableActionButton}
+                aria-label={`迁移组织 ${record.name}`}
+              >
+                迁移
+              </Button>
+            )}
             <Button
               type="text"
               icon={<HistoryOutlined />}
@@ -123,11 +162,12 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
             {!isReadOnlyMode && (
               <Button
                 type="text"
+                icon={<TagsOutlined />}
                 onClick={() => onManageBindings(record)}
                 className={styles.tableActionButton}
-                aria-label={`管理组织 ${record.name} 主体绑定`}
+                aria-label={`管理组织 ${record.name} 数据范围`}
               >
-                主体绑定
+                数据范围
               </Button>
             )}
             {!isReadOnlyMode && (
@@ -159,6 +199,7 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
       isReadOnlyMode,
       onDelete,
       onEdit,
+      onMove,
       onManageBindings,
       onViewHistory,
     ]
@@ -194,6 +235,15 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
               >
                 刷新
               </Button>
+              <Button
+                icon={<TagsOutlined />}
+                onClick={onBatchManagePartyScope}
+                disabled={isReadOnlyMode || selectedPartyScopeOrganizations.length < 2}
+                className={styles.actionButton}
+                aria-label="批量设置组织代表主体"
+              >
+                批量设置主体
+              </Button>
             </Space>
           </Col>
           <Col>
@@ -216,6 +266,7 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
         columns={columns}
         dataSource={organizations}
         rowKey="id"
+        rowSelection={isReadOnlyMode ? undefined : rowSelection}
         loading={loading}
         paginationState={paginationState}
         onPageChange={onPageChange}

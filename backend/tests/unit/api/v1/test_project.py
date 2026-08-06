@@ -47,23 +47,25 @@ def test_org_party(db_session: Session, test_organization):
     """创建与组织映射的 Party 数据（Phase4 必需）。"""
     from sqlalchemy import select
 
-    from src.models.party import Party, PartyType
+    from src.models.party import Party, PartyReviewStatus, PartyType
 
     party_stmt = select(Party).where(
-        Party.party_type == PartyType.ORGANIZATION.value,
-        Party.external_ref == test_organization.id,
+        Party.code == "LE-900001",
     )
     party = db_session.execute(party_stmt).scalar_one_or_none()
     if party is None:
         party = Party(
-            party_type=PartyType.ORGANIZATION.value,
+            party_type=PartyType.LEGAL_ENTITY.value,
             name=f"Unit Test Party {test_organization.name}",
-            code="PARTY-UNIT-TEST-001",
-            external_ref=test_organization.id,
+            code="LE-900001",
             status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
         db_session.add(party)
         db_session.flush()
+    test_organization.represented_party_id = party.id
+    test_organization.represented_party_perspective = "manager"
+    db_session.flush()
     db_session.refresh(party)
     return party
 
@@ -119,7 +121,7 @@ def admin_user_headers(
     ):
         return None
 
-    admin_user.default_organization_id = test_organization.id
+    admin_user.organization_id = test_organization.id
     monkeypatch.setattr(
         OrganizationPermissionService,
         "get_user_accessible_organizations",
@@ -442,7 +444,7 @@ class TestListProjects:
             id=f"party-map-{ownership.id}",
             party_type=PartyType.LEGAL_ENTITY.value,
             name=ownership.name,
-            code=f"PARTY-{ownership.id}",
+            code="LE-910001",
             external_ref=ownership.id,
             status="active",
         )
@@ -520,7 +522,7 @@ class TestListProjects:
             id=f"party-list-combo-{ownership.id}",
             party_type=PartyType.LEGAL_ENTITY.value,
             name=ownership.name,
-            code=f"PARTY-LCMB-{ownership.id}",
+            code="LE-920001",
             external_ref=ownership.id,
             status="active",
         )
@@ -614,7 +616,7 @@ class TestListProjects:
             id=f"party-list-page-{ownership.id}",
             party_type=PartyType.LEGAL_ENTITY.value,
             name=ownership.name,
-            code=f"PARTY-LPG-{ownership.id}",
+            code="LE-930001",
             external_ref=ownership.id,
             status="active",
         )
@@ -798,7 +800,7 @@ class TestSearchProjects:
             id=f"party-search-map-{ownership.id}",
             party_type=PartyType.LEGAL_ENTITY.value,
             name=ownership.name,
-            code=f"PARTY-SRCH-{ownership.id}",
+            code="LE-940001",
             external_ref=ownership.id,
             status="active",
         )
@@ -923,7 +925,7 @@ class TestSearchProjects:
             id=f"party-combo-{ownership.id}",
             party_type=PartyType.LEGAL_ENTITY.value,
             name=ownership.name,
-            code=f"PARTY-COMBO-{ownership.id}",
+            code="LE-950001",
             external_ref=ownership.id,
             status="active",
         )

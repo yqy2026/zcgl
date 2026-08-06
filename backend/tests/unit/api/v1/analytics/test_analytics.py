@@ -61,7 +61,6 @@ def client(mock_db, mock_user):
                     user_id="test_user_001",
                     owner_party_ids=["owner-party-1"],
                     manager_party_ids=["manager-party-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),

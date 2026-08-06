@@ -30,7 +30,8 @@ export const authHandlers = [
             role_ids: ['role-admin-id'],
             is_admin: true,
             full_name: 'Test User',
-            default_organization_id: 'org-001',
+            account_type: 'human',
+            organization_id: 'org-001',
           },
           token: 'fake-jwt-token',
         },
@@ -56,7 +57,46 @@ export const authHandlers = [
         is_admin: true,
         full_name: 'Test User',
         is_active: true,
-        default_organization_id: 'org-001',
+        account_type: 'human',
+        organization_id: 'org-001',
+      },
+      success: true,
+    });
+  }),
+
+  // 获取当前用户有效主体范围
+  http.get(`${API_BASE_URL}/auth/me/party-scope`, () => {
+    return HttpResponse.json({
+      data: {
+        user_id: 'test-user-001',
+        source: 'unrestricted',
+        scope_mode: 'unrestricted',
+        owner_party_ids: [],
+        manager_party_ids: [],
+        organization_id: 'org-001',
+        source_organization_id: null,
+        next_transition_at: null,
+        error_code: null,
+        issues: [],
+      },
+      success: true,
+    });
+  }),
+
+  // 获取用户有效主体范围
+  http.get(`${API_BASE_URL}/auth/users/:userId/party-scope`, () => {
+    return HttpResponse.json({
+      data: {
+        user_id: 'user-1',
+        source: 'explicit',
+        scope_mode: 'owner',
+        owner_party_ids: ['party-1'],
+        manager_party_ids: [],
+        organization_id: 'org-001',
+        source_organization_id: null,
+        next_transition_at: null,
+        error_code: null,
+        issues: [],
       },
       success: true,
     });

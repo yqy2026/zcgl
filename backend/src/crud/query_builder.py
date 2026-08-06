@@ -20,12 +20,9 @@ class PartyFilter:
     """主体维度过滤上下文。"""
 
     party_ids: Sequence[PartyIdentifier]
-    legacy_org_ids: Sequence[PartyIdentifier] | None = None
     filter_mode: Literal["owner", "manager", "any"] = "any"
     owner_party_ids: Sequence[PartyIdentifier] | None = None
     manager_party_ids: Sequence[PartyIdentifier] | None = None
-    owner_legacy_org_ids: Sequence[PartyIdentifier] | None = None
-    manager_legacy_org_ids: Sequence[PartyIdentifier] | None = None
     mode: Literal["strict"] = "strict"
     allow_null: bool = False
 
@@ -190,13 +187,10 @@ class QueryBuilder[ModelType]:
         owner_column = getattr(self.model, "owner_party_id", None)
         manager_column = getattr(self.model, "manager_party_id", None)
         generic_column = getattr(self.model, "party_id", None)
-        legacy_org_column = getattr(self.model, "organization_id", None)
 
         relation_aware_filter = (
             party_filter.owner_party_ids is not None
             or party_filter.manager_party_ids is not None
-            or party_filter.owner_legacy_org_ids is not None
-            or party_filter.manager_legacy_org_ids is not None
         )
         if relation_aware_filter:
             return self._apply_relation_aware_party_filter(
@@ -205,16 +199,9 @@ class QueryBuilder[ModelType]:
                 manager_party_ids=self._normalize_party_ids(
                     party_filter.manager_party_ids
                 ),
-                owner_legacy_org_ids=self._normalize_party_ids(
-                    party_filter.owner_legacy_org_ids
-                ),
-                manager_legacy_org_ids=self._normalize_party_ids(
-                    party_filter.manager_legacy_org_ids
-                ),
                 owner_column=owner_column,
                 manager_column=manager_column,
                 generic_column=generic_column,
-                legacy_org_column=legacy_org_column,
                 allow_null=party_filter.allow_null,
             )
 
@@ -225,29 +212,22 @@ class QueryBuilder[ModelType]:
                 self.model.__name__,
             )
             return query.where(false())
-        legacy_org_ids = self._normalize_party_ids(party_filter.legacy_org_ids)
-
         columns: list[Any] = []
         if party_filter.filter_mode == "owner":
             if owner_column is not None:
                 columns.append(owner_column)
             elif generic_column is not None:
                 columns.append(generic_column)
-            elif legacy_org_column is not None:
-                columns.append(legacy_org_column)
         elif party_filter.filter_mode == "manager":
             if manager_column is not None:
                 columns.append(manager_column)
             elif generic_column is not None:
                 columns.append(generic_column)
-            elif legacy_org_column is not None:
-                columns.append(legacy_org_column)
         else:
             for column in (
                 owner_column,
                 manager_column,
                 generic_column,
-                legacy_org_column,
             ):
                 if column is None:
                     continue
@@ -262,28 +242,9 @@ class QueryBuilder[ModelType]:
             )
             return query
 
-        legacy_org_only_filter = (
-            legacy_org_column is not None
-            and len(columns) == 1
-            and columns[0] is legacy_org_column
-        )
-        if legacy_org_only_filter and len(legacy_org_ids) == 0:
-            logger.warning(
-                "Applying fail-closed party filter for %s: legacy organization mapping is missing",
-                self.model.__name__,
-            )
-            return query.where(false())
-
         conditions: list[Any] = []
         for column in columns:
-            scope_ids = party_ids
-            if (
-                legacy_org_column is not None
-                and column is legacy_org_column
-                and len(legacy_org_ids) > 0
-            ):
-                scope_ids = legacy_org_ids
-            conditions.append(column.in_(scope_ids))
+            conditions.append(column.in_(party_ids))
 
         if party_filter.allow_null:
             conditions = [
@@ -301,12 +262,9 @@ class QueryBuilder[ModelType]:
         *,
         owner_party_ids: list[PartyIdentifier],
         manager_party_ids: list[PartyIdentifier],
-        owner_legacy_org_ids: list[PartyIdentifier],
-        manager_legacy_org_ids: list[PartyIdentifier],
         owner_column: Any,
         manager_column: Any,
         generic_column: Any,
-        legacy_org_column: Any,
         allow_null: bool,
     ) -> Select[Any]:
         available_columns = [
@@ -315,7 +273,6 @@ class QueryBuilder[ModelType]:
                 owner_column,
                 manager_column,
                 generic_column,
-                legacy_org_column,
             )
             if column is not None
         ]
@@ -329,8 +286,6 @@ class QueryBuilder[ModelType]:
         if (
             len(owner_party_ids) == 0
             and len(manager_party_ids) == 0
-            and len(owner_legacy_org_ids) == 0
-            and len(manager_legacy_org_ids) == 0
         ):
             logger.warning(
                 "Applying fail-closed relation-aware party filter for %s: empty owner/manager scope",
@@ -342,56 +297,28 @@ class QueryBuilder[ModelType]:
         class _ScopedRelationCondition:
             column: Any
             party_ids: set[PartyIdentifier]
-            legacy_org_ids: set[PartyIdentifier]
-            fallback_to_legacy_org_when_null: bool = False
 
         scoped_columns: dict[int, _ScopedRelationCondition] = {}
 
         def _bind_scope(
             column: Any | None,
             party_ids: list[PartyIdentifier],
-            legacy_org_ids: list[PartyIdentifier] | None = None,
-            *,
-            fallback_to_legacy_org_when_null: bool = False,
         ) -> None:
-            normalized_legacy_org_ids = legacy_org_ids or []
-            if column is None or (
-                len(party_ids) == 0 and len(normalized_legacy_org_ids) == 0
-            ):
+            if column is None or len(party_ids) == 0:
                 return
             column_key = id(column)
             if column_key not in scoped_columns:
                 scoped_columns[column_key] = _ScopedRelationCondition(
                     column=column,
                     party_ids=set(),
-                    legacy_org_ids=set(),
-                    fallback_to_legacy_org_when_null=fallback_to_legacy_org_when_null,
                 )
             scoped_scope = scoped_columns[column_key]
             scoped_scope.party_ids.update(party_ids)
-            scoped_scope.legacy_org_ids.update(normalized_legacy_org_ids)
-            if fallback_to_legacy_org_when_null:
-                scoped_scope.fallback_to_legacy_org_when_null = True
 
-        owner_target_column = owner_column or generic_column or legacy_org_column
-        manager_target_column = manager_column or generic_column or legacy_org_column
-        _bind_scope(
-            owner_target_column,
-            owner_party_ids,
-            legacy_org_ids=owner_legacy_org_ids,
-            fallback_to_legacy_org_when_null=(
-                legacy_org_column is not None and owner_target_column is owner_column
-            ),
-        )
-        _bind_scope(
-            manager_target_column,
-            manager_party_ids,
-            legacy_org_ids=manager_legacy_org_ids,
-            fallback_to_legacy_org_when_null=(
-                legacy_org_column is not None
-                and manager_target_column is manager_column
-            ),
-        )
+        owner_target_column = owner_column or generic_column
+        manager_target_column = manager_column or generic_column
+        _bind_scope(owner_target_column, owner_party_ids)
+        _bind_scope(manager_target_column, manager_party_ids)
 
         if len(scoped_columns) == 0:
             logger.warning(
@@ -402,46 +329,10 @@ class QueryBuilder[ModelType]:
 
         conditions: list[Any] = []
         for scoped_scope in scoped_columns.values():
-            scoped_legacy_org_ids = scoped_scope.legacy_org_ids
-            if (
-                legacy_org_column is not None
-                and scoped_scope.column is legacy_org_column
-            ):
-                primary_scope_ids = (
-                    scoped_legacy_org_ids
-                    if len(scoped_legacy_org_ids) > 0
-                    else scoped_scope.party_ids
-                )
-            else:
-                primary_scope_ids = scoped_scope.party_ids
-
-            condition: Any | None = None
-            if len(primary_scope_ids) > 0:
-                sorted_primary_scope_ids = sorted(
-                    primary_scope_ids, key=lambda value: str(value)
-                )
-                condition = scoped_scope.column.in_(sorted_primary_scope_ids)
-
-            if (
-                scoped_scope.fallback_to_legacy_org_when_null
-                and legacy_org_column is not None
-                and len(scoped_legacy_org_ids) > 0
-            ):
-                sorted_legacy_scope_ids = sorted(
-                    scoped_legacy_org_ids, key=lambda value: str(value)
-                )
-                legacy_condition = and_(
-                    scoped_scope.column.is_(None),
-                    legacy_org_column.in_(sorted_legacy_scope_ids),
-                )
-                condition = (
-                    legacy_condition
-                    if condition is None
-                    else or_(condition, legacy_condition)
-                )
-
-            if condition is None:
-                continue
+            sorted_party_ids = sorted(
+                scoped_scope.party_ids, key=lambda value: str(value)
+            )
+            condition = scoped_scope.column.in_(sorted_party_ids)
 
             if allow_null:
                 condition = or_(scoped_scope.column.is_(None), condition)

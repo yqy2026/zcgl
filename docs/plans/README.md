@@ -6,7 +6,9 @@
 
 ## 活跃方案
 
-当前无活跃或搁置方案。
+| 方案 | 状态 | 关联需求 |
+|---|---|---|
+| [2026-08-03 Organization-Party 与主体范围一次切换](./2026-08-03-organization-party-scope-cutover.md) | 🔄 阶段 3 实施中 | REQ-SYS-001、REQ-SYS-002、REQ-AUTH-002、REQ-PTY-001、REQ-PTY-002 |
 
 ## 状态说明
 

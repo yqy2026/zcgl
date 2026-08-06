@@ -15,6 +15,9 @@ vi.mock('@/services/partyService', () => ({
     submitReview: vi.fn(),
     approveReview: vi.fn(),
     rejectReview: vi.fn(),
+    previewLifecycle: vi.fn(),
+    deactivate: vi.fn(),
+    reactivate: vi.fn(),
   },
 }));
 
@@ -22,10 +25,10 @@ vi.mock('../partyImport', () => ({
   parsePartyImportWorkbook: vi.fn(() =>
     Promise.resolve([
       {
-        party_type: 'organization',
+        party_type: 'legal_entity',
         name: '导入主体',
-        code: 'IMP-001',
-        status: 'active',
+        identifier_type: 'unified_social_credit_code',
+        identifier_value: '91440101231229726P',
       },
     ])
   ),
@@ -53,9 +56,11 @@ const formatConsoleMessages = (calls: unknown[][]) =>
 const draftParty: Party = {
   id: 'party-1',
   business_roles: ['owner', 'terminal_tenant'],
-  party_type: 'organization' as const,
+  party_type: 'legal_entity' as const,
   name: '测试主体',
-  code: 'PTY-001',
+  code: 'LE-000001',
+  identifier_type: 'unified_social_credit_code',
+  identifier_display: '91440101231229726P',
   external_ref: 'EXT-1',
   status: 'active',
   review_status: 'draft' as const,
@@ -75,6 +80,43 @@ const pendingParty = {
   review_status: 'pending' as const,
 };
 
+const approvedParty = {
+  ...draftParty,
+  id: 'party-3',
+  code: 'PTY-003',
+  name: '已审核主体',
+  review_status: 'approved' as const,
+};
+
+const lifecyclePreview = {
+  party_id: 'party-3',
+  operation: 'deactivate' as const,
+  before_state: {
+    party_id: 'party-3',
+    status: 'active',
+    review_status: 'approved',
+    available_for_new_references: true,
+  },
+  after_state: {
+    party_id: 'party-3',
+    status: 'inactive',
+    review_status: 'approved',
+    available_for_new_references: false,
+  },
+  impact: {
+    represented_organization_count: 1,
+    potentially_affected_organization_count: 1,
+    current_user_binding_count: 1,
+    affected_user_count: 1,
+    user_scope_change_count: 1,
+    asset_reference_count: 0,
+    project_reference_count: 0,
+    contract_group_reference_count: 0,
+    contract_reference_count: 0,
+  },
+  preview_token: 'preview-token-1',
+  expires_at: '2026-08-06T01:10:00Z',
+};
 describe('Party system pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -142,6 +184,37 @@ describe('Party system pages', () => {
     });
   });
 
+  it('shows a blocking error state when the party list request fails', async () => {
+    vi.mocked(partyService.getParties).mockRejectedValue(new Error('响应字段校验失败'));
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties" element={<PartyListPage />} />
+      </Routes>,
+      { route: '/system/parties' }
+    );
+
+    expect(await screen.findByText('主体列表加载失败')).toBeInTheDocument();
+    expect(screen.getByText('响应字段校验失败')).toBeInTheDocument();
+    expect(screen.queryByText('共 0 条主体记录')).not.toBeInTheDocument();
+  });
+
+  it('creates a party without accepting a client-owned code', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties" element={<PartyListPage />} />
+      </Routes>,
+      { route: '/system/parties' }
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '新建主体' }));
+
+    expect(screen.queryByLabelText('主体编码')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('统一标识类型')).toBeInTheDocument();
+    expect(screen.getByLabelText('统一标识值')).toBeInTheDocument();
+    expect(screen.queryByLabelText('状态')).not.toBeInTheDocument();
+  });
+
   it('requests the selected business role slice from the server', async () => {
     renderWithProviders(
       <Routes>
@@ -202,7 +275,8 @@ describe('Party system pages', () => {
         items: [
           expect.objectContaining({
             name: '导入主体',
-            code: 'IMP-001',
+            identifier_type: 'unified_social_credit_code',
+            identifier_value: '91440101231229726P',
           }),
         ],
       });
@@ -218,6 +292,9 @@ describe('Party system pages', () => {
     );
 
     expect(await screen.findByDisplayValue('测试主体')).toBeInTheDocument();
+    expect(screen.getByText('91440101231229726P')).toBeInTheDocument();
+    expect(screen.queryByLabelText('主体编码')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('业务状态')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('主体名称'), {
       target: { value: '测试主体-更新' },
@@ -269,6 +346,97 @@ describe('Party system pages', () => {
     });
   });
 
+  it('previews lifecycle impact and requires a reason before deactivating an approved party', async () => {
+    vi.mocked(partyService.getPartyById).mockResolvedValue(approvedParty);
+    vi.mocked(partyService.previewLifecycle).mockResolvedValue(lifecyclePreview);
+    vi.mocked(partyService.deactivate).mockResolvedValue({
+      ...lifecyclePreview,
+      party: { ...approvedParty, status: 'inactive' },
+      committed_at: '2026-08-06T01:01:00Z',
+      idempotent: false,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties/:id" element={<PartyDetailPage />} />
+      </Routes>,
+      { route: '/system/parties/party-3' }
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '停用主体' }));
+
+    await waitFor(() => {
+      expect(partyService.previewLifecycle).toHaveBeenCalledWith('party-3', {
+        operation: 'deactivate',
+      });
+    });
+    expect(partyService.deactivate).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('停用原因'), {
+      target: { value: '停止主体的新增引用和有效范围。' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认停用' }));
+
+    await waitFor(() => {
+      expect(partyService.deactivate).toHaveBeenCalledWith(
+        'party-3',
+        expect.objectContaining({
+          preview_token: 'preview-token-1',
+          reason: '停止主体的新增引用和有效范围。',
+          idempotency_key: expect.any(String),
+        })
+      );
+    });
+  });
+  it('previews and confirms reactivation for an inactive approved party', async () => {
+    const inactiveApprovedParty = { ...approvedParty, status: 'inactive' };
+    const reactivationPreview = {
+      ...lifecyclePreview,
+      operation: 'reactivate' as const,
+      before_state: lifecyclePreview.after_state,
+      after_state: lifecyclePreview.before_state,
+      preview_token: 'preview-token-2',
+    };
+    vi.mocked(partyService.getPartyById).mockResolvedValue(inactiveApprovedParty);
+    vi.mocked(partyService.previewLifecycle).mockResolvedValue(reactivationPreview);
+    vi.mocked(partyService.reactivate).mockResolvedValue({
+      ...reactivationPreview,
+      party: { ...inactiveApprovedParty, status: 'active' },
+      committed_at: '2026-08-06T01:02:00Z',
+      idempotent: false,
+    });
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties/:id" element={<PartyDetailPage />} />
+      </Routes>,
+      { route: '/system/parties/party-3' }
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '重新启用主体' }));
+
+    await waitFor(() => {
+      expect(partyService.previewLifecycle).toHaveBeenCalledWith('party-3', {
+        operation: 'reactivate',
+      });
+    });
+
+    fireEvent.change(screen.getByLabelText('重新启用原因'), {
+      target: { value: '关联组织已恢复有效配置。' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认启用' }));
+
+    await waitFor(() => {
+      expect(partyService.reactivate).toHaveBeenCalledWith(
+        'party-3',
+        expect.objectContaining({
+          preview_token: 'preview-token-2',
+          reason: '关联组织已恢复有效配置。',
+          idempotency_key: expect.any(String),
+        })
+      );
+    });
+  });
   it('rejects a pending party from detail page', async () => {
     vi.mocked(partyService.getPartyById).mockResolvedValue(pendingParty);
 

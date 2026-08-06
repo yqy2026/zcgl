@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 
 from src.models.abac import ABACPolicy, ABACPolicyRule, ABACRolePolicy
 from src.models.asset import Asset
-from src.models.auth import User
-from src.models.party import Party, PartyType
+from src.models.auth import AccountType, User
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.rbac import Role, UserRoleAssignment
 from src.models.user_party_binding import RelationType, UserPartyBinding
 from src.services.core.password_service import PasswordService
@@ -110,22 +110,25 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     test_data: dict[str, object],
 ) -> None:
     suffix = uuid.uuid4().hex[:8]
+    party_serial = int(suffix, 16) % 999_999
     password = "User123!@#"
     password_hash = PasswordService().get_password_hash(password)
 
     scoped_party = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Scoped Party {suffix}",
-        code=f"SCOPED-{suffix}",
+        code=f"LE-{party_serial:06d}",
         external_ref=f"SCOPED-EXT-{suffix}",
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     other_party = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Other Party {suffix}",
-        code=f"OTHER-{suffix}",
+        code=f"LE-{party_serial + 1:06d}",
         external_ref=f"OTHER-EXT-{suffix}",
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     db_session.add_all([scoped_party, other_party])
     db_session.flush()
@@ -138,7 +141,8 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
         full_name="Asset Scope User",
         password_hash=password_hash,
         is_active=True,
-        default_organization_id=organization_id,
+        account_type=AccountType.HUMAN,
+        organization_id=organization_id,
         created_by="integration_test",
         updated_by="integration_test",
     )
@@ -150,7 +154,6 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
             user_id=scoped_user.id,
             party_id=scoped_party.id,
             relation_type=RelationType.OWNER,
-            is_primary=True,
         )
     )
 

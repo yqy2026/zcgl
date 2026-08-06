@@ -3,7 +3,8 @@ import { Button, Form, Input, Modal, Select, Typography } from 'antd';
 import type { SelectProps } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { partyService } from '@/services/partyService';
-import type { Party, PartyType } from '@/types/party';
+import type { Party, PartyIdentifierType, PartyType } from '@/types/party';
+import { getPartyIdentifierTypeOptions, PARTY_TYPE_OPTIONS } from '@/constants/party';
 import { MessageManager } from '@/utils/messageManager';
 import styles from './PartySelector.module.css';
 
@@ -14,7 +15,6 @@ const EMPTY_STATUS_TEXT = '请先创建主体数据';
 const FORBIDDEN_STATUS_TEXT = '当前账号无 party.read 权限，请联系管理员';
 const FORBIDDEN_PATTERN = /(403|PERMISSION_DENIED|AUTHZ_DENIED|forbidden)/i;
 const FORBIDDEN_ERROR_CODE_PATTERN = /(PERMISSION_DENIED|AUTHZ_DENIED|HTTP_403|FORBIDDEN)/i;
-const ROLE_ALIGNED_PARTY_TYPES: readonly PartyType[] = ['organization', 'legal_entity'];
 
 export type PartySelectorFilterMode = 'owner' | 'manager' | 'tenant' | 'any';
 
@@ -49,39 +49,25 @@ export interface PartySelectorProps {
 interface QuickCreateFormValues {
   party_type: PartyType;
   name: string;
-  code: string;
+  identifier_type?: PartyIdentifierType;
+  identifier_value?: string;
 }
 
 const resolveDefaultCreatePartyType = (filterMode: PartySelectorFilterMode): PartyType => {
   if (filterMode === 'tenant') {
     return 'legal_entity';
   }
-  return 'organization';
-};
-
-const mergeAndDedupeParties = (partyGroups: Party[][]): Party[] => {
-  const deduped = new Map<string, Party>();
-  partyGroups.flat().forEach(party => {
-    if (!deduped.has(party.id)) {
-      deduped.set(party.id, party);
-    }
-  });
-  return Array.from(deduped.values());
+  return 'legal_entity';
 };
 
 export const createDefaultPartyFetcher = (searchParties: PartySearchExecutor): PartyFetcher => {
   return async (query, filterMode) => {
     if (filterMode === 'owner' || filterMode === 'manager') {
-      const responses = await Promise.all(
-        ROLE_ALIGNED_PARTY_TYPES.map(async partyType => {
-          const result = await searchParties(query, {
-            limit: DEFAULT_SEARCH_LIMIT,
-            party_type: partyType,
-          });
-          return result.items;
-        })
-      );
-      return mergeAndDedupeParties(responses).slice(0, DEFAULT_SEARCH_LIMIT);
+      const result = await searchParties(query, {
+        limit: DEFAULT_SEARCH_LIMIT,
+        party_type: 'legal_entity',
+      });
+      return result.items.slice(0, DEFAULT_SEARCH_LIMIT);
     }
 
     const result = await searchParties(query, { limit: DEFAULT_SEARCH_LIMIT });
@@ -178,6 +164,7 @@ const PartySelector: React.FC<PartySelectorProps> = ({
   allowQuickCreate = false,
 }) => {
   const [quickCreateForm] = Form.useForm<QuickCreateFormValues>();
+  const quickCreatePartyType = Form.useWatch('party_type', quickCreateForm);
   const [options, setOptions] = useState<PartyOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
@@ -278,8 +265,8 @@ const PartySelector: React.FC<PartySelectorProps> = ({
       const createdParty = await partyService.createParty({
         party_type: values.party_type,
         name: values.name,
-        code: values.code,
-        status: 'active',
+        identifier_type: values.identifier_type,
+        identifier_value: values.identifier_value,
       });
       const createdOption = toPartyOption(createdParty);
       setOptions(currentOptions => {
@@ -362,14 +349,7 @@ const PartySelector: React.FC<PartySelectorProps> = ({
             name="party_type"
             rules={[{ required: true, message: '请选择主体类型' }]}
           >
-            <Select
-              aria-label="快速新建主体类型"
-              options={[
-                { label: '组织', value: 'organization' },
-                { label: '法人主体', value: 'legal_entity' },
-                { label: '自然人', value: 'individual' },
-              ]}
-            />
+            <Select aria-label="快速新建主体类型" options={PARTY_TYPE_OPTIONS} />
           </Form.Item>
           <Form.Item
             label="主体名称"
@@ -379,11 +359,43 @@ const PartySelector: React.FC<PartySelectorProps> = ({
             <Input aria-label="快速新建主体名称" />
           </Form.Item>
           <Form.Item
-            label="主体编码"
-            name="code"
-            rules={[{ required: true, message: '请输入主体编码' }]}
+            label="统一标识类型"
+            name="identifier_type"
+            dependencies={['identifier_value']}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator: async (_, value) => {
+                  const identifierValue = String(getFieldValue('identifier_value') ?? '').trim();
+                  if ((value == null || value === '') && identifierValue !== '') {
+                    throw new Error('请选择统一标识类型');
+                  }
+                },
+              }),
+            ]}
           >
-            <Input aria-label="快速新建主体编码" />
+            <Select
+              aria-label="快速新建统一标识类型"
+              allowClear
+              options={getPartyIdentifierTypeOptions(quickCreatePartyType)}
+            />
+          </Form.Item>
+          <Form.Item
+            label="统一标识值"
+            name="identifier_value"
+            dependencies={['identifier_type']}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator: async (_, value) => {
+                  const identifierType = getFieldValue('identifier_type');
+                  const identifierValue = String(value ?? '').trim();
+                  if (identifierType != null && identifierType !== '' && identifierValue === '') {
+                    throw new Error('请输入统一标识值');
+                  }
+                },
+              }),
+            ]}
+          >
+            <Input aria-label="快速新建统一标识值" />
           </Form.Item>
         </Form>
       </Modal>

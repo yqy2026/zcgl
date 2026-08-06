@@ -14,7 +14,6 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.party import party_crud
 from ....crud.query_builder import PartyFilter
 from ....database import get_async_db
 from ....middleware.auth import (
@@ -40,6 +39,7 @@ from ....schemas.project import (
     ProjectUpdate,
 )
 from ....services.authz import authz_service
+from ....services.organization import organization_service
 from ....services.party_scope import build_party_filter_from_scope_context
 from ....services.project import project_service
 
@@ -81,9 +81,7 @@ def _normalize_identifier_sequence(values: Any) -> list[str]:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(
-        getattr(current_user, "default_organization_id", None)
-    )
+    return _normalize_optional_str(current_user.organization_id)
 
 
 def _resolve_effective_organization_id(
@@ -106,14 +104,13 @@ async def _resolve_organization_party_id(
     if normalized_organization_id is None:
         return None
 
-    try:
-        resolved_party_id = await party_crud.resolve_organization_party_id(
-            db,
-            organization_id=normalized_organization_id,
-        )
-    except Exception:
+    organization = await organization_service.get_organization(
+        db,
+        org_id=normalized_organization_id,
+    )
+    if organization is None:
         return None
-    return _normalize_optional_str(resolved_party_id)
+    return _normalize_optional_str(organization.represented_party_id)
 
 
 async def _build_subject_scope_hint(
@@ -180,7 +177,7 @@ async def _require_project_create_authz(
         resource_context["manager_party_id"] = manager_party_id
     if effective_organization_id is not None:
         resource_context["organization_id"] = effective_organization_id
-    if manager_party_id is None:
+    if manager_party_id is None and effective_organization_id is None:
         subject_scope_hint = await _build_subject_scope_hint(
             db=db,
             user_id=str(current_user.id),
@@ -198,7 +195,6 @@ async def _require_project_create_authz(
     resource_context["party_id"] = (
         manager_party_id
         or _normalize_optional_str(resource_context.get("party_id"))
-        or effective_organization_id
         or _PROJECT_CREATE_UNSCOPED_PARTY_ID
     )
 

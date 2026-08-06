@@ -67,7 +67,6 @@ def search_client(monkeypatch):
                 user_id="search-user-1",
                 owner_party_ids=["owner-party-1"],
                 manager_party_ids=["manager-party-1"],
-                headquarters_party_ids=[],
                 role_ids=[],
             )
         ),

@@ -40,6 +40,32 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             self.sensitive_data_handler.decrypt_data(result.__dict__)
         return result
 
+    async def get_for_update_async(
+        self, db: AsyncSession, id: Any
+    ) -> Organization | None:
+        """Read one organization with a row lock for sensitive mutations."""
+        stmt = select(self.model).where(getattr(self.model, "id") == id).with_for_update()
+        result = (await db.execute(stmt)).scalars().first()
+        if result is not None:
+            self.sensitive_data_handler.decrypt_data(result.__dict__)
+        return result
+
+    async def get_represented_by_party_async(
+        self, db: AsyncSession, *, party_id: str
+    ) -> list[Organization]:
+        """List non-deleted Organizations directly representing one Party."""
+        stmt = (
+            select(Organization)
+            .where(
+                Organization.represented_party_id == party_id,
+                Organization.is_deleted.is_(False),
+            )
+            .order_by(Organization.id)
+        )
+        result = list((await db.execute(stmt)).scalars().all())
+        for item in result:
+            self.sensitive_data_handler.decrypt_data(item.__dict__)
+        return result
     async def update_async(
         self,
         db: AsyncSession,

@@ -200,6 +200,83 @@ class ResourceConflictError(BaseBusinessError):
         )
 
 
+class OrganizationPartyScopePreviewStaleError(BaseBusinessError):
+    """预览已过期、已消费或基础数据已发生变化。"""
+
+    def __init__(self, reason: str = "preview_stale"):
+        super().__init__(
+            message="组织主体范围预览已失效，请重新预览",
+            code="SCOPE_CHANGE_PREVIEW_STALE",
+            details={"reason": reason},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class OrganizationMovePreviewStaleError(BaseBusinessError):
+    """Organization move preview no longer describes current state."""
+
+    def __init__(self, reason: str = "preview_stale"):
+        super().__init__(
+            message="Organization move preview is stale; preview again",
+            code="SCOPE_CHANGE_PREVIEW_STALE",
+            details={"reason": reason},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class UserPartyScopePreviewStaleError(BaseBusinessError):
+    """用户主体范围预览已过期、已消费或基础数据发生变化。"""
+
+    def __init__(self, reason: str = "preview_stale"):
+        super().__init__(
+            message="用户主体范围预览已失效，请重新预览",
+            code="SCOPE_CHANGE_PREVIEW_STALE",
+            details={"reason": reason},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class PartyLifecyclePreviewStaleError(BaseBusinessError):
+    """Party lifecycle preview no longer describes the current state."""
+
+    def __init__(self, reason: str = "preview_stale"):
+        super().__init__(
+            message="Party lifecycle preview is stale; preview again",
+            code="SCOPE_CHANGE_PREVIEW_STALE",
+            details={"reason": reason},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class UserOrganizationTransferPreviewStaleError(BaseBusinessError):
+    """User organization transfer preview no longer describes current state."""
+
+    def __init__(self, reason: str = "preview_stale"):
+        super().__init__(
+            message="User organization transfer preview is stale; preview again",
+            code="SCOPE_CHANGE_PREVIEW_STALE",
+            details={"reason": reason},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class PartyScopeForbiddenError(BaseBusinessError):
+    """Invalid or missing Party scope must fail business interfaces with 403."""
+
+    def __init__(
+        self,
+        code: str = "PARTY_SCOPE_MISSING",
+        message: str | None = None,
+        details: ErrorDetails | None = None,
+    ):
+        super().__init__(
+            message=message or "当前主体范围缺失或配置无效",
+            code=code,
+            details=details,
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
 class ServiceUnavailableError(BaseBusinessError):
     """服务不可用异常"""
 

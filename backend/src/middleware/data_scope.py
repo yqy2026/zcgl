@@ -9,7 +9,7 @@ from typing import Any, Literal, cast
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exception_handler import bad_request, forbidden
+from ..core.exception_handler import PartyScopeForbiddenError, bad_request, forbidden
 from ..database import get_async_db
 from ..models.auth import User
 from ..schemas.authz import BindingType, ScopeMode
@@ -111,6 +111,11 @@ class DataScopeContextChecker:
             db,
             user_id=str(current_user.id),
         )
+        if getattr(subject_context, "scope_error_code", None) is not None:
+            raise PartyScopeForbiddenError(
+                code=getattr(subject_context, "scope_error_code"),
+                message="当前主体范围缺失或配置无效",
+            )
         subject_binding_types = (
             authz_service.context_builder.resolve_allowed_binding_types(subject_context)
         )

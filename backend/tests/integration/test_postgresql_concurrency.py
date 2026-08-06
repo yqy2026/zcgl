@@ -81,21 +81,27 @@ class TestPostgreSQLConcurrency:
     async def test_concurrent_transaction_isolation(self, isolated_db_manager):
         """测试并发事务隔离"""
         from src.crud.asset import asset_crud
-        from src.models.ownership import Ownership
+        from src.models.party import Party, PartyReviewStatus, PartyType
 
         mgr = isolated_db_manager
 
         # 创建初始资产
         async with mgr.get_session() as session:
             suffix = uuid.uuid4().hex[:8]
-            ownership = Ownership(name="并发测试权属方", code="OWN-CONCURRENCY")
+            ownership = Party(
+                party_type=PartyType.LEGAL_ENTITY,
+                name=f"并发测试权属方-{suffix}",
+                code="LE-600001",
+                status="active",
+                review_status=PartyReviewStatus.APPROVED,
+            )
             session.add(ownership)
             await session.flush()
 
             asset_data = {
                 "asset_name": f"隔离测试资产-{suffix}",
                 "asset_code": f"CONC-ASSET-{suffix}",
-                "ownership_id": ownership.id,
+                "owner_party_id": ownership.id,
                 "address": "隔离测试地址",
                 "ownership_status": "已确权",
                 "property_nature": "商业",

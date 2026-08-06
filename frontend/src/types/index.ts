@@ -173,9 +173,9 @@ export type {
 export type {
   // Party 相关
   PartyType,
+  PartyIdentifierType,
   Party,
   PartyListParams,
-  FrontendPartyHierarchyEdge,
   PartyContact,
   CertificatePartyRelationRole,
   CertificatePartyRelation,

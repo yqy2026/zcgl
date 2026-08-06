@@ -384,6 +384,7 @@ class TestOrganizationDeletion:
         parent_data = OrganizationCreate(
             **self.factory.create_org_dict(
                 name="父组织",
+                code="DELETE_PARENT",
             )
         )
         parent = await self.service.create_organization(self.db, obj_in=parent_data)
@@ -392,6 +393,7 @@ class TestOrganizationDeletion:
         child_data = OrganizationCreate(
             **self.factory.create_org_dict(
                 name="子组织",
+                code="DELETE_CHILD",
                 parent_id=parent.id,
             )
         )

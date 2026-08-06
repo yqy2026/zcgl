@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from src.crud.asset import AssetCRUD
 from src.models.asset import Asset
-from src.models.ownership import Ownership
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.schemas.asset import AssetUpdate
 from tests.integration.conftest import AsyncSessionAdapter
 
@@ -88,7 +88,13 @@ def async_db_session(db_session: Session) -> AsyncSessionAdapter:
 @pytest.fixture
 def sample_asset_data(db_session: Session) -> dict:
     suffix = uuid.uuid4().hex[:8]
-    ownership = Ownership(name=f"加密测试权属方-{suffix}", code=f"OWN-ENC-{suffix}")
+    ownership = Party(
+        party_type=PartyType.LEGAL_ENTITY,
+        name=f"加密测试权属方-{suffix}",
+        code="LE-300001",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED,
+    )
     db_session.add(ownership)
     db_session.flush()
 

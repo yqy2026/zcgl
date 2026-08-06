@@ -5,6 +5,12 @@ import type {
   Party,
   PartyContact,
   PartyListParams,
+  PartyIdentifierType,
+  PartyLifecycleCommitRequest,
+  PartyLifecycleCommitResponse,
+  PartyLifecyclePreviewRequest,
+  PartyLifecyclePreviewResponse,
+  PartyLifecycleOperation,
   PartyType,
 } from '@/types/party';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
@@ -32,9 +38,9 @@ export interface PartyListResult {
 export interface PartyCreatePayload {
   party_type: PartyType;
   name: string;
-  code: string;
+  identifier_type?: PartyIdentifierType | null;
+  identifier_value?: string | null;
   external_ref?: string | null;
-  status?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -239,6 +245,70 @@ export class PartyService {
     }
   }
 
+  async previewLifecycle(
+    id: string,
+    payload: PartyLifecyclePreviewRequest
+  ): Promise<PartyLifecyclePreviewResponse> {
+    try {
+      const result = await apiClient.post<PartyLifecyclePreviewResponse>(
+        PARTY_BASE_URL + '/' + id + '/status/preview',
+        payload,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error('预览主体状态变更失败: ' + result.error);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async deactivate(
+    id: string,
+    payload: PartyLifecycleCommitRequest
+  ): Promise<PartyLifecycleCommitResponse> {
+    return await this.commitLifecycle(id, 'deactivate', payload);
+  }
+
+  async reactivate(
+    id: string,
+    payload: PartyLifecycleCommitRequest
+  ): Promise<PartyLifecycleCommitResponse> {
+    return await this.commitLifecycle(id, 'reactivate', payload);
+  }
+
+  private async commitLifecycle(
+    id: string,
+    operation: PartyLifecycleOperation,
+    payload: PartyLifecycleCommitRequest
+  ): Promise<PartyLifecycleCommitResponse> {
+    try {
+      const result = await apiClient.post<PartyLifecycleCommitResponse>(
+        PARTY_BASE_URL + '/' + id + '/' + operation,
+        payload,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error('提交主体状态变更失败: ' + result.error);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
   async submitReview(id: string): Promise<Party> {
     try {
       const result = await apiClient.post<Party>(
@@ -329,26 +399,6 @@ export class PartyService {
 
       if (!result.success || result.data == null) {
         throw new Error(`获取主体日志失败: ${result.error}`);
-      }
-
-      return result.data;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw toServiceError(enhancedError);
-    }
-  }
-
-  async getPartyHierarchy(partyId: string, includeSelf: boolean = false): Promise<string[]> {
-    try {
-      const result = await apiClient.get<string[]>(`${PARTY_BASE_URL}/${partyId}/hierarchy`, {
-        params: includeSelf === true ? { include_self: true } : undefined,
-        cache: false,
-        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success || result.data == null) {
-        throw new Error(`获取主体层级失败: ${result.error}`);
       }
 
       return result.data;

@@ -23,6 +23,8 @@ export interface User {
   role_ids?: string[];
   is_admin?: boolean;
   is_active: boolean;
+  account_type: 'human' | 'service' | 'system';
+  organization_id?: string | null;
   created_at: string;
   updated_at: string;
   // 个人资料相关字段
@@ -31,7 +33,6 @@ export interface User {
   failed_login_attempts?: number;
   is_locked?: boolean;
   locked_until?: string;
-  default_organization_id?: string;
   // 关联数据
   organization?: Organization;
   permissions?: Permission[];

@@ -19,6 +19,8 @@ import UserTable from './components/UserTable';
 import UserFormModal from './components/UserFormModal';
 import UserDetailDrawer from './components/UserDetailDrawer';
 import UserPartyBindingModal from './components/UserPartyBindingModal';
+import UserOrganizationTransferModal from './components/UserOrganizationTransferModal';
+import UserPartyScopeViewModal from './components/UserPartyScopeViewModal';
 import styles from '../UserManagementPage.module.css';
 
 const pageLogger = createLogger('UserManagement');
@@ -56,6 +58,8 @@ const UserManagementPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [bindingUser, setBindingUser] = useState<User | null>(null);
+  const [organizationTransferUser, setOrganizationTransferUser] = useState<User | null>(null);
+  const [scopeViewUser, setScopeViewUser] = useState<User | null>(null);
 
   const [form] = Form.useForm();
 
@@ -154,7 +158,6 @@ const UserManagementPage: React.FC = () => {
   const handleCreate = useCallback(() => {
     setEditingUser(null);
     form.resetFields();
-    form.setFieldsValue({ status: 'active' });
     setModalVisible(true);
   }, [form]);
 
@@ -168,7 +171,6 @@ const UserManagementPage: React.FC = () => {
         phone: user.phone,
         status: user.status,
         role_ids: user.role_ids ?? (user.role_id != null ? [user.role_id] : []),
-        default_organization_id: user.default_organization_id,
       });
       setModalVisible(true);
     },
@@ -231,6 +233,13 @@ const UserManagementPage: React.FC = () => {
     setBindingModalVisible(true);
   }, []);
 
+  const handleTransferOrganization = useCallback((user: User) => {
+    setOrganizationTransferUser(user);
+  }, []);
+
+  const handleViewPartyScope = useCallback((user: User) => {
+    setScopeViewUser(user);
+  }, []);
   const handleSubmit = useCallback(
     async (values: CreateUserData | UpdateUserData) => {
       try {
@@ -327,6 +336,8 @@ const UserManagementPage: React.FC = () => {
           onPageChange={handlePageChange}
           onViewDetail={handleViewDetail}
           onManagePartyBindings={handleManagePartyBindings}
+          onViewPartyScope={handleViewPartyScope}
+          onTransferOrganization={handleTransferOrganization}
           onEdit={handleEdit}
           onToggleLock={handleToggleLock}
           onToggleStatus={handleToggleStatus}
@@ -339,7 +350,6 @@ const UserManagementPage: React.FC = () => {
         open={modalVisible}
         editingUser={editingUser}
         form={form}
-        organizations={organizations}
         roles={roles}
         statusOptions={USER_STATUS_FORM_OPTIONS}
         onCancel={() => setModalVisible(false)}
@@ -362,6 +372,18 @@ const UserManagementPage: React.FC = () => {
         user={bindingUser}
         onClose={() => setBindingModalVisible(false)}
         onChanged={refreshUsersAndStatistics}
+      />
+      <UserOrganizationTransferModal
+        open={organizationTransferUser != null}
+        user={organizationTransferUser}
+        organizations={organizations}
+        onClose={() => setOrganizationTransferUser(null)}
+        onChanged={refreshUsersAndStatistics}
+      />
+      <UserPartyScopeViewModal
+        open={scopeViewUser != null}
+        user={scopeViewUser}
+        onClose={() => setScopeViewUser(null)}
       />
     </PageContainer>
   );

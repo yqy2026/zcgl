@@ -18,18 +18,21 @@ from ...crud.party import CRUDParty, party_crud
 from ...crud.query_builder import PartyFilter
 from ...models.auth import User
 from ...models.contract_group import Contract, ContractGroup, GroupRelationType
-from ...models.party import Party, PartyContact, PartyHierarchy, PartyReviewStatus
+from ...models.party import Party, PartyContact, PartyReviewStatus
 from ...models.party_review_log import PartyReviewLog
 from ...models.user_party_binding import UserPartyBinding
 from ...schemas.party import (
     PartyBusinessRole,
     PartyContactCreate,
     PartyCreate,
+    PartyResponse,
     PartyUpdate,
     UserPartyBindingCreate,
     UserPartyBindingUpdate,
 )
 from ...services.party_scope import resolve_user_party_filter
+from .code_service import PartyCodeService
+from .identifier_service import PartyIdentifierService
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +40,18 @@ _CONTACT_METADATA_FIELDS = {"contact_name", "contact_phone"}
 
 
 class PartyService:
-    """Service layer for Party/Hierarchy/Contact operations."""
+    """Service layer for Party, contact, and user-binding operations."""
 
-    def __init__(self, data_access: CRUDParty | None = None) -> None:
+    def __init__(
+        self,
+        data_access: CRUDParty | None = None,
+        *,
+        code_service: PartyCodeService | None = None,
+        identifier_service: PartyIdentifierService | None = None,
+    ) -> None:
         self.party_crud = data_access or party_crud
+        self.code_service = code_service or PartyCodeService()
+        self.identifier_service = identifier_service or PartyIdentifierService()
 
     async def create_party(self, db: AsyncSession, *, obj_in: PartyCreate) -> Party:
         payload = self._normalize_party_payload(obj_in.model_dump())
@@ -49,17 +60,8 @@ class PartyService:
         payload.setdefault("reviewed_at", None)
         payload.setdefault("review_reason", None)
 
-        party_type = payload.get("party_type", "")
-        code = payload.get("code", "")
-        existing = await self.party_crud.get_party_by_type_and_code(
-            db, party_type=party_type, code=code
-        )
-        if existing is not None:
-            raise DuplicateResourceError(
-                resource_type="主体",
-                field="party_type+code",
-                value=f"{party_type}/{code}",
-            )
+        party_type = self._normalize_party_type(payload.get("party_type"))
+        self._prepare_identifier_payload(payload, party_type=party_type)
 
         existing_by_name = await self._maybe_call_optional_async(
             getattr(self.party_crud, "get_party_by_type_and_name", None),
@@ -74,6 +76,10 @@ class PartyService:
                 value=f"{party_type}/{payload.get('name', '')}",
             )
 
+        payload["code"] = await self.code_service.generate(
+            db,
+            party_type=party_type,
+        )
         party = await self.party_crud.create_party(db, obj_in=payload, commit=False)
         await self._write_review_log(
             db,
@@ -87,6 +93,25 @@ class PartyService:
 
     async def get_party(self, db: AsyncSession, *, party_id: str) -> Party | None:
         return await self.party_crud.get_party(db, party_id=party_id)
+
+    def to_response(self, party: Party) -> PartyResponse:
+        response = PartyResponse.model_validate(party)
+        identifier_type = self._normalize_optional_text(
+            getattr(party, "identifier_type", None)
+        )
+        stored_value = self._normalize_optional_text(
+            getattr(party, "identifier_value", None)
+        )
+        if identifier_type is None or stored_value is None:
+            return response
+        return response.model_copy(
+            update={
+                "identifier_display": self.identifier_service.mask(
+                    identifier_type=identifier_type,
+                    stored_value=stored_value,
+                )
+            }
+        )
 
     async def get_parties(
         self,
@@ -106,7 +131,6 @@ class PartyService:
             current_user_id=current_user_id,
             party_filter=party_filter,
             logger=logger,
-            allow_legacy_default_organization_fallback=False,
         )
         scoped_party_ids = self._resolve_scoped_party_ids(resolved_party_filter)
         return await self.party_crud.get_parties(
@@ -141,9 +165,11 @@ class PartyService:
             )
 
         payload = self._normalize_party_payload(obj_in.model_dump(exclude_unset=True))
-        next_party_type = str(
-            payload.get("party_type", getattr(party, "party_type", ""))
+        next_party_type = self._normalize_party_type(
+            getattr(party, "party_type", "")
         )
+        if {"identifier_type", "identifier_value"}.intersection(payload):
+            self._prepare_identifier_payload(payload, party_type=next_party_type)
         next_name = str(payload.get("name", getattr(party, "name", "")))
         if next_name != str(getattr(party, "name", "")):
             duplicate_by_name = await self._maybe_call_optional_async(
@@ -160,22 +186,6 @@ class PartyService:
                     field="party_type+name",
                     value=f"{next_party_type}/{next_name}",
                 )
-        next_code = str(payload.get("code", getattr(party, "code", "")))
-        if next_code != str(getattr(party, "code", "")):
-            duplicate_by_code = await self.party_crud.get_party_by_type_and_code(
-                db,
-                party_type=next_party_type,
-                code=next_code,
-            )
-            if duplicate_by_code is not None and str(duplicate_by_code.id) != str(
-                party.id
-            ):
-                raise DuplicateResourceError(
-                    resource_type="主体",
-                    field="party_type+code",
-                    value=f"{next_party_type}/{next_code}",
-                )
-
         updated_party = await self.party_crud.update_party(
             db,
             db_obj=party,
@@ -210,31 +220,14 @@ class PartyService:
 
         for index, item in enumerate(items):
             payload = self._normalize_party_payload(item.model_dump())
-            payload["review_status"] = PartyReviewStatus.APPROVED.value
-            payload["review_by"] = operator
-            payload["reviewed_at"] = self._utcnow_naive()
-            payload["review_reason"] = "初始化导入"
+            payload["review_status"] = PartyReviewStatus.DRAFT.value
+            payload["review_by"] = None
+            payload["reviewed_at"] = None
+            payload["review_reason"] = None
 
-            party_type = str(payload.get("party_type", ""))
-            code = str(payload.get("code", ""))
+            party_type = self._normalize_party_type(payload.get("party_type"))
+            self._prepare_identifier_payload(payload, party_type=party_type)
             name = str(payload.get("name", ""))
-
-            duplicate_by_code = await self.party_crud.get_party_by_type_and_code(
-                db,
-                party_type=party_type,
-                code=code,
-            )
-            if duplicate_by_code is not None:
-                error_count += 1
-                results.append(
-                    {
-                        "index": index,
-                        "status": "error",
-                        "party_id": None,
-                        "message": "主体编码重复",
-                    }
-                )
-                continue
 
             duplicate_by_name = await self.party_crud.get_party_by_type_and_name(
                 db,
@@ -253,15 +246,19 @@ class PartyService:
                 )
                 continue
 
+            payload["code"] = await self.code_service.generate(
+                db,
+                party_type=party_type,
+            )
             party = await self.party_crud.create_party(db, obj_in=payload, commit=False)
             await self._write_review_log(
                 db,
                 party_id=str(party.id),
                 action="import",
                 from_status="none",
-                to_status=PartyReviewStatus.APPROVED.value,
+                to_status=PartyReviewStatus.DRAFT.value,
                 operator=operator,
-                reason="初始化导入",
+                reason="批量导入待审核",
             )
             await self._maybe_await_db_call(getattr(db, "commit", None))
             created_count += 1
@@ -551,71 +548,6 @@ class PartyService:
                 details={"party_ids": normalized_party_ids},
             )
 
-    async def add_hierarchy(
-        self,
-        db: AsyncSession,
-        *,
-        parent_party_id: str,
-        child_party_id: str,
-    ) -> PartyHierarchy:
-        if parent_party_id == child_party_id:
-            raise OperationNotAllowedError(
-                "父主体和子主体不能相同",
-                reason="party_hierarchy_self_reference",
-            )
-
-        parent = await self.party_crud.get_party(db, party_id=parent_party_id)
-        if parent is None:
-            raise ResourceNotFoundError("主体", parent_party_id)
-
-        child = await self.party_crud.get_party(db, party_id=child_party_id)
-        if child is None:
-            raise ResourceNotFoundError("主体", child_party_id)
-
-        child_descendants = await self.party_crud.get_descendants(
-            db,
-            party_id=child_party_id,
-            include_self=True,
-        )
-        if parent_party_id in child_descendants:
-            raise OperationNotAllowedError(
-                "新增层级会形成环，已拒绝",
-                reason="party_hierarchy_cycle",
-            )
-
-        return await self.party_crud.add_hierarchy(
-            db,
-            parent_party_id=parent_party_id,
-            child_party_id=child_party_id,
-        )
-
-    async def remove_hierarchy(
-        self,
-        db: AsyncSession,
-        *,
-        parent_party_id: str,
-        child_party_id: str,
-    ) -> bool:
-        deleted = await self.party_crud.remove_hierarchy(
-            db,
-            parent_party_id=parent_party_id,
-            child_party_id=child_party_id,
-        )
-        return deleted > 0
-
-    async def get_descendants(
-        self,
-        db: AsyncSession,
-        *,
-        party_id: str,
-        include_self: bool = False,
-    ) -> list[str]:
-        return await self.party_crud.get_descendants(
-            db,
-            party_id=party_id,
-            include_self=include_self,
-        )
-
     async def create_contact(
         self,
         db: AsyncSession,
@@ -704,11 +636,9 @@ class PartyService:
                 getattr(primary_contact, "contact_phone", None)
             ),
             "identifier_type": self._normalize_optional_text(
-                metadata.get("identifier_type")
+                getattr(party, "identifier_type", None)
             ),
-            "unified_identifier": self._normalize_optional_text(
-                metadata.get("unified_identifier")
-            ),
+            "identifier_display": self.display_identifier(party),
             "address": self._normalize_optional_text(metadata.get("address")),
             "status": str(getattr(party, "status", "active")),
             "historical_contract_count": len(contract_summaries),
@@ -802,15 +732,6 @@ class PartyService:
         if "valid_from" not in payload:
             payload["valid_from"] = self._utcnow_naive()
         self._validate_binding_valid_range(payload)
-        relation_type = str(payload["relation_type"])
-        is_primary = bool(payload.get("is_primary", False))
-        if is_primary:
-            await self.party_crud.clear_primary_bindings_for_relation(
-                db,
-                user_id=obj_in.user_id,
-                relation_type=relation_type,
-                commit=False,
-            )
 
         binding = await self.party_crud.create_user_party_binding(
             db,
@@ -878,17 +799,6 @@ class PartyService:
         }
         self._validate_binding_valid_range(merged_payload)
 
-        next_relation_type = str(payload.get("relation_type", binding.relation_type))
-        next_is_primary = bool(payload.get("is_primary", binding.is_primary))
-        if next_is_primary:
-            await self.party_crud.clear_primary_bindings_for_relation(
-                db,
-                user_id=user_id,
-                relation_type=next_relation_type,
-                exclude_binding_id=binding_id,
-                commit=False,
-            )
-
         updated = await self.party_crud.update_user_party_binding(
             db,
             db_obj=binding,
@@ -925,10 +835,7 @@ class PartyService:
         await self.party_crud.update_user_party_binding(
             db,
             db_obj=binding,
-            obj_in={
-                "valid_to": close_time,
-                "is_primary": False,
-            },
+            obj_in={"valid_to": close_time},
             commit=True,
         )
         await self._publish_user_scope_invalidation(user_id)
@@ -995,6 +902,11 @@ class PartyService:
         party = await self.party_crud.get_party(db, party_id=party_id)
         if party is None:
             raise ResourceNotFoundError("主体", party_id)
+        if party.review_status != PartyReviewStatus.APPROVED or party.status != "active":
+            raise OperationNotAllowedError(
+                "用户数据范围只能绑定已审核且启用的主体",
+                reason="user_party_binding_target_invalid",
+            )
 
     @staticmethod
     def _normalize_party_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1008,6 +920,48 @@ class PartyService:
                 if key not in _CONTACT_METADATA_FIELDS
             }
         return payload
+
+    @staticmethod
+    def _normalize_party_type(raw_party_type: Any) -> str:
+        value = getattr(raw_party_type, "value", raw_party_type)
+        return str(value).strip()
+
+    def _prepare_identifier_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        party_type: str,
+    ) -> None:
+        identifier_type = payload.pop("identifier_type", None)
+        identifier_value = payload.pop("identifier_value", None)
+        try:
+            prepared = self.identifier_service.prepare(
+                party_type=party_type,
+                identifier_type=identifier_type,
+                identifier_value=identifier_value,
+            )
+        except ValueError as exc:
+            raise OperationNotAllowedError(
+                str(exc),
+                reason="party_identifier_invalid",
+            ) from exc
+        payload["identifier_type"] = prepared.identifier_type
+        payload["identifier_value"] = prepared.value
+        payload["identifier_fingerprint"] = prepared.fingerprint
+
+    def display_identifier(self, party: Party) -> str | None:
+        identifier_type = self._normalize_optional_text(
+            getattr(party, "identifier_type", None)
+        )
+        stored_value = self._normalize_optional_text(
+            getattr(party, "identifier_value", None)
+        )
+        if identifier_type is None or stored_value is None:
+            return None
+        return self.identifier_service.mask(
+            identifier_type=identifier_type,
+            stored_value=stored_value,
+        )
 
     @staticmethod
     def _build_update_reason(payload: dict[str, Any]) -> str:

@@ -5,7 +5,6 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, Query
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import (
@@ -28,6 +27,7 @@ from ....schemas.ownership import (
     OwnershipUpdate,
 )
 from ....services.authz import authz_service
+from ....services.organization import organization_service
 from ....services.ownership import ownership_service
 
 router = APIRouter()
@@ -44,9 +44,7 @@ def _normalize_optional_str(value: Any) -> str | None:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(
-        getattr(current_user, "default_organization_id", None)
-    )
+    return _normalize_optional_str(current_user.organization_id)
 
 
 async def _resolve_organization_party_id(
@@ -58,22 +56,13 @@ async def _resolve_organization_party_id(
     if normalized_organization_id is None:
         return None
 
-    from ....models.party import Party, PartyType
-
-    stmt = (
-        select(Party.id.label("party_id"))
-        .where(
-            Party.party_type == PartyType.ORGANIZATION.value,
-            or_(
-                Party.id == normalized_organization_id,
-                Party.external_ref == normalized_organization_id,
-            ),
-        )
-        .order_by(Party.id)
-        .limit(1)
+    organization = await organization_service.get_organization(
+        db,
+        org_id=normalized_organization_id,
     )
-    row = (await db.execute(stmt)).mappings().one_or_none()
-    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+    if organization is None:
+        return None
+    return _normalize_optional_str(organization.represented_party_id)
 
 
 async def _require_ownership_create_authz(
@@ -88,9 +77,7 @@ async def _require_ownership_create_authz(
             db=db,
             organization_id=organization_id,
         )
-        resolved_party_id = (
-            scoped_party_id if scoped_party_id is not None else organization_id
-        )
+        resolved_party_id = scoped_party_id or _OWNERSHIP_CREATE_UNSCOPED_PARTY_ID
         resource_context["party_id"] = resolved_party_id
         resource_context["owner_party_id"] = resolved_party_id
         resource_context["manager_party_id"] = resolved_party_id

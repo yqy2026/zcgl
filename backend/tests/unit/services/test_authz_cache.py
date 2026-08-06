@@ -92,3 +92,21 @@ def test_authz_decision_cache_set_l1_evicts_expired_entries_on_insert() -> None:
 
     assert "k1" not in cache._l1
     assert "k2" in cache._l1
+
+
+def test_authz_decision_cache_set_honors_shorter_ttl() -> None:
+    backend = FakeL2CacheBackend()
+    cache = AuthzDecisionCache(
+        l1_ttl_seconds=300,
+        l2_ttl_seconds=300,
+        l2_backend=backend,
+    )
+    key = "abac:decision:u1:asset:res1:read:-:ctx"
+    value = {"allowed": True, "reason_code": "policy_allow"}
+
+    with patch(
+        "src.services.authz.cache.time.time",
+        side_effect=[100.0, 100.5],
+    ):
+        cache.set(key, value, ttl_seconds=0)
+        assert cache.get_l1(key) is None

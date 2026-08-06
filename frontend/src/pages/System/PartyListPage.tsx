@@ -1,10 +1,27 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tabs,
+  Tag,
+  Typography,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from '@/components/Common/PageContainer';
 import { SYSTEM_ROUTES } from '@/constants/routes';
+import {
+  getPartyIdentifierTypeOptions,
+  PARTY_TYPE_LABELS,
+  PARTY_TYPE_OPTIONS,
+} from '@/constants/party';
 import {
   partyService,
   type PartyImportPayload,
@@ -23,12 +40,6 @@ interface PartyFilters {
   businessRole: PartyBusinessRole | 'all';
 }
 
-const PARTY_TYPE_OPTIONS: Array<{ label: string; value: PartyType }> = [
-  { label: '组织', value: 'organization' },
-  { label: '法人主体', value: 'legal_entity' },
-  { label: '自然人', value: 'individual' },
-];
-
 const REVIEW_STATUS_OPTIONS: Array<{ label: string; value: PartyReviewStatus | 'all' }> = [
   { label: '全部审核状态', value: 'all' },
   { label: '草稿', value: 'draft' },
@@ -36,12 +47,6 @@ const REVIEW_STATUS_OPTIONS: Array<{ label: string; value: PartyReviewStatus | '
   { label: '已审核', value: 'approved' },
   { label: '已驳回', value: 'rejected' },
 ];
-
-const PARTY_TYPE_LABELS: Record<PartyType, string> = {
-  organization: '组织',
-  legal_entity: '法人主体',
-  individual: '自然人',
-};
 
 const REVIEW_STATUS_META: Record<PartyReviewStatus, { color: string; label: string }> = {
   draft: { color: 'default', label: '草稿' },
@@ -87,6 +92,7 @@ const PartyListPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [createForm] = Form.useForm<PartyCreatePayload>();
+  const createPartyType = Form.useWatch('party_type', createForm);
   const [filters, setFilters] = useState<PartyFilters>({
     search: '',
     partyType: 'all',
@@ -182,6 +188,12 @@ const PartyListPage: React.FC = () => {
         dataIndex: 'party_type',
         key: 'party_type',
         render: (value: PartyType) => PARTY_TYPE_LABELS[value],
+      },
+      {
+        title: '统一标识',
+        dataIndex: 'identifier_display',
+        key: 'identifier_display',
+        render: (value: string | null | undefined) => value ?? '-',
       },
       {
         title: '\u5f53\u524d\u4e1a\u52a1\u89d2\u8272',
@@ -328,21 +340,43 @@ const PartyListPage: React.FC = () => {
           </Button>
         </Space>
 
-        <Typography.Text type="secondary">
-          共 {parties.length} 条主体记录
-          {partyListQuery.data?.total != null ? ` / 后端总数 ${partyListQuery.data.total}` : ''}
-        </Typography.Text>
+        {partyListQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title="主体列表加载失败"
+            description={
+              partyListQuery.error instanceof Error
+                ? partyListQuery.error.message
+                : '主体列表接口返回异常'
+            }
+            action={
+              <Button
+                onClick={() => {
+                  void partyListQuery.refetch();
+                }}
+              >
+                重试
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <Typography.Text type="secondary">
+              共 {parties.length} 条主体记录
+              {partyListQuery.data?.total != null ? ` / 后端总数 ${partyListQuery.data.total}` : ''}
+            </Typography.Text>
 
-        <Table<Party>
-          rowKey="id"
-          loading={partyListQuery.isLoading || partyListQuery.isFetching}
-          columns={columns}
-          dataSource={parties}
-          pagination={false}
-          locale={{
-            emptyText: partyListQuery.isError ? '主体列表加载失败' : '暂无主体数据',
-          }}
-        />
+            <Table<Party>
+              rowKey="id"
+              loading={partyListQuery.isLoading || partyListQuery.isFetching}
+              columns={columns}
+              dataSource={parties}
+              pagination={false}
+              locale={{ emptyText: '暂无主体数据' }}
+            />
+          </>
+        )}
       </Space>
 
       <Modal
@@ -364,8 +398,7 @@ const PartyListPage: React.FC = () => {
           form={createForm}
           layout="vertical"
           initialValues={{
-            party_type: 'organization',
-            status: 'active',
+            party_type: 'legal_entity',
           }}
         >
           <Form.Item
@@ -376,27 +409,50 @@ const PartyListPage: React.FC = () => {
             <Input aria-label="主体名称" />
           </Form.Item>
           <Form.Item
-            label="主体编码"
-            name="code"
-            rules={[{ required: true, message: '请输入主体编码' }]}
-          >
-            <Input aria-label="主体编码" />
-          </Form.Item>
-          <Form.Item
             label="主体类型"
             name="party_type"
             rules={[{ required: true, message: '请选择主体类型' }]}
           >
             <Select aria-label="主体类型" options={PARTY_TYPE_OPTIONS} />
           </Form.Item>
-          <Form.Item label="状态" name="status">
+          <Form.Item
+            label="统一标识类型"
+            name="identifier_type"
+            dependencies={['identifier_value']}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator: async (_, value) => {
+                  const identifierValue = String(getFieldValue('identifier_value') ?? '').trim();
+                  if ((value == null || value === '') && identifierValue !== '') {
+                    throw new Error('请选择统一标识类型');
+                  }
+                },
+              }),
+            ]}
+          >
             <Select
-              aria-label="状态"
-              options={[
-                { label: 'active', value: 'active' },
-                { label: 'inactive', value: 'inactive' },
-              ]}
+              aria-label="统一标识类型"
+              allowClear
+              options={getPartyIdentifierTypeOptions(createPartyType)}
             />
+          </Form.Item>
+          <Form.Item
+            label="统一标识值"
+            name="identifier_value"
+            dependencies={['identifier_type']}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator: async (_, value) => {
+                  const identifierType = getFieldValue('identifier_type');
+                  const identifierValue = String(value ?? '').trim();
+                  if (identifierType != null && identifierType !== '' && identifierValue === '') {
+                    throw new Error('请输入统一标识值');
+                  }
+                },
+              }),
+            ]}
+          >
+            <Input aria-label="统一标识值" />
           </Form.Item>
           <Form.Item label="外部引用" name="external_ref">
             <Input aria-label="外部引用" />

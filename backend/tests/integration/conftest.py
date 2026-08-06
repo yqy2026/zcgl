@@ -221,7 +221,7 @@ def test_data(db_session):
     but can use this fixture for common entities.
     """
     # Import models needed for test data
-    from src.models.auth import User
+    from src.models.auth import AccountType, User
     from src.models.organization import Organization
     from src.models.rbac import Permission, Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
@@ -248,7 +248,8 @@ def test_data(db_session):
             full_name="Test Admin",
             password_hash=password_service.get_password_hash("Admin123!@#"),
             is_active=True,
-            default_organization_id=test_org.id,
+            account_type=AccountType.HUMAN,
+            organization_id=test_org.id,
             created_by="integration_test",
             updated_by="integration_test",
         )
@@ -261,7 +262,8 @@ def test_data(db_session):
         test_admin.full_name = "Test Admin"
         test_admin.password_hash = password_service.get_password_hash("Admin123!@#")
         test_admin.is_active = True
-        test_admin.default_organization_id = test_org.id
+        test_admin.account_type = AccountType.HUMAN
+        test_admin.organization_id = test_org.id
         test_admin.updated_by = "integration_test"
         db_session.commit()
         db_session.refresh(test_admin)

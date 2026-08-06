@@ -109,7 +109,8 @@ describe('useAuth Hook', () => {
     full_name: 'Test User',
     role_id: 'role-admin-id',
     role_name: 'admin',
-    default_organization_id: 'org-1',
+    account_type: 'human' as const,
+    organization_id: 'org-1',
   };
 
   const anotherUser = {
@@ -119,7 +120,8 @@ describe('useAuth Hook', () => {
     full_name: 'Another User',
     role_id: 'role-user-id',
     role_name: 'user',
-    default_organization_id: 'org-2',
+    account_type: 'human' as const,
+    organization_id: 'org-2',
   };
 
   beforeEach(() => {

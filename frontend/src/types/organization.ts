@@ -15,6 +15,8 @@ export interface Organization {
   // 组织基本信息
   type: string;
   status: string;
+  represented_party_id?: string | null;
+  represented_party_perspective?: OrganizationPartyPerspective | null;
 
   // 其他信息
   description?: string;
@@ -59,6 +61,87 @@ export interface OrganizationUpdate {
   updated_by?: string;
 }
 
+export type OrganizationPartyPerspective = 'owner' | 'manager';
+
+export interface OrganizationPartyScopeProposal {
+  represented_party_id: string | null;
+  represented_party_perspective: OrganizationPartyPerspective | null;
+}
+
+export interface OrganizationPartyScopeState {
+  represented_party_id?: string | null;
+  represented_party_perspective?: OrganizationPartyPerspective | null;
+  effective_party_id?: string | null;
+  effective_party_perspective?: OrganizationPartyPerspective | null;
+  source_organization_id?: string | null;
+}
+
+export interface OrganizationPartyScopeImpact {
+  organization_count: number;
+  organization_scope_change_count: number;
+  user_count: number;
+  user_scope_change_count: number;
+}
+
+export interface OrganizationPartyScopePreview {
+  organization_id: string;
+  before_scope: OrganizationPartyScopeState;
+  after_scope: OrganizationPartyScopeState;
+  impact: OrganizationPartyScopeImpact;
+  preview_token: string;
+  expires_at: string;
+}
+
+export interface OrganizationPartyScopeCommitRequest {
+  preview_token: string;
+  reason: string;
+  idempotency_key: string;
+}
+
+export interface OrganizationPartyScopeCommitResponse {
+  organization: Organization;
+  before_scope: OrganizationPartyScopeState;
+  after_scope: OrganizationPartyScopeState;
+  impact: OrganizationPartyScopeImpact;
+  committed_at: string;
+  idempotent: boolean;
+}
+
+export interface OrganizationPartyScopeBatchProposal extends OrganizationPartyScopeProposal {
+  organization_id: string;
+}
+
+export interface OrganizationPartyScopeBatchPreviewItem {
+  organization: Organization;
+  before_scope: OrganizationPartyScopeState;
+  after_scope: OrganizationPartyScopeState;
+  impact: OrganizationPartyScopeImpact;
+}
+
+export interface OrganizationPartyScopeBatchPreviewRequest {
+  items: OrganizationPartyScopeBatchProposal[];
+}
+
+export interface OrganizationPartyScopeBatchPreview {
+  items: OrganizationPartyScopeBatchPreviewItem[];
+  impact: OrganizationPartyScopeImpact;
+  preview_token: string;
+  expires_at: string;
+}
+
+export interface OrganizationPartyScopeBatchCommitRequest {
+  preview_token: string;
+  reason: string;
+  idempotency_key: string;
+}
+
+export interface OrganizationPartyScopeBatchCommitResponse {
+  items: OrganizationPartyScopeBatchPreviewItem[];
+  impact: OrganizationPartyScopeImpact;
+  committed_at: string;
+  idempotent: boolean;
+}
+
 export interface OrganizationTree {
   id: string;
   name: string;
@@ -73,7 +156,7 @@ export interface OrganizationTree {
 export interface OrganizationHistory {
   id: string;
   organization_id: string;
-  action: 'create' | 'update' | 'delete';
+  action: 'create' | 'update' | 'delete' | 'move' | 'party_scope_update';
   field_name?: string;
   old_value?: string;
   new_value?: string;
@@ -90,16 +173,47 @@ export interface OrganizationStatistics {
   by_type: Record<string, number>;
 }
 
-export interface OrganizationMoveRequest {
-  target_parent_id?: string;
-  sort_order?: number;
-  updated_by?: string;
+export interface OrganizationMoveProposal {
+  target_parent_id: string | null;
 }
 
-export interface OrganizationBatchRequest {
-  organization_ids: string[];
-  action: 'delete' | 'move';
-  updated_by?: string;
+export interface OrganizationMoveScopeState {
+  parent_id: string | null;
+  effective_party_id: string | null;
+  effective_party_perspective: 'owner' | 'manager' | null;
+  source_organization_id: string | null;
+}
+
+export interface OrganizationMoveImpact {
+  organization_count: number;
+  organization_scope_change_count: number;
+  organization_path_change_count: number;
+  user_count: number;
+  user_scope_change_count: number;
+}
+
+export interface OrganizationMovePreview {
+  organization_id: string;
+  before_scope: OrganizationMoveScopeState;
+  after_scope: OrganizationMoveScopeState;
+  impact: OrganizationMoveImpact;
+  preview_token: string;
+  expires_at: string;
+}
+
+export interface OrganizationMoveCommitRequest {
+  preview_token: string;
+  reason: string;
+  idempotency_key: string;
+}
+
+export interface OrganizationMoveCommitResponse {
+  organization: Organization;
+  before_scope: OrganizationMoveScopeState;
+  after_scope: OrganizationMoveScopeState;
+  impact: OrganizationMoveImpact;
+  committed_at: string;
+  idempotent: boolean;
 }
 
 export interface OrganizationSearchRequest {
@@ -108,19 +222,6 @@ export interface OrganizationSearchRequest {
   parent_id?: string;
   page?: number;
   page_size?: number;
-}
-
-export interface OrganizationBatchResult {
-  message: string;
-  results: Array<{
-    id: string;
-    status: 'success' | 'error';
-    message: string;
-  }>;
-  errors: Array<{
-    id: string;
-    error: string;
-  }>;
 }
 
 // API响应类型
@@ -169,12 +270,6 @@ export interface OrganizationTreeNode {
 export interface OrganizationPath {
   organizations: Organization[];
   path_string: string;
-}
-
-// 组织移动操作结果
-export interface OrganizationMoveResult {
-  message: string;
-  organization: Organization;
 }
 
 // 高级搜索条件

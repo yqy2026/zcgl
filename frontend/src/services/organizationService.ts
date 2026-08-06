@@ -12,12 +12,20 @@ import {
   OrganizationTree,
   OrganizationHistory,
   OrganizationStatistics,
-  OrganizationMoveRequest,
-  OrganizationBatchRequest,
-  OrganizationBatchResult,
-  OrganizationMoveResult,
+  OrganizationMoveCommitRequest,
+  OrganizationMoveCommitResponse,
+  OrganizationMovePreview,
+  OrganizationMoveProposal,
   OrganizationPath,
   OrganizationSearchCriteria,
+  OrganizationPartyScopeBatchCommitRequest,
+  OrganizationPartyScopeBatchCommitResponse,
+  OrganizationPartyScopeBatchPreview,
+  OrganizationPartyScopeBatchPreviewRequest,
+  OrganizationPartyScopeCommitRequest,
+  OrganizationPartyScopeCommitResponse,
+  OrganizationPartyScopePreview,
+  OrganizationPartyScopeProposal,
 } from '@/types/organization';
 import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
@@ -151,6 +159,112 @@ class OrganizationService {
 
       if (!result.success) {
         throw new Error(`更新组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /** 预览组织代表主体范围变更。 */
+  async previewOrganizationPartyScope(
+    id: string,
+    proposal: OrganizationPartyScopeProposal
+  ): Promise<OrganizationPartyScopePreview> {
+    try {
+      this.assertWriteAllowed('预览组织主体范围变更');
+      const result = await apiClient.post<OrganizationPartyScopePreview>(
+        `${this.baseUrl}/${id}/party-scope/preview`,
+        proposal,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`预览组织主体范围变更失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /** 提交组织代表主体范围变更。 */
+  async commitOrganizationPartyScope(
+    id: string,
+    request: OrganizationPartyScopeCommitRequest
+  ): Promise<OrganizationPartyScopeCommitResponse> {
+    try {
+      this.assertWriteAllowed('提交组织主体范围变更');
+      const result = await apiClient.put<OrganizationPartyScopeCommitResponse>(
+        `${this.baseUrl}/${id}/party-scope`,
+        request,
+        {
+          retry: { maxAttempts: 1, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`提交组织主体范围变更失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /** 预览多个独立组织的代表主体范围变更。 */
+  async previewOrganizationPartyScopeBatch(
+    request: OrganizationPartyScopeBatchPreviewRequest
+  ): Promise<OrganizationPartyScopeBatchPreview> {
+    try {
+      this.assertWriteAllowed('预览批量组织主体范围变更');
+      const result = await apiClient.post<OrganizationPartyScopeBatchPreview>(
+        `${this.baseUrl}/party-scope/batch/preview`,
+        request,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`预览批量组织主体范围变更失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /** 提交一个已预览的组织代表主体范围批次。 */
+  async commitOrganizationPartyScopeBatch(
+    request: OrganizationPartyScopeBatchCommitRequest
+  ): Promise<OrganizationPartyScopeBatchCommitResponse> {
+    try {
+      this.assertWriteAllowed('提交批量组织主体范围变更');
+      const result = await apiClient.post<OrganizationPartyScopeBatchCommitResponse>(
+        `${this.baseUrl}/party-scope/batch/commit`,
+        request,
+        {
+          retry: { maxAttempts: 1, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`提交批量组织主体范围变更失败: ${result.error}`);
       }
 
       return result.data!;
@@ -379,15 +493,41 @@ class OrganizationService {
   /**
    * 移动组织
    */
-  async moveOrganization(
+  async previewOrganizationMove(
     id: string,
-    moveRequest: OrganizationMoveRequest
-  ): Promise<OrganizationMoveResult> {
+    proposal: OrganizationMoveProposal
+  ): Promise<OrganizationMovePreview> {
     try {
       this.assertWriteAllowed('移动组织');
-      const result = await apiClient.post<OrganizationMoveResult>(
+      const result = await apiClient.post<OrganizationMovePreview>(
+        `${this.baseUrl}/${id}/move/preview`,
+        proposal,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`组织迁移预览失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async commitOrganizationMove(
+    id: string,
+    request: OrganizationMoveCommitRequest
+  ): Promise<OrganizationMoveCommitResponse> {
+    try {
+      this.assertWriteAllowed('提交组织迁移');
+      const result = await apiClient.post<OrganizationMoveCommitResponse>(
         `${this.baseUrl}/${id}/move`,
-        moveRequest,
+        request,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -395,57 +535,10 @@ class OrganizationService {
       );
 
       if (!result.success) {
-        throw new Error(`移动组织失败: ${result.error}`);
+        throw new Error(`提交组织迁移失败: ${result.error}`);
       }
 
       return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
-  }
-
-  /**
-   * 批量操作组织
-   */
-  async batchOrganizationOperation(
-    batchRequest: OrganizationBatchRequest
-  ): Promise<OrganizationBatchResult> {
-    try {
-      this.assertWriteAllowed('批量组织操作');
-      const result = await apiClient.post<OrganizationBatchResult>(
-        `${this.baseUrl}/batch`,
-        batchRequest,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
-
-      if (!result.success) {
-        throw new Error(`批量操作组织失败: ${result.error}`);
-      }
-
-      return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
-  }
-
-  /**
-   * 批量删除组织
-   */
-  async batchDeleteOrganizations(
-    organizationIds: string[],
-    deletedBy?: string
-  ): Promise<OrganizationBatchResult> {
-    try {
-      return await this.batchOrganizationOperation({
-        organization_ids: organizationIds,
-        action: 'delete',
-        updated_by: deletedBy,
-      });
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

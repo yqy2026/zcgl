@@ -7,17 +7,15 @@ const HEADER_ALIASES: Record<string, keyof PartyCreatePayload> = {
   主体类型: 'party_type',
   name: 'name',
   主体名称: 'name',
-  code: 'code',
-  主体编码: 'code',
+  identifier_type: 'identifier_type',
+  统一标识类型: 'identifier_type',
+  identifier_value: 'identifier_value',
+  统一标识值: 'identifier_value',
   external_ref: 'external_ref',
   外部引用: 'external_ref',
-  status: 'status',
-  状态: 'status',
 };
 
 const PARTY_TYPE_ALIASES: Record<string, PartyType> = {
-  organization: 'organization',
-  组织: 'organization',
   legal_entity: 'legal_entity',
   法人主体: 'legal_entity',
   individual: 'individual',
@@ -56,29 +54,33 @@ const normalizeRow = (row: Record<string, unknown>): PartyCreatePayload => {
       mapped.name = normalizedValue;
       continue;
     }
-    if (resolvedKey === 'code') {
-      mapped.code = normalizedValue;
+    if (resolvedKey === 'identifier_type') {
+      mapped.identifier_type = normalizedValue as PartyCreatePayload['identifier_type'];
+      continue;
+    }
+    if (resolvedKey === 'identifier_value') {
+      mapped.identifier_value = normalizedValue;
       continue;
     }
     if (resolvedKey === 'external_ref') {
       mapped.external_ref = normalizedValue;
       continue;
     }
-    if (resolvedKey === 'status') {
-      mapped.status = normalizedValue;
-    }
   }
 
-  if (mapped.party_type == null || mapped.name == null || mapped.code == null) {
-    throw new Error('导入文件缺少必填列：主体类型/主体名称/主体编码');
+  if (mapped.party_type == null || mapped.name == null) {
+    throw new Error('导入文件缺少必填列：主体类型/主体名称');
+  }
+  if ((mapped.identifier_type == null) !== (mapped.identifier_value == null)) {
+    throw new Error('统一标识类型和统一标识值必须同时填写');
   }
 
   return {
     party_type: mapped.party_type,
     name: mapped.name,
-    code: mapped.code,
+    identifier_type: mapped.identifier_type ?? null,
+    identifier_value: mapped.identifier_value ?? null,
     external_ref: mapped.external_ref ?? null,
-    status: mapped.status ?? 'active',
   };
 };
 

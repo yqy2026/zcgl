@@ -226,7 +226,7 @@ def organization_required[**P, R](
             # 获取目标组织ID
             target_org_id = kwargs.get(organization_id_param)
             if target_org_id is None:
-                target_org_id = current_user.default_organization_id
+                target_org_id = current_user.organization_id
             target_org_id_value = str(target_org_id)
 
             # 检查组织访问权限

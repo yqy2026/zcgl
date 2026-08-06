@@ -2,10 +2,15 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.exception_handler import BaseBusinessError, internal_error, not_found
+from ...core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    internal_error,
+    not_found,
+)
 from ...core.router_registry import route_registry
 from ...database import get_async_db
 from ...middleware.auth import (
@@ -22,21 +27,34 @@ from ...schemas.party import (
     PartyContactCreate,
     PartyContactResponse,
     PartyCreate,
-    PartyHierarchyCreate,
-    PartyHierarchyResponse,
     PartyImportRequest,
     PartyImportResponse,
+    PartyLifecycleCommitRequest,
+    PartyLifecycleCommitResponse,
+    PartyLifecyclePreviewRequest,
+    PartyLifecyclePreviewResponse,
     PartyResponse,
     PartyReviewLogResponse,
     PartyReviewRejectRequest,
     PartyUpdate,
-    UserPartyBindingCreate,
     UserPartyBindingResponse,
-    UserPartyBindingUpdate,
-    UserPartyBindingUpsert,
+)
+from ...schemas.user_party_scope import (
+    UserPartyBindingScopeProposal,
+    UserPartyScopeBatchCommitRequest,
+    UserPartyScopeBatchCommitResponse,
+    UserPartyScopeBatchPreviewRequest,
+    UserPartyScopeBatchPreviewResponse,
+    UserPartyScopeCommitRequest,
+    UserPartyScopeCommitResponse,
+    UserPartyScopePreviewResponse,
 )
 from ...security.permissions import require_any_role
-from ...services.party import party_service
+from ...services.party import party_lifecycle_change_service, party_service
+from ...services.party.user_scope_batch_change_service import (
+    user_party_scope_batch_change_service,
+)
+from ...services.party.user_scope_change_service import user_party_scope_change_service
 
 router = APIRouter(tags=["主体管理"])
 _SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
@@ -46,6 +64,26 @@ _PARTY_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "owner_party_id": _PARTY_CREATE_UNSCOPED_PARTY_ID,
     "manager_party_id": _PARTY_CREATE_UNSCOPED_PARTY_ID,
 }
+
+
+async def _require_user_party_scope_batch_authz(
+    *,
+    request: Request,
+    db: AsyncSession,
+    current_user: User,
+    user_ids: tuple[str, ...],
+) -> None:
+    """Apply the normal per-user ABAC decision to every batch target."""
+    for user_id in sorted(set(user_ids)):
+        await require_authz(
+            action="manage_party_scope",
+            resource_type="user",
+            resource_id=user_id,
+        ).resolve(
+            request=request,
+            current_user=current_user,
+            db=db,
+        )
 
 
 @router.get("/parties", response_model=list[PartyResponse], summary="获取主体列表")
@@ -79,7 +117,7 @@ async def list_parties(
         business_role=business_role,
         current_user_id=current_user_id if current_user_id != "" else None,
     )
-    return [PartyResponse.model_validate(party) for party in parties]
+    return [party_service.to_response(party) for party in parties]
 
 
 @router.post("/parties", response_model=PartyResponse, summary="创建主体")
@@ -101,7 +139,7 @@ async def create_party(
     _ = current_user
     try:
         party = await party_service.create_party(db, obj_in=payload)
-        return PartyResponse.model_validate(party)
+        return party_service.to_response(party)
     except BaseBusinessError:
         raise
     except Exception as exc:
@@ -165,7 +203,7 @@ async def get_party(
     party = await party_service.get_party(db, party_id=party_id)
     if party is None:
         raise not_found("主体不存在", resource_type="party", resource_id=party_id)
-    return PartyResponse.model_validate(party)
+    return party_service.to_response(party)
 
 
 @router.get(
@@ -216,7 +254,7 @@ async def update_party(
     _ = current_user
     try:
         party = await party_service.update_party(db, party_id=party_id, obj_in=payload)
-        return PartyResponse.model_validate(party)
+        return party_service.to_response(party)
     except BaseBusinessError:
         raise
     except Exception as exc:
@@ -269,7 +307,7 @@ async def submit_party_review(
     _ = current_user
     try:
         party = await party_service.submit_party_review(db, party_id=party_id)
-        return PartyResponse.model_validate(party)
+        return party_service.to_response(party)
     except BaseBusinessError:
         raise
     except Exception as exc:
@@ -307,7 +345,7 @@ async def approve_party_review(
             party_id=party_id,
             reviewer=reviewer,
         )
-        return PartyResponse.model_validate(party)
+        return party_service.to_response(party)
     except BaseBusinessError:
         raise
     except Exception as exc:
@@ -347,12 +385,132 @@ async def reject_party_review(
             reviewer=reviewer,
             reason=payload.reason,
         )
-        return PartyResponse.model_validate(party)
+        return party_service.to_response(party)
     except BaseBusinessError:
         raise
     except Exception as exc:
         raise internal_error("驳回主体审核失败", original_error=exc) from exc
 
+
+@router.post(
+    "/parties/{party_id}/status/preview",
+    response_model=PartyLifecyclePreviewResponse,
+    summary="Preview Party lifecycle change",
+)
+async def preview_party_lifecycle_change(
+    party_id: str,
+    payload: PartyLifecyclePreviewRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
+) -> PartyLifecyclePreviewResponse:
+    try:
+        return await party_lifecycle_change_service.preview(
+            db,
+            party_id=party_id,
+            request=payload,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("Preview Party lifecycle change failed", original_error=exc) from exc
+
+
+async def _commit_party_lifecycle_change(
+    *,
+    party_id: str,
+    operation: str,
+    payload: PartyLifecycleCommitRequest,
+    db: AsyncSession,
+    current_user: User,
+) -> PartyLifecycleCommitResponse:
+    return await party_lifecycle_change_service.commit(
+        db,
+        party_id=party_id,
+        operation=operation,
+        request=payload,
+        actor_id=str(current_user.id),
+    )
+
+
+@router.post(
+    "/parties/{party_id}/deactivate",
+    response_model=PartyLifecycleCommitResponse,
+    summary="Deactivate an approved Party",
+)
+async def deactivate_party(
+    party_id: str,
+    payload: PartyLifecycleCommitRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
+) -> PartyLifecycleCommitResponse:
+    try:
+        return await _commit_party_lifecycle_change(
+            party_id=party_id,
+            operation="deactivate",
+            payload=payload,
+            db=db,
+            current_user=current_user,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("Deactivate Party failed", original_error=exc) from exc
+
+
+@router.post(
+    "/parties/{party_id}/reactivate",
+    response_model=PartyLifecycleCommitResponse,
+    summary="Reactivate an approved Party",
+)
+async def reactivate_party(
+    party_id: str,
+    payload: PartyLifecycleCommitRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
+) -> PartyLifecycleCommitResponse:
+    try:
+        return await _commit_party_lifecycle_change(
+            party_id=party_id,
+            operation="reactivate",
+            payload=payload,
+            db=db,
+            current_user=current_user,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("Reactivate Party failed", original_error=exc) from exc
 
 @router.get(
     "/parties/{party_id}/review-logs",
@@ -382,103 +540,6 @@ async def get_party_review_logs(
 
     logs = await party_service.get_review_logs(db, party_id=party_id)
     return [PartyReviewLogResponse.model_validate(item) for item in logs]
-
-
-@router.get(
-    "/parties/{party_id}/hierarchy",
-    response_model=list[str],
-    summary="获取主体下级列表",
-)
-async def get_party_hierarchy(
-    party_id: str,
-    include_self: bool = Query(False, description="是否包含自身"),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz_ctx: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="read",
-                resource_type="party",
-                resource_id="{party_id}",
-                deny_as_not_found=True,
-            )
-        ),
-    ] = None,
-) -> list[str]:
-    _ = current_user
-    party = await party_service.get_party(db, party_id=party_id)
-    if party is None:
-        raise not_found("主体不存在", resource_type="party", resource_id=party_id)
-
-    return await party_service.get_descendants(
-        db,
-        party_id=party_id,
-        include_self=include_self,
-    )
-
-
-@router.post(
-    "/parties/{party_id}/hierarchy",
-    response_model=PartyHierarchyResponse,
-    summary="新增主体层级",
-)
-async def add_party_hierarchy(
-    party_id: str,
-    payload: PartyHierarchyCreate,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz_ctx: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="create",
-                resource_type="party",
-                resource_id="{party_id}",
-            )
-        ),
-    ] = None,
-) -> PartyHierarchyResponse:
-    _ = current_user
-    try:
-        relation = await party_service.add_hierarchy(
-            db,
-            parent_party_id=party_id,
-            child_party_id=payload.child_party_id,
-        )
-        return PartyHierarchyResponse.model_validate(relation)
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("新增层级失败", original_error=exc) from exc
-
-
-@router.delete("/parties/{party_id}/hierarchy", summary="删除主体层级")
-async def delete_party_hierarchy(
-    party_id: str,
-    child_party_id: str = Query(..., description="子主体ID"),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz_ctx: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="delete",
-                resource_type="party",
-                resource_id="{party_id}",
-            )
-        ),
-    ] = None,
-) -> dict[str, str]:
-    _ = current_user
-    deleted = await party_service.remove_hierarchy(
-        db,
-        parent_party_id=party_id,
-        child_party_id=child_party_id,
-    )
-    if not deleted:
-        raise not_found("层级关系不存在", resource_type="party_hierarchy")
-    return {"message": "层级关系已删除"}
 
 
 @router.get(
@@ -543,6 +604,71 @@ async def create_party_contact(
         raise internal_error("创建联系人失败", original_error=exc) from exc
 
 
+@router.post(
+    "/users/party-bindings/batch/preview",
+    response_model=UserPartyScopeBatchPreviewResponse,
+    summary="预览用户主体范围批量变更",
+)
+async def preview_user_party_scope_batch(
+    payload: UserPartyScopeBatchPreviewRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+) -> UserPartyScopeBatchPreviewResponse:
+    """Preview explicit user Party-binding changes for multiple users."""
+    try:
+        await _require_user_party_scope_batch_authz(
+            request=http_request,
+            db=db,
+            current_user=current_user,
+            user_ids=tuple(item.user_id for item in payload.items),
+        )
+        return await user_party_scope_batch_change_service.preview(
+            db,
+            request=payload,
+            actor_id=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as exc:
+        raise bad_request(str(exc)) from exc
+
+
+@router.post(
+    "/users/party-bindings/batch/commit",
+    response_model=UserPartyScopeBatchCommitResponse,
+    summary="提交用户主体范围批量变更",
+)
+async def commit_user_party_scope_batch(
+    payload: UserPartyScopeBatchCommitRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+) -> UserPartyScopeBatchCommitResponse:
+    """Atomically commit a current user Party-binding batch preview."""
+    try:
+        actor_id = str(current_user.id)
+        await _require_user_party_scope_batch_authz(
+            request=http_request,
+            db=db,
+            current_user=current_user,
+            user_ids=await user_party_scope_batch_change_service.get_commit_user_ids(
+                db,
+                request=payload,
+                actor_id=actor_id,
+            ),
+        )
+        return await user_party_scope_batch_change_service.commit(
+            db,
+            request=payload,
+            actor_id=actor_id,
+        )
+    except BaseBusinessError:
+        raise
+    except ValueError as exc:
+        raise bad_request(str(exc)) from exc
+
+
 @router.get(
     "/users/{user_id}/party-bindings",
     response_model=list[UserPartyBindingResponse],
@@ -574,114 +700,63 @@ async def get_user_party_bindings(
 
 
 @router.post(
-    "/users/{user_id}/party-bindings",
-    response_model=UserPartyBindingResponse,
-    status_code=201,
-    summary="新增用户主体绑定",
+    "/users/{user_id}/party-bindings/preview",
+    response_model=UserPartyScopePreviewResponse,
+    summary="预览用户主体范围变更",
 )
-async def create_user_party_binding(
+async def preview_user_party_scope(
     user_id: str,
-    payload: UserPartyBindingUpsert,
+    proposal: UserPartyBindingScopeProposal,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
+    current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
         AuthzContext | None,
         Depends(
             require_authz(
-                action="update",
+                action="manage_party_scope",
                 resource_type="user",
                 resource_id="{user_id}",
             )
         ),
     ] = None,
-) -> UserPartyBindingResponse:
-    _ = current_user
-    try:
-        binding_payload = UserPartyBindingCreate(
-            user_id=user_id,
-            **payload.model_dump(exclude_none=True),
-        )
-        binding = await party_service.create_user_party_binding(
-            db,
-            obj_in=binding_payload,
-        )
-        return UserPartyBindingResponse.model_validate(binding)
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("创建用户主体绑定失败", original_error=exc) from exc
-
-
-@router.put(
-    "/users/{user_id}/party-bindings/{binding_id}",
-    response_model=UserPartyBindingResponse,
-    summary="更新用户主体绑定",
-)
-async def update_user_party_binding(
-    user_id: str,
-    binding_id: str,
-    payload: UserPartyBindingUpdate,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
-    _authz_ctx: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="update",
-                resource_type="user",
-                resource_id="{user_id}",
-            )
-        ),
-    ] = None,
-) -> UserPartyBindingResponse:
-    _ = current_user
-    try:
-        binding = await party_service.update_user_party_binding(
-            db,
-            user_id=user_id,
-            binding_id=binding_id,
-            obj_in=payload,
-        )
-        return UserPartyBindingResponse.model_validate(binding)
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("更新用户主体绑定失败", original_error=exc) from exc
-
-
-@router.delete(
-    "/users/{user_id}/party-bindings/{binding_id}",
-    summary="关闭用户主体绑定",
-)
-async def close_user_party_binding(
-    user_id: str,
-    binding_id: str,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
-    _authz_ctx: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="delete",
-                resource_type="user",
-                resource_id="{user_id}",
-            )
-        ),
-    ] = None,
-) -> dict[str, str]:
-    _ = current_user
-    closed = await party_service.close_user_party_binding(
+) -> UserPartyScopePreviewResponse:
+    """预览用户显式主体范围变更，不写入绑定。"""
+    return await user_party_scope_change_service.preview(
         db,
         user_id=user_id,
-        binding_id=binding_id,
+        proposal=proposal,
+        actor_id=str(current_user.id),
     )
-    if not closed:
-        raise not_found(
-            "用户主体绑定不存在或已失效",
-            resource_type="user_party_binding",
-            resource_id=binding_id,
-        )
-    return {"message": "用户主体绑定已关闭"}
+
+
+@router.post(
+    "/users/{user_id}/party-bindings/commit",
+    response_model=UserPartyScopeCommitResponse,
+    summary="提交用户主体范围变更",
+)
+async def commit_user_party_scope(
+    user_id: str,
+    request: UserPartyScopeCommitRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="manage_party_scope",
+                resource_type="user",
+                resource_id="{user_id}",
+            )
+        ),
+    ] = None,
+) -> UserPartyScopeCommitResponse:
+    """提交已预览的用户显式主体范围变更。"""
+    return await user_party_scope_change_service.commit(
+        db,
+        user_id=user_id,
+        request=request,
+        actor_id=str(current_user.id),
+    )
 
 
 route_registry.register_router(

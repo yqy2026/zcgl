@@ -4,6 +4,7 @@
 
 import re
 from datetime import datetime
+from typing import Literal
 
 from pydantic import (
     BaseModel,
@@ -60,13 +61,11 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """用户创建模型"""
 
+    model_config = ConfigDict(extra="forbid")
+
     password: str = Field(..., min_length=8, max_length=128, description="密码")
     role_id: str | None = Field(None, description="主角色ID")
     role_ids: list[str] = Field(default_factory=list, description="角色ID列表")
-    default_organization_id: str | None = Field(
-        None,
-        description="默认组织ID",
-    )
 
     @field_validator("password")
     @classmethod
@@ -100,6 +99,8 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """用户更新模型"""
 
+    model_config = ConfigDict(extra="forbid")
+
     email: EmailStr | None = Field(None, description="邮箱地址")
     phone: str | None = Field(None, max_length=20, description="手机号码")
     full_name: str | None = Field(
@@ -108,10 +109,6 @@ class UserUpdate(BaseModel):
     role_id: str | None = Field(None, description="主角色ID")
     role_ids: list[str] | None = Field(None, description="角色ID列表")
     is_active: bool | None = Field(None, description="是否激活")
-    default_organization_id: str | None = Field(
-        None,
-        description="默认组织ID",
-    )
 
     @field_validator("phone")
     @classmethod
@@ -148,7 +145,8 @@ class UserResponse(BaseModel):
     is_active: bool
     is_locked: bool
     last_login_at: datetime | str | None
-    default_organization_id: str | None
+    account_type: Literal["human", "service", "system"]
+    organization_id: str | None
     created_at: datetime | str
     updated_at: datetime | str
 
