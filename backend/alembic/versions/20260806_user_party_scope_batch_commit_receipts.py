@@ -1,0 +1,55 @@
+"""Add durable receipts for user Party-scope batch commits.
+
+Revision ID: 20260806_user_party_scope_batch_commit_receipts
+Revises: 20260806_organization_party_scope_batch_commit_receipts
+Create Date: 2026-08-06
+"""
+
+import sqlalchemy as sa
+
+from alembic import op
+
+revision = "20260806_user_party_scope_batch_commit_receipts"
+down_revision = "20260806_organization_party_scope_batch_commit_receipts"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.create_table(
+        "user_party_scope_batch_commits",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "actor_id",
+            sa.String(),
+            sa.ForeignKey("users.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column("idempotency_key", sa.String(length=128), nullable=False),
+        sa.Column("reason", sa.String(length=500), nullable=False),
+        sa.Column("proposal", sa.JSON(), nullable=False),
+        sa.Column("before_scope", sa.JSON(), nullable=False),
+        sa.Column("after_scope", sa.JSON(), nullable=False),
+        sa.Column("impact_summary", sa.JSON(), nullable=False),
+        sa.Column("result_data", sa.JSON(), nullable=False),
+        sa.Column("committed_at", sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "actor_id",
+            "idempotency_key",
+            name="uq_user_party_scope_batch_commit_request",
+        ),
+    )
+    op.create_index(
+        "ix_user_party_scope_batch_commits_actor_id",
+        "user_party_scope_batch_commits",
+        ["actor_id"],
+    )
+
+
+def downgrade() -> None:
+    op.drop_index(
+        "ix_user_party_scope_batch_commits_actor_id",
+        table_name="user_party_scope_batch_commits",
+    )
+    op.drop_table("user_party_scope_batch_commits")
