@@ -137,22 +137,58 @@ describe('PartyService', () => {
   it('creates and updates party', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       success: true,
-      data: { id: 'party-1', party_type: 'organization', name: '甲方', code: 'A-01' },
+      data: {
+        id: 'party-1',
+        party_type: 'legal_entity',
+        name: '甲方',
+        code: 'LE-000001',
+        identifier_type: 'unified_social_credit_code',
+        identifier_display: '91440101231229726P',
+      },
     });
     vi.mocked(apiClient.put).mockResolvedValue({
       success: true,
-      data: { id: 'party-1', party_type: 'organization', name: '甲方-更新', code: 'A-01' },
+      data: {
+        id: 'party-1',
+        party_type: 'legal_entity',
+        name: '甲方-更新',
+        code: 'LE-000001',
+      },
     });
 
     const created = await service.createParty({
-      party_type: 'organization',
+      party_type: 'legal_entity',
       name: '甲方',
-      code: 'A-01',
+      identifier_type: 'unified_social_credit_code',
+      identifier_value: '91440101231229726P',
     });
-    const updated = await service.updateParty('party-1', { name: '甲方-更新' });
+    const updated = await service.updateParty('party-1', {
+      name: '甲方-更新',
+      identifier_type: 'foreign_registration_number',
+      identifier_value: 'HK-123456',
+    });
 
     expect(created.id).toBe('party-1');
     expect(updated.name).toBe('甲方-更新');
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/parties',
+      {
+        party_type: 'legal_entity',
+        name: '甲方',
+        identifier_type: 'unified_social_credit_code',
+        identifier_value: '91440101231229726P',
+      },
+      expect.objectContaining({ smartExtract: true })
+    );
+    expect(apiClient.put).toHaveBeenCalledWith(
+      '/parties/party-1',
+      {
+        name: '甲方-更新',
+        identifier_type: 'foreign_registration_number',
+        identifier_value: 'HK-123456',
+      },
+      expect.objectContaining({ smartExtract: true })
+    );
   });
 
   it('submits, approves, and rejects party review', async () => {
@@ -197,23 +233,69 @@ describe('PartyService', () => {
     );
   });
 
-  it('fetches party hierarchy', async () => {
-    vi.mocked(apiClient.get).mockResolvedValue({
-      success: true,
-      data: ['party-1', 'party-2'],
-    });
+  it('previews and commits approved party lifecycle changes through dedicated endpoints', async () => {
+    const preview = {
+      party_id: 'party-1',
+      operation: 'deactivate' as const,
+      before_state: {
+        party_id: 'party-1',
+        status: 'active',
+        review_status: 'approved',
+        available_for_new_references: true,
+      },
+      after_state: {
+        party_id: 'party-1',
+        status: 'inactive',
+        review_status: 'approved',
+        available_for_new_references: false,
+      },
+      impact: {
+        represented_organization_count: 1,
+        potentially_affected_organization_count: 1,
+        current_user_binding_count: 1,
+        affected_user_count: 1,
+        user_scope_change_count: 1,
+        asset_reference_count: 0,
+        project_reference_count: 0,
+        contract_group_reference_count: 0,
+        contract_reference_count: 0,
+      },
+      preview_token: 'preview-token-1',
+      expires_at: '2026-08-06T01:10:00Z',
+    };
+    const request = {
+      preview_token: 'preview-token-1',
+      reason: '停止主体的新增引用和有效范围。',
+      idempotency_key: 'request-1',
+    };
+    const committed = {
+      ...preview,
+      party: { id: 'party-1', status: 'inactive' },
+      committed_at: '2026-08-06T01:01:00Z',
+      idempotent: false,
+    };
+    vi.mocked(apiClient.post)
+      .mockResolvedValueOnce({ success: true, data: preview })
+      .mockResolvedValueOnce({ success: true, data: committed });
 
-    const result = await service.getPartyHierarchy('party-1', true);
+    const previewResult = await service.previewLifecycle('party-1', { operation: 'deactivate' });
+    const commitResult = await service.deactivate('party-1', request);
 
-    expect(result).toEqual(['party-1', 'party-2']);
-    expect(apiClient.get).toHaveBeenCalledWith(
-      '/parties/party-1/hierarchy',
-      expect.objectContaining({
-        params: { include_self: true },
-      })
+    expect(previewResult.preview_token).toBe('preview-token-1');
+    expect(commitResult.party.status).toBe('inactive');
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      1,
+      '/parties/party-1/status/preview',
+      { operation: 'deactivate' },
+      expect.objectContaining({ smartExtract: true })
+    );
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      2,
+      '/parties/party-1/deactivate',
+      request,
+      expect.objectContaining({ smartExtract: true })
     );
   });
-
   it('manages contacts through party-scoped endpoints', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       success: true,
@@ -256,9 +338,10 @@ describe('PartyService', () => {
     const result = await service.importParties({
       items: [
         {
-          party_type: 'organization',
+          party_type: 'legal_entity',
           name: '导入主体',
-          code: 'IMP-001',
+          identifier_type: 'unified_social_credit_code',
+          identifier_value: '91440101231229726P',
         },
       ],
     });
@@ -269,9 +352,10 @@ describe('PartyService', () => {
       {
         items: [
           {
-            party_type: 'organization',
+            party_type: 'legal_entity',
             name: '导入主体',
-            code: 'IMP-001',
+            identifier_type: 'unified_social_credit_code',
+            identifier_value: '91440101231229726P',
           },
         ],
       },

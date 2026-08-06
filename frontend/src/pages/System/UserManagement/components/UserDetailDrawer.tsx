@@ -6,6 +6,12 @@ import type { User } from '@/services/systemService';
 import type { UserStatus } from '../types';
 import styles from '../../UserManagementPage.module.css';
 
+const ACCOUNT_TYPE_LABELS: Record<User['account_type'], string> = {
+  human: '人员账号',
+  service: '服务账号',
+  system: '系统账号',
+};
+
 interface UserDetailDrawerProps {
   open: boolean;
   user: User | null;
@@ -40,6 +46,9 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
             <Descriptions.Item label="用户名">{user.username}</Descriptions.Item>
             <Descriptions.Item label="邮箱">{user.email}</Descriptions.Item>
             <Descriptions.Item label="手机号">{user.phone ?? '未设置'}</Descriptions.Item>
+            <Descriptions.Item label="账号类型">
+              {ACCOUNT_TYPE_LABELS[user.account_type]}
+            </Descriptions.Item>
             <Descriptions.Item label="角色">
               <Space size={[6, 6]} wrap>
                 {(user.role_ids?.length ?? 0) > 0
@@ -70,7 +79,7 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
                       ]}
               </Space>
             </Descriptions.Item>
-            <Descriptions.Item label="所属组织">{user.organization_name}</Descriptions.Item>
+            <Descriptions.Item label="所属组织">{user.organization_name ?? '-'}</Descriptions.Item>
             <Descriptions.Item label="状态">
               <Space size={[8, 6]} wrap>
                 {getStatusTag(user.status)}

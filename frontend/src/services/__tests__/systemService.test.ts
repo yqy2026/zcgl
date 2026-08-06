@@ -41,30 +41,67 @@ describe('userService', () => {
   });
 
   describe('getUsers', () => {
-    it('成功获取用户列表', async () => {
-      const mockResponse = {
+    it('maps backend user records to the management view model', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
           items: [
-            { id: 'user_1', username: 'admin', email: 'admin@test.com' },
-            { id: 'user_2', username: 'user', email: 'user@test.com' },
+            {
+              id: 'user_1',
+              username: 'admin',
+              email: 'admin@test.com',
+              full_name: 'Admin User',
+              phone: '13800000000',
+              roles: ['system_admin'],
+              role_ids: ['role-admin'],
+              is_active: true,
+              is_locked: false,
+              last_login_at: '2026-08-04T08:00:00Z',
+              failed_login_attempts: 2,
+              account_type: 'human',
+              organization_id: 'org-1',
+              created_at: '2026-08-01T08:00:00Z',
+              updated_at: '2026-08-04T08:00:00Z',
+            },
           ],
-          total: 2,
-          page: 1,
-          page_size: 20,
-          pages: 1,
+          pagination: {
+            total: 1,
+            page: 1,
+            page_size: 20,
+            total_pages: 1,
+          },
         },
-      };
-
-      vi.mocked(apiClient.get).mockResolvedValue(mockResponse);
+      });
 
       const result = await userService.getUsers({ page: 1, page_size: 20 });
 
-      expect(result.items).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          id: 'user_1',
+          status: 'active',
+          organization_id: 'org-1',
+          last_login: '2026-08-04T08:00:00Z',
+          login_attempts: 2,
+        }),
+      ]);
+      expect(result.total).toBe(1);
+      expect(result.pages).toBe(1);
     });
 
-    it('返回空数据时使用默认值', async () => {
+    it('maps view filters to canonical backend query fields', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
+      });
+
+      await userService.getUsers({ organization_id: 'org-1', status: 'active' });
+
+      expect(apiClient.get).toHaveBeenCalledWith('/auth/users', {
+        params: { organization_id: 'org-1', is_active: true },
+      });
+    });
+
+    it('uses an empty page when the backend returns no data', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: null,
@@ -78,12 +115,12 @@ describe('userService', () => {
   });
 
   describe('getUser', () => {
-    it('成功获取用户详情', async () => {
+    it('returns the requested user detail', async () => {
       const mockUser = {
         id: 'user_1',
         username: 'admin',
         email: 'admin@test.com',
-        full_name: '管理员',
+        full_name: 'Admin User',
       };
 
       vi.mocked(apiClient.get).mockResolvedValue({
@@ -97,8 +134,8 @@ describe('userService', () => {
     });
   });
 
-  describe('user party bindings', () => {
-    it('成功获取用户主体绑定列表', async () => {
+  describe('user Party bindings', () => {
+    it('gets the current explicit bindings', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: [
@@ -107,7 +144,6 @@ describe('userService', () => {
             user_id: 'user_1',
             party_id: 'party-1',
             relation_type: 'owner',
-            is_primary: true,
             valid_from: '2026-03-01T00:00:00Z',
             valid_to: null,
             created_at: '2026-03-01T00:00:00Z',
@@ -124,57 +160,94 @@ describe('userService', () => {
       });
     });
 
-    it('成功创建用户主体绑定', async () => {
+    it('posts a user Party scope preview proposal', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         success: true,
-        data: { id: 'binding-1' },
+        data: { preview_token: 'preview-1', operation: 'create' },
       });
 
-      const result = await userService.createUserPartyBinding('user_1', {
+      const result = await userService.previewUserPartyScope('user_1', {
+        operation: 'create',
         party_id: 'party-1',
         relation_type: 'owner',
-        is_primary: true,
       });
 
-      expect(result?.id).toBe('binding-1');
-      expect(apiClient.post).toHaveBeenCalledWith('/users/user_1/party-bindings', {
+      expect(result?.preview_token).toBe('preview-1');
+      expect(apiClient.post).toHaveBeenCalledWith('/users/user_1/party-bindings/preview', {
+        operation: 'create',
         party_id: 'party-1',
         relation_type: 'owner',
-        is_primary: true,
       });
     });
 
-    it('成功更新用户主体绑定', async () => {
-      vi.mocked(apiClient.put).mockResolvedValue({
+    it('posts a confirmed user Party scope change', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
         success: true,
-        data: { id: 'binding-1', is_primary: false },
+        data: {
+          binding: { id: 'binding-1' },
+          operation: 'create',
+          idempotent: false,
+        },
       });
 
-      const result = await userService.updateUserPartyBinding('user_1', 'binding-1', {
-        is_primary: false,
+      const result = await userService.commitUserPartyScope('user_1', {
+        preview_token: 'preview-1',
+        reason: 'Assign the user to the approved owner Party.',
+        idempotency_key: 'request-1',
       });
 
-      expect(result?.is_primary).toBe(false);
-      expect(apiClient.put).toHaveBeenCalledWith('/users/user_1/party-bindings/binding-1', {
-        is_primary: false,
+      expect(result?.binding.id).toBe('binding-1');
+      expect(apiClient.post).toHaveBeenCalledWith('/users/user_1/party-bindings/commit', {
+        preview_token: 'preview-1',
+        reason: 'Assign the user to the approved owner Party.',
+        idempotency_key: 'request-1',
       });
-    });
-
-    it('成功关闭用户主体绑定', async () => {
-      vi.mocked(apiClient.delete).mockResolvedValue({
-        success: true,
-        data: { message: 'ok' },
-      });
-
-      const result = await userService.closeUserPartyBinding('user_1', 'binding-1');
-
-      expect(result?.message).toBe('ok');
-      expect(apiClient.delete).toHaveBeenCalledWith('/users/user_1/party-bindings/binding-1');
     });
   });
 
+  describe('user organization transfer', () => {
+    it('posts a user organization transfer preview proposal', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: { preview_token: 'preview-organization-1' },
+      });
+
+      const result = await userService.previewUserOrganizationTransfer('user_1', {
+        organization_id: 'organization-2',
+      });
+
+      expect(result?.preview_token).toBe('preview-organization-1');
+      expect(apiClient.post).toHaveBeenCalledWith('/auth/users/user_1/organization/preview', {
+        organization_id: 'organization-2',
+      });
+    });
+
+    it('puts a confirmed user organization transfer', async () => {
+      vi.mocked(apiClient.put).mockResolvedValue({
+        success: true,
+        data: {
+          user_id: 'user_1',
+          organization_id: 'organization-2',
+          idempotent: false,
+        },
+      });
+
+      const result = await userService.commitUserOrganizationTransfer('user_1', {
+        preview_token: 'preview-organization-1',
+        reason: 'Move the user to the regional operations team.',
+        idempotency_key: 'request-organization-1',
+      });
+
+      expect(result?.organization_id).toBe('organization-2');
+      expect(apiClient.put).toHaveBeenCalledWith('/auth/users/user_1/organization', {
+        preview_token: 'preview-organization-1',
+        reason: 'Move the user to the regional operations team.',
+        idempotency_key: 'request-organization-1',
+      });
+    });
+  });
   describe('createUser', () => {
-    it('成功创建用户', async () => {
+    it('创建用户时不发送由服务端控制的启用状态', async () => {
       const newUser = {
         username: 'newuser',
         email: 'newuser@test.com',
@@ -182,7 +255,6 @@ describe('userService', () => {
         password: 'password123',
         status: 'active' as const,
         role_ids: ['role-user-id', 'role-reviewer-id'],
-        default_organization_id: 'org_1',
       };
 
       vi.mocked(apiClient.post).mockResolvedValue({
@@ -193,7 +265,11 @@ describe('userService', () => {
       const result = await userService.createUser(newUser);
 
       expect(apiClient.post).toHaveBeenCalledWith('/auth/users', {
-        ...newUser,
+        username: 'newuser',
+        email: 'newuser@test.com',
+        full_name: '新用户',
+        password: 'password123',
+        role_ids: ['role-user-id', 'role-reviewer-id'],
         role_id: 'role-user-id',
       });
       expect(result.id).toBe('user_new');
@@ -218,6 +294,19 @@ describe('userService', () => {
         role_id: 'role-user-id',
       });
       expect(result.full_name).toBe('更新后的名称');
+    });
+
+    it('将页面状态更新映射为后端 is_active 字段', async () => {
+      vi.mocked(apiClient.put).mockResolvedValue({
+        success: true,
+        data: { id: 'user_1', is_active: false },
+      });
+
+      await userService.updateUser('user_1', { status: 'inactive' });
+
+      expect(apiClient.put).toHaveBeenCalledWith('/auth/users/user_1', {
+        is_active: false,
+      });
     });
   });
 

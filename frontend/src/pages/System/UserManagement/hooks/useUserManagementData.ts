@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   userService,
   roleService,
+  type User,
   type OrganizationOption,
   type RoleOption,
 } from '@/services/systemService';
@@ -14,6 +15,20 @@ interface UseUserManagementDataParams {
   filters: UserFilters;
   pagination: UserPaginationState;
 }
+
+export const attachOrganizationNames = (
+  users: User[],
+  organizations: OrganizationOption[]
+): User[] => {
+  const organizationNames = new Map(organizations.map(item => [item.id, item.name]));
+  return users.map(user => ({
+    ...user,
+    organization_name:
+      user.organization_id != null
+        ? (organizationNames.get(user.organization_id) ?? user.organization_name ?? null)
+        : null,
+  }));
+};
 
 const normalizeRoleOptions = (data: unknown): RoleOption[] => {
   const roleItems = Array.isArray(data)
@@ -51,7 +66,7 @@ export const useUserManagementData = ({ filters, pagination }: UseUserManagement
       search: trimmedKeyword !== '' ? trimmedKeyword : undefined,
       status: status !== '' ? status : undefined,
       role_id: roleId !== '' ? roleId : undefined,
-      default_organization_id: organizationId !== '' ? organizationId : undefined,
+      organization_id: organizationId !== '' ? organizationId : undefined,
     });
     return { items: response.items ?? [], total: response.total ?? 0 };
   }, [currentPage, keyword, organizationId, pageSize, roleId, status]);
@@ -97,7 +112,11 @@ export const useUserManagementData = ({ filters, pagination }: UseUserManagement
     retry: 1,
   });
 
-  const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items]);
+  const organizations = useMemo(() => organizationsQuery.data ?? [], [organizationsQuery.data]);
+  const users = useMemo(
+    () => attachOrganizationNames(usersQuery.data?.items ?? [], organizations),
+    [organizations, usersQuery.data?.items]
+  );
 
   const statistics = useMemo<UserStatistics | null>(() => {
     if (statisticsQuery.error != null) {
@@ -143,7 +162,7 @@ export const useUserManagementData = ({ filters, pagination }: UseUserManagement
     tablePagination,
     loading: usersQuery.isLoading || usersQuery.isFetching,
     isRefreshing: usersQuery.isFetching === true,
-    organizations: organizationsQuery.data ?? [],
+    organizations,
     roles: rolesQuery.data ?? [],
     statistics,
     usersError: usersQuery.error,

@@ -41,6 +41,23 @@ vi.mock('../AppHeader', () => ({
   ),
 }));
 
+vi.mock('@/services/systemService', () => ({
+  userService: {
+    getMyPartyScope: vi.fn(async () => ({
+      user_id: 'test-user-001',
+      source: 'unrestricted',
+      scope_mode: 'unrestricted',
+      owner_party_ids: [],
+      manager_party_ids: [],
+      organization_id: 'org-001',
+      source_organization_id: null,
+      next_transition_at: null,
+      error_code: null,
+      issues: [],
+    })),
+  },
+}));
+
 // =============================================================================
 // 测试内容组件
 // =============================================================================

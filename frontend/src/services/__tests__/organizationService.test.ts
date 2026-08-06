@@ -232,6 +232,116 @@ describe('OrganizationService', () => {
     });
   });
 
+  describe('organization party scope changes', () => {
+    it('previews a represented party scope change through the dedicated endpoint', async () => {
+      const preview = {
+        organization_id: 'org-1',
+        before_scope: {},
+        after_scope: {},
+        impact: {
+          organization_count: 1,
+          organization_scope_change_count: 1,
+          user_count: 1,
+          user_scope_change_count: 1,
+        },
+        preview_token: 'preview-token',
+        expires_at: '2026-08-04T12:10:00Z',
+      };
+      vi.mocked(apiClient.post).mockResolvedValue({ success: true, data: preview });
+
+      const result = await organizationService.previewOrganizationPartyScope('org-1', {
+        represented_party_id: 'party-1',
+        represented_party_perspective: 'owner',
+      });
+
+      expect(result).toEqual(preview);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/organizations/org-1/party-scope/preview',
+        {
+          represented_party_id: 'party-1',
+          represented_party_perspective: 'owner',
+        },
+        expect.any(Object)
+      );
+    });
+
+    it('commits a preview with reason and idempotency key', async () => {
+      const response = { success: true, data: { idempotent: false } };
+      vi.mocked(apiClient.put).mockResolvedValue(response);
+
+      const request = {
+        preview_token: 'preview-token',
+        reason: '组织权属调整',
+        idempotency_key: 'request-1',
+      };
+      const result = await organizationService.commitOrganizationPartyScope('org-1', request);
+
+      expect(result).toEqual(response.data);
+      expect(apiClient.put).toHaveBeenCalledWith(
+        '/organizations/org-1/party-scope',
+        request,
+        expect.any(Object)
+      );
+    });
+
+    it('previews a batch through the dedicated endpoint', async () => {
+      const preview = {
+        items: [],
+        impact: {
+          organization_count: 2,
+          organization_scope_change_count: 2,
+          user_count: 2,
+          user_scope_change_count: 2,
+        },
+        preview_token: 'batch-preview-token',
+        expires_at: '2026-08-06T12:10:00Z',
+      };
+      const request = {
+        items: [
+          {
+            organization_id: 'org-1',
+            represented_party_id: 'party-1',
+            represented_party_perspective: 'owner' as const,
+          },
+          {
+            organization_id: 'org-2',
+            represented_party_id: 'party-1',
+            represented_party_perspective: 'owner' as const,
+          },
+        ],
+      };
+      vi.mocked(apiClient.post).mockResolvedValue({ success: true, data: preview });
+
+      const result = await organizationService.previewOrganizationPartyScopeBatch(request);
+
+      expect(result).toEqual(preview);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/organizations/party-scope/batch/preview',
+        request,
+        expect.any(Object)
+      );
+    });
+
+    it('commits a batch with the preview token, reason, and idempotency key', async () => {
+      const request = {
+        preview_token: 'batch-preview-token',
+        reason: '统一更新组织代表主体',
+        idempotency_key: 'organization-party-scope-batch-1',
+      };
+      const response = { success: true, data: { items: [], idempotent: false } };
+      vi.mocked(apiClient.post).mockResolvedValue(response);
+
+      const result = await organizationService.commitOrganizationPartyScopeBatch(request);
+
+      expect(result).toEqual(response.data);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/organizations/party-scope/batch/commit',
+        request,
+        expect.any(Object)
+      );
+    });
+  });
+
   describe('deleteOrganization', () => {
     it('should delete organization successfully', async () => {
       vi.mocked(apiClient.delete).mockResolvedValue({
@@ -285,7 +395,7 @@ describe('OrganizationService', () => {
       ).rejects.toThrow(/只读模式/);
       await expect(organizationService.deleteOrganization('org-1')).rejects.toThrow(/只读模式/);
       await expect(
-        organizationService.moveOrganization('org-1', {
+        organizationService.previewOrganizationMove('org-1', {
           target_parent_id: 'org-root',
         })
       ).rejects.toThrow(/只读模式/);
@@ -498,31 +608,93 @@ describe('OrganizationService', () => {
   // 组织操作测试
   // =============================================================================
 
-  describe('moveOrganization', () => {
-    it('should move organization successfully', async () => {
+  describe('organization move preview and commit', () => {
+    it('should post a normalized move proposal to the preview endpoint', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         success: true,
-        data: { success: true, message: '移动成功' },
+        data: {
+          organization_id: 'org-2',
+          before_scope: {
+            parent_id: 'org-1',
+            effective_party_id: 'party-old',
+            effective_party_perspective: 'owner',
+            source_organization_id: 'org-1',
+          },
+          after_scope: {
+            parent_id: 'org-3',
+            effective_party_id: 'party-new',
+            effective_party_perspective: 'manager',
+            source_organization_id: 'org-3',
+          },
+          impact: {
+            organization_count: 2,
+            organization_scope_change_count: 2,
+            organization_path_change_count: 2,
+            user_count: 1,
+            user_scope_change_count: 1,
+          },
+          preview_token: 'move-preview-token',
+          expires_at: '2026-08-06T12:00:00Z',
+        },
       });
 
-      const result = await organizationService.moveOrganization('org-2', {
-        new_parent_id: 'org-3',
+      const result = await organizationService.previewOrganizationMove('org-2', {
+        target_parent_id: 'org-3',
       });
 
-      expect(result.success).toBe(true);
+      expect(result.preview_token).toBe('move-preview-token');
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/organizations/org-2/move/preview',
+        { target_parent_id: 'org-3' },
+        expect.any(Object)
+      );
     });
-  });
 
-  describe('batchDeleteOrganizations', () => {
-    it('should delete multiple organizations', async () => {
+    it('should submit a move only with a preview token, reason, and idempotency key', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         success: true,
-        data: { success_count: 2, failed_count: 0 },
+        data: {
+          organization: mockChildOrganization,
+          before_scope: {
+            parent_id: 'org-1',
+            effective_party_id: 'party-old',
+            effective_party_perspective: 'owner',
+            source_organization_id: 'org-1',
+          },
+          after_scope: {
+            parent_id: 'org-3',
+            effective_party_id: 'party-new',
+            effective_party_perspective: 'manager',
+            source_organization_id: 'org-3',
+          },
+          impact: {
+            organization_count: 2,
+            organization_scope_change_count: 2,
+            organization_path_change_count: 2,
+            user_count: 1,
+            user_scope_change_count: 1,
+          },
+          committed_at: '2026-08-06T12:00:00Z',
+          idempotent: false,
+        },
       });
 
-      const result = await organizationService.batchDeleteOrganizations(['org-1', 'org-2']);
+      const result = await organizationService.commitOrganizationMove('org-2', {
+        preview_token: 'move-preview-token',
+        reason: 'Move under the regional organization.',
+        idempotency_key: 'organization-move-1',
+      });
 
-      expect(result.success_count).toBe(2);
+      expect(result.idempotent).toBe(false);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/organizations/org-2/move',
+        {
+          preview_token: 'move-preview-token',
+          reason: 'Move under the regional organization.',
+          idempotency_key: 'organization-move-1',
+        },
+        expect.any(Object)
+      );
     });
   });
 

@@ -1,6 +1,12 @@
 /** Party domain types (Phase 3). */
 
-export type PartyType = 'organization' | 'legal_entity' | 'individual';
+export type PartyType = 'legal_entity' | 'individual';
+export type LegalEntityIdentifierType =
+  | 'unified_social_credit_code'
+  | 'legal_registration_number'
+  | 'foreign_registration_number';
+export type IndividualIdentifierType = 'national_id' | 'passport';
+export type PartyIdentifierType = LegalEntityIdentifierType | IndividualIdentifierType;
 export type PartyReviewStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 export type PartyBusinessRole = 'owner' | 'operator' | 'terminal_tenant';
 
@@ -10,6 +16,8 @@ export interface Party {
   party_type: PartyType;
   name: string;
   code: string;
+  identifier_type?: PartyIdentifierType | null;
+  identifier_display?: string | null;
   external_ref?: string | null;
   status: string;
   metadata?: Record<string, unknown>;
@@ -21,6 +29,56 @@ export interface Party {
   updated_at: string;
 }
 
+export type PartyLifecycleOperation = 'deactivate' | 'reactivate';
+
+export interface PartyLifecycleState {
+  party_id: string;
+  status: string;
+  review_status: string;
+  available_for_new_references: boolean;
+}
+
+export interface PartyLifecycleImpact {
+  represented_organization_count: number;
+  potentially_affected_organization_count: number;
+  current_user_binding_count: number;
+  affected_user_count: number;
+  user_scope_change_count: number;
+  asset_reference_count: number;
+  project_reference_count: number;
+  contract_group_reference_count: number;
+  contract_reference_count: number;
+}
+
+export interface PartyLifecyclePreviewRequest {
+  operation: PartyLifecycleOperation;
+}
+
+export interface PartyLifecyclePreviewResponse {
+  party_id: string;
+  operation: PartyLifecycleOperation;
+  before_state: PartyLifecycleState;
+  after_state: PartyLifecycleState;
+  impact: PartyLifecycleImpact;
+  preview_token: string;
+  expires_at: string;
+}
+
+export interface PartyLifecycleCommitRequest {
+  preview_token: string;
+  reason: string;
+  idempotency_key: string;
+}
+
+export interface PartyLifecycleCommitResponse {
+  party: Party;
+  operation: PartyLifecycleOperation;
+  before_state: PartyLifecycleState;
+  after_state: PartyLifecycleState;
+  impact: PartyLifecycleImpact;
+  committed_at: string;
+  idempotent: boolean;
+}
 export type CustomerType = 'internal' | 'external';
 export type CustomerSubjectNature = 'enterprise' | 'individual';
 export type CustomerContractRole = 'downstream_sublease' | 'direct_lease';
@@ -53,7 +111,7 @@ export interface CustomerProfile {
   contact_name?: string | null;
   contact_phone?: string | null;
   identifier_type?: string | null;
-  unified_identifier?: string | null;
+  identifier_display?: string | null;
   address?: string | null;
   status: string;
   historical_contract_count: number;
@@ -70,12 +128,6 @@ export interface PartyListParams {
   search?: string;
   skip?: number;
   limit?: number;
-}
-
-export interface FrontendPartyHierarchyEdge {
-  id: string;
-  parent_party_id: string;
-  child_party_id: string;
 }
 
 export interface PartyContact {

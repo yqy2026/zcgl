@@ -158,9 +158,9 @@ const CustomerDetailPage: React.FC = () => {
                   children: customerProfile.contact_phone ?? '-',
                 },
                 {
-                  key: 'unified_identifier',
+                  key: 'identifier_display',
                   label: '统一标识',
-                  children: customerProfile.unified_identifier ?? '-',
+                  children: customerProfile.identifier_display ?? '-',
                 },
                 {
                   key: 'payment_term_preference',

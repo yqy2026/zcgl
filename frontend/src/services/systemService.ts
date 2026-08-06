@@ -16,8 +16,9 @@ export interface User {
   role_id?: string;
   roles?: string[];
   role_ids?: string[];
-  default_organization_id?: string;
-  organization_name: string;
+  account_type: 'human' | 'service' | 'system';
+  organization_id: string | null;
+  organization_name?: string | null;
   last_login: string | null;
   created_at: string;
   updated_at: string;
@@ -31,6 +32,39 @@ export interface UserListResponse {
   page: number;
   page_size: number;
   pages: number;
+}
+
+interface UserApiResponse {
+  id: string;
+  username: string;
+  email: string | null;
+  full_name: string;
+  phone: string;
+  role_id?: string | null;
+  roles?: string[];
+  role_ids?: string[];
+  is_active: boolean;
+  is_locked: boolean;
+  last_login_at: string | null;
+  failed_login_attempts?: number;
+  account_type: 'human' | 'service' | 'system';
+  organization_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserListApiResponse {
+  items: UserApiResponse[];
+  total?: number;
+  page?: number;
+  page_size?: number;
+  pages?: number;
+  pagination?: {
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  };
 }
 
 export interface OrganizationOption {
@@ -52,7 +86,6 @@ export interface CreateUserData {
   status?: 'active' | 'inactive';
   role_id?: string;
   role_ids?: string[];
-  default_organization_id: string;
 }
 
 export interface UpdateUserData {
@@ -62,48 +95,210 @@ export interface UpdateUserData {
   status?: 'active' | 'inactive';
   role_id?: string;
   role_ids?: string[];
-  default_organization_id?: string;
 }
 
-export type UserPartyRelationType = 'owner' | 'manager' | 'headquarters';
+export type UserPartyRelationType = 'owner' | 'manager';
 
 export interface UserPartyBinding {
   id: string;
   user_id: string;
   party_id: string;
   relation_type: UserPartyRelationType;
-  is_primary: boolean;
   valid_from: string;
   valid_to: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface UserPartyBindingUpsertData {
-  party_id: string;
-  relation_type: UserPartyRelationType;
-  is_primary?: boolean;
-  valid_from?: string;
-  valid_to?: string | null;
-}
+export type UserPartyScopeOperation = 'create' | 'update' | 'close';
 
-export interface UserPartyBindingUpdateData {
+export interface UserPartyScopeProposal {
+  operation: UserPartyScopeOperation;
+  binding_id?: string;
   party_id?: string;
   relation_type?: UserPartyRelationType;
-  is_primary?: boolean;
   valid_from?: string;
   valid_to?: string | null;
 }
 
+export interface UserPartyScopeIssue {
+  code: string;
+  node_type: 'organization' | 'party' | 'binding';
+  safe_label: string;
+  node_ref: string | null;
+}
+
+export interface UserPartyScopeState {
+  source: 'explicit' | 'organization' | 'unrestricted' | 'none';
+  scope_mode: 'owner' | 'manager' | 'all' | 'unrestricted' | 'none';
+  owner_party_ids: string[];
+  manager_party_ids: string[];
+  organization_id: string | null;
+  source_organization_id: string | null;
+  next_transition_at: string | null;
+  error_code: string | null;
+  issues: UserPartyScopeIssue[];
+}
+
+export interface UserPartyScopeView extends UserPartyScopeState {
+  user_id: string;
+}
+
+export interface UserPartyScopeImpact {
+  before_current_binding_count: number;
+  after_current_binding_count: number;
+  scope_changed: boolean;
+  uses_organization_default_after: boolean;
+}
+
+export interface UserPartyScopePreview {
+  user_id: string;
+  operation: UserPartyScopeOperation;
+  before_scope: UserPartyScopeState;
+  after_scope: UserPartyScopeState;
+  impact: UserPartyScopeImpact;
+  preview_token: string;
+  expires_at: string;
+}
+
+export interface UserPartyScopeCommitRequest {
+  preview_token: string;
+  reason: string;
+  idempotency_key: string;
+}
+
+export interface UserPartyScopeCommitResponse {
+  binding: UserPartyBinding;
+  operation: UserPartyScopeOperation;
+  before_scope: UserPartyScopeState;
+  after_scope: UserPartyScopeState;
+  impact: UserPartyScopeImpact;
+  committed_at: string;
+  idempotent: boolean;
+}
+
+export interface UserPartyScopeBatchProposal extends UserPartyScopeProposal {
+  user_id: string;
+}
+
+export interface UserPartyScopeBatchImpact {
+  user_count: number;
+  binding_change_count: number;
+  scope_change_count: number;
+  uses_organization_default_after_count: number;
+}
+
+export interface UserPartyScopeBatchPreviewItem {
+  user: {
+    id: string;
+    username: string;
+    full_name: string;
+    account_type: 'human' | 'service' | 'system';
+    organization_id: string | null;
+  };
+  operation: UserPartyScopeOperation;
+  before_scope: UserPartyScopeState;
+  after_scope: UserPartyScopeState;
+  impact: UserPartyScopeImpact;
+}
+
+export interface UserPartyScopeBatchPreview {
+  items: UserPartyScopeBatchPreviewItem[];
+  impact: UserPartyScopeBatchImpact;
+  preview_token: string;
+  expires_at: string;
+}
+
+export interface UserPartyScopeBatchCommitRequest {
+  preview_token: string;
+  reason: string;
+  idempotency_key: string;
+}
+
+export interface UserPartyScopeBatchCommitResponse {
+  items: UserPartyScopeBatchPreviewItem[];
+  impact: UserPartyScopeBatchImpact;
+  committed_at: string;
+  idempotent: boolean;
+}
+
+export interface UserOrganizationTransferProposal {
+  organization_id: string;
+}
+
+export interface UserOrganizationTransferImpact {
+  organization_changed: boolean;
+  scope_changed: boolean;
+  current_explicit_binding_count: number;
+  uses_explicit_party_scope_after: boolean;
+  cache_invalidation_required: boolean;
+}
+
+export interface UserOrganizationTransferPreview {
+  user_id: string;
+  before_scope: UserPartyScopeState;
+  after_scope: UserPartyScopeState;
+  impact: UserOrganizationTransferImpact;
+  preview_token: string;
+  expires_at: string;
+}
+
+export interface UserOrganizationTransferCommitRequest {
+  preview_token: string;
+  reason: string;
+  idempotency_key: string;
+}
+
+export interface UserOrganizationTransferCommitResponse {
+  user_id: string;
+  organization_id: string;
+  before_scope: UserPartyScopeState;
+  after_scope: UserPartyScopeState;
+  impact: UserOrganizationTransferImpact;
+  committed_at: string;
+  idempotent: boolean;
+}
 export const userService = {
-  normalizeUserPayload(data: CreateUserData | UpdateUserData) {
+  normalizeUserPayload(data: CreateUserData | UpdateUserData, includeStatus = true) {
+    const { status, ...editableData } = data;
     const roleIds = Array.isArray(data.role_ids)
       ? data.role_ids.map(item => item.trim()).filter(item => item !== '')
       : undefined;
+    const payload: Record<string, unknown> = { ...editableData };
+    if (roleIds != null) {
+      payload.role_ids = roleIds;
+      payload.role_id = roleIds[0] ?? data.role_id;
+    } else if (data.role_id !== undefined) {
+      payload.role_id = data.role_id;
+    }
+    if (includeStatus && status != null) {
+      payload.is_active = status === 'active';
+    }
+    return payload;
+  },
+
+  normalizeUserResponse(data: UserApiResponse): User {
+    if (typeof data.is_active !== 'boolean' || typeof data.is_locked !== 'boolean') {
+      throw new Error('用户接口响应缺少有效的账号状态字段');
+    }
     return {
-      ...data,
-      role_ids: roleIds,
-      role_id: roleIds != null ? (roleIds[0] ?? data.role_id) : data.role_id,
+      id: data.id,
+      username: data.username,
+      email: data.email ?? '',
+      full_name: data.full_name,
+      phone: data.phone,
+      status: data.is_locked ? 'locked' : data.is_active ? 'active' : 'inactive',
+      role_id: data.role_id ?? undefined,
+      roles: data.roles ?? [],
+      role_ids: data.role_ids ?? [],
+      account_type: data.account_type,
+      organization_id: data.organization_id,
+      organization_name: null,
+      last_login: data.last_login_at,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      is_locked: data.is_locked,
+      login_attempts: data.failed_login_attempts ?? 0,
     };
   },
 
@@ -115,22 +310,27 @@ export const userService = {
     status?: string;
     role_id?: string;
     organization_id?: string;
-    default_organization_id?: string;
   }): Promise<UserListResponse> {
-    const { default_organization_id, ...rest } = params ?? {};
-    const requestParams =
-      params == null
-        ? undefined
-        : {
-            ...rest,
-            ...(default_organization_id !== undefined
-              ? { organization_id: default_organization_id }
-              : {}),
-          };
-    const response = await api.get<UserListResponse>(SYSTEM_API.USERS, {
+    const { status, ...baseParams } = params ?? {};
+    const requestParams = {
+      ...baseParams,
+      ...(status === 'active' ? { is_active: true } : {}),
+      ...(status === 'inactive' ? { is_active: false } : {}),
+    };
+    const response = await api.get<UserListApiResponse>(SYSTEM_API.USERS, {
       params: requestParams,
     });
-    return response.data ?? { items: [], total: 0, page: 1, page_size: 20, pages: 0 };
+    if (response.data == null) {
+      return { items: [], total: 0, page: 1, page_size: 20, pages: 0 };
+    }
+    const pagination = response.data.pagination;
+    return {
+      items: response.data.items.map(userService.normalizeUserResponse),
+      total: response.data.total ?? pagination?.total ?? 0,
+      page: response.data.page ?? pagination?.page ?? 1,
+      page_size: response.data.page_size ?? pagination?.page_size ?? 20,
+      pages: response.data.pages ?? pagination?.total_pages ?? 0,
+    };
   },
 
   // 获取用户详情
@@ -147,34 +347,82 @@ export const userService = {
     return response.data ?? [];
   },
 
-  // 新增用户主体绑定
-  async createUserPartyBinding(userId: string, data: UserPartyBindingUpsertData) {
-    const response = await api.post<UserPartyBinding>(`/users/${userId}/party-bindings`, data);
-    return response.data;
-  },
-
-  // 更新用户主体绑定
-  async updateUserPartyBinding(
-    userId: string,
-    bindingId: string,
-    data: UserPartyBindingUpdateData
-  ) {
-    const response = await api.put<UserPartyBinding>(
-      `/users/${userId}/party-bindings/${bindingId}`,
-      data
+  // 预览用户主体范围变更
+  async previewUserPartyScope(userId: string, proposal: UserPartyScopeProposal) {
+    const response = await api.post<UserPartyScopePreview>(
+      `/users/${userId}/party-bindings/preview`,
+      proposal
     );
     return response.data;
   },
 
-  // 关闭用户主体绑定
-  async closeUserPartyBinding(userId: string, bindingId: string) {
-    const response = await api.delete(`/users/${userId}/party-bindings/${bindingId}`);
+  // 提交已预览的用户主体范围变更
+  async commitUserPartyScope(userId: string, request: UserPartyScopeCommitRequest) {
+    const response = await api.post<UserPartyScopeCommitResponse>(
+      `/users/${userId}/party-bindings/commit`,
+      request
+    );
+    return response.data;
+  },
+  async previewUserPartyScopeBatch(proposals: UserPartyScopeBatchProposal[]) {
+    const response = await api.post<UserPartyScopeBatchPreview>(
+      '/users/party-bindings/batch/preview',
+      { items: proposals }
+    );
     return response.data;
   },
 
+  async commitUserPartyScopeBatch(request: UserPartyScopeBatchCommitRequest) {
+    const response = await api.post<UserPartyScopeBatchCommitResponse>(
+      '/users/party-bindings/batch/commit',
+      request
+    );
+    return response.data;
+  },
+  async getMyPartyScope(): Promise<UserPartyScopeView> {
+    const response = await api.get<UserPartyScopeView>('/auth/me/party-scope');
+    if (response.data == null) {
+      throw new Error('获取当前用户有效主体范围失败');
+    }
+    return response.data;
+  },
+
+  async getUserPartyScope(userId: string): Promise<UserPartyScopeView> {
+    const response = await api.get<UserPartyScopeView>(
+      `/auth/users/${userId}/party-scope`
+    );
+    if (response.data == null) {
+      throw new Error('获取用户有效主体范围失败');
+    }
+    return response.data;
+  },
+  async previewUserOrganizationTransfer(
+    userId: string,
+    proposal: UserOrganizationTransferProposal
+  ) {
+    const response = await api.post<UserOrganizationTransferPreview>(
+      `${SYSTEM_API.USER_DETAIL(userId)}/organization/preview`,
+      proposal
+    );
+    return response.data;
+  },
+
+  async commitUserOrganizationTransfer(
+    userId: string,
+    request: UserOrganizationTransferCommitRequest
+  ) {
+    const response = await api.put<UserOrganizationTransferCommitResponse>(
+      `${SYSTEM_API.USER_DETAIL(userId)}/organization`,
+      request
+    );
+    return response.data;
+  },
   // 创建用户
   async createUser(data: CreateUserData) {
-    const response = await api.post(SYSTEM_API.USERS, userService.normalizeUserPayload(data));
+    const response = await api.post(
+      SYSTEM_API.USERS,
+      userService.normalizeUserPayload(data, false)
+    );
     return response.data;
   },
 

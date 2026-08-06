@@ -1,6 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Layout, Typography } from 'antd';
 
+import { PartyScopeBlocked } from '@/components/Common';
+import {
+  type UserPartyScopeView,
+  userService,
+} from '@/services/systemService';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import styles from './Layout.module.css';
@@ -14,10 +19,34 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [myScope, setMyScope] = useState<UserPartyScopeView | null>(null);
+  const [scopeChecked, setScopeChecked] = useState(false);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed(prev => !prev);
   }, []);
+
+  const loadMyScope = useCallback(async () => {
+    try {
+      const scope = await userService.getMyPartyScope();
+      setMyScope(scope);
+    } catch {
+      setMyScope(null);
+    } finally {
+      setScopeChecked(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMyScope();
+  }, [loadMyScope]);
+
+  const isScopeBlocked =
+    scopeChecked &&
+    myScope != null &&
+    (myScope.error_code != null ||
+      myScope.scope_mode === 'none' ||
+      myScope.source === 'none');
 
   return (
     <Layout className={styles.appLayout}>
@@ -29,7 +58,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <AppHeader collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
 
         {/* 主内容区 */}
-        <Content className={styles.content}>{children}</Content>
+        <Content className={styles.content}>
+          {isScopeBlocked ? (
+            <PartyScopeBlocked
+              scope={myScope}
+              onRetry={() => {
+                void loadMyScope();
+              }}
+            />
+          ) : (
+            children
+          )}
+        </Content>
 
         {/* 页脚 */}
         <Footer className={styles.footer}>

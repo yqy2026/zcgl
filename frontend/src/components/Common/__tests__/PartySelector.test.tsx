@@ -40,7 +40,7 @@ describe('PartySelector', () => {
       items: [
         {
           id: 'party-1',
-          party_type: 'organization',
+          party_type: 'legal_entity',
           name: '测试主体A',
           code: 'PTY-A',
           status: 'active',
@@ -54,7 +54,7 @@ describe('PartySelector', () => {
     });
     vi.mocked(partyService.createParty).mockResolvedValue({
       id: 'party-created',
-      party_type: 'organization',
+      party_type: 'legal_entity',
       name: '新建主体',
       code: 'NEW-001',
       status: 'active',
@@ -145,47 +145,26 @@ describe('PartySelector', () => {
   });
 
   it('applies owner filter mode in default fetcher with role-aligned party_type queries', async () => {
-    vi.mocked(partyService.searchParties)
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: 'party-org-1',
-            party_type: 'organization',
-            name: '组织主体',
-            code: 'ORG-1',
-            status: 'active',
-            created_at: '2026-01-01T00:00:00Z',
-            updated_at: '2026-01-01T00:00:00Z',
-          },
-        ],
-        skip: 0,
-        limit: 20,
-        isTruncated: false,
-      })
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: 'party-legal-1',
-            party_type: 'legal_entity',
-            name: '法人主体',
-            code: 'LEGAL-1',
-            status: 'active',
-            created_at: '2026-01-01T00:00:00Z',
-            updated_at: '2026-01-01T00:00:00Z',
-          },
-        ],
-        skip: 0,
-        limit: 20,
-        isTruncated: false,
-      });
+    vi.mocked(partyService.searchParties).mockResolvedValue({
+      items: [
+        {
+          id: 'party-legal-1',
+          party_type: 'legal_entity',
+          name: '法人主体',
+          code: 'LE-000001',
+          status: 'active',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      skip: 0,
+      limit: 20,
+      isTruncated: false,
+    });
 
     renderWithProviders(<PartySelector filterMode="owner" />);
 
     await waitFor(() => {
-      expect(partyService.searchParties).toHaveBeenCalledWith('', {
-        limit: 20,
-        party_type: 'organization',
-      });
       expect(partyService.searchParties).toHaveBeenCalledWith('', {
         limit: 20,
         party_type: 'legal_entity',
@@ -196,16 +175,11 @@ describe('PartySelector', () => {
   it('applies manager filter mode in default fetcher with role-aligned party_type queries', async () => {
     const searchParties = vi
       .fn()
-      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false })
-      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false });
+      .mockResolvedValue({ items: [], skip: 0, limit: 20, isTruncated: false });
     const fetcher = createDefaultPartyFetcher(searchParties);
 
     await fetcher('', 'manager');
 
-    expect(searchParties).toHaveBeenCalledWith('', {
-      limit: 20,
-      party_type: 'organization',
-    });
     expect(searchParties).toHaveBeenCalledWith('', {
       limit: 20,
       party_type: 'legal_entity',
@@ -213,26 +187,18 @@ describe('PartySelector', () => {
   });
 
   it('caps merged owner/manager results to default limit to avoid oversized dropdown payload', async () => {
-    const searchParties = vi
-      .fn()
-      .mockResolvedValueOnce({
-        items: buildParties('org', 20, 'organization'),
-        skip: 0,
-        limit: 20,
-        isTruncated: false,
-      })
-      .mockResolvedValueOnce({
-        items: buildParties('legal', 20, 'legal_entity'),
-        skip: 0,
-        limit: 20,
-        isTruncated: false,
-      });
+    const searchParties = vi.fn().mockResolvedValue({
+      items: buildParties('legal', 40, 'legal_entity'),
+      skip: 0,
+      limit: 20,
+      isTruncated: false,
+    });
     const fetcher = createDefaultPartyFetcher(searchParties);
 
     const parties = await fetcher('', 'owner');
 
     expect(parties).toHaveLength(20);
-    expect(parties.every(item => item.party_type === 'organization')).toBe(true);
+    expect(parties.every(item => item.party_type === 'legal_entity')).toBe(true);
   });
 
   it('recognizes forbidden status by structured error object without PERMISSION_DENIED text', async () => {
@@ -282,16 +248,18 @@ describe('PartySelector', () => {
 
     await user.click(screen.getByRole('button', { name: '快速新建主体' }));
     await user.type(screen.getByLabelText('快速新建主体名称'), '新建主体');
-    await user.type(screen.getByLabelText('快速新建主体编码'), 'NEW-001');
+    expect(screen.queryByLabelText('快速新建主体编码')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('快速新建统一标识类型')).toBeInTheDocument();
+    expect(screen.getByLabelText('快速新建统一标识值')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '创建主体' }));
 
     await waitFor(() => {
-      expect(partyService.createParty).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: '新建主体',
-          code: 'NEW-001',
-        })
-      );
+      expect(partyService.createParty).toHaveBeenCalledWith({
+        party_type: 'legal_entity',
+        name: '新建主体',
+        identifier_type: undefined,
+        identifier_value: undefined,
+      });
     });
 
     expect(handleChange).toHaveBeenCalledWith(

@@ -35,6 +35,8 @@ import OrganizationTabsPanel from './components/OrganizationTabsPanel';
 import OrganizationFormModal from './components/OrganizationFormModal';
 import OrganizationHistoryModal from './components/OrganizationHistoryModal';
 import OrganizationBindingDrawer from './components/OrganizationBindingDrawer';
+import OrganizationMoveModal from './components/OrganizationMoveModal';
+import OrganizationPartyScopeBatchModal from './components/OrganizationPartyScopeBatchModal';
 import styles from '../OrganizationPage.module.css';
 
 const toneClassMap: Record<Tone, string> = {
@@ -55,6 +57,11 @@ const OrganizationPage: React.FC = () => {
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [bindingDrawerVisible, setBindingDrawerVisible] = useState(false);
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
+  const [movingOrganization, setMovingOrganization] = useState<Organization | null>(null);
+  const [partyScopeBatchOrganizations, setPartyScopeBatchOrganizations] = useState<Organization[]>(
+    []
+  );
+  const [partyScopeBatchModalVisible, setPartyScopeBatchModalVisible] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [activeTab, setActiveTab] = useState('list');
   const readOnlyMode = isOrganizationReadOnlyMode();
@@ -230,11 +237,11 @@ const OrganizationPage: React.FC = () => {
         return;
       }
       setEditingOrganization(organization);
+      form.resetFields();
       form.setFieldsValue({
         name: organization.name,
         code: organization.code,
         type: organization.type,
-        parent_id: organization.parent_id ?? undefined,
         description: organization.description ?? '',
         status: organization.status,
         sort_order: organization.sort_order,
@@ -271,6 +278,34 @@ const OrganizationPage: React.FC = () => {
     setBindingDrawerVisible(true);
   }, []);
 
+  const handleBatchManagePartyScope = useCallback(() => {
+    if (readOnlyMode) {
+      MessageManager.warning(ORGANIZATION_READ_ONLY_BLOCK_MESSAGE);
+      return;
+    }
+    if (partyScopeBatchOrganizations.length < 2) {
+      MessageManager.warning('请至少选择两个启用组织');
+      return;
+    }
+    setPartyScopeBatchModalVisible(true);
+  }, [partyScopeBatchOrganizations.length, readOnlyMode]);
+
+  const handlePartyScopeBatchChanged = useCallback(async () => {
+    setPartyScopeBatchOrganizations([]);
+    refreshOrganizations();
+  }, [refreshOrganizations]);
+
+  const handleMove = useCallback(
+    (organization: Organization) => {
+      if (readOnlyMode) {
+        MessageManager.warning(ORGANIZATION_READ_ONLY_BLOCK_MESSAGE);
+        return;
+      }
+      setMovingOrganization(organization);
+    },
+    [readOnlyMode]
+  );
+
   const {
     data: historyPageItems,
     pagination: historyPagination,
@@ -294,7 +329,9 @@ const OrganizationPage: React.FC = () => {
       }
       try {
         if (editingOrganization != null) {
-          await organizationService.updateOrganization(editingOrganization.id, values);
+          const updateValues = { ...values };
+          delete updateValues.parent_id;
+          await organizationService.updateOrganization(editingOrganization.id, updateValues);
           MessageManager.success('更新成功');
         } else {
           await organizationService.createOrganization(values);
@@ -346,9 +383,13 @@ const OrganizationPage: React.FC = () => {
             onCreate: handleCreate,
             onPageChange: handlePageChange,
             onEdit: handleEdit,
+            onMove: handleMove,
             onDelete: handleDelete,
             onManageBindings: handleManageBindings,
             onViewHistory: handleViewHistory,
+            selectedPartyScopeOrganizations: partyScopeBatchOrganizations,
+            onSelectedPartyScopeOrganizationsChange: setPartyScopeBatchOrganizations,
+            onBatchManagePartyScope: handleBatchManagePartyScope,
             isReadOnlyMode: readOnlyMode,
           }}
           treeData={organizationTreeDataNodes}
@@ -387,6 +428,21 @@ const OrganizationPage: React.FC = () => {
         open={bindingDrawerVisible}
         organization={selectedOrganization}
         onClose={() => setBindingDrawerVisible(false)}
+      />
+
+      <OrganizationMoveModal
+        open={movingOrganization != null}
+        organization={movingOrganization}
+        organizationTree={organizationTree}
+        onClose={() => setMovingOrganization(null)}
+        onChanged={refreshOrganizations}
+      />
+
+      <OrganizationPartyScopeBatchModal
+        open={partyScopeBatchModalVisible}
+        organizations={partyScopeBatchOrganizations}
+        onClose={() => setPartyScopeBatchModalVisible(false)}
+        onChanged={handlePartyScopeBatchChanged}
       />
     </PageContainer>
   );

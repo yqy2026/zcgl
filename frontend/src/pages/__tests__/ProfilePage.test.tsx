@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { renderWithProviders, screen } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
 import ProfilePage from '../ProfilePage';
 
 vi.mock('@/hooks/useAuth', () => ({
@@ -43,6 +43,23 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
+vi.mock('@/services/systemService', () => ({
+  userService: {
+    getMyPartyScope: vi.fn(async () => ({
+      user_id: 'user-1',
+      source: 'explicit',
+      scope_mode: 'owner',
+      owner_party_ids: ['party-1'],
+      manager_party_ids: [],
+      organization_id: 'org-1',
+      source_organization_id: null,
+      next_transition_at: null,
+      error_code: null,
+      issues: [],
+    })),
+  },
+}));
+
 describe('ProfilePage', () => {
   it('renders modal forms to keep useForm connected', () => {
     renderWithProviders(<ProfilePage />);
@@ -50,5 +67,15 @@ describe('ProfilePage', () => {
     expect(screen.getByText('个人资料')).toBeInTheDocument();
     expect(screen.getByLabelText('用户名')).toBeInTheDocument();
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
+  });
+
+  it('loads and renders the current user effective Party scope', async () => {
+    renderWithProviders(<ProfilePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '查看有效主体范围' }));
+
+    expect(await screen.findByText('explicit')).toBeInTheDocument();
+    expect(screen.getByText('owner')).toBeInTheDocument();
+    expect(screen.getByText('party-1')).toBeInTheDocument();
   });
 });

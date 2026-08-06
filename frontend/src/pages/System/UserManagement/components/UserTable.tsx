@@ -6,7 +6,9 @@ import {
   ExclamationCircleOutlined,
   EyeOutlined,
   LockOutlined,
+  SafetyCertificateOutlined,
   TagsOutlined,
+  SwapOutlined,
   UnlockOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -26,6 +28,8 @@ interface UserTableProps {
   onPageChange: (next: { current?: number; pageSize?: number }) => void;
   onViewDetail: (user: User) => void;
   onManagePartyBindings: (user: User) => void;
+  onViewPartyScope: (user: User) => void;
+  onTransferOrganization: (user: User) => void;
   onEdit: (user: User) => void;
   onToggleLock: (user: User) => void | Promise<void>;
   onToggleStatus: (user: User, status: 'active' | 'inactive') => void | Promise<void>;
@@ -41,6 +45,8 @@ const UserTable: React.FC<UserTableProps> = ({
   onPageChange,
   onViewDetail,
   onManagePartyBindings,
+  onViewPartyScope,
+  onTransferOrganization,
   onEdit,
   onToggleLock,
   onToggleStatus,
@@ -109,6 +115,7 @@ const UserTable: React.FC<UserTableProps> = ({
         title: '组织',
         dataIndex: 'organization_name',
         key: 'organization',
+        render: (value: string | null | undefined) => value ?? '-',
       },
       {
         title: '状态',
@@ -155,15 +162,35 @@ const UserTable: React.FC<UserTableProps> = ({
                 aria-label={`编辑用户${record.username}`}
               />
             </Tooltip>
-            <Tooltip title="主体标签绑定">
+            <Tooltip title="用户数据范围">
               <Button
                 type="text"
                 icon={<TagsOutlined />}
                 className={styles.tableActionButton}
                 onClick={() => onManagePartyBindings(record)}
-                aria-label={`主体绑定用户${record.username}`}
+                aria-label={`用户数据范围${record.username}`}
               />
             </Tooltip>
+            <Tooltip title="有效主体范围">
+              <Button
+                type="text"
+                icon={<SafetyCertificateOutlined />}
+                className={styles.tableActionButton}
+                onClick={() => onViewPartyScope(record)}
+                aria-label={`有效主体范围${record.username}`}
+              />
+            </Tooltip>
+            {record.account_type === 'human' && (
+              <Tooltip title="调动组织">
+                <Button
+                  type="text"
+                  icon={<SwapOutlined />}
+                  className={styles.tableActionButton}
+                  onClick={() => onTransferOrganization(record)}
+                  aria-label={`调动用户组织${record.username}`}
+                />
+              </Tooltip>
+            )}
             <Tooltip title={record.is_locked ? '解锁' : '锁定'}>
               <Button
                 type="text"
@@ -224,6 +251,8 @@ const UserTable: React.FC<UserTableProps> = ({
       onDelete,
       onEdit,
       onManagePartyBindings,
+      onViewPartyScope,
+      onTransferOrganization,
       onToggleLock,
       onToggleStatus,
       onViewDetail,
