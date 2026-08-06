@@ -349,3 +349,19 @@ Default to surfacing uncertainty, not hiding it.
 4. Design for Debugging / Traceability：始终注意在关键路径上给自己留足排查日志，确保每一个关键节点都是可追溯的。
 5. Living Documentation / Single Source of Truth：当项目关键技术栈或产品方向发生变更时，同步更新 agents.md。文档必须随代码一起演进，不能让它变成过时的谎言。
 6. Don't Break Mainline：大规模重构或实验性改动前，必须先切新分支。
+
+## Agent skills
+
+> 本段由 `setup-matt-pocock-skills` 写入，供 mattpocock/skills 工程类 skill（code-review、triage、to-tickets、to-spec、wayfinder 等）读取。`docs/agents/*.md` 可随时手动编辑；仅当切换 issue 跟踪器或推倒重来时才需重跑该 skill。
+
+### Issue tracker
+
+本仓库 issues / specs 存于 GitHub Issues，使用 `gh` CLI 读写（已认证 github.com 账户 yqy2026）。See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+默认五类规范标签：`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`（标签名与角色同名）。See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+单 context 布局：根目录 `CONTEXT.md` + `docs/adr/`（当前 `docs/adr/` 尚未建立，skill 探索时若不存在则静默继续）。See `docs/agents/domain.md`.
