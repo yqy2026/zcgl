@@ -191,6 +191,12 @@ BASIC_PERMISSIONS_DATA = [
     ("user", "create", "创建用户", "创建新用户"),
     ("user", "update", "更新用户", "更新用户信息"),
     ("user", "delete", "删除用户", "删除用户"),
+    (
+        "user",
+        "manage_party_scope",
+        "管理用户主体范围",
+        "预览并提交用户显式主体范围变更",
+    ),
     # 角色权限管理
     ("role", "read", "查看角色", "查看角色信息"),
     ("role", "create", "创建角色", "创建新角色"),
@@ -200,6 +206,12 @@ BASIC_PERMISSIONS_DATA = [
     # 组织管理权限
     ("organization", "read", "查看组织", "查看组织信息"),
     ("organization", "update", "更新组织", "更新组织信息"),
+    (
+        "organization",
+        "manage_party_scope",
+        "管理组织主体范围",
+        "预览并提交组织代表主体范围变更",
+    ),
     ("organization", "delete", "删除组织", "删除组织"),
     # 统一授权管理
     ("permission_grant", "read", "查看统一授权", "查看统一授权记录"),

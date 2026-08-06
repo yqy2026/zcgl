@@ -3,59 +3,82 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..models.party import PartyReviewStatus, PartyType
 from ..models.user_party_binding import RelationType
 
 PartyBusinessRole = Literal["owner", "operator", "terminal_tenant"]
+PartyLifecycleOperation = Literal["deactivate", "reactivate"]
+PartyIdentifierType = Literal[
+    "unified_social_credit_code",
+    "legal_registration_number",
+    "foreign_registration_number",
+    "national_id",
+    "passport",
+]
 
 
-class PartyBase(BaseModel):
-    """Shared Party fields."""
+class PartyCreate(BaseModel):
+    """Party create payload."""
+
+    model_config = ConfigDict(extra="forbid")
 
     party_type: PartyType = Field(..., description="主体类型")
     name: str = Field(..., min_length=1, max_length=200, description="主体名称")
-    code: str = Field(..., min_length=1, max_length=100, description="主体编码")
+    identifier_type: PartyIdentifierType | None = Field(None, description="正式标识类型")
+    identifier_value: str | None = Field(None, min_length=1, max_length=500, description="正式标识值")
     external_ref: str | None = Field(None, max_length=200, description="外部引用")
-    status: str = Field(default="active", max_length=50, description="状态")
-    metadata: dict[str, Any] | None = Field(
-        default=None,
-        validation_alias="metadata_json",
-        description="扩展元数据",
-    )
+    metadata: dict[str, Any] | None = Field(default=None, description="扩展元数据")
 
-
-class PartyCreate(PartyBase):
-    """Party create payload."""
-
-    metadata: dict[str, Any] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("metadata", "metadata_json"),
-        description="扩展元数据",
-    )
+    @model_validator(mode="after")
+    def validate_identifier_pair(self) -> "PartyCreate":
+        if (self.identifier_type is None) != (self.identifier_value is None):
+            raise ValueError("identifier_type 与 identifier_value 必须同时提供")
+        return self
 
 
 class PartyUpdate(BaseModel):
     """Party update payload."""
 
-    party_type: PartyType | None = Field(None, description="主体类型")
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = Field(None, min_length=1, max_length=200, description="主体名称")
-    code: str | None = Field(None, min_length=1, max_length=100, description="主体编码")
+    identifier_type: PartyIdentifierType | None = Field(None, description="正式标识类型")
+    identifier_value: str | None = Field(None, min_length=1, max_length=500, description="正式标识值")
     external_ref: str | None = Field(None, max_length=200, description="外部引用")
-    status: str | None = Field(None, max_length=50, description="状态")
-    metadata: dict[str, Any] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("metadata", "metadata_json"),
-        description="扩展元数据",
-    )
+    metadata: dict[str, Any] | None = Field(default=None, description="扩展元数据")
+
+    @model_validator(mode="after")
+    def validate_identifier_pair(self) -> "PartyUpdate":
+        identifier_fields = {"identifier_type", "identifier_value"}
+        supplied_fields = identifier_fields.intersection(self.model_fields_set)
+        if len(supplied_fields) not in {0, 2}:
+            raise ValueError("identifier_type 与 identifier_value 必须同时提供")
+        if len(supplied_fields) == 2 and (
+            (self.identifier_type is None) != (self.identifier_value is None)
+        ):
+            raise ValueError("identifier_type 与 identifier_value 必须同时为空或同时有值")
+        return self
 
 
-class PartyResponse(PartyBase):
+class PartyResponse(BaseModel):
     """Party response."""
 
     id: str
     business_roles: list[PartyBusinessRole] = Field(default_factory=list)
+    party_type: PartyType
+    name: str
+    code: str
+    identifier_type: PartyIdentifierType | None = None
+    identifier_display: str | None = None
+    external_ref: str | None = None
+    status: str
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias="metadata_json",
+        description="扩展元数据",
+    )
     review_status: PartyReviewStatus | None = None
     review_by: str | None = None
     reviewed_at: datetime | None = None
@@ -65,6 +88,72 @@ class PartyResponse(PartyBase):
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
+
+class PartyLifecyclePreviewRequest(BaseModel):
+    """Requested Party activation-state transition."""
+
+    operation: PartyLifecycleOperation
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class PartyLifecycleState(BaseModel):
+    """Party availability state before or after a lifecycle action."""
+
+    party_id: str
+    status: str
+    review_status: str
+    available_for_new_references: bool
+
+
+class PartyLifecycleImpact(BaseModel):
+    """References and effective scopes affected by a Party state change."""
+
+    represented_organization_count: int = Field(..., ge=0)
+    potentially_affected_organization_count: int = Field(..., ge=0)
+    current_user_binding_count: int = Field(..., ge=0)
+    affected_user_count: int = Field(..., ge=0)
+    user_scope_change_count: int = Field(..., ge=0)
+    asset_reference_count: int = Field(..., ge=0)
+    project_reference_count: int = Field(..., ge=0)
+    contract_group_reference_count: int = Field(..., ge=0)
+    contract_reference_count: int = Field(..., ge=0)
+
+
+class PartyLifecyclePreviewResponse(BaseModel):
+    party_id: str
+    operation: PartyLifecycleOperation
+    before_state: PartyLifecycleState
+    after_state: PartyLifecycleState
+    impact: PartyLifecycleImpact
+    preview_token: str
+    expires_at: datetime
+
+
+class PartyLifecycleCommitRequest(BaseModel):
+    preview_token: str = Field(..., min_length=1, max_length=512)
+    reason: str = Field(..., min_length=1, max_length=500)
+    idempotency_key: str = Field(..., min_length=1, max_length=128)
+
+    @field_validator("preview_token", "reason", "idempotency_key")
+    @classmethod
+    def reject_blank_value(cls, value: str) -> str:
+        normalized = value.strip()
+        if normalized == "":
+            raise ValueError("value must not be blank")
+        return normalized
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class PartyLifecycleCommitResponse(BaseModel):
+    party: PartyResponse
+    operation: PartyLifecycleOperation
+    before_state: PartyLifecycleState
+    after_state: PartyLifecycleState
+    impact: PartyLifecycleImpact
+    committed_at: datetime
+    idempotent: bool = False
 
 class PartyReviewRejectRequest(BaseModel):
     """Party review reject payload."""
@@ -106,24 +195,6 @@ class PartyReviewLogResponse(BaseModel):
     operator: str | None = None
     reason: str | None = None
     created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class PartyHierarchyCreate(BaseModel):
-    """Create hierarchy relation payload."""
-
-    child_party_id: str = Field(..., description="子主体ID")
-
-
-class PartyHierarchyResponse(BaseModel):
-    """Hierarchy relation response."""
-
-    id: str
-    parent_party_id: str
-    child_party_id: str
-    created_at: datetime
-    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -205,7 +276,7 @@ class CustomerProfileResponse(BaseModel):
     contact_name: str | None = Field(None, description="联系人")
     contact_phone: str | None = Field(None, description="联系电话")
     identifier_type: str | None = Field(None, description="统一标识类型")
-    unified_identifier: str | None = Field(None, description="统一标识")
+    identifier_display: str | None = Field(None, description="脱敏后的正式标识")
     address: str | None = Field(None, description="地址")
     status: str = Field(..., description="客户状态")
     historical_contract_count: int = Field(..., ge=0, description="历史签约数")
@@ -227,7 +298,6 @@ class UserPartyBindingCreate(BaseModel):
     user_id: str = Field(..., description="用户ID")
     party_id: str = Field(..., description="主体ID")
     relation_type: RelationType = Field(..., description="关系类型")
-    is_primary: bool = Field(default=False, description="是否主关系")
     valid_from: datetime | None = Field(None, description="生效时间")
     valid_to: datetime | None = Field(None, description="失效时间")
 
@@ -237,7 +307,6 @@ class UserPartyBindingUpsert(BaseModel):
 
     party_id: str = Field(..., description="主体ID")
     relation_type: RelationType = Field(..., description="关系类型")
-    is_primary: bool = Field(default=False, description="是否主关系")
     valid_from: datetime | None = Field(None, description="生效时间")
     valid_to: datetime | None = Field(None, description="失效时间")
 
@@ -247,7 +316,6 @@ class UserPartyBindingUpdate(BaseModel):
 
     party_id: str | None = Field(None, description="主体ID")
     relation_type: RelationType | None = Field(None, description="关系类型")
-    is_primary: bool | None = Field(None, description="是否主关系")
     valid_from: datetime | None = Field(None, description="生效时间")
     valid_to: datetime | None = Field(None, description="失效时间")
 
@@ -259,7 +327,6 @@ class UserPartyBindingResponse(BaseModel):
     user_id: str
     party_id: str
     relation_type: RelationType
-    is_primary: bool
     valid_from: datetime
     valid_to: datetime | None
     created_at: datetime
@@ -277,8 +344,6 @@ __all__ = [
     "PartyImportResultItem",
     "PartyReviewLogResponse",
     "PartyReviewRejectRequest",
-    "PartyHierarchyCreate",
-    "PartyHierarchyResponse",
     "PartyContactCreate",
     "PartyContactUpdate",
     "PartyContactResponse",

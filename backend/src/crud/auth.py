@@ -14,7 +14,7 @@ from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..constants.validation_constants import AuthFields
-from ..models.auth import AuditLog, User, UserSession
+from ..models.auth import AccountType, AuditLog, User, UserSession
 from ..models.rbac import Role, UserRoleAssignment
 from ..schemas.auth import UserCreate, UserUpdate
 
@@ -73,12 +73,19 @@ class UserCRUD:
             stmt = stmt.where(User.is_active == is_active)
 
         if organization_id is not None:
-            stmt = stmt.where(User.default_organization_id == organization_id)
+            stmt = stmt.where(User.organization_id == organization_id)
 
         return stmt
 
     async def get_async(self, db: AsyncSession, user_id: str) -> User | None:
         stmt = select(User).where(User.id == user_id)
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_for_update_async(
+        self, db: AsyncSession, *, user_id: str
+    ) -> User | None:
+        """Read one user with a row lock for sensitive scope changes."""
+        stmt = select(User).where(User.id == user_id).with_for_update()
         return (await db.execute(stmt)).scalars().first()
 
     async def get_by_username_async(
@@ -98,6 +105,59 @@ class UserCRUD:
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_active_human_by_organization_ids_async(
+        self,
+        db: AsyncSession,
+        *,
+        organization_ids: list[str],
+    ) -> list[User]:
+        normalized_ids = sorted(
+            {
+                str(organization_id).strip()
+                for organization_id in organization_ids
+                if str(organization_id).strip() != ""
+            }
+        )
+        if len(normalized_ids) == 0:
+            return []
+
+        stmt = (
+            select(User)
+            .where(
+                User.organization_id.in_(normalized_ids),
+                User.account_type == AccountType.HUMAN,
+                User.is_active.is_(True),
+            )
+            .order_by(User.id)
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_active_human_by_ids_async(
+        self,
+        db: AsyncSession,
+        *,
+        user_ids: list[str],
+    ) -> list[User]:
+        normalized_ids = sorted(
+            {
+                str(user_id).strip()
+                for user_id in user_ids
+                if str(user_id).strip() != ""
+            }
+        )
+        if len(normalized_ids) == 0:
+            return []
+
+        stmt = (
+            select(User)
+            .where(
+                User.id.in_(normalized_ids),
+                User.account_type == AccountType.HUMAN,
+                User.is_active.is_(True),
+            )
+            .order_by(User.id)
+        )
+        return list((await db.execute(stmt)).scalars().all())
     async def get_username_map_async(
         self, db: AsyncSession, user_ids: set[str]
     ) -> dict[str, str]:
@@ -151,7 +211,9 @@ class UserCRUD:
         db_user.phone = obj_in.phone
         db_user.full_name = obj_in.full_name
         db_user.password_hash = hashed_password
-        db_user.default_organization_id = obj_in.default_organization_id
+        db_user.account_type = "human"
+        db_user.organization_id = None
+        db_user.is_active = False
 
         db.add(db_user)
         await db.commit()

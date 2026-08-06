@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from sqlalchemy import select
@@ -14,18 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 class UserScopeContextLoader(Protocol):
     async def __call__(self, *, db: AsyncSession, user_id: str) -> dict[str, Any]:
         """Load trusted scope context for a user resource."""
-
-
-class OrganizationPartyResolver(Protocol):
-    async def __call__(
-        self,
-        *,
-        db: AsyncSession,
-        organization_id: str,
-        organization_code: Any,
-        organization_name: Any,
-    ) -> str | None:
-        """Resolve an organization resource to a Party id."""
 
 
 class OwnershipPartyResolver(Protocol):
@@ -247,68 +234,29 @@ async def load_user_scope_context(
     *,
     db: AsyncSession,
     user_id: str,
-    resolve_organization_party_id: OrganizationPartyResolver,
 ) -> dict[str, Any]:
-    from ..models.auth import User
-    from ..models.user_party_binding import UserPartyBinding
+    from ..services.party_scope_resolver import party_scope_resolver
 
-    user_stmt = select(
-        User.id.label("user_id"),
-        User.default_organization_id,
-    ).where(User.id == user_id)
-    user_row = (await db.execute(user_stmt)).mappings().one_or_none()
-    if user_row is None:
-        return {}
-
-    normalized_user_id = normalize_optional_str(user_row.get("user_id"))
+    normalized_user_id = normalize_optional_str(user_id)
     if normalized_user_id is None:
         return {}
-
-    now = datetime.now(UTC).replace(tzinfo=None)
-    binding_stmt = (
-        select(UserPartyBinding.party_id.label("party_id"))
-        .where(UserPartyBinding.user_id == normalized_user_id)
-        .where(UserPartyBinding.valid_from <= now)
-        .where(
-            (UserPartyBinding.valid_to.is_(None)) | (UserPartyBinding.valid_to >= now)
-        )
-        .order_by(
-            UserPartyBinding.is_primary.desc(),
-            UserPartyBinding.valid_from.desc(),
-            UserPartyBinding.created_at.desc(),
-        )
-        .limit(1)
-    )
-    binding_row = (await db.execute(binding_stmt)).mappings().one_or_none()
-
-    scoped_party_id = normalize_optional_str(
-        binding_row.get("party_id") if binding_row is not None else None
-    )
-    normalized_organization_id = normalize_optional_str(
-        user_row.get("default_organization_id")
-    )
-    if scoped_party_id is None and normalized_organization_id is not None:
-        scoped_party_id = await resolve_organization_party_id(
-            db=db,
-            organization_id=normalized_organization_id,
-            organization_code=None,
-            organization_name=None,
-        )
-        if scoped_party_id is None:
-            scoped_party_id = normalized_organization_id
+    scope = await party_scope_resolver.resolve(db, user_id=normalized_user_id)
+    scoped_party_id = next(iter(scope.effective_party_ids), None)
     if scoped_party_id is None:
         scoped_party_id = build_unscoped_party_id(
             resource_type="user",
             resource_id=normalized_user_id,
         )
+    owner_party_id = next(iter(scope.owner_party_ids), scoped_party_id)
+    manager_party_id = next(iter(scope.manager_party_ids), scoped_party_id)
 
     return normalize_scope_context(
         {
             "user_id": normalized_user_id,
-            "organization_id": normalized_organization_id,
+            "organization_id": scope.organization_id,
             "party_id": scoped_party_id,
-            "owner_party_id": scoped_party_id,
-            "manager_party_id": scoped_party_id,
+            "owner_party_id": owner_party_id,
+            "manager_party_id": manager_party_id,
         }
     )
 
@@ -372,14 +320,12 @@ async def load_organization_scope_context(
     *,
     db: AsyncSession,
     organization_id: str,
-    resolve_organization_party_id: OrganizationPartyResolver,
 ) -> dict[str, Any]:
     from ..models.organization import Organization
 
     stmt = select(
         Organization.id.label("organization_id"),
-        Organization.code.label("organization_code"),
-        Organization.name.label("organization_name"),
+        Organization.represented_party_id.label("party_id"),
     ).where(Organization.id == organization_id)
     row = (await db.execute(stmt)).mappings().one_or_none()
     if row is None:
@@ -389,14 +335,12 @@ async def load_organization_scope_context(
     if normalized_org_id is None:
         return {}
 
-    scoped_party_id = await resolve_organization_party_id(
-        db=db,
-        organization_id=normalized_org_id,
-        organization_code=row.get("organization_code"),
-        organization_name=row.get("organization_name"),
-    )
+    scoped_party_id = normalize_optional_str(row.get("party_id"))
     if scoped_party_id is None:
-        scoped_party_id = normalized_org_id
+        scoped_party_id = build_unscoped_party_id(
+            resource_type="organization",
+            resource_id=normalized_org_id,
+        )
 
     return normalize_scope_context(
         {
@@ -412,41 +356,20 @@ async def resolve_organization_party_id(
     *,
     db: AsyncSession,
     organization_id: str,
-    organization_code: Any,
-    organization_name: Any,
 ) -> str | None:
-    from ..models.party import Party, PartyType
+    from ..models.organization import Organization
 
-    lookup_conditions = [
-        Party.id == organization_id,
-        Party.external_ref == organization_id,
-    ]
+    normalized_organization_id = normalize_optional_str(organization_id)
+    if normalized_organization_id is None:
+        return None
 
-    normalized_code = normalize_optional_str(organization_code)
-    if normalized_code is not None:
-        lookup_conditions.append(Party.code == normalized_code)
-
-    normalized_name = normalize_optional_str(organization_name)
-    if normalized_name is not None:
-        lookup_conditions.append(Party.name == normalized_name)
-
-    for condition in lookup_conditions:
-        stmt = (
-            select(Party.id.label("party_id"))
-            .where(
-                Party.party_type == PartyType.ORGANIZATION.value,
-                condition,
-            )
-            .order_by(Party.id)
-            .limit(1)
-        )
-        row = (await db.execute(stmt)).mappings().one_or_none()
-        party_id = normalize_optional_str(
-            row.get("party_id") if row is not None else None
-        )
-        if party_id is not None:
-            return party_id
-    return None
+    stmt = (
+        select(Organization.represented_party_id.label("party_id"))
+        .where(Organization.id == normalized_organization_id)
+        .limit(1)
+    )
+    row = (await db.execute(stmt)).mappings().one_or_none()
+    return normalize_optional_str(row.get("party_id") if row is not None else None)
 
 
 async def resolve_ownership_party_id(

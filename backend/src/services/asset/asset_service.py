@@ -195,7 +195,6 @@ class AssetService:
             current_user_id=current_user_id,
             party_filter=party_filter,
             logger=logger,
-            allow_legacy_default_organization_fallback=False,
         )
 
     @staticmethod
@@ -1129,12 +1128,11 @@ class AssetService:
             or getattr(current_user, "id", None)
             or "system"
         )
-        default_org_id = getattr(
-            current_user, "default_organization_id", None
-        )  # DEPRECATED legacy org scope fallback
-        organization_id = (  # DEPRECATED alias
-            str(default_org_id)
-            if default_org_id is not None and str(default_org_id).strip() != ""
+        user_organization_id = getattr(current_user, "organization_id", None)
+        organization_id = (
+            str(user_organization_id)
+            if user_organization_id is not None
+            and str(user_organization_id).strip() != ""
             else None
         )
 

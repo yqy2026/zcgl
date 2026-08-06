@@ -3,7 +3,6 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import forbidden, internal_error
@@ -14,6 +13,7 @@ from ....schemas.asset import AssetImportRequest, AssetImportResponse
 from ....services.asset.asset_service import AsyncAssetService
 from ....services.asset.import_service import AsyncAssetImportService
 from ....services.authz import authz_service
+from ....services.organization import organization_service
 
 # 创建导入路由器
 router = APIRouter()
@@ -54,22 +54,13 @@ async def _resolve_organization_party_scope_by_organization_id(
     if normalized_organization_id is None:
         return None
 
-    from ....models.party import Party, PartyType
-
-    stmt = (
-        select(Party.id.label("party_id"))
-        .where(
-            Party.party_type == PartyType.ORGANIZATION.value,
-            or_(
-                Party.id == normalized_organization_id,
-                Party.external_ref == normalized_organization_id,
-            ),
-        )
-        .order_by(Party.id)
-        .limit(1)
+    organization = await organization_service.get_organization(
+        db,
+        org_id=normalized_organization_id,
     )
-    row = (await db.execute(stmt)).mappings().one_or_none()
-    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+    if organization is None:
+        return None
+    return _normalize_optional_str(organization.represented_party_id)
 
 
 async def _build_asset_import_resource_context(
@@ -115,11 +106,8 @@ async def _build_asset_import_resource_context(
                 organization_id=organization_id,
             )
         resolved_organization_party_id = organization_scope_cache.get(organization_id)
-        resource_context["party_id"] = (
-            resolved_organization_party_id
-            if resolved_organization_party_id is not None
-            else organization_id
-        )
+        if resolved_organization_party_id is not None:
+            resource_context["party_id"] = resolved_organization_party_id
 
     if "party_id" not in resource_context:
         # Fail-closed sentinel: block scoped packages when import rows carry no resolvable scope keys.

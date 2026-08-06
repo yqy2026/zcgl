@@ -141,8 +141,8 @@ class OrganizationPermissionService:  # DEPRECATED
 
         org_ids: set[str] = set()
 
-        if user.default_organization_id:
-            org_ids.add(str(user.default_organization_id))
+        if user.organization_id:
+            org_ids.add(str(user.organization_id))
 
         roles = await self._get_user_roles(user_id)
         for role in roles:
@@ -232,7 +232,7 @@ class OrganizationPermissionService:  # DEPRECATED
         if await self.rbac_service.is_admin(user_id):
             return "admin"
 
-        target_org = user.default_organization_id
+        target_org = user.organization_id
 
         roles = await self._get_user_roles(user_id)
         if target_org:

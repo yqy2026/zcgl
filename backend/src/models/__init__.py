@@ -21,7 +21,7 @@ from .associations import (  # noqa: F401  # noqa: F401
     property_cert_assets,
 )
 from .attachment import Attachment  # noqa: F401
-from .auth import AuditLog, User, UserSession  # noqa: F401
+from .auth import AccountType, AuditLog, User, UserSession  # noqa: F401
 from .certificate_party_relation import (  # noqa: F401
     CertificatePartyRelation,
     CertificateRelationRole,
@@ -61,15 +61,19 @@ from .notification import (  # noqa: F401
 from .organization import (  # noqa: F401
     Organization,
     OrganizationHistory,
+    OrganizationPartyScopeBatchCommit,
+    OrganizationPartyScopeCommit,
+    RepresentedPartyPerspective,
 )
+from .organization_move_commit import OrganizationMoveCommit  # noqa: F401
 from .ownership import Ownership  # noqa: F401
 from .party import (  # noqa: F401
     Party,
     PartyContact,
-    PartyHierarchy,
     PartyReviewStatus,
     PartyType,
 )
+from .party_lifecycle_commit import PartyLifecycleCommit  # noqa: F401
 from .party_review_log import PartyReviewLog  # noqa: F401
 from .party_role import PartyRoleBinding, PartyRoleDef  # noqa: F401
 from .project import Project  # noqa: F401
@@ -91,7 +95,12 @@ from .security_event import (  # noqa: F401
 )
 from .system_dictionary import AssetCustomField, SystemDictionary  # noqa: F401
 from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
+from .user_organization_transfer_commit import (
+    UserOrganizationTransferCommit,  # noqa: F401
+)
 from .user_party_binding import RelationType, UserPartyBinding  # noqa: F401
+from .user_party_scope_batch_commit import UserPartyScopeBatchCommit  # noqa: F401
+from .user_party_scope_commit import UserPartyScopeCommit  # noqa: F401
 
 __all__ = [
     "Attachment",
@@ -108,7 +117,12 @@ __all__ = [
     "AssetSearchIndex",
     "Organization",
     "OrganizationHistory",
+    "OrganizationPartyScopeBatchCommit",
+    "OrganizationPartyScopeCommit",
+    "OrganizationMoveCommit",
+    "RepresentedPartyPerspective",
     "User",
+    "AccountType",
     "UserSession",
     "AuditLog",
     "Role",
@@ -152,12 +166,15 @@ __all__ = [
     "PartyType",
     "PartyReviewStatus",
     "Party",
-    "PartyHierarchy",
     "PartyContact",
+    "PartyLifecycleCommit",
     "PartyRoleDef",
     "PartyRoleBinding",
     "RelationType",
     "UserPartyBinding",
+    "UserOrganizationTransferCommit",
+    "UserPartyScopeBatchCommit",
+    "UserPartyScopeCommit",
     "ProjectAsset",
     "CertificateRelationRole",
     "CertificatePartyRelation",

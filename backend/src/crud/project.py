@@ -35,7 +35,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.default_organization_id.in_(
+            User.organization_id.in_(
                 org_ids
             )  # DEPRECATED legacy org scope fallback
         )

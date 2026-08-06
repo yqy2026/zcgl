@@ -3,7 +3,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...core.exception_handler import OperationNotAllowedError
 from ...crud.auth import UserCRUD
+from ...crud.organization import organization as organization_crud
 from ...crud.rbac import role_crud
 from ...exceptions import BusinessLogicError
 from ...models.auth import User
@@ -48,6 +50,70 @@ class AsyncUserManagementService:
             seen.add(normalized)
             normalized_role_ids.append(normalized)
         return normalized_role_ids
+
+    async def _assert_human_user_activation_organization_chain(
+        self, user: User
+    ) -> None:
+        account_type = (
+            str(getattr(user.account_type, "value", user.account_type)).strip().lower()
+        )
+        if account_type != "human":
+            return
+
+        organization_id = str(user.organization_id or "").strip()
+        if organization_id == "":
+            raise OperationNotAllowedError(
+                "An active human user requires an active organization chain",
+                reason="user_activation_organization_chain_invalid",
+            )
+
+        visited: set[str] = set()
+        current_organization_id: str | None = organization_id
+        while current_organization_id is not None:
+            if current_organization_id in visited:
+                raise OperationNotAllowedError(
+                    "An active human user requires an acyclic organization chain",
+                    reason="user_activation_organization_chain_invalid",
+                )
+            visited.add(current_organization_id)
+
+            organization = await organization_crud.get_async(
+                self.db,
+                current_organization_id,
+                use_cache=False,
+            )
+            if organization is None:
+                raise OperationNotAllowedError(
+                    "An active human user requires a complete organization chain",
+                    reason="user_activation_organization_chain_invalid",
+                )
+
+            organization_status = (
+                str(
+                    getattr(
+                        getattr(organization, "status", None),
+                        "value",
+                        getattr(organization, "status", None),
+                    )
+                )
+                .strip()
+                .lower()
+            )
+            if organization_status != "active" or bool(
+                getattr(organization, "is_deleted", False)
+            ):
+                raise OperationNotAllowedError(
+                    "An active human user requires an active organization chain",
+                    reason="user_activation_organization_chain_invalid",
+                )
+
+            parent_id = getattr(organization, "parent_id", None)
+            normalized_parent_id = (
+                str(parent_id).strip() if parent_id is not None else ""
+            )
+            current_organization_id = (
+                normalized_parent_id if normalized_parent_id != "" else None
+            )
 
     async def _assign_roles(
         self,
@@ -129,7 +195,9 @@ class AsyncUserManagementService:
         db_user.phone = user_data.phone
         db_user.full_name = user_data.full_name
         db_user.password_hash = hashed_password
-        db_user.default_organization_id = user_data.default_organization_id
+        db_user.account_type = "human"
+        db_user.organization_id = None
+        db_user.is_active = False
 
         self.password_service.add_password_to_history(db_user, hashed_password)
 
@@ -165,6 +233,8 @@ class AsyncUserManagementService:
                 raise BusinessLogicError("用户名已被其他用户使用")
 
         update_data: dict[str, Any] = user_data.model_dump(exclude_unset=True)
+        if update_data.get("is_active") is True:
+            await self._assert_human_user_activation_organization_chain(user)
         role_id = update_data.pop("role_id", None)
         role_ids = update_data.pop("role_ids", None)
         for field, value in update_data.items():
@@ -208,6 +278,7 @@ class AsyncUserManagementService:
         if not user:
             return False
 
+        await self._assert_human_user_activation_organization_chain(user)
         user.is_active = True
         user.is_locked = False
         user.locked_until = None

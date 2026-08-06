@@ -50,10 +50,10 @@ def _resolve_task_service(
 
 
 def _organization_id(current_user: User) -> str | None:
-    default_org_id = getattr(current_user, "default_organization_id", None)
-    if default_org_id is None or str(default_org_id).strip() == "":
+    organization_id = current_user.organization_id
+    if organization_id is None or str(organization_id).strip() == "":
         return None
-    return str(default_org_id)
+    return str(organization_id)
 
 
 @router.post("/import", summary="Import Excel data synchronously")

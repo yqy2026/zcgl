@@ -390,7 +390,6 @@ class AuthzPermissionChecker:
         return await trusted_resource_context.load_user_scope_context(
             db=db,
             user_id=user_id,
-            resolve_organization_party_id=self._resolve_organization_party_id,
         )
 
     async def _load_task_scope_context(
@@ -421,22 +420,6 @@ class AuthzPermissionChecker:
         return await trusted_resource_context.load_organization_scope_context(
             db=db,
             organization_id=organization_id,
-            resolve_organization_party_id=self._resolve_organization_party_id,
-        )
-
-    async def _resolve_organization_party_id(
-        self,
-        *,
-        db: AsyncSession,
-        organization_id: str,
-        organization_code: Any,
-        organization_name: Any,
-    ) -> str | None:
-        return await trusted_resource_context.resolve_organization_party_id(
-            db=db,
-            organization_id=organization_id,
-            organization_code=organization_code,
-            organization_name=organization_name,
         )
 
     async def _resolve_ownership_party_id(

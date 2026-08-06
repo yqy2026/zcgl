@@ -4,9 +4,19 @@
 
 import uuid
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, cast
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -17,10 +27,28 @@ if TYPE_CHECKING:
     from .rbac import UserRoleAssignment
 
 
+class AccountType(StrEnum):
+    HUMAN = "human"
+    SERVICE = "service"
+    SYSTEM = "system"
+
+
 class User(Base):
     """用户模型"""
 
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(
+            "account_type IN ('human', 'service', 'system')",
+            name="ck_users_account_type",
+        ),
+        CheckConstraint(
+            "(account_type = 'human' AND "
+            "(is_active = false OR organization_id IS NOT NULL)) OR "
+            "(account_type IN ('service', 'system') AND organization_id IS NULL)",
+            name="ck_users_account_organization",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         String, primary_key=True, default=lambda: str(uuid.uuid4())
@@ -71,8 +99,11 @@ class User(Base):
     )
 
     # 组织关联
-    default_organization_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("organizations.id"), comment="默认组织ID"
+    account_type: Mapped[AccountType] = mapped_column(
+        String(20), nullable=False, default=AccountType.HUMAN, comment="账号类型"
+    )
+    organization_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("organizations.id"), comment="所属组织ID"
     )
 
     # 审计信息
@@ -93,7 +124,7 @@ class User(Base):
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
 
     # 关系
-    default_organization: Mapped["Organization | None"] = relationship("Organization")
+    organization: Mapped["Organization | None"] = relationship("Organization")
     user_sessions: Mapped[list["UserSession"]] = relationship(
         "UserSession", back_populates="user", cascade="all, delete-orphan"
     )

@@ -162,6 +162,7 @@ class NotificationSchedulerService:
                 current_user_id=user_id,
                 party_filter=None,
                 logger=logger,
+                skip_invalid_scope=True,
             )
         return recipient_filters
 

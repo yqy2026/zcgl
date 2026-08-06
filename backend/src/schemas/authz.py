@@ -5,7 +5,15 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-AuthzAction = Literal["create", "read", "list", "update", "delete", "export"]
+AuthzAction = Literal[
+    "create",
+    "read",
+    "list",
+    "update",
+    "delete",
+    "export",
+    "manage_party_scope",
+]
 BindingType = Literal["owner", "manager"]
 ScopeMode = Literal["owner", "manager", "all"]
 

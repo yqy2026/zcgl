@@ -7,6 +7,31 @@ from ..models.organization import OrganizationHistory
 class OrganizationHistoryCRUD:
     """组织历史 CRUD 操作"""
 
+    async def create_async(
+        self,
+        db: AsyncSession,
+        *,
+        organization_id: str,
+        action: str,
+        field_name: str | None = None,
+        old_value: str | None = None,
+        new_value: str | None = None,
+        change_reason: str | None = None,
+        created_by: str | None = None,
+    ) -> OrganizationHistory:
+        history = OrganizationHistory(
+            organization_id=organization_id,
+            action=action,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=new_value,
+            change_reason=change_reason,
+            created_by=created_by,
+        )
+        db.add(history)
+        await db.flush()
+        return history
+
     async def get_multi_async(
         self, db: AsyncSession, org_id: str, skip: int = 0, limit: int = 100
     ) -> list[OrganizationHistory]:

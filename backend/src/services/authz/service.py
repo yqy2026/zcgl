@@ -35,7 +35,15 @@ from .resource_perspective_registry import (
 
 
 def _is_authz_action(value: str) -> TypeGuard[AuthzAction]:
-    return value in {"create", "read", "list", "update", "delete", "export"}
+    return value in {
+        "create",
+        "read",
+        "list",
+        "update",
+        "delete",
+        "export",
+        "manage_party_scope",
+    }
 
 
 class AuthzService:
@@ -43,7 +51,15 @@ class AuthzService:
 
     CAPABILITIES_VERSION = "2026-03-25.v1"
     _KNOWN_AUTHZ_ACTIONS = frozenset(
-        {"create", "read", "list", "update", "delete", "export"}
+        {
+            "create",
+            "read",
+            "list",
+            "update",
+            "delete",
+            "export",
+            "manage_party_scope",
+        }
     )
 
     @staticmethod
@@ -164,7 +180,11 @@ class AuthzService:
                 matched_rule_id=decision.matched_rule_id,
                 field_mask=decision.field_mask,
             )
-        self.decision_cache.set(decision_key, self._serialize_decision(decision))
+        self.decision_cache.set(
+            decision_key,
+            self._serialize_decision(decision),
+            ttl_seconds=self._decision_cache_ttl_seconds(subject_context),
+        )
         return decision
 
     async def get_capabilities(
@@ -295,6 +315,22 @@ class AuthzService:
         if len(subject_context.manager_party_ids) > 0:
             perspectives.append("manager")
         return perspectives
+
+    @staticmethod
+    def _decision_cache_ttl_seconds(
+        subject_context: Any,
+        *,
+        default_ttl: int = 300,
+    ) -> int:
+        next_transition = getattr(subject_context, "next_transition_at", None)
+        if next_transition is None:
+            return default_ttl
+        seconds = (
+            next_transition - datetime.now(UTC).replace(tzinfo=None)
+        ).total_seconds()
+        if seconds <= 0:
+            return 0
+        return min(default_ttl, max(1, int(seconds)))
 
     @classmethod
     def _build_perspective_token(cls, subject_context: Any) -> str:

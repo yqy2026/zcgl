@@ -32,7 +32,6 @@ def _utcnow_naive() -> datetime:
 
 
 class PartyType(StrEnum):
-    ORGANIZATION = "organization"
     LEGAL_ENTITY = "legal_entity"
     INDIVIDUAL = "individual"
 
@@ -49,7 +48,64 @@ class Party(Base):
 
     __tablename__ = "parties"
     __table_args__ = (
-        UniqueConstraint("party_type", "code", name="uq_parties_party_type_code"),
+        UniqueConstraint("code", name="uq_parties_code"),
+        CheckConstraint(
+            "party_type IN ('legal_entity', 'individual')",
+            name="ck_parties_party_type",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'inactive')",
+            name="ck_parties_status",
+        ),
+        CheckConstraint(
+            "metadata IS NULL OR jsonb_typeof(metadata) = 'object'",
+            name="ck_parties_metadata_object",
+        ),
+        CheckConstraint(
+            "(party_type = 'legal_entity' AND code ~ '^LE-[0-9]{6}$') OR "
+            "(party_type = 'individual' AND code ~ '^NP-[0-9]{6}$')",
+            name="ck_parties_code_format",
+        ),
+        CheckConstraint(
+            "(identifier_type IS NULL AND identifier_value IS NULL) OR "
+            "(identifier_type IS NOT NULL AND identifier_value IS NOT NULL)",
+            name="ck_parties_identifier_pair",
+        ),
+        CheckConstraint(
+            "identifier_type IS NULL OR "
+            "(party_type = 'legal_entity' AND identifier_type IN "
+            "('unified_social_credit_code', 'legal_registration_number', "
+            "'foreign_registration_number')) OR "
+            "(party_type = 'individual' AND identifier_type IN "
+            "('national_id', 'passport'))",
+            name="ck_parties_identifier_type",
+        ),
+        CheckConstraint(
+            "(identifier_type IS NULL AND identifier_fingerprint IS NULL) OR "
+            "(identifier_type IS NOT NULL AND party_type = 'legal_entity' AND "
+            "identifier_fingerprint IS NULL) OR "
+            "(identifier_type IS NOT NULL AND party_type = 'individual' AND "
+            "identifier_fingerprint IS NOT NULL)",
+            name="ck_parties_identifier_fingerprint",
+        ),
+        Index(
+            "uq_parties_legal_identifier",
+            "identifier_type",
+            "identifier_value",
+            unique=True,
+            postgresql_where=text(
+                "party_type = 'legal_entity' AND identifier_type IS NOT NULL"
+            ),
+        ),
+        Index(
+            "uq_parties_individual_identifier_fingerprint",
+            "identifier_type",
+            "identifier_fingerprint",
+            unique=True,
+            postgresql_where=text(
+                "party_type = 'individual' AND identifier_type IS NOT NULL"
+            ),
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -60,6 +116,15 @@ class Party(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False, comment="主体名称")
     code: Mapped[str] = mapped_column(String(100), nullable=False, comment="主体编码")
+    identifier_type: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, comment="正式标识类型"
+    )
+    identifier_value: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, comment="规范化或加密后的正式标识值"
+    )
+    identifier_fingerprint: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="自然人正式标识指纹"
+    )
     external_ref: Mapped[str | None] = mapped_column(
         String(200), comment="外部系统引用ID"
     )
@@ -98,18 +163,6 @@ class Party(Base):
     contacts: Mapped[list["PartyContact"]] = relationship(
         "PartyContact", back_populates="party", cascade="all, delete-orphan"
     )
-    parent_links: Mapped[list["PartyHierarchy"]] = relationship(
-        "PartyHierarchy",
-        foreign_keys="PartyHierarchy.parent_party_id",
-        back_populates="parent_party",
-        cascade="all, delete-orphan",
-    )
-    child_links: Mapped[list["PartyHierarchy"]] = relationship(
-        "PartyHierarchy",
-        foreign_keys="PartyHierarchy.child_party_id",
-        back_populates="child_party",
-        cascade="all, delete-orphan",
-    )
     role_bindings: Mapped[list["PartyRoleBinding"]] = relationship(
         "PartyRoleBinding", back_populates="party", cascade="all, delete-orphan"
     )
@@ -122,60 +175,6 @@ class Party(Base):
 
     def __repr__(self) -> str:
         return f"<Party(id={self.id}, code={self.code}, type={self.party_type})>"
-
-
-class PartyHierarchy(Base):
-    """Parent-child hierarchy between parties."""
-
-    __tablename__ = "party_hierarchy"
-    __table_args__ = (
-        UniqueConstraint(
-            "parent_party_id",
-            "child_party_id",
-            name="uq_party_hierarchy_parent_child",
-        ),
-        CheckConstraint(
-            "parent_party_id <> child_party_id", name="ck_party_hierarchy_no_self_ref"
-        ),
-    )
-
-    id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=lambda: str(uuid.uuid4())
-    )
-    parent_party_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("parties.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-        comment="父主体ID",
-    )
-    child_party_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("parties.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-        comment="子主体ID",
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
-        comment="更新时间",
-    )
-
-    parent_party: Mapped["Party"] = relationship(
-        "Party", foreign_keys=[parent_party_id], back_populates="parent_links"
-    )
-    child_party: Mapped["Party"] = relationship(
-        "Party", foreign_keys=[child_party_id], back_populates="child_links"
-    )
-
-    def __repr__(self) -> str:
-        return f"<PartyHierarchy(parent={self.parent_party_id}, child={self.child_party_id})>"
 
 
 class PartyContact(Base):
@@ -232,6 +231,5 @@ __all__ = [
     "PartyType",
     "PartyReviewStatus",
     "Party",
-    "PartyHierarchy",
     "PartyContact",
 ]

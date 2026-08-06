@@ -3,7 +3,7 @@
 from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import delete, literal, or_, select, text, union_all
+from sqlalchemy import literal, or_, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..constants.business_constants import DataStatusValues
@@ -14,7 +14,7 @@ from ..models.contract_group import (
     ContractLifecycleStatus,
     GroupRelationType,
 )
-from ..models.party import Party, PartyContact, PartyHierarchy, PartyType
+from ..models.party import Party, PartyContact, PartyType
 from ..models.project import Project, ProjectStatus
 from ..models.user_party_binding import UserPartyBinding
 from .asset_support import SensitiveDataHandler
@@ -65,6 +65,117 @@ class CRUDParty:
             stmt = stmt.where(Party.deleted_at.is_(None))
         return (await db.execute(stmt)).scalars().first()
 
+    async def get_party_for_update(
+        self, db: AsyncSession, *, party_id: str
+    ) -> Party | None:
+        """Read one Party with a row lock for lifecycle changes."""
+        stmt = (
+            select(Party)
+            .where(
+                Party.id == party_id,
+                Party.deleted_at.is_(None),
+            )
+            .with_for_update()
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_lifecycle_reference_snapshot(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+        now: datetime,
+    ) -> dict[str, Any]:
+        """Return stable IDs and binding versions used by a lifecycle preview."""
+        asset_ids = [
+            str(value)
+            for value in (
+                await db.execute(
+                    select(Asset.id)
+                    .where(
+                        or_(
+                            Asset.owner_party_id == party_id,
+                            Asset.manager_party_id == party_id,
+                        )
+                    )
+                    .order_by(Asset.id)
+                )
+            ).scalars().all()
+        ]
+        project_ids = [
+            str(value)
+            for value in (
+                await db.execute(
+                    select(Project.id)
+                    .where(Project.manager_party_id == party_id)
+                    .order_by(Project.id)
+                )
+            ).scalars().all()
+        ]
+        contract_group_ids = [
+            str(value)
+            for value in (
+                await db.execute(
+                    select(ContractGroup.contract_group_id)
+                    .where(
+                        or_(
+                            ContractGroup.owner_party_id == party_id,
+                            ContractGroup.operator_party_id == party_id,
+                        )
+                    )
+                    .order_by(ContractGroup.contract_group_id)
+                )
+            ).scalars().all()
+        ]
+        contract_ids = [
+            str(value)
+            for value in (
+                await db.execute(
+                    select(Contract.contract_id)
+                    .where(
+                        or_(
+                            Contract.lessor_party_id == party_id,
+                            Contract.lessee_party_id == party_id,
+                        )
+                    )
+                    .order_by(Contract.contract_id)
+                )
+            ).scalars().all()
+        ]
+        binding_rows = list(
+            (
+                await db.execute(
+                    select(UserPartyBinding)
+                    .where(
+                        UserPartyBinding.party_id == party_id,
+                        or_(
+                            UserPartyBinding.valid_to.is_(None),
+                            UserPartyBinding.valid_to >= now,
+                        ),
+                    )
+                    .order_by(UserPartyBinding.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return {
+            "asset_ids": tuple(asset_ids),
+            "project_ids": tuple(project_ids),
+            "contract_group_ids": tuple(contract_group_ids),
+            "contract_ids": tuple(contract_ids),
+            "bindings": tuple(
+                {
+                    "id": str(binding.id),
+                    "user_id": str(binding.user_id),
+                    "relation_type": binding.relation_type,
+                    "valid_from": binding.valid_from,
+                    "valid_to": binding.valid_to,
+                    "updated_at": binding.updated_at,
+                }
+                for binding in binding_rows
+            ),
+        }
     async def get_party_by_type_and_code(
         self,
         db: AsyncSession,
@@ -92,250 +203,27 @@ class CRUDParty:
         )
         return (await db.execute(stmt)).scalars().first()
 
-    async def resolve_organization_party_id(
+    async def get_represented_party_id_for_organization(
         self,
         db: AsyncSession,
         *,
         organization_id: str,
-        organization_code: str | None = None,
-        organization_name: str | None = None,
     ) -> str | None:
         normalized_organization_id = self._normalize_identifier(organization_id)
         if normalized_organization_id is None:
             return None
 
-        for condition in (
-            Party.id == normalized_organization_id,
-            Party.external_ref == normalized_organization_id,
-        ):
-            stmt = (
-                select(Party.id.label("party_id"))
-                .where(
-                    Party.party_type == PartyType.ORGANIZATION.value,
-                    condition,
-                )
-                .order_by(Party.id)
-                .limit(1)
-            )
-            row = (await db.execute(stmt)).mappings().one_or_none()
-            resolved_party_id = self._normalize_identifier(
-                row.get("party_id") if row is not None else None
-            )
-            if resolved_party_id is not None:
-                return resolved_party_id
-
-        normalized_code = self._normalize_identifier(organization_code)
-        normalized_name = self._normalize_identifier(organization_name)
-        if normalized_code is None or normalized_name is None:
-            from ..models.organization import Organization
-
-            org_stmt = (
-                select(
-                    Organization.code.label("organization_code"),
-                    Organization.name.label("organization_name"),
-                )
-                .where(Organization.id == normalized_organization_id)
-                .limit(1)
-            )
-            org_row = (await db.execute(org_stmt)).mappings().one_or_none()
-            if org_row is not None:
-                if normalized_code is None:
-                    normalized_code = self._normalize_identifier(
-                        org_row.get("organization_code")
-                    )
-                if normalized_name is None:
-                    normalized_name = self._normalize_identifier(
-                        org_row.get("organization_name")
-                    )
-
-        code_or_name_conditions = []
-        if normalized_code is not None:
-            code_or_name_conditions.append(Party.code == normalized_code)
-        if normalized_name is not None:
-            code_or_name_conditions.append(Party.name == normalized_name)
-
-        for condition in code_or_name_conditions:
-            stmt = (
-                select(Party.id.label("party_id"))
-                .where(
-                    Party.party_type == PartyType.ORGANIZATION.value,
-                    condition,
-                )
-                .order_by(Party.id)
-                .limit(1)
-            )
-            row = (await db.execute(stmt)).mappings().one_or_none()
-            resolved_party_id = self._normalize_identifier(
-                row.get("party_id") if row is not None else None
-            )
-            if resolved_party_id is not None:
-                return resolved_party_id
-
-        return None
-
-    async def resolve_legacy_organization_scope_ids_by_party_ids(
-        self,
-        db: AsyncSession,
-        *,
-        party_ids: list[str],
-    ) -> dict[str, list[str]]:
-        normalized_party_ids = [
-            normalized
-            for raw_party_id in party_ids
-            if (normalized := self._normalize_identifier(raw_party_id)) is not None
-        ]
-        if len(normalized_party_ids) == 0:
-            return {}
-
-        ordered_unique_party_ids = list(dict.fromkeys(normalized_party_ids))
-        normalized_party_id_set = set(ordered_unique_party_ids)
+        from ..models.organization import Organization
 
         stmt = (
-            select(
-                Party.id.label("party_id"),
-                Party.external_ref.label("external_ref"),
-                Party.code.label("party_code"),
-                Party.name.label("party_name"),
-            )
-            .where(
-                Party.party_type == PartyType.ORGANIZATION.value,
-                or_(
-                    Party.id.in_(ordered_unique_party_ids),
-                    Party.external_ref.in_(ordered_unique_party_ids),
-                ),
-            )
-            .order_by(Party.id)
+            select(Organization.represented_party_id.label("party_id"))
+            .where(Organization.id == normalized_organization_id)
+            .limit(1)
         )
-        rows = (await db.execute(stmt)).mappings().all()
-
-        pending_party_ids: set[str] = set()
-        pending_party_codes: set[str] = set()
-        pending_party_names: set[str] = set()
-        for row in rows:
-            if self._normalize_identifier(row.get("external_ref")) is not None:
-                continue
-            party_id = self._normalize_identifier(row.get("party_id"))
-            party_code = self._normalize_identifier(row.get("party_code"))
-            party_name = self._normalize_identifier(row.get("party_name"))
-            if party_id is not None:
-                pending_party_ids.add(party_id)
-            if party_code is not None:
-                pending_party_codes.add(party_code)
-            if party_name is not None:
-                pending_party_names.add(party_name)
-
-        resolved_org_ids_by_party_id: dict[str, set[str]] = {}
-        resolved_org_ids_by_party_code: dict[str, set[str]] = {}
-        resolved_org_ids_by_party_name: dict[str, set[str]] = {}
-        if (
-            len(pending_party_ids) > 0
-            or len(pending_party_codes) > 0
-            or len(pending_party_names) > 0
-        ):
-            from ..models.organization import Organization
-
-            org_lookup_conditions = []
-            if len(pending_party_ids) > 0:
-                org_lookup_conditions.append(
-                    Organization.id.in_(sorted(pending_party_ids))
-                )
-            if len(pending_party_codes) > 0:
-                org_lookup_conditions.append(
-                    Organization.code.in_(sorted(pending_party_codes))
-                )
-            if len(pending_party_names) > 0:
-                org_lookup_conditions.append(
-                    Organization.name.in_(sorted(pending_party_names))
-                )
-
-            if len(org_lookup_conditions) > 0:
-                org_stmt = (
-                    select(
-                        Organization.id.label("organization_id"),
-                        Organization.code.label("organization_code"),
-                        Organization.name.label("organization_name"),
-                    )
-                    .where(or_(*org_lookup_conditions))
-                    .order_by(Organization.id)
-                )
-                org_rows = (await db.execute(org_stmt)).mappings().all()
-                for org_row in org_rows:
-                    organization_id = self._normalize_identifier(
-                        org_row.get("organization_id")
-                    )
-                    organization_code = self._normalize_identifier(
-                        org_row.get("organization_code")
-                    )
-                    organization_name = self._normalize_identifier(
-                        org_row.get("organization_name")
-                    )
-                    if organization_id is None:
-                        continue
-                    if organization_id in pending_party_ids:
-                        resolved_org_ids_by_party_id.setdefault(
-                            organization_id,
-                            set(),
-                        ).add(organization_id)
-                    if (
-                        organization_code is not None
-                        and organization_code in pending_party_codes
-                    ):
-                        resolved_org_ids_by_party_code.setdefault(
-                            organization_code,
-                            set(),
-                        ).add(organization_id)
-                    if (
-                        organization_name is not None
-                        and organization_name in pending_party_names
-                    ):
-                        resolved_org_ids_by_party_name.setdefault(
-                            organization_name,
-                            set(),
-                        ).add(organization_id)
-
-        resolved_scope_ids: dict[str, set[str]] = {}
-        for row in rows:
-            matched_party_id = self._normalize_identifier(row.get("party_id"))
-            matched_external_ref = self._normalize_identifier(row.get("external_ref"))
-            matched_party_code = self._normalize_identifier(row.get("party_code"))
-            matched_party_name = self._normalize_identifier(row.get("party_name"))
-            matched_input_identifiers = {
-                identifier
-                for identifier in (matched_party_id, matched_external_ref)
-                if identifier is not None and identifier in normalized_party_id_set
-            }
-            if len(matched_input_identifiers) == 0:
-                continue
-
-            scoped_legacy_org_ids: set[str] = set()
-            if matched_external_ref is not None:
-                scoped_legacy_org_ids.add(matched_external_ref)
-            if matched_party_id is not None:
-                scoped_legacy_org_ids.update(
-                    resolved_org_ids_by_party_id.get(matched_party_id, set())
-                )
-            if matched_party_code is not None:
-                scoped_legacy_org_ids.update(
-                    resolved_org_ids_by_party_code.get(matched_party_code, set())
-                )
-            if matched_party_name is not None:
-                scoped_legacy_org_ids.update(
-                    resolved_org_ids_by_party_name.get(matched_party_name, set())
-                )
-
-            if len(scoped_legacy_org_ids) == 0:
-                continue
-
-            for matched_input_id in matched_input_identifiers:
-                resolved_scope_ids.setdefault(matched_input_id, set()).update(
-                    scoped_legacy_org_ids
-                )
-
-        return {
-            input_party_id: sorted(scope_ids)
-            for input_party_id, scope_ids in resolved_scope_ids.items()
-            if len(scope_ids) > 0
-        }
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        return self._normalize_identifier(
+            row.get("party_id") if row is not None else None
+        )
 
     async def resolve_legal_entity_party_id(
         self,
@@ -532,76 +420,6 @@ class CRUDParty:
             await db.flush()
         await db.refresh(db_obj)
 
-    async def add_hierarchy(
-        self,
-        db: AsyncSession,
-        *,
-        parent_party_id: str,
-        child_party_id: str,
-        commit: bool = True,
-    ) -> PartyHierarchy:
-        relation = PartyHierarchy()
-        relation.parent_party_id = parent_party_id
-        relation.child_party_id = child_party_id
-        db.add(relation)
-        if commit:
-            await db.commit()
-        else:
-            await db.flush()
-        await db.refresh(relation)
-        return relation
-
-    async def remove_hierarchy(
-        self,
-        db: AsyncSession,
-        *,
-        parent_party_id: str,
-        child_party_id: str,
-        commit: bool = True,
-    ) -> int:
-        stmt = delete(PartyHierarchy).where(
-            PartyHierarchy.parent_party_id == parent_party_id,
-            PartyHierarchy.child_party_id == child_party_id,
-        )
-        result = await db.execute(stmt)
-        if commit:
-            await db.commit()
-        else:
-            await db.flush()
-        rowcount = getattr(result, "rowcount", 0)
-        return int(rowcount or 0)
-
-    async def get_descendants(
-        self,
-        db: AsyncSession,
-        *,
-        party_id: str,
-        include_self: bool = False,
-    ) -> list[str]:
-        result = await db.execute(
-            text(
-                """
-                WITH RECURSIVE descendants AS (
-                    SELECT ph.child_party_id AS party_id
-                    FROM party_hierarchy ph
-                    WHERE ph.parent_party_id = :party_id
-
-                    UNION ALL
-
-                    SELECT ph2.child_party_id AS party_id
-                    FROM party_hierarchy ph2
-                    JOIN descendants d ON ph2.parent_party_id = d.party_id
-                )
-                SELECT party_id FROM descendants
-                """
-            ),
-            {"party_id": party_id},
-        )
-        descendants = [str(row[0]) for row in result.fetchall()]
-        if include_self:
-            return [party_id, *descendants]
-        return descendants
-
     async def create_contact(
         self,
         db: AsyncSession,
@@ -714,6 +532,41 @@ class CRUDParty:
         )
         return (await db.execute(stmt)).scalars().first()
 
+    async def get_user_binding_for_update(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        binding_id: str,
+    ) -> UserPartyBinding | None:
+        """Read one binding with a row lock for sensitive scope changes."""
+        stmt = (
+            select(UserPartyBinding)
+            .where(
+                UserPartyBinding.user_id == user_id,
+                UserPartyBinding.id == binding_id,
+            )
+            .with_for_update()
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_user_bindings_for_update(
+        self,
+        db: AsyncSession,
+        *,
+        binding_ids: tuple[str, ...],
+    ) -> list[UserPartyBinding]:
+        """Read multiple bindings with deterministic row locks for a batch."""
+        if not binding_ids:
+            return []
+        stmt = (
+            select(UserPartyBinding)
+            .where(UserPartyBinding.id.in_(binding_ids))
+            .order_by(UserPartyBinding.id)
+            .with_for_update()
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
     async def update_user_party_binding(
         self,
         db: AsyncSession,
@@ -731,35 +584,6 @@ class CRUDParty:
             await db.flush()
         await db.refresh(db_obj)
         return db_obj
-
-    async def clear_primary_bindings_for_relation(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        relation_type: str,
-        exclude_binding_id: str | None = None,
-        commit: bool = True,
-    ) -> int:
-        stmt = select(UserPartyBinding).where(
-            UserPartyBinding.user_id == user_id,
-            UserPartyBinding.relation_type == relation_type,
-            UserPartyBinding.is_primary.is_(True),
-        )
-        if exclude_binding_id is not None:
-            stmt = stmt.where(UserPartyBinding.id != exclude_binding_id)
-
-        bindings = list((await db.execute(stmt)).scalars().all())
-        for binding in bindings:
-            binding.is_primary = False
-            binding.updated_at = _utcnow_naive()
-
-        if commit:
-            await db.commit()
-        else:
-            await db.flush()
-
-        return len(bindings)
 
     async def get_user_bindings(
         self,

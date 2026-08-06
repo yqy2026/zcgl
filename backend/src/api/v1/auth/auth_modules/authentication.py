@@ -37,7 +37,9 @@ from .....schemas.auth import (
     UserResponse,
 )
 from .....schemas.authz import CapabilitiesResponse
+from .....schemas.user_party_scope import UserPartyScopeIssue, UserPartyScopeView
 from .....security.cookie_manager import cookie_manager
+from .....security.permissions import require_any_role
 from .....services.authz import authz_service
 from .....services.core.audit_service import AuditService
 from .....services.core.authentication_service import AsyncAuthenticationService
@@ -45,6 +47,7 @@ from .....services.core.password_service import PasswordService
 from .....services.core.session_service import AsyncSessionService
 from .....services.core.user_management_service import AsyncUserManagementService
 from .....services.factory import ServiceFactory, get_service_factory
+from .....services.party_scope_resolver import party_scope_resolver
 from .....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["认证管理"])
@@ -306,9 +309,8 @@ async def login(
                 if hasattr(getattr(user, "is_locked", False), "__int__")
                 else getattr(user, "is_locked", False),
                 "last_login_at": getattr(user, "last_login_at", None),
-                "default_organization_id": getattr(
-                    user, "default_organization_id", None
-                ),
+                "account_type": user.account_type,
+                "organization_id": user.organization_id,
                 "created_at": getattr(user, "created_at", None) or datetime.now(UTC),
                 "updated_at": getattr(user, "updated_at", None) or datetime.now(UTC),
             },
@@ -540,7 +542,8 @@ async def get_current_user_info(
         "roles": role_summary["roles"],
         "role_ids": role_summary["role_ids"],
         "is_admin": role_summary["is_admin"],
-        "default_organization_id": current_user.default_organization_id,
+        "account_type": current_user.account_type,
+        "organization_id": current_user.organization_id,
         "timestamp": datetime.now(UTC).isoformat(),
         "session_status": "active",
     }
@@ -562,3 +565,76 @@ async def get_current_user_capabilities(
         raise
     except Exception as exc:
         raise internal_error("获取能力清单失败", original_error=exc) from exc
+
+
+@router.get(
+    "/me/party-scope",
+    response_model=UserPartyScopeView,
+    summary="查看本人有效主体范围",
+)
+async def get_my_party_scope(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> UserPartyScopeView:
+    """Return the current user's effective Party scope with self-safe issues."""
+    scope = await party_scope_resolver.resolve(
+        db,
+        user_id=str(current_user.id),
+    )
+    return _scope_view(
+        scope,
+        include_node_refs=False,
+    )
+
+
+@router.get(
+    "/users/{user_id}/party-scope",
+    response_model=UserPartyScopeView,
+    summary="查看用户有效主体范围",
+)
+async def get_user_party_scope(
+    user_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(
+        require_any_role(["admin", "system_admin", "perm_admin"])
+    ),
+) -> UserPartyScopeView:
+    """Return one user's effective Party scope for authorized administrators."""
+    _ = current_user
+    scope = await party_scope_resolver.resolve(
+        db,
+        user_id=user_id,
+    )
+    return _scope_view(
+        scope,
+        include_node_refs=True,
+    )
+
+
+def _scope_view(
+    scope: Any,
+    *,
+    include_node_refs: bool,
+) -> UserPartyScopeView:
+    issues: list[UserPartyScopeIssue] = []
+    for issue in getattr(scope, "issues", []):
+        issues.append(
+            UserPartyScopeIssue(
+                code=issue.code,
+                node_type=issue.node_type,
+                safe_label=issue.safe_label,
+                node_ref=issue.node_ref if include_node_refs else None,
+            )
+        )
+    return UserPartyScopeView(
+        user_id=scope.user_id,
+        source=scope.source,
+        scope_mode=scope.scope_mode,
+        owner_party_ids=list(scope.owner_party_ids),
+        manager_party_ids=list(scope.manager_party_ids),
+        organization_id=scope.organization_id,
+        source_organization_id=scope.source_organization_id,
+        next_transition_at=scope.next_transition_at,
+        error_code=scope.error_code,
+        issues=issues,
+    )

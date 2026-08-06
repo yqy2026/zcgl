@@ -51,6 +51,11 @@ class CacheBackend(ABC):
         pass
 
     @abstractmethod
+    def consume(self, key: str) -> Any | None:
+        """原子获取并删除缓存值"""
+        pass
+
+    @abstractmethod
     def exists(self, key: str) -> bool:
         """检查缓存是否存在"""
         pass
@@ -133,6 +138,19 @@ class MemoryCache(CacheBackend):
             del self._cache[key]
             return True
         return False
+
+    def consume(self, key: str) -> Any | None:
+        """原子获取并删除缓存值"""
+        self._cleanup_expired()
+        item = self._cache.pop(key, None)
+        if item is None:
+            self._misses += 1
+            return None
+        if item["expires_at"] <= datetime.now(UTC):
+            self._misses += 1
+            return None
+        self._hits += 1
+        return item["value"]
 
     def exists(self, key: str) -> bool:
         """检查缓存是否存在"""
@@ -238,6 +256,19 @@ class RedisCache(CacheBackend):
         except Exception as e:
             logger.error(f"Redis缓存删除失败: {e}")
             return False
+
+    def consume(self, key: str) -> Any | None:
+        """使用 Redis GETDEL 原子获取并删除缓存值"""
+        try:
+            value = self.client.getdel(key)
+            if value is None:
+                self._misses += 1
+            else:
+                self._hits += 1
+            return value
+        except Exception as e:
+            logger.error(f"Redis缓存原子消费失败: {e}")
+            return None
 
     def exists(self, key: str) -> bool:
         """检查缓存是否存在"""
@@ -440,6 +471,16 @@ class CacheManager:
         """
         cache_key = self._make_key(key, namespace)
         return self.backend.delete(cache_key)
+
+    def consume(
+        self, key: str, namespace: str | None = None, default: Any = None
+    ) -> Any:
+        """原子获取并删除缓存值，适用于一次性令牌。"""
+        cache_key = self._make_key(key, namespace)
+        value = self.backend.consume(cache_key)
+        if value is None:
+            return default
+        return self._deserialize_value(value)
 
     def exists(self, key: str, namespace: str | None = None) -> bool:
         """
