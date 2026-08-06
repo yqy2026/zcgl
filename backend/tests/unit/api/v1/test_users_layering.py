@@ -242,19 +242,20 @@ async def test_get_user_authz_should_allow_self_without_user_policy() -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_user_authz_context_should_include_party_scope_fields() -> None:
+async def test_create_user_authz_context_ignores_scope_managed_payload_fields() -> None:
     from src.api.v1.auth.auth_modules.users import _resolve_user_create_resource_context
 
     request = MagicMock()
-    request.json = AsyncMock(return_value={"default_organization_id": "org-001"})
+    request.json = AsyncMock(
+        return_value={"organization_id": "org-001", "account_type": "system"}
+    )
 
     result = await _resolve_user_create_resource_context(request)
 
     assert result == {
-        "organization_id": "org-001",
-        "party_id": "org-001",
-        "owner_party_id": "org-001",
-        "manager_party_id": "org-001",
+        "party_id": "__unscoped__:user:create",
+        "owner_party_id": "__unscoped__:user:create",
+        "manager_party_id": "__unscoped__:user:create",
     }
 
 

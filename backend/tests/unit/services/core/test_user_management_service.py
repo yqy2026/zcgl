@@ -12,10 +12,12 @@ Tests cover:
 """
 
 from datetime import datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import OperationNotAllowedError
 from src.exceptions import BusinessLogicError
 from src.models.auth import User
 from src.schemas.auth import UserCreate, UserUpdate
@@ -84,7 +86,7 @@ def user_management_service(mock_db, mock_password_service, mock_session_service
 
 @pytest.fixture
 def sample_user():
-    return User(
+    user = User(
         id="user_123",
         username="testuser",
         email="test@example.com",
@@ -94,8 +96,28 @@ def sample_user():
         is_active=True,
         is_locked=False,
         failed_login_attempts=0,
-        default_organization_id="org_123",
     )
+    user.account_type = "human"
+    user.organization_id = "org_123"
+    return user
+
+
+@pytest.fixture(autouse=True)
+def mock_active_organization_lookup():
+    with patch(
+        "src.services.core.user_management_service.organization_crud",
+        create=True,
+    ) as organization_lookup_crud:
+        lookup = AsyncMock(
+            return_value=SimpleNamespace(
+                id="org_123",
+                parent_id=None,
+                status="active",
+                is_deleted=False,
+            )
+        )
+        organization_lookup_crud.get_async = lookup
+        yield lookup
 
 
 @pytest.fixture
@@ -107,7 +129,6 @@ def sample_user_create():
         full_name="New User",
         password="SecurePass123!",
         role_id="role-user-id",
-        default_organization_id="org_456",
     )
 
 
@@ -124,7 +145,9 @@ def sample_user_update():
 
 
 class TestUserLookupMethods:
-    async def test_get_user_by_id_found(self, user_management_service, mock_db, sample_user):
+    async def test_get_user_by_id_found(
+        self, user_management_service, mock_db, sample_user
+    ):
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
 
         result = await user_management_service.get_user_by_id("user_123")
@@ -148,7 +171,9 @@ class TestUserLookupMethods:
 
         assert result == sample_user
 
-    async def test_get_user_by_username_not_found(self, user_management_service, mock_db):
+    async def test_get_user_by_username_not_found(
+        self, user_management_service, mock_db
+    ):
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
 
         result = await user_management_service.get_user_by_username("nonexistent")
@@ -273,10 +298,9 @@ class TestUserCreation:
         assert added_user.email == sample_user_create.email
         assert added_user.phone == sample_user_create.phone
         assert added_user.full_name == sample_user_create.full_name
-        assert (
-            added_user.default_organization_id
-            == sample_user_create.default_organization_id
-        )
+        assert added_user.account_type == "human"
+        assert added_user.organization_id is None
+        assert added_user.is_active is False
 
     async def test_create_user_without_optional_fields(
         self, user_management_service, mock_db
@@ -295,7 +319,9 @@ class TestUserCreation:
         mock_db.add.assert_called_once()
         added_user = mock_db.add.call_args[0][0]
         assert added_user.phone == user_data.phone
-        assert added_user.default_organization_id is None
+        assert added_user.account_type == "human"
+        assert added_user.organization_id is None
+        assert added_user.is_active is False
 
 
 # ===================== User Update Tests =====================
@@ -319,6 +345,26 @@ class TestUserUpdate:
         assert result == sample_user
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once()
+
+    async def test_update_user_rejects_human_activation_without_an_organization(
+        self, user_management_service, mock_db, sample_user
+    ):
+        sample_user.is_active = False
+        sample_user.organization_id = None
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
+
+        with pytest.raises(OperationNotAllowedError) as exc_info:
+            await user_management_service.update_user(
+                "user_123",
+                UserUpdate(is_active=True),
+            )
+
+        assert (
+            exc_info.value.details["reason"]
+            == "user_activation_organization_chain_invalid"
+        )
+        assert sample_user.is_active is False
+        mock_db.commit.assert_not_awaited()
 
     async def test_update_user_not_found(
         self, user_management_service, mock_db, sample_user_update
@@ -458,6 +504,57 @@ class TestUserActivation:
         assert sample_user.locked_until is None
         mock_db.commit.assert_awaited_once()
 
+    async def test_activate_user_rejects_human_without_an_organization(
+        self, user_management_service, mock_db, sample_user
+    ):
+        sample_user.is_active = False
+        sample_user.organization_id = None
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
+
+        with pytest.raises(OperationNotAllowedError) as exc_info:
+            await user_management_service.activate_user("user_123")
+
+        assert (
+            exc_info.value.details["reason"]
+            == "user_activation_organization_chain_invalid"
+        )
+        assert sample_user.is_active is False
+        mock_db.commit.assert_not_awaited()
+
+    async def test_activate_user_rejects_inactive_organization_ancestor(
+        self,
+        user_management_service,
+        mock_db,
+        sample_user,
+        mock_active_organization_lookup,
+    ):
+        sample_user.is_active = False
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
+        mock_active_organization_lookup.side_effect = [
+            SimpleNamespace(
+                id="org_123",
+                parent_id="org-root",
+                status="active",
+                is_deleted=False,
+            ),
+            SimpleNamespace(
+                id="org-root",
+                parent_id=None,
+                status="inactive",
+                is_deleted=False,
+            ),
+        ]
+
+        with pytest.raises(OperationNotAllowedError) as exc_info:
+            await user_management_service.activate_user("user_123")
+
+        assert (
+            exc_info.value.details["reason"]
+            == "user_activation_organization_chain_invalid"
+        )
+        assert sample_user.is_active is False
+        mock_db.commit.assert_not_awaited()
+
     async def test_activate_user_not_found(self, user_management_service, mock_db):
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
 
@@ -519,7 +616,9 @@ class TestUserUnlock:
 
 
 class TestUserLock:
-    async def test_lock_user_success(self, user_management_service, mock_db, sample_user):
+    async def test_lock_user_success(
+        self, user_management_service, mock_db, sample_user
+    ):
         sample_user.is_locked = False
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
 
@@ -566,7 +665,9 @@ class TestAdminResetPassword:
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once_with(sample_user)
 
-    async def test_admin_reset_password_not_found(self, user_management_service, mock_db):
+    async def test_admin_reset_password_not_found(
+        self, user_management_service, mock_db
+    ):
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
 
         result = await user_management_service.admin_reset_password(
@@ -693,9 +794,7 @@ class TestEdgeCases:
 
         assert "Database error" in str(exc_info.value)
 
-    async def test_create_user_with_admin_role(
-        self, user_management_service, mock_db
-    ):
+    async def test_create_user_with_admin_role(self, user_management_service, mock_db):
         user_data = UserCreate(
             username="admin",
             email="admin@example.com",
@@ -710,7 +809,9 @@ class TestEdgeCases:
 
         mock_db.add.assert_called_once()
         user_management_service.rbac_service.assign_role_to_user.assert_awaited()
-        assignment_call = user_management_service.rbac_service.assign_role_to_user.call_args
+        assignment_call = (
+            user_management_service.rbac_service.assign_role_to_user.call_args
+        )
         assignment_data = assignment_call.kwargs.get("assignment_data")
         assert assignment_data is not None
         assert assignment_data.role_id == "role-admin-id"

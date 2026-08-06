@@ -47,6 +47,20 @@ def clear_organization_stats_cache():
 
 class TestOrganizationService:
     @pytest.mark.asyncio
+    async def test_get_organization_does_not_cache_session_bound_orm(
+        self, service, mock_db
+    ):
+        organization = MagicMock(spec=Organization)
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=organization),
+        ) as mock_get:
+            result = await service.get_organization(mock_db, org_id="org-1")
+
+        assert result is organization
+        mock_get.assert_awaited_once_with(mock_db, id="org-1", use_cache=False)
+
+    @pytest.mark.asyncio
     async def test_get_statistics_group_by_enum_fields(self, service, mock_db):
         status_result = MagicMock()
         status_result.all.return_value = [
@@ -131,24 +145,17 @@ class TestOrganizationService:
             assert mock_db.commit.await_count >= 1
 
     @pytest.mark.asyncio
-    async def test_move_organization_cycle(self, service, mock_db):
-        # Move org to under itself or its child
-        db_obj = Organization(id=TEST_ORG_ID, name="Moving Org")
-        obj_in = OrganizationUpdate(parent_id="child_id")
+    def test_update_schema_rejects_sensitive_party_scope_fields(self):
+        with pytest.raises(ValueError, match="extra_forbidden"):
+            OrganizationUpdate(
+                represented_party_id="party-1",
+                represented_party_perspective="owner",
+            )
 
-        with patch(
-            "src.services.organization.service.organization_crud.get_async",
-            new=AsyncMock(return_value=db_obj),
-        ):
-            # Mock _would_create_cycle to return True
-            service._would_create_cycle = AsyncMock(return_value=True)
-
-            with pytest.raises(OperationNotAllowedError) as excinfo:
-                await service.update_organization(
-                    mock_db, org_id=TEST_ORG_ID, obj_in=obj_in
-                )
-
-            assert "不能将组织移动到其子组织下" in str(excinfo.value)
+    def test_move_organization_cycle_requires_dedicated_move_flow(self):
+        """普通更新不接受父级字段，环校验由专用移动服务负责。"""
+        with pytest.raises(ValueError, match="Extra inputs are not permitted"):
+            OrganizationUpdate(parent_id="child_id")
 
     @pytest.mark.asyncio
     async def test_delete_organization_with_children(self, service, mock_db):

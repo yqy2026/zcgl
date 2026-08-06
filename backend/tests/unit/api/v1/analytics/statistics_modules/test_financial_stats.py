@@ -50,7 +50,6 @@ def client(mock_db, mock_user):
                 return_value=SimpleNamespace(
                     owner_party_ids=["owner-party-1"],
                     manager_party_ids=[],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),

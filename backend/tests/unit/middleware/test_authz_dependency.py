@@ -13,6 +13,7 @@ from starlette.requests import Request
 from src.middleware.auth import require_authz
 from src.services.authz.context_builder import SubjectContext
 from src.services.authz.engine import AuthzDecision
+from src.services.party_scope_resolver import EffectivePartyScope
 
 pytestmark = pytest.mark.asyncio
 
@@ -203,16 +204,9 @@ async def test_load_organization_scope_context_includes_party_scope_fields() -> 
     )
     db = AsyncMock(spec=AsyncSession)
     db.execute = AsyncMock(
-        side_effect=[
-            _mapping_result(
-                {
-                    "organization_id": "org-1",
-                    "organization_code": "ORG-001",
-                    "organization_name": "Org One",
-                }
-            ),
-            _mapping_result({"party_id": "party-1"}),
-        ]
+        return_value=_mapping_result(
+            {"organization_id": "org-1", "party_id": "party-1"}
+        )
     )
 
     context = await checker._load_organization_scope_context(
@@ -227,7 +221,7 @@ async def test_load_organization_scope_context_includes_party_scope_fields() -> 
 
 
 @pytest.mark.asyncio
-async def test_load_organization_scope_context_falls_back_to_org_id_when_party_missing() -> None:
+async def test_load_organization_scope_context_fails_closed_when_party_missing() -> None:
     checker = require_authz(
         action="read",
         resource_type="organization",
@@ -235,30 +229,21 @@ async def test_load_organization_scope_context_falls_back_to_org_id_when_party_m
     )
     db = AsyncMock(spec=AsyncSession)
     db.execute = AsyncMock(
-        side_effect=[
-            _mapping_result(
-                {
-                    "organization_id": "org-legacy",
-                    "organization_code": "ORG-LEGACY",
-                    "organization_name": "Legacy Org",
-                }
-            ),
-            _mapping_result(None),
-            _mapping_result(None),
-            _mapping_result(None),
-            _mapping_result(None),
-        ]
+        return_value=_mapping_result(
+            {"organization_id": "org-1", "party_id": None}
+        )
     )
 
     context = await checker._load_organization_scope_context(
         db=db,
-        organization_id="org-legacy",
+        organization_id="org-1",
     )
 
-    assert context["organization_id"] == "org-legacy"
-    assert context["party_id"] == "org-legacy"
-    assert context["owner_party_id"] == "org-legacy"
-    assert context["manager_party_id"] == "org-legacy"
+    sentinel = "__unscoped__:organization:org-1"
+    assert context["organization_id"] == "org-1"
+    assert context["party_id"] == sentinel
+    assert context["owner_party_id"] == sentinel
+    assert context["manager_party_id"] == sentinel
 
 
 @pytest.mark.asyncio
@@ -524,22 +509,22 @@ async def test_load_user_scope_context_uses_user_binding_party_id_when_present()
         resource_id="{user_id}",
     )
     db = AsyncMock(spec=AsyncSession)
-    db.execute = AsyncMock(
-        side_effect=[
-            _mapping_result(
-                {
-                    "user_id": "user-1",
-                    "default_organization_id": "org-1",
-                }
-            ),
-            _mapping_result({"party_id": "party-1"}),
-        ]
+    resolved_scope = EffectivePartyScope(
+        user_id="user-1",
+        source="explicit",
+        scope_mode="owner",
+        organization_id="org-1",
+        owner_party_ids=["party-1"],
     )
 
-    context = await checker._load_user_scope_context(
-        db=db,
-        user_id="user-1",
-    )
+    with patch(
+        "src.services.party_scope_resolver.party_scope_resolver.resolve",
+        new=AsyncMock(return_value=resolved_scope),
+    ) as mock_resolve:
+        context = await checker._load_user_scope_context(
+            db=db,
+            user_id="user-1",
+        )
 
     assert context["user_id"] == "user-1"
     assert context["organization_id"] == "org-1"
@@ -547,14 +532,7 @@ async def test_load_user_scope_context_uses_user_binding_party_id_when_present()
     assert context["owner_party_id"] == "party-1"
     assert context["manager_party_id"] == "party-1"
 
-    binding_stmt = db.execute.await_args_list[1].args[0]
-    binding_stmt_sql = str(binding_stmt).lower()
-    assert "user_party_bindings.valid_from <=" in binding_stmt_sql
-    assert "user_party_bindings.valid_to is null" in binding_stmt_sql
-    assert "user_party_bindings.valid_to >=" in binding_stmt_sql
-    assert "user_party_bindings.valid_from desc" in binding_stmt_sql
-    assert "user_party_bindings.created_at desc" in binding_stmt_sql
-    assert "user_party_bindings.created_at asc" not in binding_stmt_sql
+    mock_resolve.assert_awaited_once_with(db, user_id="user-1")
 
 
 @pytest.mark.asyncio
@@ -570,7 +548,7 @@ async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scop
             _mapping_result(
                 {
                     "user_id": "user-no-scope",
-                    "default_organization_id": None,
+                    "organization_id": None,
                 }
             ),
             _mapping_result(None),
@@ -684,7 +662,6 @@ async def test_require_authz_collection_read_infers_party_scope_hint() -> None:
                     user_id="user-1",
                     owner_party_ids=["owner-party-1"],
                     manager_party_ids=["manager-party-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -741,7 +718,6 @@ async def test_require_authz_collection_read_keeps_explicit_scope_context() -> N
                     user_id="user-1",
                     owner_party_ids=["owner-party-1"],
                     manager_party_ids=["manager-party-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),

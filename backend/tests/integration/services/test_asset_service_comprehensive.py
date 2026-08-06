@@ -12,7 +12,7 @@ from sqlalchemy.pool import NullPool
 
 from src import database as database
 from src.core.exception_handler import ResourceNotFoundError
-from src.models.ownership import Ownership
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.schemas.asset import AssetCreate, AssetUpdate
 from src.services.asset.asset_service import AssetService
 
@@ -21,7 +21,7 @@ pytestmark = pytest.mark.asyncio
 
 def _build_asset_data(**overrides):
     data = {
-        "ownership_id": "ownership-default",
+        "owner_party_id": "ownership-default",
         "asset_name": "测试物业A",
         "address_detail": "北京市朝阳区测试路123号",
         "ownership_status": "已确权",
@@ -65,10 +65,13 @@ def asset_service(db_session: AsyncSession):
 
 @pytest.fixture
 async def ownership_record(db_session: AsyncSession):
-    ownership = Ownership(
+    ownership = Party(
         id="ownership-default",
+        party_type=PartyType.LEGAL_ENTITY,
         name="测试公司",
-        code="OWN-DEFAULT",
+        code="LE-200001",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED,
     )
     db_session.add(ownership)
     await db_session.flush()

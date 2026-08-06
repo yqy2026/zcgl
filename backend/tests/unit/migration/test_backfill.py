@@ -14,9 +14,6 @@ from src.scripts.migration.party_migration.backfill_role_policies import (
     _choose_policy_package,
     _choose_policy_packages,
 )
-from src.scripts.migration.party_migration.generate_mapping import (
-    build_mapping_artifact,
-)
 from src.scripts.migration.party_migration.reconciliation import (
     _check_role_party_scope_integrity,
 )
@@ -33,51 +30,6 @@ def _close_connection(connection: sa.engine.Connection) -> None:
     engine = connection.info.pop("_test_engine")
     connection.close()
     engine.dispose()
-
-
-def test_generate_mapping_artifact_prefers_external_ref_and_code() -> None:
-    artifact = build_mapping_artifact(
-        organization_rows=[
-            {"id": "org-ext", "name": "外部组织", "code": "ORG_EXT"},
-            {"id": "org-code", "name": "编码组织", "code": "ORG_CODE"},
-            {"id": "org-missing", "name": "未知组织", "code": "ORG_MISS"},
-        ],
-        ownership_rows=[
-            {"id": "own-name", "name": "A权属", "code": "OWN_A"},
-            {"id": "own-missing", "name": "B权属", "code": "OWN_B"},
-        ],
-        party_rows=[
-            {
-                "id": "party-org-ext",
-                "party_type": "organization",
-                "name": "外部组织",
-                "code": "ORG_IGNORE",
-                "external_ref": "org-ext",
-            },
-            {
-                "id": "party-org-code",
-                "party_type": "organization",
-                "name": "编码组织",
-                "code": "ORG_CODE",
-                "external_ref": None,
-            },
-            {
-                "id": "party-own-name",
-                "party_type": "legal_entity",
-                "name": "A权属",
-                "code": "OWN_X",
-                "external_ref": None,
-            },
-        ],
-    )
-
-    assert artifact.org_to_party_map == {
-        "org-ext": "party-org-ext",
-        "org-code": "party-org-code",
-    }
-    assert artifact.ownership_to_party_map == {"own-name": "party-own-name"}
-    assert artifact.unmatched_org_ids == ["org-missing"]
-    assert artifact.unmatched_ownership_ids == ["own-missing"]
 
 
 def test_apply_mapping_updates_dry_run_and_exec() -> None:

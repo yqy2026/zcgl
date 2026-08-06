@@ -31,6 +31,7 @@ from src.schemas.project import (
     ProjectSearchRequest,
     ProjectUpdate,
 )
+from src.services.party_scope_resolver import EffectivePartyScope
 from src.services.project.service import ProjectService
 
 pytestmark = pytest.mark.asyncio
@@ -1046,7 +1047,7 @@ class TestGetProjectById:
 
 
 class TestTenantFilterResolution:
-    async def test_resolve_party_filter_disables_legacy_default_org_fallback(
+    async def test_resolve_party_filter_uses_cutover_signature(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
         resolved_filter = PartyFilter(party_ids=["party-1"])
@@ -1066,19 +1067,22 @@ class TestTenantFilterResolution:
             current_user_id="user-1",
             party_filter=None,
             logger=ANY,
-            allow_legacy_default_organization_fallback=False,
         )
 
     async def test_resolve_party_filter_uses_user_party_bindings(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
         """Resolve filter scope from user party bindings."""
-        binding = MagicMock()
-        binding.party_id = "party-1"
+        resolved_scope = EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="manager",
+            manager_party_ids=["party-1"],
+        )
 
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
-            new=AsyncMock(return_value=[binding]),
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=resolved_scope),
         ):
             party_filter = await project_service._resolve_party_filter(
                 mock_db,
@@ -1092,12 +1096,16 @@ class TestTenantFilterResolution:
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
         """Return party binding scope when organization lookup fails."""
-        binding = MagicMock()
-        binding.party_id = "party-1"
+        resolved_scope = EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="manager",
+            manager_party_ids=["party-1"],
+        )
 
         with patch(
-            "src.services.party_scope.party_crud.get_user_bindings",
-            new=AsyncMock(return_value=[binding]),
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=resolved_scope),
         ):
             party_filter = await project_service._resolve_party_filter(
                 mock_db,

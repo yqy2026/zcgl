@@ -14,19 +14,13 @@ def _mapping_execute_result(row: dict[str, str] | None) -> MagicMock:
     return result
 
 
-def _mapping_execute_all_result(rows: list[dict[str, str | None]]) -> MagicMock:
-    result = MagicMock()
-    result.mappings.return_value.all.return_value = rows
-    return result
-
-
 @pytest.mark.asyncio
 async def test_create_party_adds_and_refreshes(mock_db) -> None:
     crud = CRUDParty()
 
     result = await crud.create_party(
         mock_db,
-        obj_in={"party_type": "organization", "name": "总部", "code": "HQ"},
+        obj_in={"party_type": "legal_entity", "name": "总部", "code": "LE-000001"},
         commit=False,
     )
 
@@ -34,38 +28,6 @@ async def test_create_party_adds_and_refreshes(mock_db) -> None:
     mock_db.add.assert_called_once()
     mock_db.flush.assert_awaited_once()
     mock_db.refresh.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_get_descendants_returns_recursive_ids(mock_db) -> None:
-    crud = CRUDParty()
-    execute_result = MagicMock()
-    execute_result.fetchall.return_value = [("child-1",), ("child-2",)]
-    mock_db.execute = AsyncMock(return_value=execute_result)
-
-    descendants = await crud.get_descendants(
-        mock_db,
-        party_id="root-1",
-        include_self=True,
-    )
-
-    assert descendants == ["root-1", "child-1", "child-2"]
-
-
-@pytest.mark.asyncio
-async def test_remove_hierarchy_returns_deleted_count(mock_db) -> None:
-    crud = CRUDParty()
-    mock_db.execute = AsyncMock(return_value=SimpleNamespace(rowcount=1))
-
-    deleted = await crud.remove_hierarchy(
-        mock_db,
-        parent_party_id="p-1",
-        child_party_id="p-2",
-        commit=False,
-    )
-
-    assert deleted == 1
-    mock_db.flush.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -99,7 +61,9 @@ async def test_get_parties_applies_scoped_party_ids_filter(mock_db) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_parties_returns_empty_when_scoped_party_ids_is_empty(mock_db) -> None:
+async def test_get_parties_returns_empty_when_scoped_party_ids_is_empty(
+    mock_db,
+) -> None:
     crud = CRUDParty()
 
     result = await crud.get_parties(mock_db, scoped_party_ids=[])
@@ -128,50 +92,21 @@ async def test_resolve_legal_entity_party_id_should_match_external_ref(mock_db) 
 
 
 @pytest.mark.asyncio
-async def test_resolve_organization_party_id_should_match_external_ref(mock_db) -> None:
-    crud = CRUDParty()
-    mock_db.execute = AsyncMock(
-        side_effect=[
-            _mapping_execute_result(None),
-            _mapping_execute_result({"party_id": "party-org-2"}),
-        ]
-    )
-
-    resolved = await crud.resolve_organization_party_id(
-        mock_db,
-        organization_id="organization-legacy-1",
-    )
-
-    assert resolved == "party-org-2"
-    assert mock_db.execute.await_count == 2
-
-
-@pytest.mark.asyncio
-async def test_resolve_organization_party_id_should_fallback_to_org_metadata(
+async def test_get_represented_party_id_for_organization_reads_explicit_link(
     mock_db,
 ) -> None:
     crud = CRUDParty()
     mock_db.execute = AsyncMock(
-        side_effect=[
-            _mapping_execute_result(None),
-            _mapping_execute_result(None),
-            _mapping_execute_result(
-                {
-                    "organization_code": "ORG-001",
-                    "organization_name": "组织一",
-                }
-            ),
-            _mapping_execute_result({"party_id": "party-org-1"}),
-        ]
+        return_value=_mapping_execute_result({"party_id": "party-legal-1"})
     )
 
-    resolved = await crud.resolve_organization_party_id(
+    resolved = await crud.get_represented_party_id_for_organization(
         mock_db,
-        organization_id="organization-legacy-1",
+        organization_id="organization-1",
     )
 
-    assert resolved == "party-org-1"
-    assert mock_db.execute.await_count == 4
+    assert resolved == "party-legal-1"
+    assert mock_db.execute.await_count == 1
 
 
 @pytest.mark.asyncio
@@ -186,122 +121,6 @@ async def test_resolve_legal_entity_party_id_should_return_none_for_blank_identi
     )
 
     assert resolved is None
-    mock_db.execute.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_map_party_and_external_ref(
-    mock_db,
-) -> None:
-    crud = CRUDParty()
-    mock_db.execute = AsyncMock(
-        return_value=_mapping_execute_all_result(
-            [
-                {
-                    "party_id": "party-org-1",
-                    "external_ref": "org-legacy-1",
-                    "party_code": "ORG-001",
-                    "party_name": "组织一",
-                },
-                {
-                    "party_id": "party-org-2",
-                    "external_ref": "org-legacy-2",
-                    "party_code": "ORG-002",
-                    "party_name": "组织二",
-                },
-            ]
-        )
-    )
-
-    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
-        mock_db,
-        party_ids=["party-org-1", "org-legacy-2", "unknown"],
-    )
-
-    assert result == {
-        "party-org-1": ["org-legacy-1"],
-        "org-legacy-2": ["org-legacy-2"],
-    }
-
-
-@pytest.mark.asyncio
-async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_resolve_org_id_via_metadata_lookup(
-    mock_db,
-) -> None:
-    crud = CRUDParty()
-    mock_db.execute = AsyncMock(
-        side_effect=[
-            _mapping_execute_all_result(
-                [
-                    {
-                        "party_id": "party-org-1",
-                        "external_ref": None,
-                        "party_code": "ORG-001",
-                        "party_name": "组织一",
-                    }
-                ]
-            ),
-            _mapping_execute_all_result(
-                [
-                    {
-                        "organization_id": "org-legacy-1",
-                        "organization_code": "ORG-001",
-                        "organization_name": "组织一",
-                    }
-                ]
-            ),
-        ]
-    )
-
-    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
-        mock_db,
-        party_ids=["party-org-1"],
-    )
-
-    assert result == {"party-org-1": ["org-legacy-1"]}
-
-
-@pytest.mark.asyncio
-async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_not_fallback_to_party_id_when_org_lookup_missing(
-    mock_db,
-) -> None:
-    crud = CRUDParty()
-    mock_db.execute = AsyncMock(
-        side_effect=[
-            _mapping_execute_all_result(
-                [
-                    {
-                        "party_id": "party-org-1",
-                        "external_ref": None,
-                        "party_code": "ORG-001",
-                        "party_name": "组织一",
-                    }
-                ]
-            ),
-            _mapping_execute_all_result([]),
-        ]
-    )
-
-    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
-        mock_db,
-        party_ids=["party-org-1"],
-    )
-
-    assert result == {}
-
-
-@pytest.mark.asyncio
-async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_skip_blank_input(
-    mock_db,
-) -> None:
-    crud = CRUDParty()
-
-    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
-        mock_db,
-        party_ids=[" ", "", "\t"],
-    )
-
-    assert result == {}
     mock_db.execute.assert_not_called()
 
 
@@ -371,9 +190,7 @@ async def test_update_contact_encrypts_phone_before_write_and_returns_plaintext(
         commit=False,
     )
 
-    mock_handler.encrypt_field.assert_called_once_with(
-        "contact_phone", "13900000000"
-    )
+    mock_handler.encrypt_field.assert_called_once_with("contact_phone", "13900000000")
     mock_handler.decrypt_field.assert_called_once_with(
         "contact_phone", "enc:v1:new-ciphertext"
     )

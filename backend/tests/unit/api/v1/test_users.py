@@ -53,7 +53,8 @@ class FakeUser:
     is_active: bool = True
     is_locked: bool = False
     last_login_at: datetime | None = None
-    default_organization_id: str | None = None
+    account_type: str = "human"
+    organization_id: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     role_id: str | None = None
@@ -90,7 +91,8 @@ def _build_current_user(*, user_id: str, username: str, is_admin: bool) -> UserR
         is_admin=is_admin,
         is_active=True,
         is_locked=False,
-        default_organization_id=None,
+        account_type="human",
+        organization_id=None,
         last_login_at=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),

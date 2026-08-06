@@ -211,58 +211,12 @@ class TestUpdateOrganization:
             assert result is not None
             assert mock_db.commit.await_count >= 1
 
-    async def test_update_organization_parent(
-        self, organization_service, mock_db, sample_organization, sample_parent_org
-    ):
-        """Test updating organization parent"""
-        update_data = OrganizationUpdate(
-            parent_id="parent-123",
-            updated_by="user-123",
-        )
+    def test_update_organization_rejects_parent_change(self):
+        """普通资料更新不能绕过组织移动预览/提交协议。"""
+        with pytest.raises(ValueError, match="Extra inputs are not permitted"):
+            OrganizationUpdate(parent_id="parent-123", updated_by="user-123")
 
-        async def get_side_effect(db, org_id):
-            return sample_organization if org_id == "org-123" else sample_parent_org
-
-        with patch(
-            "src.services.organization.service.organization_crud.get_async",
-            new=AsyncMock(side_effect=get_side_effect),
-        ):
-            with patch.object(
-                organization_service, "_would_create_cycle", new=AsyncMock(return_value=False)
-            ):
-                result = await organization_service.update_organization(
-                    db=mock_db, org_id="org-123", obj_in=update_data
-                )
-
-                assert result is not None
-                assert result.parent_id == "parent-123"
-
-    async def test_update_organization_prevents_cycle(
-        self, organization_service, mock_db, sample_organization, sample_child_org
-    ):
-        """Test that updating parent prevents cycle creation"""
-        update_data = OrganizationUpdate(
-            parent_id="child-123",  # Try to set child as parent
-            updated_by="user-123",
-        )
-
-        with patch(
-            "src.services.organization.service.organization_crud.get_async",
-            new=AsyncMock(return_value=sample_organization),
-        ):
-            with patch.object(
-                organization_service, "_would_create_cycle", new=AsyncMock(return_value=True)
-            ):
-                with pytest.raises(
-                    OperationNotAllowedError, match="不能将组织移动到其子组织下"
-                ):
-                    await organization_service.update_organization(
-                        db=mock_db, org_id="org-123", obj_in=update_data
-                    )
-
-    async def test_update_nonexistent_organization(
-        self, organization_service, mock_db
-    ):
+    async def test_update_nonexistent_organization(self, organization_service, mock_db):
         """Test updating non-existent organization"""
         update_data = OrganizationUpdate(
             name="New Name",
@@ -387,7 +341,9 @@ class TestOrganizationHistory:
             new=AsyncMock(return_value=org),
         ):
             with patch.object(
-                organization_service, "_create_history", new=AsyncMock(return_value=None)
+                organization_service,
+                "_create_history",
+                new=AsyncMock(return_value=None),
             ) as mock_history:
                 await organization_service.update_organization(
                     db=mock_db, org_id="org-123", obj_in=update_data
@@ -452,9 +408,7 @@ class TestOrganizationValidation:
 class TestOrganizationErrorHandling:
     """Tests for error handling scenarios"""
 
-    async def test_handle_database_error_on_create(
-        self, organization_service, mock_db
-    ):
+    async def test_handle_database_error_on_create(self, organization_service, mock_db):
         """Test handling database error during creation"""
         mock_db.commit.side_effect = Exception("Database connection failed")
 

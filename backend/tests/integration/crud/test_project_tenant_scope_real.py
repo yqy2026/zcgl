@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from src.crud.project import project_crud
 from src.crud.query_builder import PartyFilter
 from src.models.organization import Organization
-from src.models.party import Party, PartyType
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from tests.integration.conftest import AsyncSessionAdapter
 
@@ -18,6 +18,10 @@ from tests.integration.conftest import AsyncSessionAdapter
 def _build_code(prefix: str) -> str:
     serial = f"{uuid.uuid4().int % 1000000:06d}"
     return f"PRJ-{prefix.upper()}-{serial}"
+
+
+def _build_party_code() -> str:
+    return f"LE-{uuid.uuid4().int % 1_000_000:06d}"
 
 
 @pytest.mark.integration
@@ -45,18 +49,20 @@ async def test_project_get_multi_respects_tenant_filter(db_session: Session):
     db_session.flush()
 
     party_a = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Tenant Scope Party A-{uuid.uuid4().hex[:6]}",
-        code=f"TEN-PARTY-A-{uuid.uuid4().hex[:6]}",
+        code=_build_party_code(),
         external_ref=org_a.id,
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     party_b = Party(
-        party_type=PartyType.ORGANIZATION.value,
+        party_type=PartyType.LEGAL_ENTITY.value,
         name=f"Tenant Scope Party B-{uuid.uuid4().hex[:6]}",
-        code=f"TEN-PARTY-B-{uuid.uuid4().hex[:6]}",
+        code=_build_party_code(),
         external_ref=org_b.id,
         status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
     )
     db_session.add_all([party_a, party_b])
     db_session.flush()

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from src.crud.asset import asset_crud
 from src.models.asset import Asset
 from src.models.ownership import Ownership
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.services.organization_permission_service import (
     invalidate_user_accessible_organizations_cache,
 )
@@ -39,8 +40,19 @@ class TestAssetFilterEndpoints:
     """Test suite for asset filter/dropdown endpoints"""
 
     @staticmethod
-    def _seed_assets_for_filters(db_session, organization_id: str, suffix: str) -> None:
+    def _seed_assets_for_filters(db_session, organization, suffix: str) -> None:
         """Seed deterministic asset rows for filter endpoint assertions."""
+        owner_party = Party(
+            party_type=PartyType.LEGAL_ENTITY,
+            name=f"筛选测试产权方-{suffix}",
+            code="LE-400001",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
+        )
+        db_session.add(owner_party)
+        db_session.flush()
+        organization.represented_party_id = owner_party.id
+        organization.represented_party_perspective = "owner"
         db_session.add_all(
             [
                 Asset(
@@ -51,7 +63,7 @@ class TestAssetFilterEndpoints:
                     property_nature=f"经营类-{suffix}",
                     usage_status=f"出租-{suffix}",
                     business_category=f"业态B-{suffix}",
-                    organization_id=organization_id,
+                    owner_party_id=owner_party.id,
                     data_status="正常",
                 ),
                 Asset(
@@ -62,7 +74,7 @@ class TestAssetFilterEndpoints:
                     property_nature=f"非经营类-{suffix}",
                     usage_status=f"空置-{suffix}",
                     business_category=f"业态A-{suffix}",
-                    organization_id=organization_id,
+                    owner_party_id=owner_party.id,
                     data_status="正常",
                 ),
                 Asset(
@@ -73,7 +85,7 @@ class TestAssetFilterEndpoints:
                     property_nature=f"经营类-{suffix}",
                     usage_status=f"出租-{suffix}",
                     business_category=f"业态A-{suffix}",
-                    organization_id=organization_id,
+                    owner_party_id=owner_party.id,
                     data_status="正常",
                 ),
                 Asset(
@@ -84,7 +96,7 @@ class TestAssetFilterEndpoints:
                     property_nature=f"经营类-{suffix}",
                     usage_status=f"出租-{suffix}",
                     business_category="",
-                    organization_id=organization_id,
+                    owner_party_id=owner_party.id,
                     data_status="正常",
                 ),
             ]
@@ -239,8 +251,7 @@ class TestAssetFilterEndpoints:
     ):
         """Filter endpoints should reflect deterministic seeded asset values."""
         suffix = uuid4().hex[:8]
-        organization_id = str(test_data["organization"].id)
-        self._seed_assets_for_filters(db_session, organization_id, suffix)
+        self._seed_assets_for_filters(db_session, test_data["organization"], suffix)
         asset_crud.clear_cache()
 
         business_categories = authenticated_client.get(

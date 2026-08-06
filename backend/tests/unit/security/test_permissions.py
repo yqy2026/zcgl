@@ -7,6 +7,7 @@ import pytest
 
 from src.core.exception_handler import BaseBusinessError
 from src.security.permissions import (
+    organization_required,
     require_any_role,
     require_asset_edit,
     require_asset_view,
@@ -85,4 +86,25 @@ async def test_require_asset_edit_uses_canonical_update_action() -> None:
         user_id="user-1",
         resource="asset",
         action="update",
+    )
+
+
+async def test_organization_required_uses_user_organization_id_by_default() -> None:
+    @organization_required()
+    async def handler(*, current_user: object, db: object) -> str:
+        del current_user, db
+        return "ok"
+
+    current_user = SimpleNamespace(id="user-1", organization_id="org-1")
+    db = MagicMock()
+    mock_rbac = MagicMock()
+    mock_rbac.check_organization_access = AsyncMock(return_value=True)
+
+    with patch("src.security.permissions.RBACService", return_value=mock_rbac):
+        result = await handler(current_user=current_user, db=db)
+
+    assert result == "ok"
+    mock_rbac.check_organization_access.assert_awaited_once_with(
+        user_id="user-1",
+        organization_id="org-1",
     )

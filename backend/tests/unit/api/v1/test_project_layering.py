@@ -60,7 +60,7 @@ async def test_project_create_authz_should_include_manager_scope_context() -> No
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
         result = await module._require_project_create_authz(  # type: ignore[attr-defined]
             project_in=project_in,
-            current_user=MagicMock(id="user-1", default_organization_id=None),
+            current_user=MagicMock(id="user-1", organization_id=None),
             db=MagicMock(),
         )
 
@@ -141,7 +141,7 @@ async def test_project_create_authz_should_infer_subject_scope_when_request_is_u
         )
         result = await module._require_project_create_authz(  # type: ignore[attr-defined]
             project_in=project_in,
-            current_user=MagicMock(id="user-1", default_organization_id=None),
+            current_user=MagicMock(id="user-1", organization_id=None),
             db=MagicMock(),
         )
 
@@ -181,7 +181,7 @@ async def test_project_create_authz_should_keep_unscoped_sentinel_when_subject_s
         )
         result = await module._require_project_create_authz(  # type: ignore[attr-defined]
             project_in=project_in,
-            current_user=MagicMock(id="user-1", default_organization_id=None),
+            current_user=MagicMock(id="user-1", organization_id=None),
             db=MagicMock(),
         )
 
@@ -192,10 +192,10 @@ async def test_project_create_authz_should_keep_unscoped_sentinel_when_subject_s
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_backfill_manager_party_id_from_mapped_organization_party() -> (
+async def test_project_create_authz_should_backfill_manager_from_represented_party() -> (
     None
 ):
-    """创建项目应通过 organization->party 映射回填 manager_party_id。"""
+    """创建项目应使用 Organization 显式配置的代表主体。"""
     from src.api.v1.assets import project as module
 
     project_in = MagicMock(
@@ -234,7 +234,7 @@ async def test_project_create_authz_should_backfill_manager_party_id_from_mapped
 async def test_project_create_authz_should_not_copy_raw_organization_id_into_manager_party_id() -> (
     None
 ):
-    """organization 映射缺失时不应把原始 organization_id 写入 manager_party_id。"""
+    """组织没有代表主体时不得把 organization_id 当成 Party id。"""
     from src.api.v1.assets import project as module
 
     project_in = MagicMock(
@@ -273,14 +273,17 @@ async def test_project_create_authz_should_not_copy_raw_organization_id_into_man
     assert project_in.manager_party_id is None
     assert result.resource_context["organization_id"] == "org-1"
     assert "manager_party_id" not in result.resource_context
-    assert result.resource_context["party_id"] == "org-1"
+    assert (
+        result.resource_context["party_id"]
+        == module._PROJECT_CREATE_UNSCOPED_PARTY_ID
+    )
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_use_default_org_scope_when_request_is_unscoped() -> (
+async def test_project_create_authz_should_use_user_org_scope_when_request_is_unscoped() -> (
     None
 ):
-    """创建项目请求未携带 organization_id 时应使用用户默认组织鉴权。"""
+    """创建项目请求未携带 organization_id 时应使用用户归属组织鉴权。"""
     from src.api.v1.assets import project as module
 
     project_in = MagicMock(
@@ -308,7 +311,7 @@ async def test_project_create_authz_should_use_default_org_scope_when_request_is
             project_in=project_in,
             current_user=MagicMock(
                 id="user-1",
-                default_organization_id="org-default",
+                organization_id="org-default",
             ),
             db=MagicMock(),
         )
@@ -331,7 +334,7 @@ async def test_create_project_should_backfill_manager_party_from_authz_context()
     from src.api.v1.assets import project as module
 
     project_in = MagicMock(manager_party_id=None, organization_id=None)
-    current_user = MagicMock(id="user-1", default_organization_id="org-1")
+    current_user = MagicMock(id="user-1", organization_id="org-1")
 
     mock_service = MagicMock()
     mock_service.create_project = AsyncMock(return_value=MagicMock(id="project-1"))
@@ -369,17 +372,17 @@ async def test_create_project_should_backfill_manager_party_from_authz_context()
 
 
 @pytest.mark.asyncio
-async def test_create_project_should_use_request_organization_id_before_default_organization() -> (
+async def test_create_project_should_use_request_organization_id_before_user_organization() -> (
     None
 ):
-    """创建项目应优先使用请求 organization_id，再回退 default_organization_id。"""
+    """创建项目应优先使用请求 organization_id，再回退用户归属组织。"""
     from src.api.v1.assets import project as module
 
     project_in = MagicMock(
         manager_party_id="manager-party-1",
         organization_id="org-request",
     )
-    current_user = MagicMock(id="user-1", default_organization_id="org-default")
+    current_user = MagicMock(id="user-1", organization_id="org-default")
 
     mock_service = MagicMock()
     mock_service.create_project = AsyncMock(return_value=MagicMock(id="project-1"))

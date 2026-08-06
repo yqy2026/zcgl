@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -14,6 +15,35 @@ from src.services.authz.service import AuthzService
 pytestmark = pytest.mark.asyncio
 
 
+def test_decision_cache_ttl_is_capped_by_next_transition() -> None:
+    now = datetime.now(UTC).replace(tzinfo=None)
+    subject = SubjectContext(
+        user_id="user-1",
+        owner_party_ids=["owner-1"],
+        manager_party_ids=[],
+        role_ids=[],
+        next_transition_at=now + timedelta(seconds=30),
+    )
+
+    capped_ttl = AuthzService._decision_cache_ttl_seconds(
+        subject,
+        default_ttl=300,
+    )
+    assert 29 <= capped_ttl <= 30
+
+    expired_subject = SubjectContext(
+        user_id="user-1",
+        owner_party_ids=["owner-1"],
+        manager_party_ids=[],
+        role_ids=[],
+        next_transition_at=now - timedelta(seconds=1),
+    )
+    assert AuthzService._decision_cache_ttl_seconds(
+        expired_subject,
+        default_ttl=300,
+    ) == 0
+
+
 async def test_get_capabilities_should_use_resource_perspective_registry() -> None:
     db = MagicMock()
     context_builder = MagicMock()
@@ -22,7 +52,6 @@ async def test_get_capabilities_should_use_resource_perspective_registry() -> No
             user_id="user-1",
             owner_party_ids=["owner-party-1"],
             manager_party_ids=["manager-party-1"],
-            headquarters_party_ids=[],
             role_ids=["role-1"],
         )
     )
@@ -74,7 +103,6 @@ async def test_get_capabilities_should_include_rbac_permission_when_abac_policy_
             user_id="user-1",
             owner_party_ids=[],
             manager_party_ids=["manager-party-1"],
-            headquarters_party_ids=[],
             role_ids=["role-1"],
         )
     )
@@ -115,7 +143,6 @@ async def test_check_access_should_fallback_to_rbac_when_abac_rule_missing() -> 
             user_id="user-1",
             owner_party_ids=[],
             manager_party_ids=["manager-party-1"],
-            headquarters_party_ids=[],
             role_ids=["role-1"],
         )
     )
@@ -160,7 +187,6 @@ async def test_get_capabilities_should_include_authenticated_notification_read_w
             user_id="user-1",
             owner_party_ids=[],
             manager_party_ids=[],
-            headquarters_party_ids=[],
             role_ids=[],
         )
     )
@@ -203,7 +229,6 @@ async def test_check_access_should_allow_authenticated_notification_read_without
             user_id="user-1",
             owner_party_ids=[],
             manager_party_ids=[],
-            headquarters_party_ids=[],
             role_ids=[],
         )
     )
@@ -246,7 +271,6 @@ async def test_check_access_should_not_override_policy_deny_with_authenticated_d
             user_id="user-1",
             owner_party_ids=[],
             manager_party_ids=[],
-            headquarters_party_ids=[],
             role_ids=["role-1"],
         )
     )
@@ -314,7 +338,6 @@ async def test_check_access_should_allow_in_log_only_mode_when_policy_denies() -
             user_id="user-1",
             owner_party_ids=["owner-1"],
             manager_party_ids=[],
-            headquarters_party_ids=[],
             role_ids=["role-1"],
         )
     )

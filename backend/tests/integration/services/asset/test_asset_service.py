@@ -18,7 +18,7 @@ from src.core.exception_handler import (
 )
 from src.models.asset import Asset
 from src.models.asset_history import AssetHistory
-from src.models.ownership import Ownership
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.schemas.asset import AssetCreate, AssetListItemResponse, AssetUpdate
 from src.services.asset.asset_service import AssetService
 
@@ -36,7 +36,7 @@ class AssetTestDataFactory:
     def create_asset_dict(**kwargs):
         """生成资产创建数据"""
         default_data = {
-            "ownership_id": "ownership-default",
+            "owner_party_id": "ownership-default",
             "asset_name": "测试物业A",
             "address_detail": "北京市朝阳区测试路123号",
             "ownership_status": "已确权",
@@ -99,10 +99,13 @@ class TestAssetCreation:
         self.db = db_session
         self.service = asset_service
         self.factory = AssetTestDataFactory()
-        ownership = Ownership(
+        ownership = Party(
             id="ownership-default",
+            party_type=PartyType.LEGAL_ENTITY,
             name="测试公司",
-            code="OWN-DEFAULT",
+            code="LE-100001",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
         self.db.add(ownership)
         await self.db.flush()
@@ -116,7 +119,7 @@ class TestAssetCreation:
 
         assert asset.id is not None
         assert asset.asset_name == "测试物业A"
-        assert asset.ownership_id == "ownership-default"
+        assert asset.owner_party_id == "ownership-default"
         assert asset.ownership_status == "已确权"
 
     async def test_create_asset_creates_history(self):
@@ -193,15 +196,21 @@ class TestAssetQuery:
         self.factory = AssetTestDataFactory()
         self.query_marker = f"asset-query-{uuid4().hex}"
 
-        ownership_a = Ownership(
+        ownership_a = Party(
             id=f"ownership-a-{uuid4().hex}",
+            party_type=PartyType.LEGAL_ENTITY,
             name=f"公司A-{self.query_marker}",
-            code=f"OWN-A-{uuid4().hex[:8]}",
+            code="LE-100002",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
-        ownership_b = Ownership(
+        ownership_b = Party(
             id=f"ownership-b-{uuid4().hex}",
+            party_type=PartyType.LEGAL_ENTITY,
             name=f"公司B-{self.query_marker}",
-            code=f"OWN-B-{uuid4().hex[:8]}",
+            code="LE-100003",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
         self.db.add_all([ownership_a, ownership_b])
         await self.db.flush()
@@ -215,14 +224,14 @@ class TestAssetQuery:
         self.asset1 = await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    asset_name=self.asset_name_a, ownership_id=ownership_a.id
+                    asset_name=self.asset_name_a, owner_party_id=ownership_a.id
                 )
             )
         )
         self.asset2 = await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    asset_name=self.asset_name_b, ownership_id=ownership_b.id
+                    asset_name=self.asset_name_b, owner_party_id=ownership_b.id
                 )
             )
         )
@@ -296,10 +305,22 @@ class TestAssetUpdate:
         self.service = asset_service
         self.factory = AssetTestDataFactory()
 
-        default_ownership = Ownership(
-            id="ownership-default", name="测试公司", code="OWN-DEFAULT"
+        default_ownership = Party(
+            id="ownership-default",
+            party_type=PartyType.LEGAL_ENTITY,
+            name="测试公司",
+            code="LE-100001",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
-        new_ownership = Ownership(id="ownership-new", name="新公司", code="OWN-NEW")
+        new_ownership = Party(
+            id="ownership-new",
+            party_type=PartyType.LEGAL_ENTITY,
+            name="新公司",
+            code="LE-100004",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
+        )
         self.db.add_all([default_ownership, new_ownership])
         await self.db.flush()
 
@@ -314,17 +335,17 @@ class TestAssetUpdate:
     async def test_update_asset_basic_fields(self):
         """测试更新资产基本信息"""
         update_data = AssetUpdate(
-            ownership_id=self.new_ownership.id, usage_status="空置"
+            owner_party_id=self.new_ownership.id, usage_status="空置"
         )
 
         updated = await self.service.update_asset(self.asset.id, update_data)
 
-        assert updated.ownership_id == self.new_ownership.id
+        assert updated.owner_party_id == self.new_ownership.id
         assert updated.usage_status == "空置"
 
     async def test_update_asset_creates_history(self):
         """测试更新资产时记录历史"""
-        update_data = AssetUpdate(ownership_id=self.new_ownership.id)
+        update_data = AssetUpdate(owner_party_id=self.new_ownership.id)
 
         await self.service.update_asset(self.asset.id, update_data)
 
@@ -353,7 +374,7 @@ class TestAssetUpdate:
         """测试更新不存在的资产抛出异常"""
         with pytest.raises(ResourceNotFoundError):
             await self.service.update_asset(
-                "nonexistent-id", AssetUpdate(ownership_id=self.new_ownership.id)
+                "nonexistent-id", AssetUpdate(owner_party_id=self.new_ownership.id)
             )
 
 
@@ -370,10 +391,13 @@ class TestAssetDeletion:
         self.db = db_session
         self.service = asset_service
         self.factory = AssetTestDataFactory()
-        ownership = Ownership(
+        ownership = Party(
             id="ownership-default",
+            party_type=PartyType.LEGAL_ENTITY,
             name="测试公司",
-            code="OWN-DEFAULT",
+            code="LE-100001",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
         self.db.add(ownership)
         await self.db.flush()
@@ -415,15 +439,21 @@ class TestFieldValuesQuery:
         self.factory = AssetTestDataFactory()
         self.field_values_marker = f"asset-field-values-{uuid4().hex}"
 
-        ownership_a = Ownership(
+        ownership_a = Party(
             id=f"ownership-a-{uuid4().hex}",
+            party_type=PartyType.LEGAL_ENTITY,
             name=f"公司A-{self.field_values_marker}",
-            code=f"OWN-A-{uuid4().hex[:8]}",
+            code="LE-100002",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
-        ownership_b = Ownership(
+        ownership_b = Party(
             id=f"ownership-b-{uuid4().hex}",
+            party_type=PartyType.LEGAL_ENTITY,
             name=f"公司B-{self.field_values_marker}",
-            code=f"OWN-B-{uuid4().hex[:8]}",
+            code="LE-100003",
+            status="active",
+            review_status=PartyReviewStatus.APPROVED,
         )
         self.db.add_all([ownership_a, ownership_b])
         await self.db.flush()
@@ -434,7 +464,7 @@ class TestFieldValuesQuery:
         await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    ownership_id=ownership_a.id,
+                    owner_party_id=ownership_a.id,
                     asset_name=f"字段值测试物业A-{self.field_values_marker}",
                 )
             )
@@ -442,7 +472,7 @@ class TestFieldValuesQuery:
         await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    ownership_id=ownership_b.id,
+                    owner_party_id=ownership_b.id,
                     asset_name=f"字段值测试物业B-{self.field_values_marker}",
                 )
             )
@@ -450,7 +480,7 @@ class TestFieldValuesQuery:
         await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    ownership_id=ownership_a.id,  # 重复
+                    owner_party_id=ownership_a.id,  # 重复
                     asset_name=f"字段值测试物业C-{self.field_values_marker}",
                 )
             )

@@ -102,7 +102,8 @@ def mock_admin_user():
         is_admin=True,
         is_active=True,
         is_locked=False,
-        default_organization_id=None,
+        account_type="human",
+        organization_id=None,
         last_login_at=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
@@ -126,7 +127,8 @@ def mock_regular_user():
         is_admin=False,
         is_active=True,
         is_locked=False,
-        default_organization_id=None,
+        account_type="human",
+        organization_id=None,
         last_login_at=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
@@ -142,6 +144,8 @@ def mock_user_model():
     user.email = "test@example.com"
     user.full_name = "Test User"
     user.is_active = True
+    user.account_type = "human"
+    user.organization_id = None
     user.is_locked_now.return_value = False
     user.last_login_at = datetime.now(UTC)
     return user
@@ -302,6 +306,8 @@ class TestLogin:
         mock_user.email = "test@example.com"
         mock_user.full_name = "Test User"
         mock_user.is_active = True
+        mock_user.account_type = "human"
+        mock_user.organization_id = None
 
         mock_tokens = MagicMock()
         mock_tokens.access_token = "access_token"
@@ -333,6 +339,9 @@ class TestLogin:
 
         assert result["message"] == "登录成功"
         assert result["user"]["username"] == "testuser"
+        assert result["user"]["account_type"] == "human"
+        assert result["user"]["organization_id"] is None
+        assert "default_organization_id" not in result["user"]
         assert result["auth_mode"] == "cookie"
         assert "tokens" not in result
         mock_auth_service.authenticate_user.assert_called_once_with(
@@ -368,7 +377,8 @@ class TestLogin:
         mock_user.is_active = True
         mock_user.is_locked = False
         mock_user.last_login_at = None
-        mock_user.default_organization_id = None
+        mock_user.account_type = "human"
+        mock_user.organization_id = None
         now = datetime.now(UTC)
         mock_user.created_at = now
         mock_user.updated_at = now
@@ -1534,6 +1544,9 @@ class TestGetCurrentUserInfo:
         assert result["role_id"] == "role-admin-id"
         assert result["is_active"] is True
         assert result["is_admin"] is True
+        assert result["account_type"] == "human"
+        assert result["organization_id"] is None
+        assert "default_organization_id" not in result
         assert result["session_status"] == "active"
         assert "timestamp" in result
 

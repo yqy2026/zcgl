@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from src.models.party import Party, PartyType
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.user_party_binding import RelationType, UserPartyBinding
 from tests.e2e.factories import (
     create_asset_ownership as _create_ownership,
@@ -38,9 +38,10 @@ def _ensure_asset_party_scope(
         party = Party(
             party_type=PartyType.LEGAL_ENTITY,
             name=ownership.name,
-            code=ownership.code,
+            code=f"LE-{uuid4().int % 1_000_000:06d}",
             external_ref=ownership.id,
             status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
         )
         db_session.add(party)
         db_session.flush()
@@ -58,20 +59,10 @@ def _ensure_asset_party_scope(
         .one_or_none()
     )
     if binding is None:
-        existing_primary_owner_binding = (
-            db_session.query(UserPartyBinding)
-            .filter(
-                UserPartyBinding.user_id == user_id,
-                UserPartyBinding.relation_type == RelationType.OWNER,
-                UserPartyBinding.is_primary.is_(True),
-            )
-            .one_or_none()
-        )
         binding = UserPartyBinding(
             user_id=user_id,
             party_id=party.id,
             relation_type=RelationType.OWNER,
-            is_primary=existing_primary_owner_binding is None,
         )
         db_session.add(binding)
         db_session.flush()

@@ -10,7 +10,7 @@ Test coverage for Roles API endpoints:
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import status
@@ -74,12 +74,38 @@ class TestRolesCRUD:
 
     def test_get_roles_list(self, client, admin_user_headers):
         """测试获取角色列表"""
-        response = client.get("/api/v1/roles", headers=admin_user_headers)
+        from src.services.party_scope_resolver import EffectivePartyScope
+
+        with patch(
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(
+                return_value=EffectivePartyScope(
+                    user_id="test_user_001",
+                    source="unrestricted",
+                    scope_mode="unrestricted",
+                )
+            ),
+        ):
+            response = client.get("/api/v1/roles", headers=admin_user_headers)
         assert response.status_code == status.HTTP_200_OK
 
     def test_get_role_by_id(self, client, admin_user_headers):
         """测试获取单个角色"""
-        response = client.get("/api/v1/roles/test-role-id", headers=admin_user_headers)
+        from src.services.party_scope_resolver import EffectivePartyScope
+
+        with patch(
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(
+                return_value=EffectivePartyScope(
+                    user_id="test_user_001",
+                    source="unrestricted",
+                    scope_mode="unrestricted",
+                )
+            ),
+        ):
+            response = client.get(
+                "/api/v1/roles/test-role-id", headers=admin_user_headers
+            )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_update_role(self, client, admin_user_headers, monkeypatch):

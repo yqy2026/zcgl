@@ -6,11 +6,17 @@ from unittest.mock import AsyncMock, patch
 from fastapi import status
 
 
+def test_party_hierarchy_routes_are_removed() -> None:
+    from src.api.v1 import party as party_module
+
+    assert all("/hierarchy" not in route.path for route in party_module.router.routes)
+
+
 def _create_user(
     db_session,
     *,
     user_id: str,
-    default_organization_id: str | None = None,
+    organization_id: str | None = None,
 ) -> None:
     from src.models.auth import User
 
@@ -25,9 +31,9 @@ def _create_user(
             phone=f"1{phone_suffix[:10]}",
             full_name=f"用户{user_id}",
             password_hash="hashed-password",
-            is_active=True,
+            is_active=organization_id is not None,
             is_locked=False,
-            default_organization_id=default_organization_id,
+            organization_id=organization_id,
         )
     )
     db_session.flush()
@@ -41,15 +47,16 @@ def test_list_parties_should_filter_by_search_query(client, db_session) -> None:
     _create_user(db_session, user_id="test_user_001")
 
     matching_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Acme Holdings",
-        code="ACME-001",
+        code="LE-000001",
         status="active",
+        review_status="approved",
     )
     other_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Beta Group",
-        code="BETA-001",
+        code="LE-000002",
         status="active",
     )
     db_session.add_all([matching_party, other_party])
@@ -59,7 +66,6 @@ def test_list_parties_should_filter_by_search_query(client, db_session) -> None:
             user_id="test_user_001",
             party_id=matching_party.id,
             relation_type=RelationType.OWNER,
-            is_primary=True,
         )
     )
     db_session.flush()
@@ -71,7 +77,7 @@ def test_list_parties_should_filter_by_search_query(client, db_session) -> None:
     assert isinstance(payload, list)
     assert len(payload) == 1
     assert payload[0]["name"] == "Acme Holdings"
-    assert payload[0]["code"] == "ACME-001"
+    assert payload[0]["code"] == "LE-000001"
 
 
 def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
@@ -82,15 +88,16 @@ def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
     _create_user(db_session, user_id="test_user_001")
 
     matching_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Code Match Party",
-        code="ACME-001",
+        code="LE-000001",
         status="active",
+        review_status="approved",
     )
     other_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Other Party",
-        code="BETA-001",
+        code="LE-000002",
         status="active",
     )
     db_session.add_all([matching_party, other_party])
@@ -100,22 +107,21 @@ def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
             user_id="test_user_001",
             party_id=matching_party.id,
             relation_type=RelationType.OWNER,
-            is_primary=True,
         )
     )
     db_session.flush()
 
-    response = client.get("/api/v1/parties?search=ACME-001")
+    response = client.get("/api/v1/parties?search=LE-000001")
 
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
     assert isinstance(payload, list)
     assert len(payload) == 1
     assert payload[0]["name"] == "Code Match Party"
-    assert payload[0]["code"] == "ACME-001"
+    assert payload[0]["code"] == "LE-000001"
 
 
-def test_list_parties_should_fail_closed_when_user_has_no_bindings(
+def test_list_parties_should_return_stable_403_when_user_has_no_bindings(
     client, db_session
 ) -> None:
     """无绑定时列表接口应 fail-closed 返回空列表。"""
@@ -123,9 +129,9 @@ def test_list_parties_should_fail_closed_when_user_has_no_bindings(
 
     db_session.add(
         Party(
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="Acme Holdings",
-            code="ACME-001",
+            code="LE-000001",
             status="active",
         )
     )
@@ -133,8 +139,8 @@ def test_list_parties_should_fail_closed_when_user_has_no_bindings(
 
     response = client.get("/api/v1/parties")
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == []
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["error"]["code"] == "PARTY_SCOPE_MISSING"
 
 
 def test_list_parties_should_derive_current_business_roles_within_party_scope(
@@ -156,27 +162,30 @@ def test_list_parties_should_derive_current_business_roles_within_party_scope(
 
     _create_user(db_session, user_id="test_user_001")
     current_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Current Multi-role Party",
-        code="PTY-CURRENT-001",
+        code="LE-000001",
         status="active",
+        review_status="approved",
     )
     direct_lease_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Direct Lease Tenant Party",
-        code="PTY-DIRECT-001",
+        code="LE-000002",
         status="active",
+        review_status="approved",
     )
     expired_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Expired Tenant Party",
-        code="PTY-EXPIRED-001",
+        code="LE-000003",
         status="active",
+        review_status="approved",
     )
     out_of_scope_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Out Of Scope Tenant Party",
-        code="PTY-OUT-001",
+        code="LE-000004",
         status="active",
     )
     db_session.add_all(
@@ -189,19 +198,16 @@ def test_list_parties_should_derive_current_business_roles_within_party_scope(
                 user_id="test_user_001",
                 party_id=current_party.id,
                 relation_type=RelationType.OWNER,
-                is_primary=True,
             ),
             UserPartyBinding(
                 user_id="test_user_001",
                 party_id=direct_lease_party.id,
                 relation_type=RelationType.OWNER,
-                is_primary=False,
             ),
             UserPartyBinding(
                 user_id="test_user_001",
                 party_id=expired_party.id,
                 relation_type=RelationType.OWNER,
-                is_primary=False,
             ),
         ]
     )
@@ -339,10 +345,11 @@ def test_list_parties_should_derive_current_business_roles_within_party_scope(
     ]
 
 
-def test_user_party_bindings_crud_should_work(client, db_session) -> None:
-    """用户主体绑定接口应支持新增、查询、更新和关闭。"""
+def test_user_party_bindings_list_should_work(client, db_session) -> None:
+    """用户主体绑定查询接口应保留，只读数据不需要预览令牌。"""
     from src.models.auth import User
     from src.models.party import Party, PartyType
+    from src.models.user_party_binding import RelationType, UserPartyBinding
 
     user = User(
         id="binding-user-1",
@@ -351,64 +358,35 @@ def test_user_party_bindings_crud_should_work(client, db_session) -> None:
         phone="13900000001",
         full_name="绑定用户1",
         password_hash="hashed-password",
-        is_active=True,
+        is_active=False,
         is_locked=False,
     )
     party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Binding Party",
-        code="BIND-001",
+        code="LE-000001",
         status="active",
+        review_status="approved",
     )
     db_session.add_all([user, party])
     db_session.flush()
-
-    create_response = client.post(
-        f"/api/v1/users/{user.id}/party-bindings",
-        json={
-            "party_id": party.id,
-            "relation_type": "owner",
-            "is_primary": True,
-        },
+    binding = UserPartyBinding(
+        user_id=user.id,
+        party_id=party.id,
+        relation_type=RelationType.OWNER,
     )
-    assert create_response.status_code == status.HTTP_201_CREATED
-    created_payload = create_response.json()
-    assert created_payload["user_id"] == user.id
-    assert created_payload["party_id"] == party.id
-    assert created_payload["relation_type"] == "owner"
-    assert created_payload["is_primary"] is True
+    db_session.add(binding)
+    db_session.flush()
 
     list_response = client.get(f"/api/v1/users/{user.id}/party-bindings")
+
     assert list_response.status_code == status.HTTP_200_OK
     listed_payload = list_response.json()
     assert isinstance(listed_payload, list)
     assert len(listed_payload) == 1
-    assert listed_payload[0]["id"] == created_payload["id"]
-
-    update_response = client.put(
-        f"/api/v1/users/{user.id}/party-bindings/{created_payload['id']}",
-        json={
-            "relation_type": "manager",
-            "is_primary": False,
-        },
-    )
-    assert update_response.status_code == status.HTTP_200_OK
-    updated_payload = update_response.json()
-    assert updated_payload["relation_type"] == "manager"
-    assert updated_payload["is_primary"] is False
-
-    delete_response = client.delete(
-        f"/api/v1/users/{user.id}/party-bindings/{created_payload['id']}"
-    )
-    assert delete_response.status_code == status.HTTP_200_OK
-    assert delete_response.json()["message"] == "用户主体绑定已关闭"
-
-    active_response = client.get(
-        f"/api/v1/users/{user.id}/party-bindings?active_only=true"
-    )
-    assert active_response.status_code == status.HTTP_200_OK
-    assert active_response.json() == []
-
+    assert listed_payload[0]["id"] == binding.id
+    assert listed_payload[0]["relation_type"] == "owner"
+    assert "is_primary" not in listed_payload[0]
 
 def test_party_review_endpoints_should_transition_review_status(
     client, db_session
@@ -417,9 +395,9 @@ def test_party_review_endpoints_should_transition_review_status(
     from src.models.party import Party, PartyReviewStatus, PartyType
 
     party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Review Party",
-        code="REVIEW-001",
+        code="LE-000001",
         status="active",
         review_status=PartyReviewStatus.DRAFT,
     )
@@ -437,9 +415,9 @@ def test_party_review_endpoints_should_transition_review_status(
     assert approve_payload["reviewed_at"] is not None
 
     party_reject = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Reject Party",
-        code="REJECT-001",
+        code="LE-000002",
         status="active",
         review_status=PartyReviewStatus.PENDING,
     )
@@ -485,14 +463,12 @@ def test_import_parties_should_return_created_and_error_summary(client) -> None:
             json={
                 "items": [
                     {
-                        "party_type": "organization",
+                        "party_type": "legal_entity",
                         "name": "导入主体1",
-                        "code": "IMP-001",
                     },
                     {
-                        "party_type": "organization",
+                        "party_type": "legal_entity",
                         "name": "导入主体2",
-                        "code": "IMP-002",
                     },
                 ]
             },
@@ -589,10 +565,11 @@ def test_get_customer_profile_should_require_perspective_and_return_profile(
 
     _create_user(db_session, user_id="test_user_001")
     scoped_party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="经营主体",
-        code="MGR-001",
+        code="LE-000001",
         status="active",
+        review_status="approved",
     )
     db_session.add(scoped_party)
     db_session.flush()
@@ -601,7 +578,6 @@ def test_get_customer_profile_should_require_perspective_and_return_profile(
             user_id="test_user_001",
             party_id=scoped_party.id,
             relation_type=RelationType.MANAGER,
-            is_primary=True,
         )
     )
     db_session.flush()
@@ -618,8 +594,8 @@ def test_get_customer_profile_should_require_perspective_and_return_profile(
                 "contract_role": "entrusted_operation",
                 "contact_name": "张三",
                 "contact_phone": "13800000000",
-                "identifier_type": "USCC",
-                "unified_identifier": "91310000123456789A",
+                "identifier_type": "unified_social_credit_code",
+                "identifier_display": "91310000123456789A",
                 "address": "上海市徐汇区测试路 1 号",
                 "status": "active",
                 "historical_contract_count": 2,
@@ -678,21 +654,23 @@ def test_create_user_party_binding_should_return_400_for_invalid_time_range(
         phone="13900000002",
         full_name="绑定用户非法时间",
         password_hash="hashed-password",
-        is_active=True,
+        is_active=False,
         is_locked=False,
     )
     party = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Binding Party Invalid Time",
-        code="BIND-002",
+        code="LE-000001",
         status="active",
+        review_status="approved",
     )
     db_session.add_all([user, party])
     db_session.flush()
 
     response = client.post(
-        f"/api/v1/users/{user.id}/party-bindings",
+        f"/api/v1/users/{user.id}/party-bindings/preview",
         json={
+            "operation": "create",
             "party_id": party.id,
             "relation_type": "owner",
             "valid_to": (
@@ -730,20 +708,32 @@ def test_unit_client_should_bypass_closure_based_require_any_role_dependencies(
     assert response.json() == []
 
 
-def test_list_parties_should_ignore_legacy_default_org_fallback(
+def test_list_parties_should_inherit_scope_from_user_organization(
     client, db_session
 ) -> None:
-    """无绑定时即使存在 legacy default_organization 映射也应 fail-closed。"""
+    """没有当前显式绑定时，应继承最近组织的有效代表主体。"""
     from src.models.organization import Organization
     from src.models.party import Party, PartyType
 
+    represented_party = Party(
+        party_type=PartyType.LEGAL_ENTITY,
+        name="代表主体",
+        code="LE-000001",
+        status="active",
+        review_status="approved",
+    )
+    db_session.add(represented_party)
+    db_session.flush()
+
     organization = Organization(
-        id="org-legacy-1",
+        id="org-1",
         name="组织一",
         code="ORG-001",
         level=1,
         type="company",
         status="active",
+        represented_party_id=represented_party.id,
+        represented_party_perspective="owner",
     )
     db_session.add(organization)
     db_session.flush()
@@ -751,23 +741,13 @@ def test_list_parties_should_ignore_legacy_default_org_fallback(
     _create_user(
         db_session,
         user_id="test_user_001",
-        default_organization_id=organization.id,
+        organization_id=organization.id,
     )
-    db_session.add(
-        Party(
-            party_type=PartyType.ORGANIZATION,
-            name="映射主体",
-            code="PARTY-ORG-001",
-            external_ref=organization.id,
-            status="active",
-        )
-    )
-    db_session.flush()
 
     response = client.get("/api/v1/parties")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == []
+    assert [item["id"] for item in response.json()] == [represented_party.id]
 
 
 def test_list_parties_should_bypass_scope_for_admin_user(client, db_session) -> None:
@@ -777,24 +757,32 @@ def test_list_parties_should_bypass_scope_for_admin_user(client, db_session) -> 
     db_session.add_all(
         [
             Party(
-                party_type=PartyType.ORGANIZATION,
+                party_type=PartyType.LEGAL_ENTITY,
                 name="Acme Holdings",
-                code="ACME-001",
+                code="LE-000001",
                 status="active",
             ),
             Party(
-                party_type=PartyType.ORGANIZATION,
+                party_type=PartyType.LEGAL_ENTITY,
                 name="Beta Group",
-                code="BETA-001",
+                code="LE-000002",
                 status="active",
             ),
         ]
     )
     db_session.flush()
 
+    from src.services.party_scope_resolver import EffectivePartyScope
+
     with patch(
-        "src.services.party_scope._has_unrestricted_party_scope_access",
-        new=AsyncMock(return_value=True),
+        "src.services.party_scope.party_scope_resolver.resolve",
+        new=AsyncMock(
+            return_value=EffectivePartyScope(
+                user_id="test_user_001",
+                source="unrestricted",
+                scope_mode="unrestricted",
+            )
+        ),
     ):
         response = client.get("/api/v1/parties")
 
@@ -802,7 +790,7 @@ def test_list_parties_should_bypass_scope_for_admin_user(client, db_session) -> 
     payload = response.json()
     assert isinstance(payload, list)
     codes = {item["code"] for item in payload}
-    assert {"ACME-001", "BETA-001"}.issubset(codes)
+    assert {"LE-000001", "LE-000002"}.issubset(codes)
 
 
 def test_list_parties_cross_user_isolation(client, db_session) -> None:
@@ -815,16 +803,18 @@ def test_list_parties_cross_user_isolation(client, db_session) -> None:
     _create_user(db_session, user_id="test_user_002")
 
     party_a = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Party Alpha",
-        code="ALPHA-001",
+        code="LE-000001",
         status="active",
+        review_status="approved",
     )
     party_b = Party(
-        party_type=PartyType.ORGANIZATION,
+        party_type=PartyType.LEGAL_ENTITY,
         name="Party Beta",
-        code="BETA-002",
+        code="LE-000002",
         status="active",
+        review_status="approved",
     )
     db_session.add_all([party_a, party_b])
     db_session.flush()
@@ -834,7 +824,6 @@ def test_list_parties_cross_user_isolation(client, db_session) -> None:
             user_id="test_user_001",
             party_id=party_a.id,
             relation_type=RelationType.OWNER,
-            is_primary=True,
         )
     )
     db_session.add(
@@ -842,7 +831,6 @@ def test_list_parties_cross_user_isolation(client, db_session) -> None:
             user_id="test_user_002",
             party_id=party_b.id,
             relation_type=RelationType.OWNER,
-            is_primary=True,
         )
     )
     db_session.flush()
@@ -856,62 +844,6 @@ def test_list_parties_cross_user_isolation(client, db_session) -> None:
     assert party_b.id not in ids, "用户 A 不应看到仅属于用户 B 的主体"
 
 
-def test_list_parties_headquarters_expands_to_manager_descendants(
-    client, db_session
-) -> None:
-    """§6.2 headquarters 绑定应展开子树（含自身）纳入 manager 视角，无关主体不可见。"""
-    from src.models.party import Party, PartyHierarchy, PartyType
-    from src.models.user_party_binding import RelationType, UserPartyBinding
-
-    _create_user(db_session, user_id="test_user_001")
-
-    party_h = Party(
-        party_type=PartyType.ORGANIZATION,
-        name="Headquarters Party",
-        code="HQ-001",
-        status="active",
-    )
-    party_m1 = Party(
-        party_type=PartyType.ORGANIZATION,
-        name="Manager Child Party",
-        code="MGR-001",
-        status="active",
-    )
-    party_x = Party(
-        party_type=PartyType.ORGANIZATION,
-        name="Unrelated Party",
-        code="UNRELATED-001",
-        status="active",
-    )
-    db_session.add_all([party_h, party_m1, party_x])
-    db_session.flush()
-
-    db_session.add(
-        PartyHierarchy(
-            parent_party_id=party_h.id,
-            child_party_id=party_m1.id,
-        )
-    )
-    db_session.add(
-        UserPartyBinding(
-            user_id="test_user_001",
-            party_id=party_h.id,
-            relation_type=RelationType.HEADQUARTERS,
-            is_primary=True,
-        )
-    )
-    db_session.flush()
-
-    response = client.get("/api/v1/parties")
-
-    assert response.status_code == status.HTTP_200_OK
-    payload = response.json()
-    ids = [p["id"] for p in payload]
-    assert party_h.id in ids, "headquarters 自身应在可见范围内"
-    assert party_m1.id in ids, "headquarters 直接子节点应在可见范围内"
-    assert party_x.id not in ids, "无关主体不应出现在 headquarters 范围内"
-
-
 def test_list_parties_returns_empty_when_scope_resolver_raises(
     client, db_session
 ) -> None:
@@ -920,19 +852,218 @@ def test_list_parties_returns_empty_when_scope_resolver_raises(
 
     db_session.add(
         Party(
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="Should Not Be Visible",
-            code="SECRET-001",
+            code="LE-000001",
             status="active",
         )
     )
     db_session.flush()
 
     with patch(
-        "src.crud.party.CRUDParty.get_user_bindings",
+        "src.services.party_scope.party_scope_resolver.resolve",
         new=AsyncMock(side_effect=RuntimeError("simulated scope resolution failure")),
     ):
         response = client.get("/api/v1/parties")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == [], "scope 异常时必须 fail-closed，不得返回全量数据"
+
+
+def test_approved_party_lifecycle_requires_preview_then_commit(
+    client, db_session
+) -> None:
+    """Approved Party activation changes are auditable, previewed mutations."""
+    from src.models.auth import User
+    from src.models.party import Party, PartyReviewStatus, PartyType
+
+    actor = User(
+        id="test_user_001",
+        username="test_user_001",
+        email="test.user.001@example.com",
+        phone="13900000001",
+        full_name="Party lifecycle manager",
+        password_hash="hashed-password",
+        account_type="service",
+        is_active=True,
+        is_locked=False,
+    )
+    party = Party(
+        party_type=PartyType.LEGAL_ENTITY,
+        name="Lifecycle Party",
+        code="LE-000061",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED,
+    )
+    db_session.add_all([actor, party])
+    db_session.flush()
+
+    preview_response = client.post(
+        f"/api/v1/parties/{party.id}/status/preview",
+        json={"operation": "deactivate"},
+    )
+
+    assert preview_response.status_code == status.HTTP_200_OK
+    preview_payload = preview_response.json()
+    assert preview_payload["before_state"]["status"] == "active"
+    assert preview_payload["after_state"]["status"] == "inactive"
+    db_session.refresh(party)
+    assert party.status == "active"
+
+    direct_status_write = client.put(
+        f"/api/v1/parties/{party.id}",
+        json={"status": "inactive"},
+    )
+    assert direct_status_write.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    commit_request = {
+        "preview_token": preview_payload["preview_token"],
+        "reason": "Retire the Party from new references.",
+        "idempotency_key": "party-lifecycle-api-1",
+    }
+    commit_response = client.post(
+        f"/api/v1/parties/{party.id}/deactivate",
+        json=commit_request,
+    )
+
+    assert commit_response.status_code == status.HTTP_200_OK
+    commit_payload = commit_response.json()
+    assert commit_payload["operation"] == "deactivate"
+    assert commit_payload["party"]["status"] == "inactive"
+    assert commit_payload["idempotent"] is False
+
+    repeated_commit = client.post(
+        f"/api/v1/parties/{party.id}/deactivate",
+        json=commit_request,
+    )
+    assert repeated_commit.status_code == status.HTTP_200_OK
+    assert repeated_commit.json()["idempotent"] is True
+
+    stale_commit = client.post(
+        f"/api/v1/parties/{party.id}/deactivate",
+        json={
+            **commit_request,
+            "idempotency_key": "party-lifecycle-api-1-stale",
+        },
+    )
+    assert stale_commit.status_code == status.HTTP_409_CONFLICT
+    assert stale_commit.json()["error"]["code"] == "SCOPE_CHANGE_PREVIEW_STALE"
+
+    reactivate_preview = client.post(
+        f"/api/v1/parties/{party.id}/status/preview",
+        json={"operation": "reactivate"},
+    )
+    assert reactivate_preview.status_code == status.HTTP_200_OK
+
+    reactivate_commit = client.post(
+        f"/api/v1/parties/{party.id}/reactivate",
+        json={
+            "preview_token": reactivate_preview.json()["preview_token"],
+            "reason": "Restore approved Party references.",
+            "idempotency_key": "party-lifecycle-api-2",
+        },
+    )
+    assert reactivate_commit.status_code == status.HTTP_200_OK
+    assert reactivate_commit.json()["party"]["status"] == "active"
+
+
+def test_party_lifecycle_preview_reports_scope_impact_and_rejects_status_drift(
+    client, db_session
+) -> None:
+    """A Party preview captures scope impact and refuses a changed target state."""
+    from src.models.auth import User
+    from src.models.organization import Organization
+    from src.models.party import Party, PartyReviewStatus, PartyType
+    from src.models.party_lifecycle_commit import PartyLifecycleCommit
+    from src.models.user_party_binding import RelationType, UserPartyBinding
+
+    actor = User(
+        id="test_user_001",
+        username="test_user_001",
+        email="test.user.001@example.com",
+        phone="13900000001",
+        full_name="Party lifecycle manager",
+        password_hash="hashed-password",
+        account_type="service",
+        is_active=True,
+        is_locked=False,
+    )
+    party = Party(
+        party_type=PartyType.LEGAL_ENTITY,
+        name="Impacted Party",
+        code="LE-000062",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED,
+    )
+    organization = Organization(
+        id="party-lifecycle-org-1",
+        name="Lifecycle Organization",
+        code="ORG-LIFECYCLE-1",
+        level=1,
+        sort_order=1,
+        type="department",
+        status="active",
+        represented_party_id=None,
+        represented_party_perspective=None,
+        is_deleted=False,
+    )
+    db_session.add_all([actor, party, organization])
+    db_session.flush()
+    organization.represented_party_id = party.id
+    organization.represented_party_perspective = "owner"
+    user = User(
+        id="party-lifecycle-user-1",
+        username="party_lifecycle_user_1",
+        email="party.lifecycle.user.1@example.com",
+        phone="13900000062",
+        full_name="Affected human user",
+        password_hash="hashed-password",
+        account_type="human",
+        organization_id=organization.id,
+        is_active=True,
+        is_locked=False,
+    )
+    db_session.add(user)
+    db_session.flush()
+    db_session.add(
+        UserPartyBinding(
+            user_id=user.id,
+            party_id=party.id,
+            relation_type=RelationType.OWNER,
+        )
+    )
+    db_session.flush()
+
+    preview_response = client.post(
+        f"/api/v1/parties/{party.id}/status/preview",
+        json={"operation": "deactivate"},
+    )
+
+    assert preview_response.status_code == status.HTTP_200_OK
+    preview_payload = preview_response.json()
+    assert preview_payload["impact"] == {
+        "represented_organization_count": 1,
+        "potentially_affected_organization_count": 1,
+        "current_user_binding_count": 1,
+        "affected_user_count": 1,
+        "user_scope_change_count": 1,
+        "asset_reference_count": 0,
+        "project_reference_count": 0,
+        "contract_group_reference_count": 0,
+        "contract_reference_count": 0,
+    }
+
+    party.status = "inactive"
+    db_session.flush()
+    stale_commit = client.post(
+        f"/api/v1/parties/{party.id}/deactivate",
+        json={
+            "preview_token": preview_payload["preview_token"],
+            "reason": "This preview must not commit after a status change.",
+            "idempotency_key": "party-lifecycle-status-drift",
+        },
+    )
+
+    assert stale_commit.status_code == status.HTTP_409_CONFLICT
+    assert stale_commit.json()["error"]["code"] == "SCOPE_CHANGE_PREVIEW_STALE"
+    assert db_session.query(PartyLifecycleCommit).filter_by(party_id=party.id).count() == 0

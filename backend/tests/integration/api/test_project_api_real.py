@@ -8,6 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from src.models.party import Party, PartyReviewStatus, PartyType
+
 
 def _get_auth_headers(client: TestClient, admin_user) -> dict[str, str]:
     response = client.post(
@@ -39,15 +41,27 @@ def _request_with_reauth(
 
 
 @pytest.mark.integration
-def test_project_crud_real_flow(client: TestClient, test_data):
+def test_project_crud_real_flow(
+    client: TestClient, db_session: Session, test_data
+) -> None:
     """真实链路验证：项目 CRUD + 列表搜索。"""
     admin_user = test_data["admin"]
     headers = _get_auth_headers(client, admin_user)
 
     project_name = f"IT-Real-Project-{uuid.uuid4().hex[:8]}"
+    manager_party = Party(
+        party_type=PartyType.LEGAL_ENTITY.value,
+        name=f"IT Project Manager {uuid.uuid4().hex[:8]}",
+        code=f"LE-{uuid.uuid4().int % 1_000_000:06d}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    db_session.add(manager_party)
+    db_session.flush()
     create_payload = {
         "project_name": project_name,
         "status": "active",
+        "manager_party_id": manager_party.id,
     }
 
     create_response = client.post(
@@ -100,7 +114,6 @@ def test_project_list_and_detail_should_tolerate_legacy_project_code(
     """历史 project_code 不符合新格式时，列表/详情仍应可读。"""
     from sqlalchemy import select
 
-    from src.models.party import Party, PartyType
     from src.models.project import Project
 
     admin_user = test_data["admin"]
@@ -112,17 +125,18 @@ def test_project_list_and_detail_should_tolerate_legacy_project_code(
     organization_id = str(getattr(test_data["organization"], "id"))
     manager_party = db_session.execute(
         select(Party).where(
-            Party.party_type == PartyType.ORGANIZATION.value,
+            Party.party_type == PartyType.LEGAL_ENTITY.value,
             Party.external_ref == organization_id,
         )
     ).scalar_one_or_none()
     if manager_party is None:
         manager_party = Party(
-            party_type=PartyType.ORGANIZATION.value,
+            party_type=PartyType.LEGAL_ENTITY.value,
             name=f"Legacy Test Party {suffix}",
-            code=f"LEGACY-PARTY-{suffix}",
+            code=f"LE-{int(suffix, 16) % 1_000_000:06d}",
             external_ref=organization_id,
             status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
         )
         db_session.add(manager_party)
         db_session.flush()
@@ -172,7 +186,6 @@ def test_project_search_should_tolerate_legacy_project_code(
     """历史 project_code 不符合新格式时，POST /search 仍应可读。"""
     from sqlalchemy import select
 
-    from src.models.party import Party, PartyType
     from src.models.project import Project
 
     admin_user = test_data["admin"]
@@ -184,17 +197,18 @@ def test_project_search_should_tolerate_legacy_project_code(
     organization_id = str(getattr(test_data["organization"], "id"))
     manager_party = db_session.execute(
         select(Party).where(
-            Party.party_type == PartyType.ORGANIZATION.value,
+            Party.party_type == PartyType.LEGAL_ENTITY.value,
             Party.external_ref == organization_id,
         )
     ).scalar_one_or_none()
     if manager_party is None:
         manager_party = Party(
-            party_type=PartyType.ORGANIZATION.value,
+            party_type=PartyType.LEGAL_ENTITY.value,
             name=f"Legacy Search Party {suffix}",
-            code=f"LEGACY-SEARCH-PARTY-{suffix}",
+            code=f"LE-{int(suffix, 16) % 1_000_000:06d}",
             external_ref=organization_id,
             status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
         )
         db_session.add(manager_party)
         db_session.flush()

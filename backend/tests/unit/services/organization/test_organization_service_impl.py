@@ -217,30 +217,10 @@ class TestUpdateOrganization:
                     mock_db, org_id="nonexistent", obj_in=obj_in
                 )
 
-    async def test_update_organization_parent_cycle(self, org_service, mock_db):
-        """测试更新上级组织时检测循环引用"""
-        obj_in = OrganizationUpdate(
-            parent_id="org_123",  # 尝试将组织设置为自己的子组织
-            updated_by="user_123",
-        )
-
-        org = MagicMock(spec=Organization)
-        org.id = "org_123"
-        org.name = "测试组织"
-        org.parent_id = "parent_123"
-        with patch(
-            "src.services.organization.service.organization_crud.get_async",
-            new=AsyncMock(return_value=org),
-        ):
-            with patch.object(
-                org_service, "_would_create_cycle", new=AsyncMock(return_value=True)
-            ):
-                with pytest.raises(
-                    OperationNotAllowedError, match="不能将组织移动到其子组织下"
-                ):
-                    await org_service.update_organization(
-                        mock_db, org_id="org_123", obj_in=obj_in
-                    )
+    def test_update_organization_rejects_parent_change(self):
+        """普通资料更新不能改变组织层级。"""
+        with pytest.raises(ValueError, match="Extra inputs are not permitted"):
+            OrganizationUpdate(parent_id="org_123", updated_by="user_123")
 
     async def test_update_organization_invalidates_cache(
         self, org_service, mock_db, mock_organization
@@ -250,52 +230,26 @@ class TestUpdateOrganization:
             name="新名称",
             updated_by="user_123",
         )
-        with patch(
-            "src.services.organization.service.organization_crud.get_async",
-            new=AsyncMock(return_value=mock_organization),
-        ), patch(
-            "src.services.organization.service.cache_manager.clear",
-            return_value=True,
-        ) as mock_cache_clear:
-            await org_service.update_organization(mock_db, org_id="org_123", obj_in=obj_in)
+        with (
+            patch(
+                "src.services.organization.service.organization_crud.get_async",
+                new=AsyncMock(return_value=mock_organization),
+            ),
+            patch(
+                "src.services.organization.service.cache_manager.clear",
+                return_value=True,
+            ) as mock_cache_clear,
+        ):
+            await org_service.update_organization(
+                mock_db, org_id="org_123", obj_in=obj_in
+            )
 
         mock_cache_clear.assert_called()
 
-    async def test_update_organization_changes_level_and_path(
-        self, org_service, mock_db, mock_parent
-    ):
-        """测试更新上级组织时更新层级和路径"""
-        obj_in = OrganizationUpdate(
-            parent_id="parent_123",
-            updated_by="user_123",
-        )
-
-        org = MagicMock(spec=Organization)
-        org.id = "org_123"
-        org.name = "测试组织"
-        org.parent_id = None
-        org.level = 1
-        async def get_async_side_effect(db, org_id):
-            return org if org_id == "org_123" else mock_parent
-
-        with patch(
-            "src.services.organization.service.organization_crud.get_async",
-            new=AsyncMock(side_effect=get_async_side_effect),
-        ):
-            with patch.object(
-                org_service, "_would_create_cycle", new=AsyncMock(return_value=False)
-            ):
-                with patch.object(
-                    org_service, "_update_children_path", new=AsyncMock()
-                ) as mock_update_children:
-                    result = await org_service.update_organization(
-                        mock_db, org_id="org_123", obj_in=obj_in
-                    )
-
-                    # Level and path update happens through object.__setattr__ in the actual code
-                    # We just verify the method completed without error
-                    assert result is not None
-                    mock_update_children.assert_awaited()
+    def test_update_organization_rejects_level_path_bypass(self):
+        """层级与路径只由专用组织移动动作维护。"""
+        with pytest.raises(ValueError, match="Extra inputs are not permitted"):
+            OrganizationUpdate(parent_id="parent_123", updated_by="user_123")
 
     async def test_update_organization_creates_history(
         self, org_service, mock_db, mock_organization
@@ -410,16 +364,20 @@ class TestDeleteOrganization:
         self, org_service, mock_db, mock_organization
     ):
         """删除组织后应触发组织缓存失效"""
-        with patch(
-            "src.services.organization.service.organization_crud.get_async",
-            new=AsyncMock(return_value=mock_organization),
-        ), patch(
-            "src.services.organization.service.organization_crud.get_children_async",
-            new=AsyncMock(return_value=[]),
-        ), patch(
-            "src.services.organization.service.cache_manager.clear",
-            return_value=True,
-        ) as mock_cache_clear:
+        with (
+            patch(
+                "src.services.organization.service.organization_crud.get_async",
+                new=AsyncMock(return_value=mock_organization),
+            ),
+            patch(
+                "src.services.organization.service.organization_crud.get_children_async",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch(
+                "src.services.organization.service.cache_manager.clear",
+                return_value=True,
+            ) as mock_cache_clear,
+        ):
             await org_service.delete_organization(mock_db, org_id="org_123")
 
         mock_cache_clear.assert_called()
@@ -440,13 +398,16 @@ class TestGetStatistics:
             "by_level": {"1": 4, "2": 3},
         }
 
-        with patch(
-            "src.services.organization.service.cache_manager.get",
-            return_value=cached_stats,
-        ), patch(
-            "src.services.organization.service.organization_crud.get_statistics_async",
-            new=AsyncMock(),
-        ) as mock_get_stats:
+        with (
+            patch(
+                "src.services.organization.service.cache_manager.get",
+                return_value=cached_stats,
+            ),
+            patch(
+                "src.services.organization.service.organization_crud.get_statistics_async",
+                new=AsyncMock(),
+            ) as mock_get_stats,
+        ):
             result = await org_service.get_statistics(mock_db)
 
         assert result == cached_stats
@@ -454,6 +415,7 @@ class TestGetStatistics:
 
     async def test_get_statistics_basic(self, org_service, mock_db):
         """测试基本统计"""
+
         class _ExecuteResult:
             def __init__(self, rows=None):
                 self._rows = rows or []
@@ -461,9 +423,7 @@ class TestGetStatistics:
             def all(self):
                 return self._rows
 
-        mock_db.execute = AsyncMock(
-            return_value=_ExecuteResult(rows=[(1, 6), (2, 4)])
-        )
+        mock_db.execute = AsyncMock(return_value=_ExecuteResult(rows=[(1, 6), (2, 4)]))
 
         with patch(
             "src.services.organization.service.cache_manager.get",
@@ -479,6 +439,7 @@ class TestGetStatistics:
 
     async def test_get_statistics_empty(self, org_service, mock_db):
         """测试空统计"""
+
         class _ExecuteResult:
             def __init__(self, rows=None):
                 self._rows = rows or []
@@ -505,15 +466,19 @@ class TestGetStatistics:
             "inactive": 0,
             "by_level": {"1": 2, "2": 1},
         }
-        with patch(
-            "src.services.organization.service.cache_manager.get",
-            return_value=None,
-        ), patch(
-            "src.services.organization.service.cache_manager.set",
-            return_value=True,
-        ) as mock_cache_set, patch(
-            "src.services.organization.service.organization_crud.get_statistics_async",
-            new=AsyncMock(return_value=db_stats),
+        with (
+            patch(
+                "src.services.organization.service.cache_manager.get",
+                return_value=None,
+            ),
+            patch(
+                "src.services.organization.service.cache_manager.set",
+                return_value=True,
+            ) as mock_cache_set,
+            patch(
+                "src.services.organization.service.organization_crud.get_statistics_async",
+                new=AsyncMock(return_value=db_stats),
+            ),
         ):
             result = await org_service.get_statistics(mock_db)
 
@@ -564,9 +529,7 @@ class TestWouldCreateCycle:
     async def test_no_cycle(self, org_service, mock_db, mock_parent):
         """测试无循环引用"""
         mock_db.execute = AsyncMock(return_value=_ExecuteResult(None))
-        result = await org_service._would_create_cycle(
-            mock_db, "org_123", "parent_123"
-        )
+        result = await org_service._would_create_cycle(mock_db, "org_123", "parent_123")
 
         assert result is False
 

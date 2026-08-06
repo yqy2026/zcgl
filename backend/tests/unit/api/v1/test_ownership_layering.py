@@ -104,7 +104,7 @@ async def test_ownership_create_authz_should_include_organization_scope_context(
             AsyncMock(return_value="party-org-1"),
         )
         result = await module._require_ownership_create_authz(  # type: ignore[attr-defined]
-            current_user=MagicMock(id="user-1", default_organization_id="org-1"),
+            current_user=MagicMock(id="user-1", organization_id="org-1"),
             db=MagicMock(),
         )
 
@@ -133,7 +133,7 @@ async def test_ownership_create_authz_should_fallback_to_unscoped_sentinel() -> 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
         result = await module._require_ownership_create_authz(  # type: ignore[attr-defined]
-            current_user=MagicMock(id="user-1", default_organization_id=None),
+            current_user=MagicMock(id="user-1", organization_id=None),
             db=MagicMock(),
         )
 

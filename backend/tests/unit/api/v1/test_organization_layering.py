@@ -35,10 +35,15 @@ def test_organization_endpoints_should_use_require_authz() -> None:
         r"async def get_organization_path[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_id=\"\{org_id\}\"[\s\S]*?deny_as_not_found=True",
         r"async def get_organization_history[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_id=\"\{org_id\}\"[\s\S]*?deny_as_not_found=True",
         r"async def create_organization[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_organization_create_authz\)",
+        r"async def _require_organization_party_scope_batch_authz[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"organization\"[\s\S]*?resource_id=organization_id",
+        r"async def preview_organization_party_scope_batch[\s\S]*?_require_organization_party_scope_batch_authz",
+        r"async def commit_organization_party_scope_batch[\s\S]*?_require_organization_party_scope_batch_authz",
         r"async def update_organization[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_id=\"\{org_id\}\"",
+        r"async def preview_organization_party_scope[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"organization\"[\s\S]*?resource_id=\"\{org_id\}\"",
+        r"async def commit_organization_party_scope[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"organization\"[\s\S]*?resource_id=\"\{org_id\}\"",
         r"async def delete_organization[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_id=\"\{org_id\}\"",
-        r"async def move_organization[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_id=\"\{org_id\}\"",
-        r"async def batch_organization_operation[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"organization\"[\s\S]*?resource_context=_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT",
+        r"async def preview_organization_move[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"organization\"[\s\S]*?resource_id=\"\{org_id\}\"",
+        r"async def commit_organization_move[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"organization\"[\s\S]*?resource_id=\"\{org_id\}\"",
         r"async def advanced_search_organizations[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"organization\"",
     ]
 
@@ -65,7 +70,7 @@ async def test_organization_create_authz_should_include_parent_scope_context() -
         )
         result = await module._require_organization_create_authz(  # type: ignore[attr-defined]
             organization=org_create,
-            current_user=MagicMock(id="user-1", default_organization_id="org-self-1"),
+            current_user=MagicMock(id="user-1", organization_id="org-self-1"),
             db=MagicMock(),
         )
 
@@ -90,7 +95,7 @@ async def test_organization_create_authz_should_fallback_to_unscoped_sentinel() 
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
         result = await module._require_organization_create_authz(  # type: ignore[attr-defined]
             organization=org_create,
-            current_user=MagicMock(id="user-1", default_organization_id=None),
+            current_user=MagicMock(id="user-1", organization_id=None),
             db=MagicMock(),
         )
 
@@ -102,13 +107,8 @@ async def test_organization_create_authz_should_fallback_to_unscoped_sentinel() 
     }
 
 
-def test_organization_batch_update_unscoped_context_should_be_defined() -> None:
+def test_retired_organization_batch_update_context_is_not_defined() -> None:
     from src.api.v1.auth import organization as module
 
-    expected = "__unscoped__:organization:batch_update"
-    assert module._ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID == expected  # type: ignore[attr-defined]
-    assert module._ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT == {  # type: ignore[attr-defined]
-        "party_id": expected,
-        "owner_party_id": expected,
-        "manager_party_id": expected,
-    }
+    assert not hasattr(module, "_ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(module, "_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT")

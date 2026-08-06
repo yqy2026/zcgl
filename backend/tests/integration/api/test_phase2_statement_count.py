@@ -10,7 +10,7 @@ from sqlalchemy.engine import Engine
 
 from src.crud.asset import asset_crud
 from src.models.asset import Asset
-from src.models.party import Party, PartyType
+from src.models.party import Party, PartyReviewStatus, PartyType
 
 pytestmark = pytest.mark.integration
 
@@ -71,17 +71,18 @@ def _seed_assets(
     name_prefix: str,
 ) -> list[str]:
     party_stmt = select(Party).where(
-        Party.party_type == PartyType.ORGANIZATION.value,
+        Party.party_type == PartyType.LEGAL_ENTITY.value,
         Party.external_ref == organization_id,
     )
     party = db_session.execute(party_stmt).scalar_one_or_none()
     if party is None:
         party = Party(
-            party_type=PartyType.ORGANIZATION.value,
+            party_type=PartyType.LEGAL_ENTITY.value,
             name=f"StatementCountOrg-{organization_id[:8]}",
-            code=f"STMT-ORG-{organization_id[:8]}",
+            code=f"LE-{uuid4().int % 1_000_000:06d}",
             external_ref=organization_id,
             status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
         )
         db_session.add(party)
         db_session.flush()

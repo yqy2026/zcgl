@@ -13,6 +13,7 @@ from src.crud.asset_support import SensitiveDataHandler
 from src.models.asset import Asset
 from src.models.enum_field import EnumFieldType, EnumFieldValue
 from src.models.ownership import Ownership
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.user_party_binding import RelationType, UserPartyBinding
 from src.services.organization_permission_service import (
     invalidate_user_accessible_organizations_cache,
@@ -132,12 +133,21 @@ class TestAssetLifecycle:
         )
         db_session.add(ownership)
         db_session.flush()
+        party = Party(
+            party_type=PartyType.LEGAL_ENTITY.value,
+            name=ownership.name,
+            code=f"LE-{uuid4().int % 1_000_000:06d}",
+            external_ref=ownership.id,
+            status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
+        )
+        db_session.add(party)
+        db_session.flush()
         db_session.add(
             UserPartyBinding(
                 user_id=user_id,
-                party_id=ownership.id,
+                party_id=party.id,
                 relation_type=RelationType.OWNER,
-                is_primary=False,
             )
         )
         db_session.commit()

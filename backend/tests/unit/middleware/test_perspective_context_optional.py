@@ -24,7 +24,6 @@ async def test_no_perspective_header_returns_all_binding_context() -> None:
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -58,7 +57,6 @@ async def test_no_perspective_header_admin_bypass() -> None:
                     user_id="admin-1",
                     owner_party_ids=[],
                     manager_party_ids=[],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -94,7 +92,6 @@ async def test_legacy_header_is_ignored_for_non_analytics_endpoint() -> None:
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -128,7 +125,6 @@ async def test_single_binding_user_no_header_returns_single_scope() -> None:
                     user_id="user-1",
                     owner_party_ids=[],
                     manager_party_ids=["manager-1"],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),
@@ -162,7 +158,6 @@ async def test_non_exempt_path_without_header_no_longer_400() -> None:
                     user_id="user-1",
                     owner_party_ids=["owner-1"],
                     manager_party_ids=[],
-                    headquarters_party_ids=[],
                     role_ids=[],
                 )
             ),

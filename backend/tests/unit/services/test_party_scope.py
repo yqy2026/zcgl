@@ -4,21 +4,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import PartyScopeForbiddenError
 from src.crud.query_builder import PartyFilter
 from src.middleware.auth import DataScopeContext
 from src.services.party_scope import (
     build_party_filter_from_scope_context,
     resolve_user_party_filter,
 )
+from src.services.party_scope_resolver import EffectivePartyScope
 
 pytestmark = pytest.mark.asyncio
 
 
 class TestResolveUserPartyFilter:
-    async def test_build_perspective_party_filter_should_use_owner_ids_only(
-        self,
-    ) -> None:
-        perspective_context = DataScopeContext(
+    async def test_build_owner_filter_uses_owner_ids_only(self) -> None:
+        context = DataScopeContext(
             scope_mode="owner",
             allowed_binding_types=["owner", "manager"],
             owner_party_ids=["owner-1"],
@@ -27,19 +27,15 @@ class TestResolveUserPartyFilter:
             source="header",
         )
 
-        result = build_party_filter_from_scope_context(perspective_context)
-
-        assert result == PartyFilter(
+        assert build_party_filter_from_scope_context(context) == PartyFilter(
             party_ids=["owner-1"],
             filter_mode="owner",
             owner_party_ids=["owner-1"],
             manager_party_ids=[],
         )
 
-    async def test_build_perspective_party_filter_should_use_manager_ids_only(
-        self,
-    ) -> None:
-        perspective_context = DataScopeContext(
+    async def test_build_manager_filter_uses_manager_ids_only(self) -> None:
+        context = DataScopeContext(
             scope_mode="manager",
             allowed_binding_types=["owner", "manager"],
             owner_party_ids=["owner-1"],
@@ -48,57 +44,33 @@ class TestResolveUserPartyFilter:
             source="header",
         )
 
-        result = build_party_filter_from_scope_context(perspective_context)
-
-        assert result == PartyFilter(
+        assert build_party_filter_from_scope_context(context) == PartyFilter(
             party_ids=["manager-1"],
             filter_mode="manager",
             owner_party_ids=[],
             manager_party_ids=["manager-1"],
         )
 
-    async def test_build_party_filter_perspective_all(self) -> None:
-        perspective_context = DataScopeContext(
-            scope_mode="all",
-            allowed_binding_types=["owner", "manager"],
-            owner_party_ids=["owner-1"],
-            manager_party_ids=["manager-1"],
-            effective_party_ids=["owner-1", "manager-1"],
-            source="auto",
-        )
-
-        result = build_party_filter_from_scope_context(perspective_context)
-
-        assert result == PartyFilter(
-            party_ids=["manager-1", "owner-1"],
-            filter_mode="any",
-            owner_party_ids=["owner-1"],
-            manager_party_ids=["manager-1"],
-        )
-
-    async def test_build_party_filter_perspective_none_with_both_bindings(self) -> None:
-        perspective_context = SimpleNamespace(
+    async def test_build_all_filter_keeps_owner_and_manager_separate(self) -> None:
+        context = SimpleNamespace(
             scope_mode="all",
             owner_party_ids=["owner-1", "owner-1"],
             manager_party_ids=["manager-1"],
             effective_party_ids=[],
         )
 
-        result = build_party_filter_from_scope_context(perspective_context)
-
-        assert result == PartyFilter(
+        assert build_party_filter_from_scope_context(context) == PartyFilter(
             party_ids=["manager-1", "owner-1"],
             filter_mode="any",
             owner_party_ids=["owner-1"],
             manager_party_ids=["manager-1"],
         )
 
-    async def test_should_return_explicit_party_filter(self) -> None:
-        db = MagicMock()
+    async def test_explicit_filter_wins_without_resolving(self) -> None:
         explicit_filter = PartyFilter(party_ids=["party-1"])
 
         result = await resolve_user_party_filter(
-            db,
+            MagicMock(),
             current_user_id="user-1",
             party_filter=explicit_filter,
             logger=logging.getLogger(__name__),
@@ -106,11 +78,9 @@ class TestResolveUserPartyFilter:
 
         assert result is explicit_filter
 
-    async def test_should_return_none_when_current_user_id_missing(self) -> None:
-        db = MagicMock()
-
+    async def test_missing_user_id_keeps_unscoped_internal_caller_behavior(self) -> None:
         result = await resolve_user_party_filter(
-            db,
+            MagicMock(),
             current_user_id=None,
             party_filter=None,
             logger=logging.getLogger(__name__),
@@ -118,379 +88,115 @@ class TestResolveUserPartyFilter:
 
         assert result is None
 
-    async def test_should_fallback_to_mapped_party_scope_when_no_party_bindings(
-        self,
-    ) -> None:
-        db = MagicMock()
-        execute_result = MagicMock()
-        execute_result.scalar_one_or_none.return_value = "org-legacy"
-        db.execute = AsyncMock(return_value=execute_result)
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.party_scope.party_crud.resolve_organization_party_id",
-                new=AsyncMock(return_value="party-legacy"),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
+    async def test_unrestricted_scope_bypasses_query_filter(self) -> None:
+        scope = EffectivePartyScope(
+            user_id="user-1",
+            source="unrestricted",
+            scope_mode="unrestricted",
+        )
+        with patch(
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=scope),
         ):
             result = await resolve_user_party_filter(
-                db,
+                MagicMock(),
+                current_user_id="user-1",
+                party_filter=None,
+                logger=logging.getLogger(__name__),
+            )
+
+        assert result is None
+
+    async def test_denied_scope_raises_stable_forbidden(self) -> None:
+        scope = EffectivePartyScope(
+            user_id="user-1",
+            source="none",
+            scope_mode="none",
+            error_code="PARTY_SCOPE_MISSING",
+        )
+        with patch(
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=scope),
+        ):
+            with pytest.raises(PartyScopeForbiddenError) as exc_info:
+                await resolve_user_party_filter(
+                    MagicMock(),
+                    current_user_id="user-1",
+                    party_filter=None,
+                    logger=logging.getLogger(__name__),
+                )
+
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.code == "PARTY_SCOPE_MISSING"
+
+    async def test_denied_scope_can_skip_invalid_recipients(self) -> None:
+        scope = EffectivePartyScope(
+            user_id="user-1",
+            source="none",
+            scope_mode="none",
+            error_code="PARTY_SCOPE_MISSING",
+        )
+        with patch(
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=scope),
+        ):
+            result = await resolve_user_party_filter(
+                MagicMock(),
+                    current_user_id="user-1",
+                    party_filter=None,
+                    logger=logging.getLogger(__name__),
+                    skip_invalid_scope=True,
+                )
+
+        assert result == PartyFilter(party_ids=[])
+
+    async def test_manager_scope_maps_to_manager_filter(self) -> None:
+        scope = EffectivePartyScope(
+            user_id="user-1",
+            source="organization",
+            scope_mode="manager",
+            manager_party_ids=["party-1"],
+        )
+        with patch(
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=scope),
+        ):
+            result = await resolve_user_party_filter(
+                MagicMock(),
                 current_user_id="user-1",
                 party_filter=None,
                 logger=logging.getLogger(__name__),
             )
 
         assert result == PartyFilter(
-            party_ids=["party-legacy"],
-            legacy_org_ids=["org-legacy"],
+            party_ids=["party-1"],
+            filter_mode="manager",
+            owner_party_ids=[],
+            manager_party_ids=["party-1"],
         )
 
-    async def test_should_fail_closed_when_legacy_org_not_mapped_to_party(self) -> None:
-        db = MagicMock()
-        execute_result = MagicMock()
-        execute_result.scalar_one_or_none.return_value = "org-legacy"
-        db.execute = AsyncMock(return_value=execute_result)
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.party_scope.party_crud.resolve_organization_party_id",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result == PartyFilter(party_ids=[])
-
-    async def test_should_fail_closed_when_legacy_fallback_disabled(self) -> None:
-        db = MagicMock()
-        execute_result = MagicMock()
-        execute_result.scalar_one_or_none.return_value = "org-legacy"
-        db.execute = AsyncMock(return_value=execute_result)
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-                allow_legacy_default_organization_fallback=False,
-            )
-
-        assert result == PartyFilter(party_ids=[])
-
-    async def test_should_bypass_privileged_user_before_legacy_org_fallback(
-        self,
-    ) -> None:
-        db = MagicMock()
-        execute_result = MagicMock()
-        execute_result.scalar_one_or_none.return_value = "org-legacy"
-        db.execute = AsyncMock(return_value=execute_result)
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=True),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result is None
-
-    async def test_should_fail_closed_when_no_bindings_and_no_legacy_org(self) -> None:
-        db = MagicMock()
-        execute_result = MagicMock()
-        execute_result.scalar_one_or_none.return_value = None
-        db.execute = AsyncMock(return_value=execute_result)
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result == PartyFilter(party_ids=[])
-
-    async def test_should_bypass_filter_for_privileged_user_without_scope(self) -> None:
-        db = MagicMock()
-        execute_result = MagicMock()
-        execute_result.scalar_one_or_none.return_value = None
-        db.execute = AsyncMock(return_value=execute_result)
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=True),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result is None
-
-    async def test_should_not_bypass_filter_when_only_global_read_permission_present(
-        self,
-    ) -> None:
-        db = MagicMock()
-        execute_result = MagicMock()
-        execute_result.scalar_one_or_none.return_value = None
-        db.execute = AsyncMock(return_value=execute_result)
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[]),
-            ),
-            patch(
-                "src.services.permission.rbac_service.RBACService"
-            ) as mock_rbac_service,
-        ):
-            service_instance = mock_rbac_service.return_value
-            service_instance.is_admin = AsyncMock(return_value=False)
-            service_instance.check_permission = AsyncMock(
-                return_value=SimpleNamespace(has_permission=True)
-            )
-
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result == PartyFilter(party_ids=[])
-        service_instance.is_admin.assert_awaited_once_with("user-1")
-        service_instance.check_permission.assert_not_awaited()
-
-    async def test_should_bypass_filter_for_privileged_user_even_with_bindings(
-        self,
-    ) -> None:
-        db = MagicMock()
-        owner_binding = MagicMock()
-        owner_binding.party_id = "owner-party-1"
-        owner_binding.relation_type = "owner"
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[owner_binding]),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=True),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result is None
-
-    async def test_should_keep_relation_specific_scope_for_manager_binding(
-        self,
-    ) -> None:
-        db = MagicMock()
-        binding = MagicMock()
-        binding.party_id = "party-1"
-        binding.relation_type = "manager"
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[binding]),
-            ),
-            patch(
-                "src.services.party_scope.party_crud.resolve_legacy_organization_scope_ids_by_party_ids",
-                new=AsyncMock(return_value={}),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result is not None
-        assert result.filter_mode == "manager"
-
-    async def test_should_attach_legacy_org_scope_for_generic_party_bindings(
-        self,
-    ) -> None:
-        db = MagicMock()
-        binding = MagicMock()
-        binding.party_id = "party-1"
-        binding.relation_type = None
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[binding]),
-            ),
-            patch(
-                "src.services.party_scope.party_crud.resolve_legacy_organization_scope_ids_by_party_ids",
-                new=AsyncMock(return_value={"party-1": ["org-legacy-1"]}),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result is not None
-        assert result.party_ids == ["party-1"]
-        assert result.legacy_org_ids == ["org-legacy-1"]
-
-    async def test_should_expand_headquarters_binding_to_descendant_manager_scope(
-        self,
-    ) -> None:
-        db = MagicMock()
-        binding = MagicMock()
-        binding.party_id = "hq-1"
-        binding.relation_type = "headquarters"
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[binding]),
-            ),
-            patch(
-                "src.services.party_scope.party_crud.get_descendants",
-                new=AsyncMock(return_value=["hq-1", "child-1", "child-2"]),
-            ) as mock_get_descendants,
-            patch(
-                "src.services.party_scope.party_crud.resolve_legacy_organization_scope_ids_by_party_ids",
-                new=AsyncMock(return_value={}),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
-        ):
-            result = await resolve_user_party_filter(
-                db,
-                current_user_id="user-1",
-                party_filter=None,
-                logger=logging.getLogger(__name__),
-            )
-
-        assert result is not None
-        assert result.filter_mode == "manager"
-        assert result.party_ids == ["child-1", "child-2", "hq-1"]
-        assert result.manager_party_ids == ["child-1", "child-2", "hq-1"]
-        mock_get_descendants.assert_awaited_once_with(
-            db,
-            party_id="hq-1",
-            include_self=True,
+    async def test_all_scope_maps_to_any_filter(self) -> None:
+        scope = EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="all",
+            owner_party_ids=["owner-party-1"],
+            manager_party_ids=["manager-party-1"],
         )
-
-    async def test_should_attach_relation_specific_legacy_org_scope_ids(self) -> None:
-        db = MagicMock()
-        owner_binding = MagicMock()
-        owner_binding.party_id = "owner-party-1"
-        owner_binding.relation_type = "owner"
-        manager_binding = MagicMock()
-        manager_binding.party_id = "manager-party-1"
-        manager_binding.relation_type = "manager"
-
-        with (
-            patch(
-                "src.services.party_scope.party_crud.get_user_bindings",
-                new=AsyncMock(return_value=[owner_binding, manager_binding]),
-            ),
-            patch(
-                "src.services.party_scope.party_crud.resolve_legacy_organization_scope_ids_by_party_ids",
-                new=AsyncMock(
-                    return_value={
-                        "owner-party-1": ["org-owner-legacy-1"],
-                        "manager-party-1": ["org-manager-legacy-1"],
-                    }
-                ),
-            ),
-            patch(
-                "src.services.party_scope._has_unrestricted_party_scope_access",
-                new=AsyncMock(return_value=False),
-            ),
+        with patch(
+            "src.services.party_scope.party_scope_resolver.resolve",
+            new=AsyncMock(return_value=scope),
         ):
             result = await resolve_user_party_filter(
-                db,
+                MagicMock(),
                 current_user_id="user-1",
                 party_filter=None,
                 logger=logging.getLogger(__name__),
             )
 
-        assert result is not None
-        assert result.owner_party_ids == ["owner-party-1"]
-        assert result.manager_party_ids == ["manager-party-1"]
-        assert result.legacy_org_ids == ["org-manager-legacy-1", "org-owner-legacy-1"]
-        assert result.owner_legacy_org_ids == ["org-owner-legacy-1"]
-        assert result.manager_legacy_org_ids == ["org-manager-legacy-1"]
+        assert result == PartyFilter(
+            party_ids=["manager-party-1", "owner-party-1"],
+            filter_mode="any",
+            owner_party_ids=["owner-party-1"],
+            manager_party_ids=["manager-party-1"],
+        )

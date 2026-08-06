@@ -74,7 +74,7 @@ def audit_crud():
 
 @pytest.fixture
 def sample_user():
-    return User(
+    user = User(
         id="user_123",
         username="testuser",
         email="test@example.com",
@@ -82,8 +82,10 @@ def sample_user():
         full_name="Test User",
         password_hash="hashed_password_here",
         is_active=True,
-        default_organization_id=None,
     )
+    user.account_type = "human"
+    user.organization_id = None
+    return user
 
 
 @pytest.fixture
@@ -123,7 +125,6 @@ def user_create_data():
         full_name="New User",
         password="SecurePass123!",
         role_id="role-user-id",
-        default_organization_id=None,
     )
 
 
@@ -182,7 +183,6 @@ class TestUserCRUD:
             full_name="Inactive User",
             password_hash="hashed_password_here",
             is_active=False,
-            default_organization_id=None,
         )
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(inactive_user))
 
@@ -219,7 +219,6 @@ class TestUserCRUD:
             full_name="Username Priority",
             password_hash="hashed_password_here",
             is_active=True,
-            default_organization_id=None,
         )
         phone_user = sample_user
 
@@ -692,7 +691,9 @@ class TestAuditLogCRUD:
 
 
 class TestAuthCRUDEdgeCases:
-    async def test_user_create_with_all_fields(self, user_crud, mock_db):
+    async def test_general_user_create_is_inactive_human_without_organization(
+        self, user_crud, mock_db
+    ):
         user_data = UserCreate(
             username="completeuser",
             email="complete@example.com",
@@ -700,12 +701,13 @@ class TestAuthCRUDEdgeCases:
             full_name="Complete User",
             password="SecurePass123!",
             role_id="role-admin-id",
-            default_organization_id="org_123",
         )
 
         result = await user_crud.create_async(mock_db, user_data)
 
-        assert result.default_organization_id == "org_123"
+        assert result.account_type == "human"
+        assert result.organization_id is None
+        assert result.is_active is False
         assert result.phone == "13800002002"
 
     async def test_user_update_no_changes(self, user_crud, mock_db, sample_user):

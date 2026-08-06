@@ -39,15 +39,14 @@ def test_party_endpoints_should_use_require_authz() -> None:
         r"async def get_party[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"[\s\S]*?deny_as_not_found=True",
         r"async def update_party[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"",
         r"async def delete_party[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"",
-        r"async def get_party_hierarchy[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"[\s\S]*?deny_as_not_found=True",
-        r"async def add_party_hierarchy[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"",
-        r"async def delete_party_hierarchy[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"",
         r"async def get_party_contacts[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"[\s\S]*?deny_as_not_found=True",
         r"async def create_party_contact[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"",
         r"async def get_user_party_bindings[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
-        r"async def create_user_party_binding[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
-        r"async def update_user_party_binding[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
-        r"async def close_user_party_binding[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
+        r"async def preview_user_party_scope[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
+        r"async def commit_user_party_scope[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
+        r"async def _require_user_party_scope_batch_authz[\s\S]*?require_authz\([\s\S]*?action=\"manage_party_scope\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=user_id",
+        r"async def preview_user_party_scope_batch[\s\S]*?_require_user_party_scope_batch_authz",
+        r"async def commit_user_party_scope_batch[\s\S]*?_require_user_party_scope_batch_authz",
     ]
 
     for pattern in expected_patterns:
@@ -85,6 +84,7 @@ async def test_list_parties_should_delegate_to_service() -> None:
             party_type="owner",
             status="active",
             search=None,
+            business_role=None,
             db=MagicMock(),
             current_user=mock_user,
         )
@@ -97,6 +97,7 @@ async def test_list_parties_should_delegate_to_service() -> None:
         party_type="owner",
         status="active",
         search=None,
+        business_role=None,
         current_user_id="user-1",
     )
 
@@ -120,6 +121,7 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
             party_type=None,
             status=None,
             search="acme",
+            business_role=None,
             db=MagicMock(),
             current_user=mock_user,
         )
@@ -132,5 +134,6 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
         party_type=None,
         status=None,
         search="acme",
+        business_role=None,
         current_user_id="user-1",
     )

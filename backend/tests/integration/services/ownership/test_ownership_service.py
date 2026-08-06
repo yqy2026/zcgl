@@ -8,10 +8,8 @@ from sqlalchemy.orm import Session
 
 from src.core.exception_handler import (
     DuplicateResourceError,
-    OperationNotAllowedError,
     ResourceNotFoundError,
 )
-from src.models.asset import Asset
 from src.models.ownership import Ownership
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
@@ -195,29 +193,6 @@ class TestOwnershipDeletion:
         assert deleted.id == ownership_id
         result = self.db.query(Ownership).filter(Ownership.id == ownership_id).first()
         assert result is None
-
-    async def test_delete_with_assets_raises_error(self):
-        ownership = await self.service.create_ownership(
-            self.async_db,
-            obj_in=OwnershipCreate(
-                **self.factory.create_ownership_dict(name="有权资产的权属方")
-            ),
-        )
-        self.db.add(
-            Asset(
-                ownership_id=ownership.id,
-                asset_code=f"OWN-DEL-{ownership.id}",
-                asset_name="测试物业-ownership-delete-check",
-                address="测试地址",
-                ownership_status="已确权",
-                property_nature="经营类",
-                usage_status="出租",
-            )
-        )
-        self.db.commit()
-
-        with pytest.raises(OperationNotAllowedError):
-            await self.service.delete_ownership(self.async_db, id=ownership.id)
 
     async def test_delete_nonexistent_raises_error(self):
         with pytest.raises(ResourceNotFoundError):

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.models.auth import User
+from src.models.auth import AccountType, User
 
 
 class TestUserCreation:
@@ -221,22 +221,38 @@ class TestUserOrganization:
             email="org@example.com",
             full_name="Org User",
             password_hash="hash",
-            default_organization_id="org456",
+            account_type=AccountType.HUMAN,
+            organization_id="org456",
         )
 
-    def test_default_organization_id(self, user_with_org):
-        """Test default_organization_id field"""
-        assert user_with_org.default_organization_id == "org456"
+    def test_organization_id(self, user_with_org):
+        """Human accounts carry one direct organization."""
+        assert user_with_org.organization_id == "org456"
 
-    def test_org_fields_optional(self):
-        """Test org fields are optional"""
+    def test_service_account_can_have_no_organization(self):
+        """Non-human accounts must not inherit organization scope."""
         user = User(
             username="noorguser",
             email="noorg@example.com",
             full_name="No Org User",
             password_hash="hash",
+            account_type=AccountType.SERVICE,
         )
-        assert user.default_organization_id is None
+        assert user.organization_id is None
+
+    def test_account_type_and_organization_invariants_are_database_enforced(self):
+        checks = {
+            str(constraint.name): str(constraint.sqltext)
+            for constraint in User.__table__.constraints
+            if constraint.__class__.__name__ == "CheckConstraint"
+        }
+
+        assert {item.value for item in AccountType} == {"human", "service", "system"}
+        assert "ck_users_account_type" in checks
+        assert "ck_users_account_organization" in checks
+        assert "is_active" in checks["ck_users_account_organization"]
+        assert "organization_id" in checks["ck_users_account_organization"]
+        assert "default_organization_id" not in User.__table__.columns
 
 
 class TestUserValidation:
@@ -401,7 +417,7 @@ class TestUserRelationships:
         assert hasattr(user, "audit_logs")
         assert hasattr(user, "role_assignments")
         assert hasattr(user, "notifications")
-        assert hasattr(user, "default_organization")
+        assert hasattr(user, "organization")
 
     def test_relationships_are_lists(self, user):
         """Test relationships are list types"""

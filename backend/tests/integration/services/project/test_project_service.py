@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.crud.project import project_crud
-from src.models.party import Party, PartyType
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from src.schemas.project import ProjectCreate, ProjectUpdate
 from src.services.project.service import ProjectService
@@ -32,11 +32,12 @@ class TestProjectBasic:
         self.db = db_session
         self.service = project_service
         manager_party = Party(
-            party_type=PartyType.ORGANIZATION.value,
+            party_type=PartyType.LEGAL_ENTITY.value,
             name="Project Service Test Manager",
-            code="PJT-SVC-MANAGER",
+            code="LE-000101",
             external_ref="PJT-SVC-MANAGER",
             status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
         )
         self.db.add(manager_party)
         await self.db.flush()

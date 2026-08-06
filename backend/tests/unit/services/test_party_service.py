@@ -18,9 +18,31 @@ from src.schemas.party import (
     UserPartyBindingCreate,
     UserPartyBindingUpdate,
 )
+from src.services.party.identifier_service import PreparedPartyIdentifier
 from src.services.party.service import PartyService
 
 pytestmark = pytest.mark.asyncio
+
+
+def _build_party_service(
+    party_crud: MagicMock,
+    *,
+    generated_code: str = "LE-000001",
+) -> tuple[PartyService, MagicMock, MagicMock]:
+    code_service = MagicMock()
+    code_service.generate = AsyncMock(return_value=generated_code)
+    identifier_service = MagicMock()
+    identifier_service.prepare.return_value = PreparedPartyIdentifier(None, None, None)
+    identifier_service.mask.side_effect = lambda *, identifier_type, stored_value: stored_value
+    return (
+        PartyService(
+            data_access=party_crud,
+            code_service=code_service,
+            identifier_service=identifier_service,
+        ),
+        code_service,
+        identifier_service,
+    )
 
 
 class TestPartyServiceUserScopeInvalidation:
@@ -107,7 +129,6 @@ class TestPartyServiceScopeAndBindingBehavior:
             current_user_id="user-1",
             party_filter=None,
             logger=ANY,
-            allow_legacy_default_organization_fallback=False,
         )
         party_crud.get_parties.assert_awaited_once_with(
             db,
@@ -173,16 +194,13 @@ class TestPartyServiceScopeAndBindingBehavior:
             scoped_party_ids=None,
         )
 
-    async def test_update_user_party_binding_should_clear_existing_primary_when_needed(
-        self,
-    ) -> None:
+    async def test_update_user_party_binding_should_not_manage_primary_state(self) -> None:
         db = MagicMock()
         binding = SimpleNamespace(
             id="binding-1",
             user_id="user-1",
             party_id="party-1",
             relation_type="owner",
-            is_primary=False,
             valid_from=SimpleNamespace(),
             valid_to=None,
         )
@@ -205,17 +223,18 @@ class TestPartyServiceScopeAndBindingBehavior:
                 db,
                 user_id="user-1",
                 binding_id="binding-1",
-                obj_in=UserPartyBindingUpdate.model_validate({"is_primary": True}),
+                obj_in=UserPartyBindingUpdate.model_validate(
+                    {"relation_type": "manager"}
+                ),
             )
 
-        party_crud.clear_primary_bindings_for_relation.assert_awaited_once_with(
+        party_crud.clear_primary_bindings_for_relation.assert_not_awaited()
+        party_crud.update_user_party_binding.assert_awaited_once_with(
             db,
-            user_id="user-1",
-            relation_type="owner",
-            exclude_binding_id="binding-1",
-            commit=False,
+            db_obj=binding,
+            obj_in={"relation_type": "manager"},
+            commit=True,
         )
-        party_crud.update_user_party_binding.assert_awaited_once()
         mock_publish.assert_awaited_once_with("user-1")
 
     async def test_close_user_party_binding_should_publish_scope_invalidation(
@@ -251,7 +270,8 @@ class TestPartyServiceScopeAndBindingBehavior:
             )
 
         assert closed is True
-        party_crud.update_user_party_binding.assert_awaited_once()
+        update_payload = party_crud.update_user_party_binding.await_args.kwargs["obj_in"]
+        assert set(update_payload) == {"valid_to"}
         mock_publish.assert_awaited_once_with("user-1")
 
     async def test_create_user_party_binding_should_reject_invalid_time_range(
@@ -290,35 +310,36 @@ class TestPartyServiceReviewFlow:
         db = MagicMock()
         created_party = SimpleNamespace(id="party-1")
         party_crud = MagicMock()
-        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
+        party_crud.get_party_by_type_and_name = AsyncMock(return_value=None)
         party_crud.create_party = AsyncMock(return_value=created_party)
-        service = PartyService(data_access=party_crud)
+        service, code_service, _ = _build_party_service(party_crud)
 
         payload = PartyCreate(
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="测试主体",
-            code="PARTY-001",
         )
 
         result = await service.create_party(db, obj_in=payload)
 
         assert result is created_party
+        assert party_crud.create_party.await_args.kwargs["obj_in"]["code"] == "LE-000001"
+        code_service.generate.assert_awaited_once_with(
+            db, party_type=PartyType.LEGAL_ENTITY.value
+        )
 
     async def test_create_party_should_strip_contact_pii_from_metadata(self) -> None:
         db = MagicMock()
         created_party = SimpleNamespace(id="party-1")
         party_crud = MagicMock()
-        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
         party_crud.get_party_by_type_and_name = AsyncMock(return_value=None)
         party_crud.create_party = AsyncMock(return_value=created_party)
-        service = PartyService(data_access=party_crud)
+        service, _, _ = _build_party_service(party_crud)
 
         await service.create_party(
             db,
             obj_in=PartyCreate(
-                party_type=PartyType.ORGANIZATION,
+                party_type=PartyType.LEGAL_ENTITY,
                 name="客户甲",
-                code="CUS-001",
                 metadata={
                     "customer_type": "external",
                     "contact_name": "张三",
@@ -338,15 +359,15 @@ class TestCustomerProfileAggregation:
         db = MagicMock()
         party = SimpleNamespace(
             id="party-customer-1",
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="终端租户甲",
             code="CUS-001",
+            identifier_type="unified_social_credit_code",
+            identifier_value="91310000123456789A",
             status="active",
             metadata_json={
                 "customer_type": "external",
                 "subject_nature": "enterprise",
-                "identifier_type": "USCC",
-                "unified_identifier": "91310000123456789A",
                 "address": "上海市徐汇区测试路 1 号",
                 "payment_term_preference": "月付",
                 "risk_tags": ["手工关注"],
@@ -481,7 +502,7 @@ class TestCustomerProfileAggregation:
         db = MagicMock()
         party = SimpleNamespace(
             id="party-customer-1",
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="关联公司终端承租方",
             code="CUS-002",
             status="active",
@@ -534,7 +555,7 @@ class TestCustomerProfileAggregation:
         db = MagicMock()
         party = SimpleNamespace(
             id="party-customer-1",
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="多绑定终端客户",
             code="CUS-ALL",
             status="active",
@@ -592,16 +613,15 @@ class TestCustomerProfileAggregation:
             review_status=PartyReviewStatus.DRAFT.value,
         )
         party_crud = MagicMock()
-        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
+        party_crud.get_party_by_type_and_name = AsyncMock(return_value=None)
         party_crud.create_party = AsyncMock(return_value=created_party)
-        service = PartyService(data_access=party_crud)
+        service, _, _ = _build_party_service(party_crud)
 
         await service.create_party(
             db,
             obj_in=PartyCreate(
-                party_type=PartyType.ORGANIZATION,
+                party_type=PartyType.LEGAL_ENTITY,
                 name="测试主体",
-                code="PARTY-001",
             ),
         )
 
@@ -750,7 +770,7 @@ class TestCustomerProfileAggregation:
         db.flush = AsyncMock()
         party = SimpleNamespace(
             id="party-1",
-            party_type=PartyType.ORGANIZATION.value,
+            party_type=PartyType.LEGAL_ENTITY.value,
             name="旧主体",
             code="OLD-001",
             review_status=PartyReviewStatus.DRAFT.value,
@@ -822,38 +842,43 @@ class TestCustomerProfileAggregation:
 
         assert result is True
 
-    async def test_create_party_should_reject_duplicate_type_and_code(self) -> None:
-        """相同 party_type + code 应抛 DuplicateResourceError。"""
+    async def test_create_party_should_prepare_identifier_before_persistence(self) -> None:
         db = MagicMock()
-        existing = SimpleNamespace(id="existing-1")
+        created = SimpleNamespace(id="party-new")
         party_crud = MagicMock()
-        party_crud.get_party_by_type_and_code = AsyncMock(return_value=existing)
-        service = PartyService(data_access=party_crud)
-
-        payload = PartyCreate(
-            party_type=PartyType.ORGANIZATION,
-            name="重复主体",
-            code="DUP-001",
+        party_crud.get_party_by_type_and_name = AsyncMock(return_value=None)
+        party_crud.create_party = AsyncMock(return_value=created)
+        service, _, identifier_service = _build_party_service(party_crud)
+        identifier_service.prepare.return_value = PreparedPartyIdentifier(
+            "unified_social_credit_code",
+            "91440101231229726P",
+            None,
         )
 
-        with pytest.raises(DuplicateResourceError, match="主体"):
-            await service.create_party(db, obj_in=payload)
+        payload = PartyCreate(
+            party_type=PartyType.LEGAL_ENTITY,
+            name="法人主体",
+            identifier_type="unified_social_credit_code",
+            identifier_value="91440101-231229726P",
+        )
 
-        party_crud.create_party.assert_not_called()
+        await service.create_party(db, obj_in=payload)
+
+        create_payload = party_crud.create_party.await_args.kwargs["obj_in"]
+        assert create_payload["identifier_value"] == "91440101231229726P"
+        assert create_payload["identifier_fingerprint"] is None
 
     async def test_create_party_should_reject_duplicate_type_and_name(self) -> None:
         """相同 party_type + name 应抛 DuplicateResourceError。"""
         db = MagicMock()
         existing = SimpleNamespace(id="existing-1")
         party_crud = MagicMock()
-        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
         party_crud.get_party_by_type_and_name = AsyncMock(return_value=existing)
-        service = PartyService(data_access=party_crud)
+        service, _, _ = _build_party_service(party_crud)
 
         payload = PartyCreate(
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="重复主体",
-            code="UNIQUE-001",
         )
 
         with pytest.raises(DuplicateResourceError, match="主体"):
@@ -866,15 +891,13 @@ class TestCustomerProfileAggregation:
         db = MagicMock()
         created = SimpleNamespace(id="party-new")
         party_crud = MagicMock()
-        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
         party_crud.get_party_by_type_and_name = AsyncMock(return_value=None)
         party_crud.create_party = AsyncMock(return_value=created)
-        service = PartyService(data_access=party_crud)
+        service, _, _ = _build_party_service(party_crud)
 
         payload = PartyCreate(
-            party_type=PartyType.ORGANIZATION,
+            party_type=PartyType.LEGAL_ENTITY,
             name="新主体",
-            code="NEW-001",
         )
 
         result = await service.create_party(db, obj_in=payload)
@@ -885,7 +908,7 @@ class TestCustomerProfileAggregation:
         db = MagicMock()
         party = SimpleNamespace(
             id="party-1",
-            party_type=PartyType.ORGANIZATION.value,
+            party_type=PartyType.LEGAL_ENTITY.value,
             name="旧主体",
             code="OLD-001",
             review_status=PartyReviewStatus.DRAFT.value,
@@ -905,34 +928,29 @@ class TestCustomerProfileAggregation:
 
         party_crud.update_party.assert_not_called()
 
-    async def test_import_parties_should_create_approved_records_and_collect_duplicates(
+    async def test_import_parties_should_create_drafts_and_collect_duplicates(
         self,
     ) -> None:
         db = MagicMock()
         party_crud = MagicMock()
-        party_crud.get_party_by_type_and_code = AsyncMock(
+        party_crud.get_party_by_type_and_name = AsyncMock(
             side_effect=[None, SimpleNamespace(id="existing-2")]
         )
-        party_crud.get_party_by_type_and_name = AsyncMock(side_effect=[None, None])
         party_crud.create_party = AsyncMock(
             return_value=SimpleNamespace(id="party-1", name="导入主体1")
         )
-        service = PartyService(data_access=party_crud)
+        service, _, _ = _build_party_service(party_crud)
 
         result = await service.import_parties(
             db,
             items=[
                 PartyCreate(
-                    party_type=PartyType.ORGANIZATION,
+                    party_type=PartyType.LEGAL_ENTITY,
                     name="导入主体1",
-                    code="IMP-001",
-                    status="active",
                 ),
                 PartyCreate(
-                    party_type=PartyType.ORGANIZATION,
+                    party_type=PartyType.LEGAL_ENTITY,
                     name="导入主体2",
-                    code="IMP-002",
-                    status="active",
                 ),
             ],
             operator="import-user",
@@ -943,9 +961,9 @@ class TestCustomerProfileAggregation:
         assert result["items"][0]["status"] == "created"
         assert result["items"][1]["status"] == "error"
         create_payload = party_crud.create_party.await_args.kwargs["obj_in"]
-        assert create_payload["review_status"] == PartyReviewStatus.APPROVED.value
-        assert create_payload["review_by"] == "import-user"
-        assert create_payload["review_reason"] == "初始化导入"
+        assert create_payload["review_status"] == PartyReviewStatus.DRAFT.value
+        assert create_payload["review_by"] is None
+        assert create_payload["review_reason"] is None
 
 
 class TestPartyContactService:

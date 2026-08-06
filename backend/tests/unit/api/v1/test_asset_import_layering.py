@@ -203,14 +203,14 @@ async def test_asset_import_create_authz_should_resolve_owner_party_from_legacy_
 
 
 @pytest.mark.asyncio
-async def test_asset_import_create_authz_should_resolve_party_from_legacy_organization() -> (
+async def test_asset_import_create_authz_should_use_organization_represented_party() -> (
     None
 ):
-    """导入鉴权应把 legacy organization 作用域桥接为 party_id。"""
+    """导入鉴权应使用 Organization 显式配置的代表主体。"""
     from src.api.v1.assets import asset_import as module
 
     request = AssetImportRequest(
-        data=[{"organization_id": "org-legacy-1"}],
+        data=[{"organization_id": "org-1"}],
         import_mode="create",
         should_skip_errors=False,
         is_dry_run=True,
@@ -236,7 +236,7 @@ async def test_asset_import_create_authz_should_resolve_party_from_legacy_organi
         )
 
     _args, kwargs = mock_authz_service.check_access.await_args
-    assert kwargs["resource"]["organization_id"] == "org-legacy-1"
+    assert kwargs["resource"]["organization_id"] == "org-1"
     assert kwargs["resource"]["party_id"] == "org-party-1"
 
 

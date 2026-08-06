@@ -102,7 +102,6 @@ class TestTenantFilterResolution:
             current_user_id="user-1",
             party_filter=None,
             logger=ANY,
-            allow_legacy_default_organization_fallback=False,
         )
 
 
