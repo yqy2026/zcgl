@@ -23,12 +23,19 @@
 | 并发控制 | MVP 乐观锁只在 `Asset` 启用；台账等批量写路径依靠幂等约束，`ContractGroup` / `Contract` 不保留未接入 ORM `version_id_col` 的误导性 `version` 列 |
 | 字段来源 | 解析或编辑写入目标对象字段时记 `field_sources` 快照，取值 `manual` / `ocr_prefill_confirmed` / `ocr_prefill_corrected`（纯手工录入与「解析未识别后手工补齐」统一为 `manual`，不拆 `manual_after_ocr_miss` 等子类型）；解析确认提交时每个写入字段必须带来源、缺失即阻断保存，普通非解析编辑缺失可由服务端默认补 `manual`；字段来源仅供编辑或补录来源上下文按需查看，业务详情主视图不默认展示 |
 | 扫描件解析确认 | 解析会话（`ScanExtractionSession`）仅当前补录过程的临时工作区，确认 / 取消 / 失败 / 放弃后不留档、不存草稿、不可稍后继续；OCR/AI 候选必须人工逐项确认或修正后才写入，低置信字段必须逐项处理（确认候选值 / 修正为手工值 / 非必填字段显式留空），未处理不得提交确认；候选不因高置信自动绑定 Party·Asset、不自动覆盖已保存字段（冲突默认保留旧值、仅作差异提示）；解析失败 / 超时 / 低置信不阻断完全手工补录；目标对象不保存解析工具、模型、供应商、置信度、确认时间、页码、文本片段或截图区域等解析元信息 |
+| 主体范围解析 | 业务查询、ABAC、资源上下文、搜索、通知和分析只消费统一 `EffectivePartyScope`；显式用户绑定完整优先于 Organization 默认范围，范围缺失或无效时失败关闭，不按 Organization 与 Party 的名称、编码或外部引用猜测映射 |
 
 ## 3. 核心对象
 
 | 对象 | 定位 |
 |---|---|
 | Party | 统一主体主档，承载产权方、运营方、客户等主体身份 |
+| Organization | 内部公司、部门和项目组层级；与 Party 正交，可直接代表一个法人 Party 或继承上级默认范围 |
+| User | 系统账号；以不可变账号类型区分 human、service、system，并由 human 的唯一 Organization 归属承接默认主体范围 |
+| UserPartyBinding | 用户跨 Party 的显式 owner/manager 范围；存在当前有效记录时完整取代组织默认范围 |
+| UserPartyScopeCommit | 单用户显式范围敏感变更的持久化幂等回执；保存原因、规范化提议、前后范围与提交结果 |
+| PartyLifecycleCommit | 已审核 Party 停用/重新启用的持久化幂等回执；保存原因、前后状态、影响快照与首次提交响应 |
+| EffectivePartyScope | 唯一范围解析器产生的运行时投影，不持久化 |
 | Asset | 资产核心主实体 |
 | Project | 资产运营管理主业务单元 |
 | ContractGroup | 合同与协议经营事项的内部技术聚合根 |
@@ -319,11 +326,11 @@
 | `contract_roles` | enum[] | 是 | 合同角色集合 |
 | `contact_name` | string | 否 | 联系人 |
 | `contact_phone` | string | 否 | 联系电话 |
-| `identifier_type` | enum | 条件必填 | 有统一标识时必填 |
-| `unified_identifier` | string | 否 | 企业 18 位统一社会信用代码，个人按证件类型校验 |
+| `identifier_type` | enum | 条件必填 | 与 Party 正式标识类型一致；有 `identifier_display` 时必填 |
+| `identifier_display` | string | 否 | Party 正式标识的只读安全投影；法人可返回规范化值，自然人只能返回脱敏值，不返回密文、指纹或明文 |
 | `address` | string | 否 | 地址 |
 | `status` | enum | 是 | 正常、停用 |
-| `historical_contract_count` | number | 否 | 历史签约数，派生：按**用户数据范围并集、合同 ID 去重**计（同一合同在 owner+manager 两绑定均可见也只算一次）；属**列表/档案字段**，`all` 模式合法、**不受**「分析必选视图」约束——单视图铁律只约束分析端点客户双指标（`customer_entity_count`/`customer_contract_count`），见 CONTEXT「客户双指标」 |
+| `historical_contract_count` | number | 否 | 历史签约数，派生：按**有效主体范围并集、合同 ID 去重**计（同一合同在 owner+manager 两视角均可见也只算一次）；属**列表/档案字段**，`all` 模式合法、**不受**「分析必选视图」约束——单视图铁律只约束分析端点客户双指标（`customer_entity_count`/`customer_contract_count`），见 CONTEXT「客户双指标」 |
 | `risk_tags` | string[] | 否 | 风险标签，MVP 仅人工标注 |
 | `payment_term_preference` | string | 否 | 账期偏好 |
 
@@ -472,16 +479,199 @@ Concurrency and scope constraints: replacing allocations locks the payment flow 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `id` | string | 是 | 主体主键 |
-| `party_type` | enum | 是 | `organization`、`legal_entity` |
+| `party_type` | enum | 是 | 仅 `legal_entity`、`individual`；内部部门和项目组不是 Party |
 | `name` | string | 是 | 主体名称 |
-| `code` | string | 是 | 主体编码，同类型内唯一 |
-| `external_ref` | string | 否 | 外部系统引用 |
+| `code` | string | 是 | 系统并发安全生成、全局唯一、创建后不可变；法人 `LE-000001`，自然人 `NP-000001` |
+| `identifier_type` | enum | 条件 | 法人仅 `unified_social_credit_code`、`legal_registration_number`、`foreign_registration_number`；自然人仅 `national_id`、`passport`；草稿可空，提审前与 `identifier_value` 成对必填 |
+| `identifier_value` | string | 条件 | 法人规范化保存并按（`identifier_type`, 规范化值）唯一；自然人加密存储并只脱敏返回；提审前须格式正确 |
+| `identifier_fingerprint` | string | 条件 | 自然人由（类型，规范化明文）生成的不可逆指纹，并按（`identifier_type`, `identifier_fingerprint`）唯一；法人为空，不对外返回 |
+| `external_ref` | string | 否 | 外部系统记录 ID；无外部来源时为空，不承载统一标识或内部编码 |
 | `status` | enum | 是 | `active`、`inactive` |
 | `review_status` | enum | 是 | `draft`、`pending`、`approved`、`rejected`（两步审核；驳回后保留 `rejected` 态，可编辑后重新提审；**不可反审**——可反审的是 Asset 的 `reversed`，见 CONTEXT「轻量提交标记」/ADR-0014） |
 | `review_by` | string | 否 | 审核人 |
 | `reviewed_at` | datetime | 否 | 审核时间 |
 | `review_reason` | string | 否 | 审核原因 |
-| `metadata_json` | json | 否 | 扩展信息 |
+| `metadata_json` | json | 否 | 非正式扩展信息；不得存放统一标识 |
+
+约束：`party_type` 与 `identifier_type` 必须匹配；标识唯一性约束忽略草稿空值但覆盖全部非空记录。已审核 Party 不允许硬删除。停用和重新启用均为独立敏感动作，执行前展示业务引用与授权影响，要求原因并记录前后值；停用保留历史事实，禁止新增业务引用并使组织关系和用户绑定停止授权。重新启用经影响确认后恢复保留关系的效力。`PartyHierarchy` 不属于目标模型；未来企业关系必须使用带关系类型和有效期间的独立模型重新设计。
+
+#### PartyLifecycleCommit
+
+已审核 Party 的停用或重新启用不通过普通主档更新提交。预览仅保存于绑定操作者、Party、动作和状态指纹的短期服务端缓存；成功提交后写入一条持久化回执，既支持同一幂等键重放，也与审核日志共同构成审计事实。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| id | string | 是 | 回执主键 |
+| party_id | string | 是 | 目标 Party；外键 RESTRICT |
+| actor_id | string | 是 | 提交操作者；外键 RESTRICT |
+| idempotency_key | string | 是 | 与 party_id、actor_id 联合唯一 |
+| operation | enum | 是 | deactivate 或 reactivate |
+| reason | string | 是 | 1-500 字，说明本次状态变更 |
+| before_state / after_state | json | 是 | Party 状态、审核状态和新引用可用性的快照 |
+| impact_summary | json | 是 | 代表组织、潜在组织、当前用户绑定、范围变化用户及资产/项目/合同引用计数 |
+| result_data | json | 是 | 首次成功提交的 API 响应，用于幂等重放 |
+| committed_at | datetime | 是 | 服务端提交时间 |
+
+提交重新锁定 Party 并复算影响指纹；预览被消费、过期、操作者或动作不符、Party 状态或影响漂移时，以 409 SCOPE_CHANGE_PREVIEW_STALE 拒绝且不写入回执。停用保留历史 FK，但使组织默认范围和有效用户绑定不再授权；重新启用只恢复保留关系的效力。
+### 4.18.1 Organization
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 内部组织主键 |
+| `name` | string | 是 | 内部组织名称 |
+| `code` | string | 是 | 内部组织编码，仅在 Organization 命名空间内唯一，不用于匹配 Party |
+| `type` | enum | 是 | 内部公司、部门或项目组等组织分类；不改变 Party 身份 |
+| `parent_id` | string | 否 | 上级 Organization；必须无环 |
+| `level` | integer | 是 | 由层级关系维护的组织层级 |
+| `path` | string | 否 | 由层级关系维护的祖先路径，不作为主体范围授权来源 |
+| `sort_order` | integer | 是 | 同级展示顺序 |
+| `status` | enum | 是 | `active`、`inactive` |
+| `description` | text | 否 | 内部组织说明 |
+| `is_deleted` | boolean | 是 | 组织逻辑删除标记；启用子组织或用户未处理时不得删除 |
+| `represented_party_id` | string | 否 | 直接代表的 Party；只能引用 `approved + active + legal_entity` |
+| `represented_party_perspective` | enum | 否 | 仅 `owner`、`manager`；与 `represented_party_id` 同时为空或同时有值 |
+
+约束：同一 Organization 至多直接代表一个 Party，同一 Party 可被多个 Organization 代表。关系为空时运行时继承最近的、直接配置了有效关系的启用祖先；直接配置覆盖继承，继承结果不落库。直接关系存在但 Party 已失效时保留 FK 供审计并阻断上溯，不视为未配置。Organization 自身及完整祖先链必须启用；停用前必须先处理启用子组织和启用用户，不级联停用。会改变直接/继承范围的关联、解除、视角切换或组织移动必须先做影响预览、要求原因、记录前后值并立即失效授权缓存。批量关系变更使用幂等键并在同一事务内全成全败。
+
+#### 4.18.1.1 OrganizationPartyScopeCommit
+
+组织代表主体的预览结果只保存在带 TTL 的服务端缓存中，不进入业务数据库；提交成功后写入一条持久化回执，作为幂等重试和审计关联的事实来源。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 回执主键 |
+| `organization_id` | string | 是 | 目标 Organization；删除采用 RESTRICT |
+| `actor_id` | string | 是 | 提交人；删除采用 RESTRICT |
+| `idempotency_key` | string(128) | 是 | 与 Organization、提交人组成唯一幂等键 |
+| `reason` | string(500) | 是 | 提交时必填的变更原因 |
+| `proposal` | json | 是 | 规范化后的直接 Party/视角提议 |
+| `before_scope` | json | 是 | 提交前范围快照 |
+| `after_scope` | json | 是 | 提交后范围快照 |
+| `impact_summary` | json | 是 | 组织和用户影响计数 |
+| `result_data` | json | 是 | 完整提交响应快照，供幂等重试返回 |
+| `committed_at` | datetime | 是 | 实际提交时间 |
+
+约束：回执与组织关系、组织历史和直接字段在同一事务内写入；预览 token 只能消费一次，提交前重新计算指纹，提议、操作者、目标或相关范围状态变化时拒绝写入并返回 `SCOPE_CHANGE_PREVIEW_STALE`。
+
+#### 4.18.1.2 OrganizationPartyScopeBatchCommit
+
+批量代表主体变更只接受 2-100 条不同的直接 Organization 提议。服务端不允许同一批次同时选择祖先和子孙 Organization，避免独立预览基线互相覆盖；每个目标均需通过 `organization:manage_party_scope` 数据范围校验。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 回执主键 |
+| `actor_id` | string | 是 | 提交人；删除采用 RESTRICT |
+| `idempotency_key` | string(128) | 是 | 与提交人组成唯一幂等键 |
+| `reason` | string(500) | 是 | 提交时必填的变更原因 |
+| `proposal` | json | 是 | 逐 Organization 规范化后的直接 Party/视角提议 |
+| `before_scope` / `after_scope` | json | 是 | 每个目标提交前后的范围快照 |
+| `impact_summary` | json | 是 | 去重后非重叠子树的组织和用户影响计数 |
+| `result_data` | json | 是 | 首次批量提交响应快照，供幂等重试返回 |
+| `committed_at` | datetime | 是 | 实际提交时间 |
+
+约束：预览 token 绑定完整有序提议和操作者；提交先锁定每个目标的祖先链与子树，再重新解析所有提议并比对组合状态指纹。任一目标缺失、停用、Party 失效、层级重叠或状态漂移时，整个批次返回 `SCOPE_CHANGE_PREVIEW_STALE` 或相应校验错误，不写入任一 Organization。成功时在同一事务写入所有直接关系、每个 OrganizationHistory 和单个批量回执，并失效 Organization 访问缓存；相同操作者以同一幂等键重试时，从该回执的 `proposal` 恢复所有目标后逐个重新授权，不依赖已消费的预览 token。
+
+#### 4.18.1.3 OrganizationMoveCommit
+
+`parent_id` 只能通过专用组织移动预览/提交动作变更。预览不写 Organization 记录，提交消费绑定操作者、组织、规范化目标父组织和状态指纹的一次性 token，并保存可重放的提交回执。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 回执主键 |
+| `organization_id` | string | 是 | 被迁移 Organization；外键 RESTRICT |
+| `target_parent_id` | string | 否 | 目标父 Organization；`null` 表示提升为根节点 |
+| `actor_id` | string | 是 | 提交操作者；外键 RESTRICT |
+| `idempotency_key` | string(128) | 是 | 与 `organization_id`、`actor_id` 组成唯一约束；同键重试返回首次结果 |
+| `reason` | string(500) | 是 | 1-500 字符的迁移原因 |
+| `proposal` | json | 是 | 规范化后的 `target_parent_id` |
+| `before_scope` / `after_scope` | json | 是 | 被迁移节点的父级和有效 Party 范围快照 |
+| `impact_summary` | json | 是 | 子树路径、组织范围和 active human 用户范围影响摘要 |
+| `result_data` | json | 是 | 首次提交的 API 响应，用于幂等重试 |
+| `committed_at` | datetime | 是 | 服务端提交时间 |
+
+约束：预览和提交均拒绝源节点停用、目标父链缺失/停用/删除/环状、目标位于当前子树或无变化的提议。提交锁定受影响子树及旧/新祖先链，重新解析所有 active human 用户的范围并校验状态指纹；成功时在同一事务内写入 `parent_id`、整棵子树 `level/path`、`OrganizationHistory(action=move)` 和持久化回执。普通更新在 schema 和 service 两层拒绝 `parent_id`，成功后失效 Organization 可见范围和受影响用户 Party scope 缓存；token 过期、已消费或状态漂移返回 `SCOPE_CHANGE_PREVIEW_STALE`，不执行任何写入。
+
+### 4.18.2 User
+
+本节只列出本次主体范围切换新增或重命名的 User 字段；其余认证字段沿用现有用户契约。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `account_type` | enum | 是 | `human`、`service`、`system`；创建后不可变，不能按用户名或角色推断 |
+| `organization_id` | string | 条件 | 启用 `human` 用户必填且指向完整启用链上的 Organization；`service/system` 必须为空 |
+
+约束：普通用户 API 只创建 `human`；`service` 仅由受控系统管理流程创建，`system` 仅由部署初始化或迁移建立。二者都不继承 Organization 默认范围。`default_organization_id` 一次重命名后不保留别名或双写。`human` 用户调动不得通过普通资料更新修改 `organization_id`，必须走 `user:manage_party_scope` 控制的影响预览与专用变更动作。
+
+### 4.18.3 UserPartyBinding
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 显式范围绑定主键 |
+| `user_id` | string | 是 | 被授权用户 |
+| `party_id` | string | 是 | 仅可引用 `approved + active` Party |
+| `relation_type` | enum | 是 | 仅 `owner`、`manager` |
+| `valid_from` | datetime | 是 | 生效时间；创建时未指定则由服务端写入当前时间，也可预约未来生效 |
+| `valid_to` | datetime | 否 | 到期时间；不得早于 `valid_from` |
+| `created_at` | datetime | 是 | 创建时间 |
+| `updated_at` | datetime | 是 | 更新时间 |
+
+约束：不保留 `headquarters`、`is_primary` 或 Party 下级自动展开。全部当前有效绑定地位相同并按 owner/manager 分组；当前存在时间窗内绑定记录时，组织默认范围不参与并集。时间窗内绑定的目标 Party 后续失效时，该条不授权且阻断组织回退；其他有效显式绑定继续生效。创建、编辑、关闭和批量操作均需 `user:manage_party_scope`，并执行影响预览、必填原因、前后值审计和缓存失效；批量提交使用幂等键并在同一事务内全成全败。
+
+#### UserPartyScopeCommit
+
+单用户 `UserPartyBinding` 的 `create`、`update`、`close` 不直接写绑定表，只能先预览再提交。预览 token 绑定操作者、用户、规范化后的完整提议和状态指纹；提交要求原因和幂等键，成功后立即失效该用户的范围缓存。客户端传入的带时区 `valid_from`/`valid_to` 先统一规范为无时区 UTC 再参与数据库比较和指纹计算。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 回执主键 |
+| `user_id` | string | 是 | 被调整显式范围的用户；外键 RESTRICT |
+| `actor_id` | string | 是 | 提交操作者；外键 RESTRICT |
+| `idempotency_key` | string | 是 | 与 `user_id`、`actor_id` 组成唯一约束；同键重试返回首次结果 |
+| `reason` | string | 是 | 1-500 字符，记录本次范围调整理由 |
+| `proposal` | json | 是 | 服务端规范化后的操作、绑定、Party、关系类型和生效区间 |
+| `before_scope` / `after_scope` | json | 是 | 单一 `PartyScopeResolver` 的提交前后结果 |
+| `impact_summary` | json | 是 | 当前绑定数量、范围变化与组织回退影响 |
+| `result_data` | json | 是 | 首次提交的 API 响应，用于幂等重放 |
+| `committed_at` | datetime | 是 | 服务端提交时间 |
+
+单用户显式绑定、human 用户调动、已审核 Party 启停、单组织移动和 Organization 直接代表主体批量提交协议已实施；用户显式绑定批量提交仍按同一契约待实施，不得复用已退役的直写用户绑定路由、普通用户更新入口或普通 Organization 更新入口。
+
+#### UserOrganizationTransferCommit
+
+`human` 用户的 `organization_id` 只能通过专用预览/提交动作变更。预览不写用户记录，提交必须消费绑定操作者、用户、规范化目标组织与状态指纹的一次性 token，并保存可重放的提交回执。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 回执主键 |
+| `user_id` | string | 是 | 被调动的 human 用户；外键 RESTRICT |
+| `actor_id` | string | 是 | 提交操作者；外键 RESTRICT |
+| `target_organization_id` | string | 是 | 目标 Organization；外键 RESTRICT |
+| `idempotency_key` | string(128) | 是 | 与 `user_id`、`actor_id` 组成唯一约束；同键重试返回首次结果 |
+| `reason` | string(500) | 是 | 1-500 字符的调动原因 |
+| `proposal` | json | 是 | 规范化后的目标 `organization_id` |
+| `before_scope` / `after_scope` | json | 是 | 单一 `PartyScopeResolver` 的提交前后结果 |
+| `impact_summary` | json | 是 | 组织、作用域、显式绑定和缓存影响摘要 |
+| `result_data` | json | 是 | 首次提交 API 响应，用于幂等重试 |
+| `committed_at` | datetime | 是 | 服务端提交时间 |
+
+约束：提交前锁定用户和目标 Organization，重新解析有效范围，并校验目标到根的完整、启用、未删除且无环的 Organization 链。普通用户更新和激活动作在把 `human` 账号置为 active 前执行同一组织链校验；`service/system` 账号不适用。成功提交消费 token、立即失效用户 Organization 可见范围缓存和 Party 范围缓存；提议、操作者、目标状态、组织链、显式绑定、角色或范围结果漂移时返回 `SCOPE_CHANGE_PREVIEW_STALE`，不写入用户组织。
+### 4.18.4 EffectivePartyScope
+
+唯一 `PartyScopeResolver` 返回的运行时投影，不建表。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `source` | enum | 是 | `unrestricted`、`explicit`、`organization`、`fail_closed` |
+| `scope_mode` | enum | 是 | `owner`、`manager`、`all`；仅作为服务端解析结果，双视角为 `all`，不从绑定顺序猜默认 |
+| `owner_party_ids` | string[] | 是 | 可见产权方 Party 集合 |
+| `manager_party_ids` | string[] | 是 | 可见运营方 Party 集合 |
+| `organization_id` | string | 否 | 用户直接所属 Organization |
+| `inherited_from_organization_id` | string | 否 | 组织默认范围的直接配置来源；用户本人诊断仅返回可安全展示的信息 |
+| `next_transition_at` | datetime | 否 | 最近预约生效或到期边界；缓存不得越过该时刻 |
+| `error_code` | enum | 否 | `PARTY_SCOPE_MISSING`、`PARTY_SCOPE_INVALID_ORGANIZATION`、`PARTY_SCOPE_INVALID_PARTY`、`PARTY_SCOPE_INVALID_BINDING` |
+| `issues` | array | 是 | 配置异常集合；每项含 `code`、`node_type=organization|party|binding`、脱敏 `safe_label`，`node_ref` 仅向具备对应管理权限的查看者返回；禁止返回统一标识、指纹或外部引用 |
+
+解析顺序固定为：当前有效分配内建 `admin`/`system_admin` 角色的不受限用户 → 当前有效显式绑定集合 → Organization 直接或最近祖先默认范围 → 失败关闭。`perm_admin` 与其他管理角色不进入不受限分支。失效显式记录存在但仍有其他有效显式绑定时，只使用有效集合并在 `issues` 中暴露配置异常；若没有任何可授权的有效显式绑定，则以 `PARTY_SCOPE_INVALID_BINDING` 拒绝业务请求，绝不回退组织。无显式记录时，组织链或关系异常分别按稳定原因码返回 403；配置、登录和不受限管理端点不受该业务范围错误阻断。
 
 ### 4.19 PartyContact
 
@@ -584,7 +774,7 @@ Concurrency and scope constraints: replacing allocations locks the payment flow 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `id` | string | 是 | 通知主键 |
-| `recipient_id` | string | 是 | 接收用户 ID；业务提醒按主体绑定数据范围过滤——仅向可见该对象（owner / operator 范围）的用户创建（正文含合同号 / 租户名等业务数据，受 §8 约束） |
+| `recipient_id` | string | 是 | 接收用户 ID；业务提醒按统一解析的有效主体范围过滤——仅向可见该对象（owner / operator 范围）的用户创建（正文含合同号 / 租户名等业务数据，受 §8 约束） |
 | `type` | enum | 是 | `contract_expiring`、`contract_expired`、`payment_overdue`、`payment_due`、`system_notice` 五类；`payment_due` / `payment_overdue` 仅用于终端租户租金到期/逾期 |
 | `priority` | enum | 是 | `low` / `normal` / `high` / `urgent`；为 `days_overdue` / `days_remaining` 实时派生的优先级档位、不存标记位（口径同 ADR-0007） |
 | `title` | string | 是 | 通知标题 |

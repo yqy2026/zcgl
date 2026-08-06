@@ -10,7 +10,7 @@
 
 | 编号 | 文件 | 主题 | 状态 |
 |---|---|---|---|
-| ADR-0001 | [ADR-0001-party-role-architecture.md](./ADR-0001-party-role-architecture.md) | Party-Role 组织架构模型（主体 + 角色双层） | 已实施 |
+| ADR-0001 | [ADR-0001-party-role-architecture.md](./ADR-0001-party-role-architecture.md) | Party-Role 历史架构；主体主档原则保留，内部组织与范围结论被 ADR-0022 取代 | 部分取代 |
 | ADR-0002 | [ADR-0002-asset-review-no-approval-workflow.md](./ADR-0002-asset-review-no-approval-workflow.md) | 资产删除路由审批流，仅保留 `review_status` 两步确认 | 已实施 |
 | ADR-0003 | [ADR-0003-contract-relation-direction-only.md](./ADR-0003-contract-relation-direction-only.md) | 合同上下游退化为收入/成本方向标记，删除逐对配对表与主合同覆盖风险 | 已实施 |
 | ADR-0004 | [ADR-0004-settlement-rule-optional-at-creation.md](./ADR-0004-settlement-rule-optional-at-creation.md) | 合同关系 `settlement_rule` 创建时选填可缓填 | 已实施 |
@@ -30,6 +30,8 @@
 | ADR-0018 | [ADR-0018-project-code-operator-segment-and-unified-code-segment.md](./ADR-0018-project-code-operator-segment-and-unified-code-segment.md) | `project_code` 按运营方编码段生成；三类业务编码段统一由 `party_code` 派生（撤 ADR-0017 专用 `asset_code_prefix` 字段） | 🟡 已决策待实施 |
 | ADR-0019 | [ADR-0019-payment-status-derived-from-paid-amount.md](./ADR-0019-payment-status-derived-from-paid-amount.md) | 台账 `unpaid/partial/paid` 改为从 `paid_amount` 派生，实收登记只填金额；`voided` 唯一非派生、跳过判据改 `paid_amount > 0` | 🟡 已决策待实施 |
 | ADR-0020 | [ADR-0020-party-identity-history-stability.md](./ADR-0020-party-identity-history-stability.md) | 主体历史身份稳定性：MVP 不合并主体（去重=建档查重）+ 合同对手方名称定稿固化快照，当前身份 live / 历史引用冻结 | 🟡 已决策待实施 |
+| ADR-0021 | [ADR-0021-party-business-role-slices-derived.md](./ADR-0021-party-business-role-slices-derived.md) | 主体业务角色按当前有效资产、项目和合同关系实时派生 | ✅ 已实施 |
+| ADR-0022 | [ADR-0022-organization-party-scope-boundary.md](./ADR-0022-organization-party-scope-boundary.md) | Organization 与 Party 正交，组织默认范围继承与用户主体范围统一解析 | 🟡 已决策待实施 |
 
 ## 当前架构基线
 

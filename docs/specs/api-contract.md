@@ -14,9 +14,9 @@
 | 认证 | 登录态使用 HttpOnly Cookie，会话支持刷新和退出 |
 | 鉴权 | 写操作和受保护读操作必须鉴权 |
 | 授权 | 使用 RBAC + ABAC，按钮和接口级动作均需授权 |
-| 数据范围 | 业务查询按用户主体绑定自动过滤 |
+| 数据范围 | 业务查询、ABAC、资源上下文、搜索、通知和分析统一使用 `PartyScopeResolver`；显式用户绑定优先，无当前有效绑定记录时回退内部组织默认范围，异常失败关闭 |
 | 项目主轴 | 项目端点承载资产、合同与协议、经营台账摘要、风险和项目分析等运营视图；经营台账、合同中心、资产资源、主体客户仍保留全局直接入口 |
-| 分析视图 | 分析和大屏端点使用 `view_mode` 指定 owner 或 manager 口径 |
+| 分析视图 | 分析和大屏只接受公开 `view_mode=owner|manager|all`；省略时由有效范围解析，`scope_mode` 仅为服务端结果 |
 | 搜索 | 搜索结果必须经过权限和数据范围过滤 |
 | CSRF | 状态变更请求必须携带 CSRF token |
 | 幂等 | 批量更新、补偿任务等关键写操作必须幂等 |
@@ -25,16 +25,18 @@
 
 ## 3. 请求范围与视图契约
 
-### 3.1 BindingContext
+### 3.1 EffectivePartyScope
 
-常规业务端点不要求用户手动选择数据范围。系统根据用户绑定的主体自动过滤数据。
+常规业务端点不要求用户手动选择数据范围。服务端按固定优先级解析同一个有效主体范围，调用方不得自行拼接或猜测 Organization 与 Party 的关系。
 
-| 用户类型 | 常规查询行为 |
+| 范围来源 | 常规查询行为 |
 |---|---|
-| 产权方绑定用户 | 只返回绑定产权方范围内数据 |
-| 运营方绑定用户 | 只返回绑定运营方范围内数据 |
-| 多绑定用户 | 返回各绑定范围的数据并集，按业务主键去重 |
-| 管理员或审计用户 | 按授权查看全量或审计范围内数据 |
+| 当前有效分配内建 `admin` 或 `system_admin` 角色的用户 | 主体范围解析为 `unrestricted`，仍受动作权限与显式 deny 约束；`perm_admin` 和其他管理角色不进入该分支 |
+| 当前有效显式绑定 | 全部有效 owner/manager 绑定构成完整范围，按业务主键去重；不与组织默认范围合并 |
+| 无当前有效绑定记录 | 使用所属 Organization 直接关系，或继承最近有效祖先的 Party + owner/manager 视角 |
+| 范围缺失或配置失效 | 失败关闭并返回稳定 403 原因码，不返回成功空列表，也不跳过无效直接关系继续向上继承 |
+
+尚未生效、已到期或已关闭的绑定不属于当前有效记录。处于时间窗内但目标 Party 失效的绑定不授权并阻断组织回退；仍有其他有效显式绑定时只使用其范围，同时在诊断结果中报告异常。范围缓存的有效期不得越过最近的 `next_transition_at`。
 
 ### 3.2 ViewMode
 
@@ -44,9 +46,21 @@
 |---|---|
 | `view_mode=owner` | 产权方统计口径 |
 | `view_mode=manager` | 运营方统计口径 |
-| 不传 | 系统按用户绑定类型自动回落 |
+| `view_mode=all` | owner/manager 混合口径；需要客户双指标等单一视角的端点拒绝，其他端点按各自抑制契约处理 |
+| 不传 | 有效范围仅含一种视角时自动采用；同时含 owner/manager 时解析为内部 `scope_mode=all`，不按绑定顺序或展示偏好猜选 |
 
-`X-Perspective` HTTP header 已废弃，不作为当前契约。
+`view_mode` 是唯一公开视角参数；`scope_mode` 只出现在服务端解析上下文或响应诊断中，不是第二个请求参数。`X-Perspective` HTTP header 已废弃，不作为当前契约。
+
+### 3.3 敏感范围变更预览
+
+Organization 代表主体、组织移动、human 用户调动、UserPartyBinding 和 Party 启停等会改变有效范围的操作必须遵循同一预览-提交契约：
+
+1. 预览响应返回变更前后范围、影响摘要、短期有效的 opaque `preview_token` 与 `expires_at`。
+2. `preview_token` 绑定当前操作者、目标、规范化后的完整提议和相关记录版本，不包含可由客户端解码的敏感数据。
+3. 提交必须携带原 `preview_token`、原因和幂等键；服务端重新计算并校验摘要。提议、操作者、权限、目标状态或相关版本发生变化，或 token 过期时，返回 409 `SCOPE_CHANGE_PREVIEW_STALE`，要求重新预览。
+4. 成功提交消费 token；相同幂等键的网络重试返回首次结果，不重复产生副作用。批量提交另要求同一事务内全成全败。
+
+该机制只证明用户确认了当前影响，不引入审批流。
 
 ## 4. 端点契约
 
@@ -57,18 +71,35 @@
 | 登录 | `POST /api/v1/auth/login` | 校验凭据并写入会话 Cookie |
 | 刷新 | `POST /api/v1/auth/refresh` | 刷新登录会话 |
 | 退出 | `POST /api/v1/auth/logout` | 清理会话 |
-| 当前用户 | `GET /api/v1/auth/me` | 返回当前用户、角色和能力摘要 |
+| 当前用户 | `GET /api/v1/auth/me` | 返回当前用户、不可变 `account_type`、`organization_id`、角色和能力摘要 |
+| 本人有效主体范围 | `GET /api/v1/auth/me/party-scope` | 直接返回统一解析器的来源、`scope_mode`、所属/继承组织、owner/manager Party 摘要、下一时间边界和结构化 `issues`；自查视图省略异常节点 `node_ref`，不返回统一标识、指纹或外部引用 |
 
 ### 4.2 用户、角色与权限
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 用户管理 | `/api/v1/auth/users/*` | 用户创建、编辑、启停用、密码重置 |
+| 用户管理 | `/api/v1/auth/users/*` | 普通 API 只创建不可变 `account_type=human` 的停用用户，并支持资料编辑、启停用、密码重置；通用创建/编辑不得写 `organization_id`，启用 human 用户前必须已通过专用调动动作归属有效 Organization；`service/system` 由受控系统流程建立 |
+| 用户所属组织影响预览 | `POST /api/v1/auth/users/{user_id}/organization/preview` | 仅预览 human 用户调动；请求只含 `organization_id`，校验目标到根的完整启用 Organization 链并返回前后有效主体范围、显式绑定数量、组织与缓存影响，不提交变更 |
+| 用户所属组织变更 | `PUT /api/v1/auth/users/{user_id}/organization` | 仅消费当前 human 用户调动预览；需 `user:manage_party_scope`、`preview_token`、`reason`、`idempotency_key`，锁定并重算范围后写入回执和组织归属，立即失效缓存；状态漂移返回 `409 SCOPE_CHANGE_PREVIEW_STALE` |
+| 用户显式主体范围读取 | `GET /api/v1/users/{user_id}/party-bindings` | 只读返回当前或全部显式 owner/manager 绑定；不提供 `/parties/users/*` 兼容入口 |
+| 用户范围影响预览 | `POST /api/v1/users/{user_id}/party-bindings/preview` | 提议 `create|update|close` 一个绑定，验证目标 Party 已审核且启用，返回前后有效范围、当前绑定数量、是否回退组织、短期 opaque `preview_token` 和过期时间；不写入绑定 |
+| 用户范围变更提交 | `POST /api/v1/users/{user_id}/party-bindings/commit` | 仅消费同一操作者、同一用户、状态仍一致的预览；请求必须含 `preview_token`、`reason`、`idempotency_key`。成功写入绑定、持久化前后范围与结果回执并失效用户范围缓存；过期、已消费或状态漂移统一返回 `409 SCOPE_CHANGE_PREVIEW_STALE`。原 `POST /api/v1/users/{user_id}/party-bindings`、`PUT/DELETE /api/v1/users/{user_id}/party-bindings/{binding_id}` 直写入口已退役，不得绕过预览/提交 |
+| 用户范围批量预览/提交 | `POST /api/v1/users/party-bindings/batch/preview`、`POST /api/v1/users/party-bindings/batch/commit` | 预览接收 2-100 条唯一的 `{user_id, operation, ...}`，逐用户需要 `user:manage_party_scope`。首次提交只消费同一操作者的 token，必须有 `reason` 与 `idempotency_key`；同键重试从同一操作者的持久化回执恢复目标并重新授权，不依赖已消费 token。锁定并重算后在一个事务内全成全败，状态漂移返回 `409 SCOPE_CHANGE_PREVIEW_STALE` |
+| 管理员查看用户有效范围 | `GET /api/v1/auth/users/{user_id}/party-scope` | `admin`、`system_admin`、`perm_admin` 可查看任意用户的统一诊断结果；`issues.node_ref` 仅向具备对应范围管理权限者返回，`perm_admin` 仍不能据此读取业务对象 |
 | 角色管理 | `/api/v1/roles/*` | 角色定义、权限勾选、角色分配 |
 | 数据策略 | `/api/v1/auth/data-policies/*` | ABAC 策略包、模板和角色绑定管理 |
 
 用户管理主契约使用多角色语义，支持单用户分配多个角色。多角色权限默认取允许权限并集；显式拒绝授权或拒绝数据策略优先于允许结论。
 
+`organization:manage_party_scope` 与 `user:manage_party_scope` 默认仅授予 `admin`、`system_admin`、`perm_admin`。`perm_admin` 可配置和诊断范围，但不得读取业务数据或授予业务角色；主体范围始终与角色动作权限取交集。
+
+#### 4.2.1 用户组织调动请求/响应
+
+预览请求体固定为 `{ "organization_id": "<target-organization-id>" }`。成功响应包含 `before_scope`、`after_scope`、`impact`、短期 opaque `preview_token` 和 `expires_at`；`impact` 至少包含 `organization_changed`、`scope_changed`、`current_explicit_binding_count`、`uses_explicit_party_scope_after` 和 `cache_invalidation_required`。预览不会修改用户、Organization 或范围缓存。
+
+提交请求体固定为 `{ "preview_token": "...", "reason": "...", "idempotency_key": "..." }`。服务端只接受与当前操作者、用户、目标组织和状态指纹一致的未消费 token；提交时锁定用户与目标 Organization，重新校验完整启用链并用 `PartyScopeResolver` 重新计算范围。相同 `(user_id, actor_id, idempotency_key)` 重试返回首次 `organization_id`、前后范围、影响摘要和 `committed_at`，不会重复写入。
+
+普通 `PUT /api/v1/auth/users/{user_id}` 不接受 `organization_id`；其 `is_active=true` 与 `POST /api/v1/auth/users/{user_id}/activate` 在启用 human 用户前都必须校验该用户已有完整、启用且未删除的 Organization 祖先链。`service/system` 账号不得通过本动作分配 Organization。
 ### 4.3 资产
 
 | 能力 | 方法与路径 | 契约 |
@@ -170,14 +201,16 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 | 客户详情 | `GET /api/v1/customers/{party_id}` | 返回客户基础信息、风险标签、历史签约和统计 |
 | 主体列表 | `GET /api/v1/parties` | 查询主体主档 |
 | 主体业务角色切片 | `GET /api/v1/parties?business_role=owner|operator|terminal_tenant` | 在既有主体列表分页、搜索和数据范围契约上增加服务端当前角色筛选；响应返回 `business_roles`。省略参数为“全部”，同一 Party 在全部列表仅一行；角色只按当前有效资产、项目和合同/协议关系派生，不将 `customer_type`、用户主体绑定或历史合同角色用于筛选。 |
-| 主体创建 | `POST /api/v1/parties` | 创建主体草稿 |
-| 主体更新 | `PATCH /api/v1/parties/{party_id}` | 更新主体主档 |
-| 主体导入 | `POST /api/v1/parties/import` | 初始化批量导入主体 |
-| 主体审核 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` | 主体审核状态流转：`draft → pending → approved`，驳回写入 `rejected`；`rejected` 可编辑后重新提审，不提供 Asset 式 `reverse-review` 反审端点 |
+| 主体创建 | `POST /api/v1/parties` | 只接受 `legal_entity` / `individual`、名称、正式统一标识和外部引用等业务字段；法人标识类型限 `unified_social_credit_code|legal_registration_number|foreign_registration_number`，自然人限 `national_id|passport`；`code` 由服务端生成且拒绝客户端写入 |
+| 主体更新 | `PUT /api/v1/parties/{party_id}` | 更新草稿或已驳回 Party 的主档业务字段；拒绝 status，已审核 Party 的启停只能走专用动作 |
+| 主体导入 | `POST /api/v1/parties/import` | 初始化批量导入法人主体或自然人；服务端生成编码，统一标识进入专用字段，不接受 `organization` 类型 |
+| 主体审核 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` | 主体审核状态流转：`draft → pending → approved`，驳回写入 `rejected`；提审前统一标识必须成对、格式正确且唯一，不提供 Asset 式 `reverse-review` 反审端点 |
+| 主体启停影响预览 | `POST /api/v1/parties/{party_id}/status/preview` | 请求体只接受 operation=deactivate|reactivate；仅已审核 Party 可预览，响应返回前后状态、组织/用户范围/业务引用影响、短期 preview_token 与过期时间，不提交状态变更 |
+| 主体停用/重新启用 | `POST /api/v1/parties/{party_id}/deactivate|reactivate` | 请求体必须携带预览 token、原因和幂等键；重新锁定 Party 并复算影响，漂移返回 409 SCOPE_CHANGE_PREVIEW_STALE。成功写审核日志和持久化回执，重复幂等键返回首次响应 |
+| 代表组织反查 | `GET /api/v1/parties/{party_id}/organizations` | 返回直接代表该 Party 的 Organization 只读列表，不提供主体详情侧编辑 |
 | 主体联系人 | `GET/POST /api/v1/parties/{party_id}/contacts` | 维护主体主档下的联系人；联系人不提供通用实体联系人写入口 |
-| 主体绑定 | `/api/v1/parties/users/{user_id}/party-bindings*` | 维护用户和主体绑定关系 |
 
-合同补录引用的主体必须来自已审核 Party。
+合同补录和产权证权利人引用的主体必须来自已审核 Party；新增业务引用、Organization 代表关系和用户范围绑定还要求目标 Party 启用。`PartyHierarchy` 及其 API 不属于目标契约。
 
 ### 4.8 搜索
 
@@ -195,7 +228,7 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 | 分析导出 | `GET /api/v1/analytics/export` | 导出带统计口径版本的结果；客户双指标分析拒绝 `view_mode=all`；导出应标记账期归属口径和流水发生日期字段 |
 | 统计报表 | `/api/v1/statistics/*` | 提供基础、面积、财务、出租率、分布、趋势等统计能力 |
 
-分析端点可接收 `view_mode=owner|manager`，不传时按用户绑定自动回落。常规客户列表可使用 `all` 并集视图；综合分析和分析导出产出客户双指标，必须选定 owner 或 manager 单一视角。
+分析端点公开接收 `view_mode=owner|manager|all`。不传时，有效范围仅含一种视角则自动采用；双视角则解析为内部 `scope_mode=all`，不从绑定顺序或展示偏好猜选。常规客户列表可使用混合并集视图；综合分析和分析导出产出客户双指标，必须选定 owner 或 manager 单一视角。
 
 ### 4.10 扫描件解析辅助补录
 
@@ -219,10 +252,14 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 组织管理 | `/api/v1/organizations/*` | 组织 CRUD 和组织上下文绑定维护 |
+| 组织管理 | `/api/v1/organizations/*` | 内部组织创建、资料编辑、查询与启停；普通编辑不得修改 `parent_id` 或代表 Party 字段。停用组织前必须先处理启用子组织和 human 用户，不级联停用 |
+| 组织代表主体影响预览 | `POST /api/v1/organizations/{organization_id}/party-scope/preview` | 预览直接关联、解除或视角切换对本组织、继承子树和用户的影响；组织移动使用独立预览端点 |
+| 组织代表主体变更 | `PUT /api/v1/organizations/{organization_id}/party-scope` | 仅允许关联已审核启用法人 Party 与 owner/manager 视角；需 `organization:manage_party_scope` 并遵循 §3.3，记录前后值、立即失效缓存。空关系表示继承，不按名称、编码或 `external_ref` 自动关联 |
+| 组织移动影响预览/提交 | `POST /api/v1/organizations/{organization_id}/move/preview`、`POST /api/v1/organizations/{organization_id}/move` | 移动导致直接或继承范围变化时需 `organization:manage_party_scope` 并遵循 §3.3；提交重新校验整棵受影响子树，普通组织更新不能改 `parent_id` 绕过该动作 |
+| 组织代表主体批量预览/提交 | `POST /api/v1/organizations/party-scope/batch/preview`、`POST /api/v1/organizations/party-scope/batch/commit` | 预览接收 2-100 条唯一的 `{organization_id, represented_party_id, represented_party_perspective}`；同批禁止祖先/子孙重叠，逐 Organization 需要 `organization:manage_party_scope`。首次提交只消费同一操作者的 token，必须有 `reason` 与 `idempotency_key`；同键重试从同一操作者的持久化回执恢复目标并重新授权，不依赖已消费 token。锁定并重算后在一个事务内全成全败，状态漂移返回 `409 SCOPE_CHANGE_PREVIEW_STALE`，不按候选匹配结果自动授权 |
 | 数据字典 | `/api/v1/system/dictionaries/*` | 字典分类和字典项维护 |
 | 系统基础 | `/api/v1/system/health`、`/api/v1/system/info`、`/api/v1/system/root` | MVP 仅保留最小健康检查和系统信息；复杂 monitoring API 不作为产品能力暴露 |
-| 通知 | `/api/v1/notifications/*` | 站内通知查询与处理（仅已读/未读，无处理闭环）；业务提醒生成时按主体绑定数据范围过滤接收人（仅可见该对象 owner/operator 范围者），系统通知豁免范围过滤但须内容中立（`admin`/`system_admin` 发，见 domain-model §4.24）。业务通知仅覆盖合同/协议即将到期、合同/协议已到期、终端租户租金到期、终端租户租金逾期；运营方成本未付和服务费未收不生成逾期通知。档位幂等去重、优先级档位派生、系统通知生产者、企业微信按 `recipient_id` 定向应用消息（删群广播）等机制见 domain-model §4.24 Notification；ADR-0015 与系统通知生产者已实施。ADR-0016 代码已接企业微信应用消息并通过 `gettoken` 凭据验证，真实发送待企业微信可信 IP / 域名配置；正式用户 ↔ 企业微信 `userid` 映射仍待实施。 |
+| 通知 | `/api/v1/notifications/*` | 站内通知查询与处理（仅已读/未读，无处理闭环）；业务提醒生成时调用统一解析器并按有效主体范围过滤接收人（仅可见该对象 owner/operator 范围者），系统通知豁免范围过滤但须内容中立（`admin`/`system_admin` 发，见 domain-model §4.24）。业务通知仅覆盖合同/协议即将到期、合同/协议已到期、终端租户租金到期、终端租户租金逾期；运营方成本未付和服务费未收不生成逾期通知。档位幂等去重、优先级档位派生、系统通知生产者、企业微信按 `recipient_id` 定向应用消息（删群广播）等机制见 domain-model §4.24 Notification；ADR-0015 与系统通知生产者已实施。ADR-0016 代码已接企业微信应用消息并通过 `gettoken` 凭据验证，真实发送待企业微信可信 IP / 域名配置；正式用户 ↔ 企业微信 `userid` 映射仍待实施。 |
 
 ## 5. 错误与边界约定
 
@@ -230,11 +267,25 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 |---|---|
 | 未登录 | 返回 401 |
 | 无权限 | 返回 403 |
+| 主体范围缺失 | 返回 403，错误码 `PARTY_SCOPE_MISSING` |
+| 所属组织或继承链无效 | 返回 403，错误码 `PARTY_SCOPE_INVALID_ORGANIZATION` |
+| 组织直接配置 Party 无效 | 返回 403，错误码 `PARTY_SCOPE_INVALID_PARTY` |
+| 当前应生效的显式绑定目标无效且无其他有效显式范围 | 返回 403，错误码 `PARTY_SCOPE_INVALID_BINDING`；不得回退组织 |
 | 资源不存在 | 返回 404 |
 | 乐观锁冲突 | 返回 409 |
+| 敏感范围变更预览过期或状态漂移 | 返回 409，错误码 `SCOPE_CHANGE_PREVIEW_STALE`，不执行任何写入 |
 | 业务规则冲突 | 返回明确业务错误和可读原因 |
 | 校验失败 | 返回字段级校验信息 |
 | 重复幂等请求 | 不重复创建记录，不重复产生副作用 |
+
+组织代表主体单组织变更的具体请求/响应契约如下：
+
+- `POST /api/v1/organizations/{organization_id}/party-scope/preview` 请求体必须同时提供 `represented_party_id` 和 `represented_party_perspective` 两个键；二者同时为 `null` 表示解除直接关系并继承，二者同时非空表示直接关联。`represented_party_id` 只能指向 `approved + active + legal_entity` Party，视角只能为 `owner` 或 `manager`。
+- 预览响应返回 `organization_id`、`before_scope`、`after_scope`、`impact`、opaque `preview_token` 和 `expires_at`。范围状态包含直接关系、有效 Party、有效视角及来源 Organization；影响摘要包含 `organization_count`、`organization_scope_change_count`、`user_count` 和 `user_scope_change_count`。
+- `PUT /api/v1/organizations/{organization_id}/party-scope` 请求体为 `preview_token`、非空 `reason`（最多 500 字符）和非空 `idempotency_key`（最多 128 字符）。提交只接受当前操作者签发、目标组织和规范化提议匹配的 token；token 一次性消费，陈旧或状态漂移返回 409 并要求重新预览。
+- 提交响应返回更新后的 `organization`、前后范围、影响摘要、`committed_at` 和 `idempotent`。服务端将原因、前后值写入 `OrganizationHistory`，并用持久化回执支撑相同幂等键的重试；本端点不提供自动关联。
+- `POST /api/v1/organizations/{organization_id}/move/preview` 请求体必须显式提供 `target_parent_id`；字符串表示目标父 Organization，`null` 表示迁移为根 Organization。预览拒绝源节点停用、目标父链缺失/停用/删除/环、目标位于当前子树或无变化提议；响应返回迁移节点的前后父级和有效 Party 范围、子树路径/范围及 active human 用户影响、opaque `preview_token` 和 `expires_at`，不写入组织。
+- `POST /api/v1/organizations/{organization_id}/move` 请求体为 `preview_token`、非空 `reason`（最多 500 字符）和非空 `idempotency_key`（最多 128 字符）。提交需要 `organization:manage_party_scope`，锁定受影响子树及旧/新祖先链后重新解析范围；同一事务更新 `parent_id`、整棵子树 `level/path`、组织历史和 `organization_move_commits` 回执。token 过期、已消费或范围/状态漂移统一返回 `409 SCOPE_CHANGE_PREVIEW_STALE`，不产生部分写入；普通 `PUT /api/v1/organizations/{organization_id}` 不接受 `parent_id`。
 
 ## 6. Out of Scope API
 
