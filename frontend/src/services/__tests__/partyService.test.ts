@@ -296,6 +296,48 @@ describe('PartyService', () => {
       expect.objectContaining({ smartExtract: true })
     );
   });
+  it('fetches representing organizations for a party', async () => {
+    const mockOrgs = [
+      {
+        organization_id: 'org-1',
+        name: '总部',
+        code: 'ROOT',
+        level: 1,
+        status: 'active',
+        parent_id: null,
+        represented_party_perspective: 'owner',
+      },
+    ];
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: mockOrgs,
+    });
+
+    const result = await service.getRepresentingOrganizations('party-1');
+
+    expect(result).toEqual(mockOrgs);
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/parties/party-1/organizations',
+      expect.objectContaining({
+        cache: false,
+        smartExtract: true,
+        retry: expect.objectContaining({ maxAttempts: 2 }),
+      })
+    );
+  });
+
+  it('throws when representing organizations request fails', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: false,
+      data: null,
+      error: '网络错误',
+    });
+
+    await expect(service.getRepresentingOrganizations('party-1')).rejects.toThrow(
+      '获取代表组织失败'
+    );
+  });
+
   it('manages contacts through party-scoped endpoints', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       success: true,

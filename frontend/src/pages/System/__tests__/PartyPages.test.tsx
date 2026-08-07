@@ -9,6 +9,7 @@ vi.mock('@/services/partyService', () => ({
     getPartyById: vi.fn(),
     getCustomerProfile: vi.fn(),
     getReviewLogs: vi.fn(),
+    getRepresentingOrganizations: vi.fn(),
     importParties: vi.fn(),
     createParty: vi.fn(),
     updateParty: vi.fn(),
@@ -145,6 +146,7 @@ describe('Party system pages', () => {
         created_at: '2026-03-29T08:00:00Z',
       },
     ]);
+    vi.mocked(partyService.getRepresentingOrganizations).mockResolvedValue([]);
     vi.mocked(partyService.createParty).mockResolvedValue(draftParty);
     vi.mocked(partyService.updateParty).mockResolvedValue({
       ...draftParty,
@@ -496,5 +498,57 @@ describe('Party system pages', () => {
     expect(await screen.findByText('测试主体')).toBeInTheDocument();
     expect(await screen.findByText('fields:name')).toBeInTheDocument();
     expect(screen.getByText('update')).toBeInTheDocument();
+  });
+
+  it('renders the read-only representing organizations card with data', async () => {
+    vi.mocked(partyService.getRepresentingOrganizations).mockResolvedValue([
+      {
+        organization_id: 'org-1',
+        name: '总部',
+        code: 'ROOT',
+        level: 1,
+        status: 'active',
+        parent_id: null,
+        represented_party_perspective: 'owner',
+      },
+      {
+        organization_id: 'org-2',
+        name: '华南分部',
+        code: 'SOUTH',
+        level: 2,
+        status: 'active',
+        parent_id: 'org-1',
+        represented_party_perspective: 'manager',
+      },
+    ]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties/:id" element={<PartyDetailPage />} />
+      </Routes>,
+      { route: '/system/parties/party-1' }
+    );
+
+    expect(await screen.findByText('代表组织（只读）')).toBeInTheDocument();
+    expect(await screen.findByText('总部')).toBeInTheDocument();
+    expect(await screen.findByText('华南分部')).toBeInTheDocument();
+    expect(screen.getByText('所有者')).toBeInTheDocument();
+    expect(screen.getByText('管理者')).toBeInTheDocument();
+    expect(await screen.findByText('共 2 个组织直接代表该主体')).toBeInTheDocument();
+    expect(partyService.getRepresentingOrganizations).toHaveBeenCalledWith('party-1');
+  });
+
+  it('renders an empty state when no organizations represent the party', async () => {
+    vi.mocked(partyService.getRepresentingOrganizations).mockResolvedValue([]);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties/:id" element={<PartyDetailPage />} />
+      </Routes>,
+      { route: '/system/parties/party-1' }
+    );
+
+    expect(await screen.findByText('代表组织（只读）')).toBeInTheDocument();
+    expect(await screen.findByText('暂无直接代表该主体的组织')).toBeInTheDocument();
   });
 });
