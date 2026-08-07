@@ -271,47 +271,20 @@ class TestOrganizationUpdate:
         assert updated.name == "更新后的组织"
         assert updated.status == "inactive"
 
-    async def test_update_organization_with_parent_change(self):
-        """测试更改组织的父组织"""
-        # 创建新的父组织
-        new_parent_data = OrganizationCreate(
-            **self.factory.create_org_dict(
-                name="新父组织",
-                code="NEWPARENT",
-            )
-        )
-        new_parent = await self.service.create_organization(
-            self.db, obj_in=new_parent_data
-        )
+    async def test_update_organization_rejects_parent_change_via_ordinary_update(self):
+        """普通组织更新拒绝 parent_id（ADR-0022/移动收口：父级变更走专用 move 流程）"""
+        from pydantic import ValidationError
 
-        # 更新父组织
-        update_data = OrganizationUpdate(parent_id=new_parent.id)
-        updated = await self.service.update_organization(
-            self.db, org_id=self.org.id, obj_in=update_data
-        )
+        with pytest.raises(ValidationError):
+            OrganizationUpdate(parent_id="any-org-id")
 
-        assert updated.parent_id == new_parent.id
-        assert updated.level == 2
+    async def test_update_organization_parent_change_is_not_available_in_service(self):
+        """普通 update 在 schema 层即拦截 parent_id，service 不再承担父级变更/环检测；
+        环检测由 move preview/commit 专用流程覆盖（见 test_organization_move_api.py::cycle）"""
+        from pydantic import ValidationError
 
-    async def test_update_organization_parent_to_child_raises_cycle_error(self):
-        """测试将组织移动到其子组织下抛出循环引用错误"""
-        # 先创建子组织
-        child_data = OrganizationCreate(
-            **self.factory.create_org_dict(
-                name="子组织",
-                code="CHILD001",
-                parent_id=self.org.id,
-            )
-        )
-        child = await self.service.create_organization(self.db, obj_in=child_data)
-
-        # 尝试将父组织移动到子组织下
-        update_data = OrganizationUpdate(parent_id=child.id)
-
-        with pytest.raises(OperationNotAllowedError, match="不能将组织移动到其子组织下"):
-            await self.service.update_organization(
-                self.db, org_id=self.org.id, obj_in=update_data
-            )
+        with pytest.raises(ValidationError):
+            OrganizationUpdate(parent_id=self.org.id)
 
     async def test_update_nonexistent_organization_raises_error(self):
         """测试更新不存在的组织抛出异常"""
