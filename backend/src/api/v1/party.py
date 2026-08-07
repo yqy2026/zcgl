@@ -21,6 +21,7 @@ from ...middleware.auth import (
     require_data_scope_context,
 )
 from ...models.auth import User
+from ...schemas.organization import RepresentingOrganizationItem
 from ...schemas.party import (
     CustomerProfileResponse,
     PartyBusinessRole,
@@ -50,6 +51,7 @@ from ...schemas.user_party_scope import (
     UserPartyScopePreviewResponse,
 )
 from ...security.permissions import require_any_role
+from ...services.organization.service import organization_service
 from ...services.party import party_lifecycle_change_service, party_service
 from ...services.party.user_scope_batch_change_service import (
     user_party_scope_batch_change_service,
@@ -204,6 +206,36 @@ async def get_party(
     if party is None:
         raise not_found("主体不存在", resource_type="party", resource_id=party_id)
     return party_service.to_response(party)
+
+
+@router.get(
+    "/parties/{party_id}/organizations",
+    response_model=list[RepresentingOrganizationItem],
+    summary="获取代表主体的组织（只读反向列表）",
+)
+async def get_representing_organizations(
+    party_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="party",
+                resource_id="{party_id}",
+                deny_as_not_found=True,
+            )
+        ),
+    ] = None,
+) -> list[RepresentingOrganizationItem]:
+    _ = current_user
+    party = await party_service.get_party(db, party_id=party_id)
+    if party is None:
+        raise not_found("主体不存在", resource_type="party", resource_id=party_id)
+    return await organization_service.get_representing_organizations(
+        db, party_id=party_id
+    )
 
 
 @router.get(

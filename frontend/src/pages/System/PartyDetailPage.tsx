@@ -5,11 +5,13 @@ import {
   Button,
   Card,
   Descriptions,
+  Empty,
   Form,
   Input,
   Modal,
   Select,
   Space,
+  Table,
   Tag,
   Typography,
 } from 'antd';
@@ -28,6 +30,7 @@ import {
   type PartyReviewRejectPayload,
   type PartyReviewLog,
   type PartyUpdatePayload,
+  type RepresentingOrganizationItem,
 } from '@/services/partyService';
 import type {
   Party,
@@ -136,6 +139,15 @@ const PartyDetailPage: React.FC = () => {
     enabled: hasPartyId,
     staleTime: 60 * 1000,
   });
+  const representingOrgQuery = useQuery<RepresentingOrganizationItem[]>({
+    queryKey: ['system-party-representing-organizations', partyId],
+    queryFn: async () => {
+      return await partyService.getRepresentingOrganizations(partyId);
+    },
+    enabled: hasPartyId,
+    staleTime: 60 * 1000,
+  });
+  const representingOrganizations = representingOrgQuery.data ?? [];
   const reviewStatus = party?.review_status ?? 'draft';
   const isDraft = reviewStatus === 'draft';
   const isPending = reviewStatus === 'pending';
@@ -491,6 +503,73 @@ const PartyDetailPage: React.FC = () => {
 
         <Card loading={partyDetailQuery.isLoading} title={party?.name ?? '主体详情'}>
           <Descriptions column={1} bordered items={overviewItems} />
+        </Card>
+
+        <Card
+          title="代表组织（只读）"
+          loading={representingOrgQuery.isLoading}
+          extra={
+            representingOrgQuery.data != null ? (
+              <Typography.Text type="secondary">
+                共 {representingOrganizations.length} 个组织直接代表该主体
+              </Typography.Text>
+            ) : null
+          }
+        >
+          {representingOrganizations.length === 0 ? (
+            <Empty description="暂无直接代表该主体的组织" />
+          ) : (
+            <Table<RepresentingOrganizationItem>
+              rowKey="organization_id"
+              size="small"
+              pagination={false}
+              dataSource={representingOrganizations}
+              columns={[
+                {
+                  title: '组织名称',
+                  dataIndex: 'name',
+                  key: 'name',
+                },
+                {
+                  title: '组织编码',
+                  dataIndex: 'code',
+                  key: 'code',
+                },
+                {
+                  title: '层级',
+                  dataIndex: 'level',
+                  key: 'level',
+                  width: 80,
+                },
+                {
+                  title: '代表视角',
+                  dataIndex: 'represented_party_perspective',
+                  key: 'represented_party_perspective',
+                  width: 120,
+                  render: (perspective: string | null) =>
+                    perspective === 'owner' ? (
+                      <Tag color="blue">所有者</Tag>
+                    ) : perspective === 'manager' ? (
+                      <Tag color="green">管理者</Tag>
+                    ) : (
+                      <Typography.Text type="secondary">-</Typography.Text>
+                    ),
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'status',
+                  key: 'status',
+                  width: 100,
+                  render: (status: string) =>
+                    status === 'active' ? (
+                      <Tag color="success">启用</Tag>
+                    ) : (
+                      <Tag>{status}</Tag>
+                    ),
+                },
+              ]}
+            />
+          )}
         </Card>
 
         <Card title="业务信息">

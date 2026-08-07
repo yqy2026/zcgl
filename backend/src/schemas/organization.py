@@ -25,6 +25,20 @@ def _validate_represented_party_pair(
         )
 
 
+class RepresentingOrganizationItem(BaseModel):
+    """代表指定主体（Party）的组织只读摘要（主体详情反向列表用）"""
+
+    organization_id: str = Field(..., description="组织ID")
+    name: str = Field(..., description="组织名称")
+    code: str = Field(..., description="组织编码")
+    level: int = Field(..., description="组织层级")
+    status: str = Field(..., description="组织状态")
+    parent_id: str | None = Field(None, description="上级组织ID")
+    represented_party_perspective: (
+        RepresentedPartyPerspective | None
+    ) = Field(None, description="代表视角（owner/manager）")
+
+
 class OrganizationBase(BaseModel):
     """组织架构基础模式"""
 

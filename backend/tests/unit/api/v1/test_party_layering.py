@@ -137,3 +137,69 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
         business_role=None,
         current_user_id="user-1",
     )
+
+
+def test_representing_organizations_should_use_require_authz() -> None:
+    """主体代表组织反向列表端点应接入 require_authz（read/party/deny_as_not_found）。"""
+    module_source = _read_module_source()
+    assert re.search(
+        r"async def get_representing_organizations[\s\S]*?"
+        r"require_authz\([\s\S]*?action=\"read\"[\s\S]*?"
+        r"resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"[\s\S]*?"
+        r"deny_as_not_found=True",
+        module_source,
+    )
+
+
+@pytest.mark.asyncio
+async def test_representing_organizations_should_delegate_to_services() -> None:
+    """反向列表端点应委托 organization_service，且主体不存在时返回 404。"""
+    from src.api.v1 import party as module
+    from src.api.v1.party import get_representing_organizations
+
+    mock_org_service = MagicMock()
+    mock_org_service.get_representing_organizations = AsyncMock(return_value=[])
+    mock_party_service = MagicMock()
+    mock_party_service.get_party = AsyncMock(return_value=object())
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "organization_service", mock_org_service)
+        monkeypatch.setattr(module, "party_service", mock_party_service)
+        result = await get_representing_organizations(
+            party_id="party-1",
+            db=MagicMock(),
+            current_user=mock_user,
+            _authz_ctx=None,
+        )
+
+    assert result == []
+    mock_party_service.get_party.assert_awaited_once_with(ANY, party_id="party-1")
+    mock_org_service.get_representing_organizations.assert_awaited_once_with(
+        ANY, party_id="party-1"
+    )
+
+
+@pytest.mark.asyncio
+async def test_representing_organizations_should_404_when_party_missing() -> None:
+    """主体不存在时反向列表端点应抛出 not_found。"""
+    from src.api.v1 import party as module
+    from src.api.v1.party import get_representing_organizations
+
+    mock_party_service = MagicMock()
+    mock_party_service.get_party = AsyncMock(return_value=None)
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "party_service", mock_party_service)
+        with pytest.raises(Exception) as exc_info:
+            await get_representing_organizations(
+                party_id="missing-party",
+                db=MagicMock(),
+                current_user=mock_user,
+                _authz_ctx=None,
+            )
+
+    assert getattr(exc_info.value, "status_code", None) == 404

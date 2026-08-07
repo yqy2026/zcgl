@@ -76,6 +76,16 @@ export interface PartyReviewLog {
   created_at: string;
 }
 
+export interface RepresentingOrganizationItem {
+  organization_id: string;
+  name: string;
+  code: string;
+  level: number;
+  status: string;
+  parent_id: string | null;
+  represented_party_perspective: string | null;
+}
+
 export interface PartyContactCreatePayload {
   contact_name: string;
   contact_phone?: string | null;
@@ -399,6 +409,30 @@ export class PartyService {
 
       if (!result.success || result.data == null) {
         throw new Error(`获取主体日志失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async getRepresentingOrganizations(
+    partyId: string,
+  ): Promise<RepresentingOrganizationItem[]> {
+    try {
+      const result = await apiClient.get<RepresentingOrganizationItem[]>(
+        `${PARTY_BASE_URL}/${partyId}/organizations`,
+        {
+          cache: false,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        },
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`获取代表组织失败: ${result.error}`);
       }
 
       return result.data;

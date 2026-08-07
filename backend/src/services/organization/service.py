@@ -9,7 +9,11 @@ from ...core.exception_handler import OperationNotAllowedError, ResourceNotFound
 from ...crud.organization import organization as organization_crud
 from ...crud.organization_history import OrganizationHistoryCRUD
 from ...models.organization import Organization, OrganizationHistory
-from ...schemas.organization import OrganizationCreate, OrganizationUpdate
+from ...schemas.organization import (
+    OrganizationCreate,
+    OrganizationUpdate,
+    RepresentingOrganizationItem,
+)
 from ..enum_validation_service import get_enum_validation_service_async
 from ..organization_permission_service import (
     invalidate_user_accessible_organizations_cache,
@@ -57,6 +61,26 @@ class OrganizationService:
         self, db: AsyncSession, *, org_id: str
     ) -> Organization | None:
         return await organization_crud.get_async(db, id=org_id, use_cache=False)
+
+    async def get_representing_organizations(
+        self, db: AsyncSession, *, party_id: str
+    ) -> list[RepresentingOrganizationItem]:
+        """只读反向列表：直接代表指定主体（Party）的所有未删除组织。"""
+        orgs = await organization_crud.get_represented_by_party_async(
+            db, party_id=party_id
+        )
+        return [
+            RepresentingOrganizationItem(
+                organization_id=str(org.id),
+                name=org.name,
+                code=org.code,
+                level=org.level,
+                status=org.status,
+                parent_id=org.parent_id,
+                represented_party_perspective=org.represented_party_perspective,
+            )
+            for org in orgs
+        ]
 
     async def get_organization_tree(
         self, db: AsyncSession, *, parent_id: str | None = None
