@@ -476,9 +476,40 @@ class TestGetAssetHistoryRecords:
                 new_callable=AsyncMock,
                 return_value=history_records,
             ) as mock_get_history:
-                result = await service.get_asset_history_records(TEST_ASSET_ID)
+                items, total = await service.get_asset_history_records(TEST_ASSET_ID)
 
-        assert result == history_records
+        assert items == history_records
+        assert total == 1
+        mock_get_asset.assert_awaited_once_with(
+            TEST_ASSET_ID,
+            party_filter=None,
+            current_user_id=None,
+        )
+        mock_get_history.assert_awaited_once_with(service.db, asset_id=TEST_ASSET_ID)
+
+    async def test_get_asset_history_records_filters_change_type_and_paginates(
+        self, service
+    ) -> None:
+        create_record = MagicMock(operation_type="create", id="history-create")
+        update_record = MagicMock(operation_type="update", id="history-update")
+        delete_record = MagicMock(operation_type="delete", id="history-delete")
+        records = [create_record, update_record, delete_record]
+
+        with patch.object(service, "get_asset", new_callable=AsyncMock) as mock_get_asset:
+            with patch(
+                "src.services.asset.asset_service.history_crud.get_by_asset_id_async",
+                new_callable=AsyncMock,
+                return_value=records,
+            ) as mock_get_history:
+                items, total = await service.get_asset_history_records(
+                    TEST_ASSET_ID,
+                    page=1,
+                    page_size=1,
+                    change_type="update",
+                )
+
+        assert items == [update_record]
+        assert total == 1
         mock_get_asset.assert_awaited_once_with(
             TEST_ASSET_ID,
             party_filter=None,

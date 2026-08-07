@@ -112,6 +112,7 @@ Organization 代表主体、组织移动、human 用户调动、UserPartyBinding
 | 恢复资产 | `POST /api/v1/assets/{asset_id}/restore` | 恢复逻辑删除资产 |
 | 批量操作 | `/api/v1/assets/batch-*` | 支持批量相关操作 |
 | 导入资产 | `/api/v1/assets/import` | 支持模板校验和导入；**导入行必须有可解析到既有产权方 Party 的 owner，无主行直接拒绝**（对齐 ADR-0010 owner 内在必填、ADR-0017 编号生成前置，已实施）；导入 create 走与手动创建共享的 owner 必填校验，不直接裸调 crud；`asset_code` 系统生成、模板不含该列 |
+| 资产变更历史 | `GET /api/v1/assets/{asset_id}/history` | 分页返回资产变更历史（`items` + `pagination`）；支持按 `operation_type` 过滤（`change_type` 查询参数）；每条记录含 `change_type`、`changed_fields` 增强字段（由基础字段回填） |
 | 资产附件 | `/api/v1/assets/{asset_id}/attachments/*` | 管理资产附件 |
 | 资产产权证 | `/api/v1/assets/{asset_id}/property-certificates/*` | 资产详情内维护产权证：列表、详情、新增、编辑、附件、轻量在线预览、扫描件解析预填。字段契约、5 项保存硬门槛、附件规则（类型/大小/上传不自动解析/预览/下载独立权限/日志/疑似重复/资产与附件 ≥1 下限）与 `warning` 风险派生见 domain-model §4.20（PropertyCertificate）、§4.21（权利人关系）、§4.22（Attachment）。**证号重复（端点专属契约）**：当前资产上下文提交的证号已存在时返回 409、既有产权证 ID/`asset_ids`/摘要与「当前资产详情页追加关联」确认目标，不创建新记录、不自动追加资产或附件；解析会话中的暂存扫描件作为既有产权证附件候选，须在同一确认端点显式选择是否追加，取消追加即清理暂存文件；若既有产权证 `attachment_ids` 为空则不得取消追加。保存闸门须按 domain-model §4.20 的 5 项校验，不得用解析字段校验器 `validate_extracted_fields` 代替、不得漏卡资产/附件/权利人 |
 | 产权证附件列表/追加 | `GET/POST /api/v1/property-certificates/{certificate_id}/attachments` | 通用 `Attachment(owner_type=property_certificate)` 的域内入口；POST 接收一个或多个 PDF/JPEG/PNG，并按文件返回成功附件或可预期校验失败，不自动解析。列表要求 `property_certificate:read`，追加要求 `property_certificate:update` |

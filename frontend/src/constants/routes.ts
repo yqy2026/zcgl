@@ -34,8 +34,10 @@ export const ASSET_ROUTES = {
   ANALYTICS_SIMPLE: '/assets/analytics-simple',
   DETAIL_PATH: '/assets/:id',
   EDIT_PATH: '/assets/:id/edit',
+  HISTORY_PATH: '/assets/:id/history',
   DETAIL: (id: string) => `/assets/${id}`,
   EDIT: (id: string) => `/assets/${id}/edit`,
+  HISTORY: (id: string) => `/assets/${id}/history`,
 } as const;
 
 export const CONTRACT_GROUP_ROUTES = {

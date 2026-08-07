@@ -572,9 +572,16 @@ class AssetService:
         self,
         asset_id: str,
         *,
+        page: int = 1,
+        page_size: int = 20,
+        change_type: str | None = None,
         party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
-    ) -> list[AssetHistory]:
+    ) -> tuple[list[AssetHistory], int]:
+        """获取资产变更历史（分页，可按操作类型过滤）。
+
+        返回 (items, total)；total 为过滤后的总条数。
+        """
         await self.get_asset(
             asset_id,
             party_filter=party_filter,
@@ -584,7 +591,13 @@ class AssetService:
             self.db,
             asset_id=asset_id,
         )
-        return history_records
+        if change_type:
+            history_records = [
+                record for record in history_records if record.operation_type == change_type
+            ]
+        total = len(history_records)
+        skip = (page - 1) * page_size
+        return history_records[skip : skip + page_size], total
 
     async def get_asset_management_history(
         self,

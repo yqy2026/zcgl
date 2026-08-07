@@ -90,6 +90,17 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     element: assetListPage,
     permissions: [{ resource: 'asset', action: 'read' }],
   },
+  // 更具体的路径要在 DETAIL_PATH 之前注册（编辑/历史）
+  {
+    path: ASSET_ROUTES.EDIT_PATH,
+    element: React.lazy(() => import('../pages/Assets/AssetCreatePage')),
+    permissions: [{ resource: 'asset', action: 'update' }],
+  },
+  {
+    path: ASSET_ROUTES.HISTORY_PATH,
+    element: React.lazy(() => import('../pages/Assets/AssetHistoryPage')),
+    permissions: [{ resource: 'asset', action: 'read' }],
+  },
   {
     path: ASSET_ROUTES.DETAIL_PATH,
     element: assetDetailPage,

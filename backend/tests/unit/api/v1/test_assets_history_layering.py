@@ -1,5 +1,6 @@
 """分层约束测试：assets 历史端点应委托服务层。"""
 
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -23,18 +24,27 @@ async def test_get_asset_history_should_delegate_asset_service() -> None:
     from src.api.v1.assets.assets import get_asset_history
 
     mock_service = MagicMock()
-    mock_service.get_asset_history_records = AsyncMock(return_value=[{"id": "history-1"}])
+    mock_service.get_asset_history_records = AsyncMock(return_value=([], 0))
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "AsyncAssetService", MagicMock(return_value=mock_service))
         result = await get_asset_history(
             asset_id="asset-1",
+            page=1,
+            page_size=20,
+            change_type=None,
             db=MagicMock(),
             current_user=MagicMock(id="user-1"),
         )
 
-    assert result == {"asset_id": "asset-1", "history": [{"id": "history-1"}]}
+    payload = json.loads(result.body)
+    assert payload["success"] is True
+    assert payload["data"]["items"] == []
+    assert payload["data"]["pagination"]["total"] == 0
     mock_service.get_asset_history_records.assert_awaited_once_with(
         "asset-1",
+        page=1,
+        page_size=20,
+        change_type=None,
         current_user_id="user-1",
     )

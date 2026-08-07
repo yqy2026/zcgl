@@ -30,7 +30,12 @@ from starlette.status import HTTP_204_NO_CONTENT
 from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
 from ....core.exception_handler import forbidden
-from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
+from ....core.response_handler import (
+    APIResponse,
+    PaginatedData,
+    PaginationInfo,
+    ResponseHandler,
+)
 from ....crud.query_builder import PartyFilter
 from ....database import get_async_db
 from ....middleware.auth import (
@@ -52,6 +57,7 @@ from ....schemas.asset import (
     AssetReviewRejectRequest,
     AssetUpdate,
 )
+from ....schemas.asset_history import AssetHistoryItem
 from ....security.permissions import require_any_role
 from ....services.asset.asset_service import (
     AssetService,
@@ -879,9 +885,21 @@ async def hard_delete_asset(
     return Response(status_code=HTTP_204_NO_CONTENT)
 
 
-@router.get("/{asset_id}/history", summary="获取资产历史")
+@router.get(
+    "/{asset_id}/history",
+    response_model=APIResponse[PaginatedData[AssetHistoryItem]],
+    summary="获取资产历史",
+)
 async def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
+    page: int = Query(PaginationLimits.DEFAULT_PAGE, ge=1, description="页码"),
+    page_size: int = Query(
+        PaginationLimits.DEFAULT_PAGE_SIZE,
+        ge=PaginationLimits.MIN_PAGE_SIZE,
+        le=PaginationLimits.MAX_PAGE_SIZE,
+        description="每页记录数",
+    ),
+    change_type: str | None = Query(None, description="按操作类型过滤（如 create/update/delete）"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
@@ -892,18 +910,37 @@ async def get_asset_history(
             deny_as_not_found=True,
         )
     ),
-) -> dict[str, Any]:
+) -> JSONResponse:
     """
-    获取资产的变更历史记录
+    获取资产的变更历史记录（分页，可按操作类型过滤）
 
     - **asset_id**: 资产ID
+    - **page**: 页码，从1开始
+    - **page_size**: 每页记录数
+    - **change_type**: 操作类型过滤（create/update/delete 或业务动作）
     """
     asset_service = AsyncAssetService(db)
-    history_records = await asset_service.get_asset_history_records(
+    items, total = await asset_service.get_asset_history_records(
         asset_id,
+        page=page,
+        page_size=page_size,
+        change_type=change_type,
         current_user_id=str(current_user.id),
     )
-    return {"asset_id": asset_id, "history": history_records}
+    total_pages = (total + page_size - 1) // page_size
+    pagination = PaginationInfo(
+        page=page,
+        page_size=page_size,
+        total=total,
+        total_pages=total_pages,
+        has_next=page < total_pages,
+        has_prev=page > 1,
+    )
+    data = PaginatedData(
+        items=[AssetHistoryItem.model_validate(item) for item in items],
+        pagination=pagination,
+    )
+    return ResponseHandler.success(data=jsonable_encoder(data), message="获取资产历史成功")
 
 
 @router.get("/{asset_id}/management-history", summary="获取资产经营方变更历史")
