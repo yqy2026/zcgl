@@ -9,6 +9,10 @@
 
 ### 2026-08-07
 
+- docs(party-scope): close out the one-cutover plan. Marked REQ-AUTH-002/REQ-PTY-002/REQ-SYS-001/REQ-SYS-002 as `已有证据` and removed the stale "frontend views pending" notes; ADR-0022 flipped to 已实施 (2026-08-07) with its plan link updated; the plan moved to `docs/archive/backend-plans/` with status ✅ and both plan indexes updated. Docs-lint passes after the traceability reference was aligned to the archived path.
+
+- feat(party): add the read-only representing-organizations reverse list on the Party detail page. `GET /api/v1/parties/{party_id}/organizations` validates the Party under `read`/party ABAC (`deny_as_not_found`), delegates to `OrganizationService.get_representing_organizations`, and returns only non-deleted Organizations directly representing that Party (id/name/code/level/status/parent/perspective) with no edit surface; the Party detail page adds a read-only "代表组织" card with an empty state, and `partyService.getRepresentingOrganizations` exposes the endpoint. Validation: backend py_compile, FastAPI import smoke test, party layering suite 9 passed (3 new), ruff clean; frontend TypeScript type-check, oxlint 0 warnings/errors, partyService suite 12 passed.
+
 - test(party-scope): align the organization-scope E2E fixture with the stage-2 contract. `organization-scope-isolation.spec.ts` now resolves user Party bindings through the preview/commit two-phase flow (`/users/{id}/party-bindings/preview` → `/commit` with `preview_token`, `reason`, `idempotency_key`), filters candidate Parties to `active`+`approved` via `submit-review`/`approve-review`, and creates fallback Parties as `legal_entity` without a client-owned code — replacing the retired direct `POST /party-bindings` (201), the `organization` Party type, and the unfiltered Party list. The `PartyItem` interface now carries `status` and `review_status`. Validation: staged for CI confirmation; local `make check` requires PostgreSQL.
 
 ### 2026-08-06

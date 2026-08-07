@@ -1,9 +1,9 @@
 # ADR-0022: Organization 与 Party 正交及主体范围单一解析
 
-**状态**：🟡 已决策待实施
+**状态**：✅ 已实施（2026-08-07）
 **决策日期**：2026-08-03
 **相关需求**：REQ-SYS-001、REQ-SYS-002、REQ-AUTH-002、REQ-PTY-001、REQ-PTY-002
-**实施方案**：[`../plans/2026-08-03-organization-party-scope-cutover.md`](../plans/2026-08-03-organization-party-scope-cutover.md)
+**实施方案**：[`../archive/backend-plans/2026-08-03-organization-party-scope-cutover.md`](../archive/backend-plans/2026-08-03-organization-party-scope-cutover.md)
 
 ---
 
