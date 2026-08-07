@@ -7,6 +7,10 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-08-07
+
+- test(party-scope): align the organization-scope E2E fixture with the stage-2 contract. `organization-scope-isolation.spec.ts` now resolves user Party bindings through the preview/commit two-phase flow (`/users/{id}/party-bindings/preview` → `/commit` with `preview_token`, `reason`, `idempotency_key`), filters candidate Parties to `active`+`approved` via `submit-review`/`approve-review`, and creates fallback Parties as `legal_entity` without a client-owned code — replacing the retired direct `POST /party-bindings` (201), the `organization` Party type, and the unfiltered Party list. The `PartyItem` interface now carries `status` and `review_status`. Validation: staged for CI confirmation; local `make check` requires PostgreSQL.
+
 ### 2026-08-06
 
 - feat(agent-skills): configure repo for mattpocock/skills engineering skills via `setup-matt-pocock-skills`. Added `docs/agents/issue-tracker.md` (GitHub Issues + `gh` CLI; PRs-as-triage-surface off), `docs/agents/triage-labels.md` (default five-role vocabulary: needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix), and `docs/agents/domain.md` (single-context layout: root `CONTEXT.md` + `docs/adr/`). Appended a `## Agent skills` block to `AGENTS.md` pointing at those files. Decisions: Issue tracker = GitHub (remote `yqy2026/zcgl`, `gh` authenticated); triage labels kept as defaults; domain docs single-context. This also unblocks `code-review`'s Spec axis, which reads issues/specs from the tracker. Validation: `make docs-lint` passed (field-drift report pre-existing, 0→1 project).

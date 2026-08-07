@@ -40,6 +40,8 @@ interface RoleDetailItem {
 
 interface PartyItem {
   id: string;
+  status?: string;
+  review_status?: string | null;
 }
 
 interface PartyPair {
@@ -143,6 +145,109 @@ const readResponseSnippet = async (response: APIResponse): Promise<string> => {
   }
 };
 
+const commitUserPartyBinding = async ({
+  page,
+  userId,
+  partyId,
+  relationType,
+  mutationHeaders,
+  idempotencyKey,
+}: {
+  page: Page;
+  userId: string;
+  partyId: string;
+  relationType: 'owner' | 'manager';
+  mutationHeaders: Record<string, string>;
+  idempotencyKey: string;
+}): Promise<void> => {
+  const previewResponse = await page.request.post(
+    `/api/v1/users/${userId}/party-bindings/preview`,
+    {
+      headers: mutationHeaders,
+      data: {
+        operation: 'create',
+        party_id: partyId,
+        relation_type: relationType,
+      },
+    }
+  );
+  if (previewResponse.status() !== 200) {
+    const errorSnippet = await readResponseSnippet(previewResponse);
+    throw new Error(
+      `Failed to preview user Party binding, status=${previewResponse.status()}, body=${errorSnippet}`
+    );
+  }
+
+  const previewPayload = (await previewResponse.json()) as unknown;
+  const preview = extractData<{ preview_token?: unknown }>(previewPayload);
+  const previewToken = normalizeNonEmpty(preview.preview_token);
+  if (previewToken == null) {
+    throw new Error('User Party binding preview did not return a token.');
+  }
+
+  const commitResponse = await page.request.post(
+    `/api/v1/users/${userId}/party-bindings/commit`,
+    {
+      headers: mutationHeaders,
+      data: {
+        preview_token: previewToken,
+        reason: 'E2E user Party scope setup.',
+        idempotency_key: idempotencyKey,
+      },
+    }
+  );
+  if (commitResponse.status() !== 200) {
+    const errorSnippet = await readResponseSnippet(commitResponse);
+    throw new Error(
+      `Failed to commit user Party binding, status=${commitResponse.status()}, body=${errorSnippet}`
+    );
+  }
+};
+const isBindingEligibleParty = (party: PartyItem): boolean => {
+  return party.status === 'active' && party.review_status === 'approved';
+};
+
+const listBindingEligiblePartyIds = async (page: Page): Promise<Set<string>> => {
+  const response = await page.request.get('/api/v1/parties?limit=200');
+  if (response.status() !== 200) {
+    return new Set();
+  }
+
+  const payload = (await response.json()) as unknown;
+  const parties = extractData<PartyItem[] | unknown>(payload);
+  if (!Array.isArray(parties)) {
+    return new Set();
+  }
+
+  return new Set(
+    parties
+      .filter((party): party is PartyItem => isBindingEligibleParty(party as PartyItem))
+      .map(party => normalizeNonEmpty(party.id))
+      .filter((partyId): partyId is string => partyId != null)
+  );
+};
+
+const approvePartyForScope = async ({
+  page,
+  partyId,
+  mutationHeaders,
+}: {
+  page: Page;
+  partyId: string;
+  mutationHeaders: Record<string, string>;
+}): Promise<boolean> => {
+  const submitResponse = await page.request.post(`/api/v1/parties/${partyId}/submit-review`, {
+    headers: mutationHeaders,
+  });
+  if (submitResponse.status() !== 200) {
+    return false;
+  }
+
+  const approveResponse = await page.request.post(`/api/v1/parties/${partyId}/approve-review`, {
+    headers: mutationHeaders,
+  });
+  return approveResponse.status() === 200;
+};
 const resolveRoleCandidateIds = async (page: Page): Promise<string[]> => {
   const explicitRoleId = normalizeNonEmpty(readNodeEnv('E2E_SCOPE_ROLE_ID'));
   if (explicitRoleId != null) {
@@ -223,16 +328,8 @@ const resolvePartyPair = async (
   }
 
   const candidatePartyIds: Array<string | null> = [explicitPartyAId, explicitPartyBId];
-  const partiesResponse = await page.request.get('/api/v1/parties?limit=200');
-  if (partiesResponse.status() === 200) {
-    const partiesPayload = (await partiesResponse.json()) as unknown;
-    const partyItems = extractData<PartyItem[] | unknown>(partiesPayload);
-    if (Array.isArray(partyItems)) {
-      for (const party of partyItems) {
-        candidatePartyIds.push(normalizeNonEmpty((party as PartyItem).id));
-      }
-    }
-  }
+  const eligiblePartyIds = await listBindingEligiblePartyIds(page);
+  candidatePartyIds.push(...eligiblePartyIds);
 
   let dedupedPartyIds = uniqueNonEmpty(candidatePartyIds);
   if (dedupedPartyIds.length < 2) {
@@ -241,9 +338,8 @@ const resolvePartyPair = async (
       const createPartyResponse = await page.request.post('/api/v1/parties', {
         headers: mutationHeaders,
         data: {
-          party_type: 'organization',
+          party_type: 'legal_entity',
           name: `E2E Scope Party ${suffix}-${i + 1}`,
-          code: `E2E_SCOPE_${suffix}_${i + 1}`,
           status: 'active',
         },
       });
@@ -252,7 +348,17 @@ const resolvePartyPair = async (
       }
       const createPartyPayload = (await createPartyResponse.json()) as unknown;
       const createdParty = extractData<PartyItem>(createPartyPayload);
-      candidatePartyIds.push(normalizeNonEmpty(createdParty.id));
+      const createdPartyId = normalizeNonEmpty(createdParty.id);
+      if (
+        createdPartyId != null &&
+        (await approvePartyForScope({
+          page,
+          partyId: createdPartyId,
+          mutationHeaders,
+        }))
+      ) {
+        candidatePartyIds.push(createdPartyId);
+      }
     }
   }
 
@@ -419,10 +525,12 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
             normalizeNonEmpty(item.owner_party_id)
           )
         );
-        if (ownerPartyIds.length > 0) {
-          const fallbackPartyAId = ownerPartyIds[0];
+        const eligiblePartyIds = await listBindingEligiblePartyIds(page);
+        const eligibleOwnerPartyIds = ownerPartyIds.filter(partyId => eligiblePartyIds.has(partyId));
+        if (eligibleOwnerPartyIds.length > 0) {
+          const fallbackPartyAId = eligibleOwnerPartyIds[0];
           const fallbackPartyBId =
-            ownerPartyIds.find(item => item !== fallbackPartyAId) ??
+            eligibleOwnerPartyIds.find(item => item !== fallbackPartyAId) ??
             [scopedPartyAId, scopedPartyBId].find(item => item !== fallbackPartyAId) ??
             null;
           if (fallbackPartyBId != null) {
@@ -574,36 +682,22 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         createdUserIds.push(userBId);
       }
 
-      const bindAResponse = await page.request.post(`/api/v1/users/${userA.id}/party-bindings`, {
-        headers: mutationHeaders,
-        data: {
-          party_id: scopedPartyAId,
-          relation_type: 'owner',
-          is_primary: true,
-        },
+      await commitUserPartyBinding({
+        page,
+        userId: userA.id,
+        partyId: scopedPartyAId,
+        relationType: 'owner',
+        mutationHeaders,
+        idempotencyKey: `e2e-user-party-binding-a-${suffix}`,
       });
-      if (bindAResponse.status() !== 201) {
-        const errorSnippet = await readResponseSnippet(bindAResponse);
-        throw new Error(
-          `Failed to bind user A, status=${bindAResponse.status()}, body=${errorSnippet}`
-        );
-      }
-
-      const bindBResponse = await page.request.post(`/api/v1/users/${userB.id}/party-bindings`, {
-        headers: mutationHeaders,
-        data: {
-          party_id: scopedPartyBId,
-          relation_type: 'owner',
-          is_primary: true,
-        },
+      await commitUserPartyBinding({
+        page,
+        userId: userB.id,
+        partyId: scopedPartyBId,
+        relationType: 'owner',
+        mutationHeaders,
+        idempotencyKey: `e2e-user-party-binding-b-${suffix}`,
       });
-      if (bindBResponse.status() !== 201) {
-        const errorSnippet = await readResponseSnippet(bindBResponse);
-        throw new Error(
-          `Failed to bind user B, status=${bindBResponse.status()}, body=${errorSnippet}`
-        );
-      }
-
       const assertScopedVisibility = async ({
         username,
         ownPartyId,
