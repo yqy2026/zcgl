@@ -33,7 +33,6 @@ from ....core.exception_handler import forbidden
 from ....core.response_handler import (
     APIResponse,
     PaginatedData,
-    PaginationInfo,
     ResponseHandler,
 )
 from ....crud.query_builder import PartyFilter
@@ -927,20 +926,14 @@ async def get_asset_history(
         change_type=change_type,
         current_user_id=str(current_user.id),
     )
-    total_pages = (total + page_size - 1) // page_size
-    pagination = PaginationInfo(
+    serialized = [AssetHistoryItem.model_validate(item) for item in items]
+    return ResponseHandler.paginated(
+        data=serialized,
         page=page,
         page_size=page_size,
         total=total,
-        total_pages=total_pages,
-        has_next=page < total_pages,
-        has_prev=page > 1,
+        message="获取资产历史成功",
     )
-    data = PaginatedData(
-        items=[AssetHistoryItem.model_validate(item) for item in items],
-        pagination=pagination,
-    )
-    return ResponseHandler.success(data=jsonable_encoder(data), message="获取资产历史成功")
 
 
 @router.get("/{asset_id}/management-history", summary="获取资产经营方变更历史")

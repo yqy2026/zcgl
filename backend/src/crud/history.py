@@ -18,17 +18,6 @@ class HistoryCRUD:
         result = await db.execute(stmt)
         return result.scalars().first()
 
-    async def get_by_asset_id_async(
-        self, db: AsyncSession, asset_id: str
-    ) -> list[AssetHistory]:
-        stmt = (
-            select(AssetHistory)
-            .where(AssetHistory.asset_id == asset_id)
-            .order_by(desc(AssetHistory.operation_time))
-        )
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
-
     async def get_multi_with_count_async(
         self,
         db: AsyncSession,
@@ -36,17 +25,29 @@ class HistoryCRUD:
         skip: int = 0,
         limit: int = 100,
         asset_id: str | None = None,
+        change_type: str | None = None,
     ) -> tuple[list[AssetHistory], int]:
+        """分页获取历史记录并返回过滤后总数。
+
+        - change_type: 按 operation_type 精确过滤（如 create/update/delete 或业务动作）。
+        - 排序固定为 operation_time 倒序，并以主键 id 作次级 tie-breaker，保证
+          LIMIT/OFFSET 分页跨查询（count 与 list、相邻页）顺序确定。
+        - 分页与过滤均下沉 SQL。
+        """
         clauses = []
         if asset_id:
             clauses.append(AssetHistory.asset_id == asset_id)
+        if change_type:
+            clauses.append(AssetHistory.operation_type == change_type)
 
         count_stmt = select(func.count(AssetHistory.id))
         if clauses:
             count_stmt = count_stmt.where(*clauses)
         total = int((await db.execute(count_stmt)).scalar() or 0)
 
-        stmt = select(AssetHistory).order_by(desc(AssetHistory.operation_time))
+        stmt = select(AssetHistory).order_by(
+            desc(AssetHistory.operation_time), desc(AssetHistory.id)
+        )
         if clauses:
             stmt = stmt.where(*clauses)
         stmt = stmt.offset(skip).limit(limit)

@@ -580,24 +580,20 @@ class AssetService:
     ) -> tuple[list[AssetHistory], int]:
         """获取资产变更历史（分页，可按操作类型过滤）。
 
-        返回 (items, total)；total 为过滤后的总条数。
+        返回 (items, total)；过滤与分页下沉 CRUD（SQL），total 为过滤后总条数。
         """
         await self.get_asset(
             asset_id,
             party_filter=party_filter,
             current_user_id=current_user_id,
         )
-        history_records = await history_crud.get_by_asset_id_async(
+        return await history_crud.get_multi_with_count_async(
             self.db,
+            skip=(page - 1) * page_size,
+            limit=page_size,
             asset_id=asset_id,
+            change_type=change_type,
         )
-        if change_type:
-            history_records = [
-                record for record in history_records if record.operation_type == change_type
-            ]
-        total = len(history_records)
-        skip = (page - 1) * page_size
-        return history_records[skip : skip + page_size], total
 
     async def get_asset_management_history(
         self,

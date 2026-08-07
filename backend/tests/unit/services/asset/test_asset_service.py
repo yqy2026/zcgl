@@ -472,9 +472,9 @@ class TestGetAssetHistoryRecords:
 
         with patch.object(service, "get_asset", new_callable=AsyncMock) as mock_get_asset:
             with patch(
-                "src.services.asset.asset_service.history_crud.get_by_asset_id_async",
+                "src.services.asset.asset_service.history_crud.get_multi_with_count_async",
                 new_callable=AsyncMock,
-                return_value=history_records,
+                return_value=(history_records, 1),
             ) as mock_get_history:
                 items, total = await service.get_asset_history_records(TEST_ASSET_ID)
 
@@ -485,26 +485,29 @@ class TestGetAssetHistoryRecords:
             party_filter=None,
             current_user_id=None,
         )
-        mock_get_history.assert_awaited_once_with(service.db, asset_id=TEST_ASSET_ID)
+        mock_get_history.assert_awaited_once_with(
+            service.db,
+            skip=0,
+            limit=20,
+            asset_id=TEST_ASSET_ID,
+            change_type=None,
+        )
 
-    async def test_get_asset_history_records_filters_change_type_and_paginates(
+    async def test_get_asset_history_records_passes_filter_and_pagination_to_crud(
         self, service
     ) -> None:
-        create_record = MagicMock(operation_type="create", id="history-create")
         update_record = MagicMock(operation_type="update", id="history-update")
-        delete_record = MagicMock(operation_type="delete", id="history-delete")
-        records = [create_record, update_record, delete_record]
 
         with patch.object(service, "get_asset", new_callable=AsyncMock) as mock_get_asset:
             with patch(
-                "src.services.asset.asset_service.history_crud.get_by_asset_id_async",
+                "src.services.asset.asset_service.history_crud.get_multi_with_count_async",
                 new_callable=AsyncMock,
-                return_value=records,
+                return_value=([update_record], 1),
             ) as mock_get_history:
                 items, total = await service.get_asset_history_records(
                     TEST_ASSET_ID,
-                    page=1,
-                    page_size=1,
+                    page=2,
+                    page_size=10,
                     change_type="update",
                 )
 
@@ -515,7 +518,14 @@ class TestGetAssetHistoryRecords:
             party_filter=None,
             current_user_id=None,
         )
-        mock_get_history.assert_awaited_once_with(service.db, asset_id=TEST_ASSET_ID)
+        # 过滤与分页参数应透传 CRUD（skip = (page-1)*page_size）
+        mock_get_history.assert_awaited_once_with(
+            service.db,
+            skip=10,
+            limit=10,
+            asset_id=TEST_ASSET_ID,
+            change_type="update",
+        )
 
 
 class TestGetOwnershipEntityNames:

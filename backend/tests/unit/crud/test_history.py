@@ -61,39 +61,13 @@ class TestGetAsync:
         assert result is None
 
 
-class TestGetByAssetIdAsync:
-    """测试根据资产ID获取历史记录"""
-
-    async def test_get_by_asset_id_async_success(
-        self, crud: HistoryCRUD, mock_db: MagicMock, mock_history: MagicMock
-    ) -> None:
-        mock_scalars = MagicMock()
-        mock_scalars.all.return_value = [mock_history]
-        mock_result = MagicMock()
-        mock_result.scalars.return_value = mock_scalars
-        mock_db.execute = AsyncMock(return_value=mock_result)
-
-        result = await crud.get_by_asset_id_async(mock_db, "asset_123")
-
-        assert result == [mock_history]
-        mock_db.execute.assert_awaited_once()
-
-    async def test_get_by_asset_id_async_empty(
-        self, crud: HistoryCRUD, mock_db: MagicMock
-    ) -> None:
-        mock_scalars = MagicMock()
-        mock_scalars.all.return_value = []
-        mock_result = MagicMock()
-        mock_result.scalars.return_value = mock_scalars
-        mock_db.execute = AsyncMock(return_value=mock_result)
-
-        result = await crud.get_by_asset_id_async(mock_db, "asset_without_history")
-
-        assert result == []
-
-
 class TestGetMultiWithCountAsync:
     """测试获取历史记录列表及总数"""
+
+    @staticmethod
+    def _render(stmt: object) -> str:
+        """将 SQLAlchemy 语句渲染为带字面量绑定的 SQL 字符串。"""
+        return str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
     async def test_get_multi_with_count_async(
         self, crud: HistoryCRUD, mock_db: MagicMock, mock_history: MagicMock
@@ -115,6 +89,53 @@ class TestGetMultiWithCountAsync:
         assert total == 1
         assert items == [mock_history]
         assert mock_db.execute.await_count == 2
+        # change_type=None 时不得生成 operation_type 过滤子句
+        # （SELECT 列含 operation_type 列名，故按过滤表达式形式 `operation_type =` 断言）
+        rendered = self._render(mock_db.execute.await_args_list[1].args[0])
+        assert "operation_type =" not in rendered
+
+    async def test_get_multi_with_count_async_orders_by_operation_time_then_id(
+        self, crud: HistoryCRUD, mock_db: MagicMock, mock_history: MagicMock
+    ) -> None:
+        """分页排序应以 operation_time 倒序为主，id 倒序为 tie-breaker。"""
+        count_result = MagicMock()
+        count_result.scalar.return_value = 1
+        list_scalars = MagicMock()
+        list_scalars.all.return_value = [mock_history]
+        list_result = MagicMock()
+        list_result.scalars.return_value = list_scalars
+        mock_db.execute = AsyncMock(side_effect=[count_result, list_result])
+
+        await crud.get_multi_with_count_async(mock_db, skip=0, limit=20, asset_id="asset_123")
+
+        rendered = self._render(mock_db.execute.await_args_list[1].args[0])
+        assert "operation_time DESC" in rendered
+        assert "id DESC" in rendered
+
+    async def test_get_multi_with_count_async_filters_change_type(
+        self, crud: HistoryCRUD, mock_db: MagicMock, mock_history: MagicMock
+    ) -> None:
+        count_result = MagicMock()
+        count_result.scalar.return_value = 1
+
+        list_scalars = MagicMock()
+        list_scalars.all.return_value = [mock_history]
+        list_result = MagicMock()
+        list_result.scalars.return_value = list_scalars
+
+        mock_db.execute = AsyncMock(side_effect=[count_result, list_result])
+
+        items, total = await crud.get_multi_with_count_async(
+            mock_db, skip=0, limit=20, asset_id="asset_123", change_type="create"
+        )
+
+        assert total == 1
+        assert items == [mock_history]
+        # 过滤条件应以绑定值 'create' 同时作用于 count 与列表查询
+        count_rendered = self._render(mock_db.execute.await_args_list[0].args[0])
+        list_rendered = self._render(mock_db.execute.await_args_list[1].args[0])
+        assert "operation_type = 'create'" in count_rendered
+        assert "operation_type = 'create'" in list_rendered
 
 
 class TestCreateAsync:
