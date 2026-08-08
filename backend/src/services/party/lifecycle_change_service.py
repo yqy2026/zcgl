@@ -8,7 +8,7 @@ import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -509,11 +509,13 @@ class PartyLifecycleChangeService:
         )
 
     @staticmethod
-    def _normalize_operation(value: PartyLifecycleOperation | str) -> str:
+    def _normalize_operation(
+        value: PartyLifecycleOperation | str,
+    ) -> PartyLifecycleOperation:
         normalized = str(getattr(value, "value", value)).strip()
         if normalized not in {"deactivate", "reactivate"}:
             raise PartyLifecyclePreviewStaleError("invalid_operation")
-        return normalized
+        return cast(PartyLifecycleOperation, normalized)
 
     @staticmethod
     def _validate_preview_payload(

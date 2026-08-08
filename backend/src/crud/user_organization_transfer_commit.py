@@ -42,17 +42,19 @@ class UserOrganizationTransferCommitCRUD:
         committed_at: datetime,
     ) -> UserOrganizationTransferCommit:
         receipt = UserOrganizationTransferCommit(
-            user_id=user_id,
-            actor_id=actor_id,
-            target_organization_id=target_organization_id,
-            idempotency_key=idempotency_key,
-            reason=reason,
-            proposal=proposal,
-            before_scope=before_scope,
-            after_scope=after_scope,
-            impact_summary=impact_summary,
-            result_data=result_data,
-            committed_at=committed_at,
+            **{
+                "user_id": user_id,
+                "actor_id": actor_id,
+                "target_organization_id": target_organization_id,
+                "idempotency_key": idempotency_key,
+                "reason": reason,
+                "proposal": proposal,
+                "before_scope": before_scope,
+                "after_scope": after_scope,
+                "impact_summary": impact_summary,
+                "result_data": result_data,
+                "committed_at": committed_at,
+            }
         )
         db.add(receipt)
         await db.flush()

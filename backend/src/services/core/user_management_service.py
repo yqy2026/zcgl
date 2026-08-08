@@ -8,7 +8,7 @@ from ...crud.auth import UserCRUD
 from ...crud.organization import organization as organization_crud
 from ...crud.rbac import role_crud
 from ...exceptions import BusinessLogicError
-from ...models.auth import User
+from ...models.auth import AccountType, User
 from ...schemas.auth import UserCreate, UserUpdate
 from ...schemas.rbac import UserRoleAssignmentCreate
 from ..permission.rbac_service import RBACService
@@ -195,7 +195,7 @@ class AsyncUserManagementService:
         db_user.phone = user_data.phone
         db_user.full_name = user_data.full_name
         db_user.password_hash = hashed_password
-        db_user.account_type = "human"
+        db_user.account_type = AccountType.HUMAN
         db_user.organization_id = None
         db_user.is_active = False
 

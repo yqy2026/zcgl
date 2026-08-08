@@ -211,7 +211,8 @@ def _collect_organization_chain_issues(
                 break
             path_positions[current_id] = len(path)
             path.append(current_id)
-            current_id = organizations[current_id]["parent_id"]
+            parent_value = organizations[current_id]["parent_id"]
+            current_id = parent_value if isinstance(parent_value, str) else None
 
     user_columns = _columns(inspector, "users")
     organization_column = (
@@ -245,7 +246,8 @@ def _collect_organization_chain_issues(
                 valid = False
                 break
             visited.add(current_id)
-            current_id = organization["parent_id"]
+            parent_value = organization["parent_id"]
+            current_id = parent_value if isinstance(parent_value, str) else None
         if not valid:
             invalid_user_ids.append(str(user_row["id"]))
 

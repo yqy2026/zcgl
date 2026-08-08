@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, cast
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -99,7 +99,9 @@ class PartyScopeRepository:
             User.account_type,
             User.organization_id,
         ).where(User.id == user_id)
-        return (await db.execute(stmt)).mappings().one_or_none()
+        return cast(
+            Mapping[str, Any] | None, (await db.execute(stmt)).mappings().one_or_none()
+        )
 
     async def load_bindings(
         self, db: AsyncSession, *, user_id: str, now: datetime
@@ -124,7 +126,9 @@ class PartyScopeRepository:
             )
             .order_by(UserPartyBinding.valid_from, UserPartyBinding.created_at)
         )
-        return list((await db.execute(stmt)).mappings().all())
+        return cast(
+            list[Mapping[str, Any]], list((await db.execute(stmt)).mappings().all())
+        )
 
     async def load_organization(
         self, db: AsyncSession, *, organization_id: str
@@ -144,7 +148,9 @@ class PartyScopeRepository:
             .outerjoin(Party, Party.id == Organization.represented_party_id)
             .where(Organization.id == organization_id)
         )
-        return (await db.execute(stmt)).mappings().one_or_none()
+        return cast(
+            Mapping[str, Any] | None, (await db.execute(stmt)).mappings().one_or_none()
+        )
 
 
 class PartyScopeResolver:
@@ -375,7 +381,7 @@ class PartyScopeResolver:
                 return EffectivePartyScope(
                     user_id=user_id,
                     source="organization",
-                    scope_mode=perspective,
+                    scope_mode=cast(ScopeMode, perspective),
                     owner_party_ids=owner_ids,
                     manager_party_ids=manager_ids,
                     organization_id=organization_id,

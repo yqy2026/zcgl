@@ -42,17 +42,19 @@ class OrganizationMoveCommitCRUD:
         committed_at: datetime,
     ) -> OrganizationMoveCommit:
         receipt = OrganizationMoveCommit(
-            organization_id=organization_id,
-            target_parent_id=target_parent_id,
-            actor_id=actor_id,
-            idempotency_key=idempotency_key,
-            reason=reason,
-            proposal=proposal,
-            before_scope=before_scope,
-            after_scope=after_scope,
-            impact_summary=impact_summary,
-            result_data=result_data,
-            committed_at=committed_at,
+            **{
+                "organization_id": organization_id,
+                "target_parent_id": target_parent_id,
+                "actor_id": actor_id,
+                "idempotency_key": idempotency_key,
+                "reason": reason,
+                "proposal": proposal,
+                "before_scope": before_scope,
+                "after_scope": after_scope,
+                "impact_summary": impact_summary,
+                "result_data": result_data,
+                "committed_at": committed_at,
+            }
         )
         db.add(receipt)
         await db.flush()

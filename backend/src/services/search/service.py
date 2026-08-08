@@ -206,7 +206,6 @@ class SearchService:
             search_params=ProjectSearchRequest(
                 keyword=query,
                 status=None,
-                owner_party_id=None,
                 page=1,
                 page_size=5,
             ),

@@ -41,16 +41,18 @@ class PartyLifecycleCommitCRUD:
         committed_at: datetime,
     ) -> PartyLifecycleCommit:
         receipt = PartyLifecycleCommit(
-            party_id=party_id,
-            actor_id=actor_id,
-            idempotency_key=idempotency_key,
-            operation=operation,
-            reason=reason,
-            before_state=before_state,
-            after_state=after_state,
-            impact_summary=impact_summary,
-            result_data=result_data,
-            committed_at=committed_at,
+            **{
+                "party_id": party_id,
+                "actor_id": actor_id,
+                "idempotency_key": idempotency_key,
+                "operation": operation,
+                "reason": reason,
+                "before_state": before_state,
+                "after_state": after_state,
+                "impact_summary": impact_summary,
+                "result_data": result_data,
+                "committed_at": committed_at,
+            }
         )
         db.add(receipt)
         await db.flush()

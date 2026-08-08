@@ -38,6 +38,9 @@ class PreparedPartyIdentifier:
 class PartyIdentifierService:
     """Apply Party-type rules without exposing natural-person plaintext."""
 
+    _encryptor: _DeterministicEncryptor | None
+    _fingerprint_key: bytes | None
+
     def __init__(
         self,
         *,

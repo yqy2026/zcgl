@@ -208,7 +208,7 @@ class UserCRUD:
         db_user.phone = obj_in.phone
         db_user.full_name = obj_in.full_name
         db_user.password_hash = hashed_password
-        db_user.account_type = "human"
+        db_user.account_type = AccountType.HUMAN
         db_user.organization_id = None
         db_user.is_active = False
 

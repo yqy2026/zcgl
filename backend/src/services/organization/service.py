@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +8,11 @@ from ...core.cache_manager import cache_manager
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.organization import organization as organization_crud
 from ...crud.organization_history import OrganizationHistoryCRUD
-from ...models.organization import Organization, OrganizationHistory
+from ...models.organization import (
+    Organization,
+    OrganizationHistory,
+    RepresentedPartyPerspective,
+)
 from ...schemas.organization import (
     OrganizationCreate,
     OrganizationUpdate,
@@ -72,12 +76,16 @@ class OrganizationService:
         return [
             RepresentingOrganizationItem(
                 organization_id=str(org.id),
-                name=org.name,
-                code=org.code,
-                level=org.level,
-                status=org.status,
+                # 以下字段在 organizations 表均为 NOT NULL，ORM 旧式 Column 注解为 Optional 属静态类型保守
+                name=cast(str, org.name),
+                code=cast(str, org.code),
+                level=cast(int, org.level),
+                status=cast(str, org.status),
                 parent_id=org.parent_id,
-                represented_party_perspective=org.represented_party_perspective,
+                represented_party_perspective=cast(
+                    RepresentedPartyPerspective | None,
+                    org.represented_party_perspective,
+                ),
             )
             for org in orgs
         ]
