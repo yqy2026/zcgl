@@ -484,7 +484,8 @@ const PartyDetailPage: React.FC = () => {
                 重新启用主体
               </Button>
             )
-          ) : null}        </Space>
+          ) : null}{' '}
+        </Space>
 
         {!hasPartyId ? <Alert type="error" title="缺少主体标识，无法加载详情" showIcon /> : null}
         {partyDetailQuery.isError ? (
@@ -561,11 +562,7 @@ const PartyDetailPage: React.FC = () => {
                   key: 'status',
                   width: 100,
                   render: (status: string) =>
-                    status === 'active' ? (
-                      <Tag color="success">启用</Tag>
-                    ) : (
-                      <Tag>{status}</Tag>
-                    ),
+                    status === 'active' ? <Tag color="success">启用</Tag> : <Tag>{status}</Tag>,
                 },
               ]}
             />
@@ -746,7 +743,9 @@ const PartyDetailPage: React.FC = () => {
             />
             <Form layout="vertical">
               <Form.Item
-                label={pendingLifecycleChange.operation === 'deactivate' ? '停用原因' : '重新启用原因'}
+                label={
+                  pendingLifecycleChange.operation === 'deactivate' ? '停用原因' : '重新启用原因'
+                }
                 validateStatus={lifecycleReasonError ? 'error' : undefined}
                 help={lifecycleReasonError ? '请输入本次状态变更的原因' : undefined}
               >

@@ -388,9 +388,7 @@ export const userService = {
   },
 
   async getUserPartyScope(userId: string): Promise<UserPartyScopeView> {
-    const response = await api.get<UserPartyScopeView>(
-      `/auth/users/${userId}/party-scope`
-    );
+    const response = await api.get<UserPartyScopeView>(`/auth/users/${userId}/party-scope`);
     if (response.data == null) {
       throw new Error('获取用户有效主体范围失败');
     }

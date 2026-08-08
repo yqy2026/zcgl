@@ -58,9 +58,7 @@ const UserPartyScopeViewModal: React.FC<UserPartyScopeViewModalProps> = ({
       })
       .catch(error => {
         if (!cancelled) {
-          MessageManager.error(
-            error instanceof Error ? error.message : '获取用户有效主体范围失败'
-          );
+          MessageManager.error(error instanceof Error ? error.message : '获取用户有效主体范围失败');
         }
       })
       .finally(() => {
@@ -95,19 +93,13 @@ const UserPartyScopeViewModal: React.FC<UserPartyScopeViewModalProps> = ({
               />
             )}
             <Descriptions bordered size="small" column={1}>
-              <Descriptions.Item label="范围来源">
-                {sourceLabel(scope.source)}
-              </Descriptions.Item>
-              <Descriptions.Item label="范围模式">
-                {modeLabel(scope.scope_mode)}
-              </Descriptions.Item>
+              <Descriptions.Item label="范围来源">{sourceLabel(scope.source)}</Descriptions.Item>
+              <Descriptions.Item label="范围模式">{modeLabel(scope.scope_mode)}</Descriptions.Item>
               <Descriptions.Item label="产权方主体">
                 {scope.owner_party_ids.length > 0 ? scope.owner_party_ids.join('、') : '无'}
               </Descriptions.Item>
               <Descriptions.Item label="运营方主体">
-                {scope.manager_party_ids.length > 0
-                  ? scope.manager_party_ids.join('、')
-                  : '无'}
+                {scope.manager_party_ids.length > 0 ? scope.manager_party_ids.join('、') : '无'}
               </Descriptions.Item>
               <Descriptions.Item label="所属组织">
                 {scope.organization_id ?? '无'}

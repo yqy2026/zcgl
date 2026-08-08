@@ -112,9 +112,7 @@ const ProfilePage: React.FC = () => {
       const scope = await userService.getMyPartyScope();
       setPartyScope(scope);
     } catch (error) {
-      MessageManager.error(
-        error instanceof Error ? error.message : '获取当前用户有效主体范围失败'
-      );
+      MessageManager.error(error instanceof Error ? error.message : '获取当前用户有效主体范围失败');
       setPartyScope(null);
     } finally {
       setPartyScopeLoading(false);
@@ -274,12 +272,8 @@ const ProfilePage: React.FC = () => {
                 />
               ) : (
                 <Descriptions bordered size="small" column={1}>
-                  <Descriptions.Item label="范围来源">
-                    {partyScope.source}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="范围模式">
-                    {partyScope.scope_mode}
-                  </Descriptions.Item>
+                  <Descriptions.Item label="范围来源">{partyScope.source}</Descriptions.Item>
+                  <Descriptions.Item label="范围模式">{partyScope.scope_mode}</Descriptions.Item>
                   <Descriptions.Item label="产权方主体">
                     {partyScope.owner_party_ids.length > 0
                       ? partyScope.owner_party_ids.join('、')
@@ -297,9 +291,7 @@ const ProfilePage: React.FC = () => {
                     {partyScope.next_transition_at ?? '无'}
                   </Descriptions.Item>
                   {partyScope.error_code != null && (
-                    <Descriptions.Item label="配置异常">
-                      {partyScope.error_code}
-                    </Descriptions.Item>
+                    <Descriptions.Item label="配置异常">{partyScope.error_code}</Descriptions.Item>
                   )}
                 </Descriptions>
               )}

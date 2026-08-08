@@ -46,9 +46,7 @@ describe('PartyScopeBlocked', () => {
   });
 
   it('returns null for a valid Party scope', () => {
-    const { container } = renderWithProviders(
-      <PartyScopeBlocked scope={validScope} />
-    );
+    const { container } = renderWithProviders(<PartyScopeBlocked scope={validScope} />);
 
     expect(container).toBeEmptyDOMElement();
   });

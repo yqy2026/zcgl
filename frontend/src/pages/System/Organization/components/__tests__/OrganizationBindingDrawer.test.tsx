@@ -180,14 +180,11 @@ describe('OrganizationBindingDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: '提交变更' }));
 
     await waitFor(() => {
-      expect(organizationService.commitOrganizationPartyScope).toHaveBeenCalledWith(
-        'org-1',
-        {
-          preview_token: 'preview-token',
-          reason: '组织权属调整',
-          idempotency_key: expect.any(String),
-        }
-      );
+      expect(organizationService.commitOrganizationPartyScope).toHaveBeenCalledWith('org-1', {
+        preview_token: 'preview-token',
+        reason: '组织权属调整',
+        idempotency_key: expect.any(String),
+      });
     });
   });
 });

@@ -275,14 +275,7 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
     } finally {
       setCommitting(false);
     }
-  }, [
-    onChanged,
-    pendingScopeChange,
-    reason,
-    refreshBindings,
-    resetFormToCreate,
-    user,
-  ]);
+  }, [onChanged, pendingScopeChange, reason, refreshBindings, resetFormToCreate, user]);
 
   const columns: ColumnsType<UserPartyBinding> = useMemo(
     () => [
@@ -396,18 +389,10 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
 
             <Form.Item className={styles.bindingFormActions}>
               <Space>
-                <Button
-                  onClick={resetFormToCreate}
-                  disabled={previewing || committing}
-                >
+                <Button onClick={resetFormToCreate} disabled={previewing || committing}>
                   清空
                 </Button>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={previewing}
-                  disabled={committing}
-                >
+                <Button type="primary" htmlType="submit" loading={previewing} disabled={committing}>
                   {editingBinding != null ? '更新绑定' : '新增绑定'}
                 </Button>
               </Space>
@@ -456,9 +441,7 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
                 {pendingScopeChange.preview.impact.after_current_binding_count} 个
               </Typography.Text>
               {pendingScopeChange.preview.impact.uses_organization_default_after ? (
-                <Typography.Text type="secondary">
-                  提交后将回退到组织默认范围。
-                </Typography.Text>
+                <Typography.Text type="secondary">提交后将回退到组织默认范围。</Typography.Text>
               ) : null}
               <Form layout="vertical">
                 <Form.Item

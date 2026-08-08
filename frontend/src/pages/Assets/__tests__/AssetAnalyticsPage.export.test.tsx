@@ -10,8 +10,9 @@ vi.mock('@/utils/queryScope', () => ({
 }));
 
 vi.mock('@/stores/dataScopeStore', () => ({
-  useDataScopeStore: (selector: (state: { initialized: boolean; getEffectiveViewMode: () => string }) => unknown) =>
-    selector({ initialized: true, getEffectiveViewMode: () => 'owner' }),
+  useDataScopeStore: (
+    selector: (state: { initialized: boolean; getEffectiveViewMode: () => string }) => unknown
+  ) => selector({ initialized: true, getEffectiveViewMode: () => 'owner' }),
 }));
 
 vi.mock('@/hooks/useFullscreen', () => ({

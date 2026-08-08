@@ -31,8 +31,6 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
-
-
 vi.mock('@/hooks/useSearchHistory', () => ({
   useSearchHistory: () => ({
     searchHistory: [
@@ -53,7 +51,6 @@ vi.mock('@/hooks/useSearchHistory', () => ({
 vi.mock('@tanstack/react-query', () => ({
   useQueries: () => [{ data: ['办公', '商业', '工业'], isLoading: false }],
 }));
-
 
 vi.mock('@/components/Common/PartySelector', () => ({
   default: ({ filterMode }: { filterMode?: string }) => (

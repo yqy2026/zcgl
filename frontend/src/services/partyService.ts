@@ -418,9 +418,7 @@ export class PartyService {
     }
   }
 
-  async getRepresentingOrganizations(
-    partyId: string,
-  ): Promise<RepresentingOrganizationItem[]> {
+  async getRepresentingOrganizations(partyId: string): Promise<RepresentingOrganizationItem[]> {
     try {
       const result = await apiClient.get<RepresentingOrganizationItem[]>(
         `${PARTY_BASE_URL}/${partyId}/organizations`,
@@ -428,7 +426,7 @@ export class PartyService {
           cache: false,
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
           smartExtract: true,
-        },
+        }
       );
 
       if (!result.success || result.data == null) {

@@ -128,8 +128,6 @@ const FiltersSection: React.FC = () => {
           <Option value="其他">其他</Option>
         </Select>
       </Col>
-
-
     </Row>
   );
 };

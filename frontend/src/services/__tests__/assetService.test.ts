@@ -18,8 +18,6 @@ vi.mock('@/api/client', () => ({
   },
 }));
 
-
-
 // Mock error handler
 vi.mock('@/utils/responseExtractor', () => ({
   ApiErrorHandler: {

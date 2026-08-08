@@ -133,7 +133,7 @@ const AssetAnalyticsPage: React.FC = () => {
           <Col xs={24} sm={12}>
             <Space align="center" wrap>
               <Typography.Title level={3} className={styles.pageTitle}>
-              经营分析
+                经营分析
               </Typography.Title>
               <ViewModeSegment />
             </Space>

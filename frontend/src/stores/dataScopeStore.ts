@@ -164,7 +164,9 @@ export const useDataScopeStore = create<DataScopeState>((set, get) => ({
     const state = get();
     const nextViewMode =
       viewMode != null &&
-      (state.isAdmin || (viewMode === 'owner' && state.isOwner) || (viewMode === 'manager' && state.isManager))
+      (state.isAdmin ||
+        (viewMode === 'owner' && state.isOwner) ||
+        (viewMode === 'manager' && state.isManager))
         ? viewMode
         : resolveDefaultViewMode(state.bindingTypes, state.isAdmin, null);
 

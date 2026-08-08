@@ -12,9 +12,7 @@ interface PartyScopeBlockedProps {
 
 const isScopeBlocked = (scope: UserPartyScopeView | null): boolean =>
   scope != null &&
-  (scope.error_code != null ||
-    scope.scope_mode === 'none' ||
-    scope.source === 'none');
+  (scope.error_code != null || scope.scope_mode === 'none' || scope.source === 'none');
 
 const PartyScopeBlocked: React.FC<PartyScopeBlockedProps> = ({ scope, onRetry }) => {
   if (!isScopeBlocked(scope)) {
@@ -28,9 +26,7 @@ const PartyScopeBlocked: React.FC<PartyScopeBlockedProps> = ({ scope, onRetry })
         icon={<SafetyCertificateOutlined />}
         title="主体范围未配置"
         subTitle={
-          scope?.error_code != null
-            ? `原因码：${scope.error_code}`
-            : '当前账号未获得业务主体范围'
+          scope?.error_code != null ? `原因码：${scope.error_code}` : '当前账号未获得业务主体范围'
         }
         extra={
           <Space orientation="vertical" align="center">
@@ -44,9 +40,7 @@ const PartyScopeBlocked: React.FC<PartyScopeBlockedProps> = ({ scope, onRetry })
                     {issues.map((issue, index) => (
                       <Text key={`${issue.code}-${index}`}>
                         {issue.safe_label}
-                        {issue.code !== scope?.error_code
-                          ? `（${issue.code}）`
-                          : ''}
+                        {issue.code !== scope?.error_code ? `（${issue.code}）` : ''}
                       </Text>
                     ))}
                   </Space>
@@ -54,11 +48,7 @@ const PartyScopeBlocked: React.FC<PartyScopeBlockedProps> = ({ scope, onRetry })
               />
             )}
             {onRetry != null && (
-              <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={onRetry}
-              >
+              <Button type="primary" icon={<ReloadOutlined />} onClick={onRetry}>
                 重新检查
               </Button>
             )}

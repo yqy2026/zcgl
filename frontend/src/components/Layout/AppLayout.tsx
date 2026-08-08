@@ -2,10 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Layout, Typography } from 'antd';
 
 import { PartyScopeBlocked } from '@/components/Common';
-import {
-  type UserPartyScopeView,
-  userService,
-} from '@/services/systemService';
+import { type UserPartyScopeView, userService } from '@/services/systemService';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import styles from './Layout.module.css';
@@ -44,9 +41,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isScopeBlocked =
     scopeChecked &&
     myScope != null &&
-    (myScope.error_code != null ||
-      myScope.scope_mode === 'none' ||
-      myScope.source === 'none');
+    (myScope.error_code != null || myScope.scope_mode === 'none' || myScope.source === 'none');
 
   return (
     <Layout className={styles.appLayout}>
