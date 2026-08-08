@@ -119,12 +119,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     }
 
     return await projectService.getProjects(params);
-  }, [
-    filters.keyword,
-    filters.status,
-    paginationState.current,
-    paginationState.pageSize,
-  ]);
+  }, [filters.keyword, filters.status, paginationState.current, paginationState.pageSize]);
 
   const {
     data: projectsResponse,

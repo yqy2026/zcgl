@@ -24,7 +24,11 @@ export type {
   AreaStatistics,
 } from '@/types/asset';
 
-export type { StandardApiResponse, PaginatedApiResponse, NormalizedPaginatedResponse } from '@/types/apiResponse';
+export type {
+  StandardApiResponse,
+  PaginatedApiResponse,
+  NormalizedPaginatedResponse,
+} from '@/types/apiResponse';
 
 const legacyOwnerEntityField = `${'ownership'}_${'entity'}` as const;
 const legacyOwnerDistributionField = `by_${'ownership'}_${'entity'}` as const;

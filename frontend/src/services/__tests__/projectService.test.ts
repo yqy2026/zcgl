@@ -409,7 +409,6 @@ describe('ProjectService', () => {
 
       expect(result.items).toHaveLength(1);
     });
-
   });
 
   describe('searchProjectsByKeyword', () => {
