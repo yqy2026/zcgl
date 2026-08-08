@@ -144,6 +144,8 @@ const provisionRegularCredential = async (
     throw new Error('Unable to provision regular user: invalid user payload.');
   }
 
+  await activateProvisionedUser(page, userId, headers);
+
   return {
     credential: {
       username,
@@ -153,10 +155,84 @@ const provisionRegularCredential = async (
   };
 };
 
-const cleanupProvisionedUser = async (
+interface OrganizationListItem {
+  id: string;
+  code?: string;
+}
+
+interface UserOrganizationTransferPreview {
+  preview_token?: unknown;
+}
+
+const resolveE2EOrganizationId = async (page: Page): Promise<string> => {
+  const orgResponse = await page.request.get('/api/v1/organizations?page=1&page_size=1000');
+  if (orgResponse.status() !== 200) {
+    throw new Error(
+      `Unable to resolve E2E organization: status=${orgResponse.status()} body=${await orgResponse.text()}`
+    );
+  }
+  const orgPayload = (await orgResponse.json()) as unknown;
+  const orgs = extractData<{ items?: OrganizationListItem[] }>(orgPayload);
+  const matched = (orgs.items ?? []).find(item => item.code === 'E2E-ORG-ROOT');
+  const organizationId = normalizeNonEmpty(matched?.id);
+  if (organizationId == null) {
+    throw new Error('Unable to resolve E2E organization: E2E-ORG-ROOT not found.');
+  }
+  return organizationId;
+};
+
+const activateProvisionedUser = async (
   page: Page,
-  userId: string
+  userId: string,
+  headers: Record<string, string>
 ): Promise<void> => {
+  // 新用户生命周期：人账号激活前必须完成组织链归属（organization transfer preview → commit → activate）
+  const organizationId = await resolveE2EOrganizationId(page);
+
+  const previewResponse = await page.request.post(
+    `/api/v1/auth/users/${userId}/organization/preview`,
+    {
+      headers,
+      data: { organization_id: organizationId },
+    }
+  );
+  if (previewResponse.status() !== 200) {
+    throw new Error(
+      `Unable to preview user organization transfer: status=${previewResponse.status()} body=${await previewResponse.text()}`
+    );
+  }
+  const previewPayload = (await previewResponse.json()) as unknown;
+  const preview = extractData<UserOrganizationTransferPreview>(previewPayload);
+  const previewToken = normalizeNonEmpty(preview.preview_token);
+  if (previewToken == null) {
+    throw new Error('Unable to preview user organization transfer: preview_token missing.');
+  }
+
+  const commitResponse = await page.request.put(`/api/v1/auth/users/${userId}/organization`, {
+    headers,
+    data: {
+      preview_token: previewToken,
+      reason: 'E2E access-denied test provision',
+      idempotency_key: `e2e-access-denied-transfer-${userId}`,
+    },
+  });
+  if (commitResponse.status() !== 200) {
+    throw new Error(
+      `Unable to commit user organization transfer: status=${commitResponse.status()} body=${await commitResponse.text()}`
+    );
+  }
+
+  const activateResponse = await page.request.post(`/api/v1/auth/users/${userId}/activate`, {
+    headers,
+  });
+  if (activateResponse.status() !== 200) {
+    throw new Error(
+      `Unable to activate regular user: status=${activateResponse.status()} body=${await activateResponse.text()}`
+    );
+  }
+};
+
+const cleanupProvisionedUser = async (page: Page, userId: string): Promise<void> => {
   try {
     await clearAuthState(page);
     await loginAsAdmin(page);
