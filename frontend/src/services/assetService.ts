@@ -53,7 +53,7 @@ import type {
   SystemDictionary,
   AssetCustomField,
   CustomFieldValue,
-  PaginatedApiResponse,
+  NormalizedPaginatedResponse,
   AssetStats,
   OccupancyRateStats,
   AssetDistributionStats,
@@ -189,7 +189,7 @@ export class AssetService {
     page?: number,
     page_size?: number,
     changeType?: string
-  ): Promise<PaginatedApiResponse<AssetHistory>> {
+  ): Promise<NormalizedPaginatedResponse<AssetHistory>> {
     return assetHistoryService.getAssetHistory(assetId, page, page_size, changeType);
   }
 

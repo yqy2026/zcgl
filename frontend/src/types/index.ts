@@ -41,6 +41,7 @@ export type {
   // 高级 API 响应类型
   StandardApiResponse,
   PaginatedApiResponse,
+  NormalizedPaginatedResponse,
   DirectResponse,
   ErrorResponse as ApiErrorResponse,
 

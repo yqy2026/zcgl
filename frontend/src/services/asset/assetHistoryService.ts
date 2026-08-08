@@ -8,7 +8,7 @@ import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { ASSET_API } from '@/constants/api';
 import type {
   AssetHistory,
-  PaginatedApiResponse,
+  NormalizedPaginatedResponse,
   HistoryComparisonResult,
   FieldHistoryRecord,
 } from './types';
@@ -26,9 +26,9 @@ export class AssetHistoryService {
     page = 1,
     pageSize = 20,
     changeType?: string
-  ): Promise<PaginatedApiResponse<AssetHistory>> {
+  ): Promise<NormalizedPaginatedResponse<AssetHistory>> {
     try {
-      const result = await apiClient.get<PaginatedApiResponse<AssetHistory>>(
+      const result = await apiClient.get<NormalizedPaginatedResponse<AssetHistory>>(
         `${ASSET_API.DETAIL(assetId)}/history`,
         {
           params: { page, page_size: pageSize, change_type: changeType },

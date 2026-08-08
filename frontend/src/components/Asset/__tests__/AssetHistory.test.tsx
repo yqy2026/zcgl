@@ -39,7 +39,7 @@ vi.mock('@/utils/format', () => ({
 vi.mock('@/services/assetService', () => ({
   assetService: {
     getAssetHistory: vi.fn(() =>
-      Promise.resolve({ data: { items: [], pagination: { total: 0, pages: 0 } } })
+      Promise.resolve({ items: [], total: 0, page: 1, page_size: 20, pages: 0 })
     ),
     getHistoryDetail: vi.fn(() => Promise.resolve({})),
   },

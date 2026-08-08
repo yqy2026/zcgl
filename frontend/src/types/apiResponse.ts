@@ -42,6 +42,20 @@ export interface PaginatedApiResponse<T = unknown> {
 }
 
 /**
+ * 规范化分页响应格式
+ * smartExtract + normalizePaginatedData 扁平化后的运行时结构：
+ * 分页字段拍平到顶层（items/total/page/page_size/pages），并透传额外字段（如 unread_count）
+ */
+export interface NormalizedPaginatedResponse<T = unknown> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+  [key: string]: unknown;
+}
+
+/**
  * 简化响应格式
  * 直接返回数据，无包装结构
  */

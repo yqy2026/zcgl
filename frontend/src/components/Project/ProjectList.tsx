@@ -40,7 +40,6 @@ import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useQuery } from '@tanstack/react-query';
 import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
-import type { Party } from '@/types/party';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
 import { buildQueryScopeKey } from '@/utils/queryScope';

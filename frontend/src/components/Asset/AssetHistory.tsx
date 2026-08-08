@@ -78,12 +78,12 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
       paginationState.pageSize,
       changeType
     );
-    // smartExtract + normalizePaginatedData 已将响应扁平化为 {items,total,page,page_size,pages,pagination}
-    const body = response as Record<string, unknown>;
-    const items = (body.items ?? []) as AssetHistory[];
-    const total = (body.total ?? (body.pagination as Record<string, unknown>)?.total ?? 0) as number;
-    const pages = body.pages as number | undefined;
-    return { items, total, pages };
+    // smartExtract + normalizePaginatedData 已扁平化为 {items,total,page,page_size,pages}
+    return {
+      items: response.items,
+      total: response.total,
+      pages: response.pages,
+    };
   };
 
   const {

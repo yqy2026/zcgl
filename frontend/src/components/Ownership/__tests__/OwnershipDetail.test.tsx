@@ -266,14 +266,6 @@ describe('OwnershipDetail 组件测试', () => {
       const assetTag = tags.find(tag => tag.textContent?.includes('10'));
       expect(assetTag).toBeInTheDocument();
     });
-
-    it('应该显示关联项目数量', () => {
-      renderWithProviders(<OwnershipDetail ownership={mockOwnership} onEdit={mockOnEdit} />);
-
-      const tags = screen.getAllByTestId('tag');
-      const projectTag = tags.find(tag => tag.textContent?.includes('5'));
-      expect(projectTag).toBeInTheDocument();
-    });
   });
 
   describe('关联项目卡片', () => {

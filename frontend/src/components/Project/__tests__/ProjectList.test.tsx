@@ -8,7 +8,6 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
 import { useQuery } from '@tanstack/react-query';
-import { partyService } from '@/services/partyService';
 
 const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
 
@@ -31,12 +30,6 @@ vi.mock('@tanstack/react-query', async importOriginal => {
     useQuery: vi.fn(),
   };
 });
-
-vi.mock('@/services/partyService', () => ({
-  partyService: {
-    searchParties: vi.fn(() => Promise.resolve({ items: [] })),
-  },
-}));
 
 vi.mock('@/components/Forms', () => ({
   ProjectForm: () => <div data-testid="project-form">ProjectForm</div>,
@@ -409,19 +402,6 @@ describe('ProjectList', () => {
         };
       }
 
-      if (key === 'project-owner-party-options') {
-        const keyword =
-          Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
-        void partyService.searchParties(keyword, { status: 'active', limit: 20 });
-        return {
-          data: [],
-          error: null,
-          isLoading: false,
-          isFetching: false,
-          refetch: vi.fn(),
-        };
-      }
-
       return {
         data: undefined,
         error: null,
@@ -453,7 +433,7 @@ describe('ProjectList', () => {
       expect(screen.getByText('项目1')).toBeInTheDocument();
     });
 
-    it('项目列表与主体搜索查询应把当前数据范围纳入 queryKey', async () => {
+    it('项目列表查询应把当前数据范围纳入 queryKey', async () => {
       await renderProjectList();
 
       expect(useQuery).toHaveBeenCalledWith(
@@ -467,15 +447,10 @@ describe('ProjectList', () => {
           ],
         })
       );
-      expect(useQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ['project-owner-party-options', 'user:user-1|scope:owner,manager', ''],
-        })
-      );
       expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
     });
 
-    it('legacy 路径下列表和主体选项查询仍继续执行', async () => {
+    it('legacy 路径下列表查询仍继续执行', async () => {
       window.history.pushState({}, 'Legacy project page', '/project');
 
       await renderProjectList();
@@ -489,11 +464,6 @@ describe('ProjectList', () => {
             10,
             { keyword: '', status: '' },
           ],
-        })
-      );
-      expect(useQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ['project-owner-party-options', 'user:user-1|scope:owner,manager', ''],
         })
       );
     });
@@ -543,17 +513,6 @@ describe('ProjectList', () => {
       const selects = screen.getAllByTestId('select');
       expect(selects.length).toBeGreaterThan(0);
     });
-
-    it('所有方主体筛选应使用后端远程搜索（关键词触发 searchParties）', async () => {
-      await renderProjectList();
-      const ownerSearchInput = screen.getByTestId('select-search-所有方主体');
-      fireEvent.change(ownerSearchInput, { target: { value: '主体关键字' } });
-
-      expect(partyService.searchParties).toHaveBeenCalledWith('主体关键字', {
-        status: 'active',
-        limit: 20,
-      });
-    });
   });
 
   describe('权属方显示', () => {
@@ -599,19 +558,6 @@ describe('ProjectList', () => {
             isLoading: false,
             isFetching: false,
             refetch: mockRefetchProjects,
-          };
-        }
-
-        if (key === 'project-owner-party-options') {
-          const keyword =
-            Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
-          void partyService.searchParties(keyword, { status: 'active', limit: 20 });
-          return {
-            data: [],
-            error: null,
-            isLoading: false,
-            isFetching: false,
-            refetch: vi.fn(),
           };
         }
 
@@ -674,17 +620,6 @@ describe('ProjectList', () => {
           };
         }
 
-        if (key === 'project-owner-party-options') {
-          void partyService.searchParties('', { status: 'active', limit: 50 });
-          return {
-            data: [],
-            error: null,
-            isLoading: false,
-            isFetching: false,
-            refetch: vi.fn(),
-          };
-        }
-
         return {
           data: undefined,
           error: null,
@@ -711,10 +646,9 @@ describe('ProjectList', () => {
     });
   });
 
-  it('初始化时会加载列表和主体选项', async () => {
+  it('初始化时会加载列表', async () => {
     await renderProjectList();
 
     expect(useQuery).toHaveBeenCalled();
-    expect(partyService.searchParties).toHaveBeenCalled();
   });
 });
