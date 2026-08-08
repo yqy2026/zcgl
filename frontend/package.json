@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "types": "index.d.ts",
+  "packageManager": "pnpm@10.34.5",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msw"
+    ]
+  },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
     "@ant-design/plots": "^2.0.0",
