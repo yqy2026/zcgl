@@ -80,7 +80,7 @@ class UserOrganizationTransferPreviewStore:
 
     def consume(self, raw_token: str) -> dict[str, object] | None:
         token = str(raw_token).strip()
-        if token == "":
+        if token == "":  # nosec B105 - token 空串守卫，非硬编码密码
             return None
 
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
