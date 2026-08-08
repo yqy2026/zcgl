@@ -111,3 +111,26 @@ async def test_get_asset_history_passes_page_and_change_type_to_service() -> Non
         change_type="update",
         current_user_id="user-1",
     )
+
+
+@pytest.mark.asyncio
+async def test_get_asset_management_history_endpoint_is_removed() -> None:
+    """management-history 空壳端点已下线，路由应返回 404 而非恒空列表。"""
+    from fastapi.routing import APIRoute
+
+    from src.api.v1.assets import assets as module
+
+    router = getattr(module, "router", None)
+    assert router is not None, "assets 模块应暴露 router"
+
+    routes = router.routes
+    management_history_routes = [
+        route
+        for route in routes
+        if isinstance(route, APIRoute)
+        and route.path.endswith("/management-history")
+    ]
+    assert management_history_routes == [], (
+        "management-history 端点应已下线，实际仍存在: "
+        f"{[r.path for r in management_history_routes]}"
+    )

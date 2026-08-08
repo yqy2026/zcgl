@@ -11,7 +11,6 @@ from .abac import (  # noqa: F401
 )
 from .asset import Asset  # noqa: F401
 from .asset_history import AssetDocument, AssetHistory  # noqa: F401
-from .asset_management_history import AssetManagementHistory  # noqa: F401
 from .asset_review_log import AssetReviewLog  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
 from .associations import (  # noqa: F401  # noqa: F401
@@ -78,7 +77,6 @@ from .party_review_log import PartyReviewLog  # noqa: F401
 from .party_role import PartyRoleBinding, PartyRoleDef  # noqa: F401
 from .project import Project  # noqa: F401
 from .project_asset import ProjectAsset  # noqa: F401
-from .project_relations import ProjectOwnershipRelation  # noqa: F401
 from .property_certificate import CertificateType, PropertyCertificate  # noqa: F401
 from .rbac import (  # noqa: F401
     Permission,
@@ -105,13 +103,11 @@ from .user_party_scope_commit import UserPartyScopeCommit  # noqa: F401
 __all__ = [
     "Attachment",
     "Asset",
-    "AssetManagementHistory",
     "AssetHistory",
     "AssetDocument",
     "AssetReviewLog",
     "Ownership",
     "Project",
-    "ProjectOwnershipRelation",
     "SystemDictionary",
     "AssetCustomField",
     "AssetSearchIndex",

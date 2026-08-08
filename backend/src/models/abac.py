@@ -161,10 +161,6 @@ class ABACRolePolicy(Base):
     enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, comment="是否启用"
     )
-    priority_override: Mapped[int | None] = mapped_column(Integer, comment="优先级覆盖")
-    params_override: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB, comment="参数覆盖"
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
     )

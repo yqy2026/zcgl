@@ -4,16 +4,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
-    BusinessValidationError,
     DuplicateResourceError,
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
 from ...crud.asset import asset_crud
 from ...crud.ownership import ownership as ownership_crud
-from ...crud.project import project_crud
 from ...models.ownership import Ownership
-from ...models.project_relations import ProjectOwnershipRelation
 from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 
@@ -143,45 +140,6 @@ class OwnershipService:
             "recent_created": recent_created,
         }
 
-    async def update_related_projects(
-        self, db: AsyncSession, *, ownership_id: str, project_ids: list[str]
-    ) -> None:
-        """更新权属方关联的项目"""
-        # 验证权属方是否存在
-        ownership_obj = await ownership_crud.get(db, id=ownership_id)
-        if not ownership_obj:
-            raise ResourceNotFoundError("权属方", ownership_id)
-
-        # 验证项目是否存在
-        valid_projects: list[str] = []
-        if project_ids:
-            valid_projects = await project_crud.get_ids_by_filter_async(db, project_ids)
-        valid_project_ids = [str(p_id) for p_id in valid_projects]
-
-        if len(valid_project_ids) != len(project_ids):
-            invalid_ids = set(project_ids) - set(valid_project_ids)
-            raise BusinessValidationError(
-                f"以下项目ID不存在: {invalid_ids}",
-                field_errors={"project_ids": [str(i) for i in invalid_ids]},
-            )
-
-        # 删除现有关联
-        await ownership_crud.delete_project_relations_async(db, ownership_id)
-
-        # 创建新关联
-        for project_id in project_ids:
-            relation = ProjectOwnershipRelation()
-            relation.project_id = project_id
-            relation.ownership_id = ownership_id
-            relation.is_active = True
-            db.add(relation)
-
-        await db.commit()
-
-    async def get_project_count(self, db: AsyncSession, ownership_id: str) -> int:
-        """获取权属方关联的项目数量"""
-        return await ownership_crud.count_projects_async(db, ownership_id)
-
     async def get_asset_count(self, db: AsyncSession, ownership_id: str) -> int:
         """获取权属方关联的资产数量"""
         return await asset_crud.count_by_ownership_async(db, ownership_id)
@@ -250,11 +208,6 @@ class OwnershipService:
             db, ownership_ids
         )
 
-        # 批量获取项目计数（按权属方分组）
-        project_counts = await ownership_crud.get_project_counts_by_ownerships_async(
-            db, ownership_ids
-        )
-
         responses = []
         for item in ownerships:
             item_id = str(item.id)
@@ -269,7 +222,6 @@ class OwnershipService:
                     "created_at": item.created_at,
                     "updated_at": item.updated_at,
                     "asset_count": asset_counts.get(item_id, 0),
-                    "project_count": project_counts.get(item_id, 0),
                 }
             )
         return responses

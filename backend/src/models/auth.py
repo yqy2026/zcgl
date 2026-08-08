@@ -273,9 +273,6 @@ class AuditLog(Base):
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     user_role: Mapped[str | None] = mapped_column(String(20), comment="用户角色")
-    user_organization: Mapped[str | None] = mapped_column(
-        String(200), comment="用户所属组织"
-    )
 
     # 操作信息
     action: Mapped[str] = mapped_column(String(100), nullable=False, comment="操作动作")

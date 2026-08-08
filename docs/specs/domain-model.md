@@ -66,9 +66,6 @@
 | `asset_id` | string | 是 | 资产主键 |
 | `asset_code` | string | 是 | 全局唯一，格式 `AST-[A-Z0-9]{4,12}-[0-9]{6}` |
 | `asset_name` | string | 是 | 资产名称 |
-| `asset_form` | enum | 是 | 土地、建筑、构筑物、车位、仓储、其他 |
-| `spatial_level` | enum | 是 | 地块、园区、楼宇、楼层、房间、商铺 |
-| `business_usage` | enum | 是 | 商业、办公、仓储、工业、综合、其他 |
 | `province_code` | string | 是 | 省级行政区代码 |
 | `city_code` | string | 是 | 市级行政区代码 |
 | `district_code` | string | 是 | 区县行政区代码 |

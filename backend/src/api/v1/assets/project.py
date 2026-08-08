@@ -297,7 +297,6 @@ async def list_projects(
     page_size: int = Query(20, ge=1, le=100),
     keyword: str | None = None,
     status: str | None = None,
-    owner_party_id: str | None = None,
 ) -> Any:
     """
     获取项目列表，支持分页和筛选
@@ -310,7 +309,6 @@ async def list_projects(
             page_size=page_size,
             keyword=keyword,
             status=status,
-            owner_party_id=owner_party_id,
         )
         result = await project_service.search_projects(
             db=db,

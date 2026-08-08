@@ -118,18 +118,6 @@ class Asset(Base):
     asset_name: Mapped[str] = mapped_column(
         String(200), nullable=False, unique=True, comment="资产名称"
     )
-    asset_form: Mapped[str | None] = mapped_column(
-        String(20),
-        index=True,
-        comment="资产形态：land/building/structure/parking/warehouse/other",
-    )
-    spatial_level: Mapped[str | None] = mapped_column(
-        String(20), comment="空间层级：plot/campus/building/floor/room/shop"
-    )
-    business_usage: Mapped[str | None] = mapped_column(
-        String(20),
-        comment="经营用途：commercial/office/warehouse/industrial/mixed/other",
-    )
     # 半结构化地址（行政区三级 + 详细地址）
     province_code: Mapped[str | None] = mapped_column(
         String(20), comment="省级行政区代码"

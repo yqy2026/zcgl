@@ -195,19 +195,6 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
-    async def count_projects_async(self, db: AsyncSession, ownership_id: str) -> int:
-        """统计权属方关联的项目数量"""
-        from sqlalchemy import func
-
-        from ..models.project_relations import ProjectOwnershipRelation
-
-        stmt = select(func.count(ProjectOwnershipRelation.id)).where(
-            ProjectOwnershipRelation.ownership_id == ownership_id,
-            ProjectOwnershipRelation.is_active.is_(True),
-        )
-        result = await db.execute(stmt)
-        return int(result.scalar() or 0)
-
     async def get_multi_for_select_async(
         self, db: AsyncSession, is_active: bool | None = None, limit: int = 1000
     ) -> list[Ownership]:
@@ -218,47 +205,6 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         stmt = stmt.order_by(Ownership.created_at.desc()).limit(limit)
         result = await db.execute(stmt)
         return list(result.scalars().all())
-
-    async def delete_project_relations_async(
-        self, db: AsyncSession, ownership_id: str
-    ) -> None:
-        """删除权属方的所有项目关联"""
-        from sqlalchemy import delete
-
-        from ..models.project_relations import ProjectOwnershipRelation
-
-        stmt = delete(ProjectOwnershipRelation).where(
-            ProjectOwnershipRelation.ownership_id == ownership_id
-        )
-        await db.execute(stmt)
-
-    async def get_project_counts_by_ownerships_async(
-        self, db: AsyncSession, ownership_ids: list[str]
-    ) -> dict[str, int]:
-        """按权属方分组统计项目数量（返回 dict）"""
-        if not ownership_ids:
-            return {}
-        from sqlalchemy import func
-
-        from ..models.project_relations import ProjectOwnershipRelation
-
-        stmt = (
-            select(
-                ProjectOwnershipRelation.ownership_id,
-                func.count(ProjectOwnershipRelation.id),
-            )
-            .where(
-                ProjectOwnershipRelation.ownership_id.in_(ownership_ids),
-                ProjectOwnershipRelation.is_active.is_(True),
-            )
-            .group_by(ProjectOwnershipRelation.ownership_id)
-        )
-        result = await db.execute(stmt)
-        return {
-            str(ownership_id): int(count or 0)
-            for ownership_id, count in result.all()
-            if ownership_id is not None
-        }
 
 
 # 创建CRUD实例

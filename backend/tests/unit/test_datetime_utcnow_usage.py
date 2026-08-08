@@ -14,7 +14,6 @@ MODULE_PATHS = [
     "src/models/notification.py",
     "src/models/ownership.py",
     "src/models/project.py",
-    "src/models/project_relations.py",
     "src/models/property_certificate.py",
     "src/models/security_event.py",
     "src/models/system_dictionary.py",

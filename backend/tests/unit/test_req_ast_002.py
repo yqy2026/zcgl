@@ -6,119 +6,15 @@ REQ-AST-002 单元测试：资产与项目、权属关系可追踪
 - Gap 2: 资产运营方随当前项目派生，资产更新不独立写 manager_party_id
 - Gap 3: 关系历史查询 API
 - Gap 4: ProjectAsset active unique 约束
-- CRUD: AssetManagementHistory CRUD 操作（历史表保留供项目归属变更追溯使用）
 """
 
-from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.crud.asset_management_history import CRUDAssetManagementHistory
-from src.models.asset_management_history import AssetManagementHistory
 from src.models.project_asset import ProjectAsset
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.unit]
-
-
-# ---------------------------------------------------------------------------
-# CRUD: AssetManagementHistory
-# ---------------------------------------------------------------------------
-
-
-class TestAssetManagementHistoryCRUD:
-    """Test CRUDAssetManagementHistory methods."""
-
-    @pytest.fixture
-    def mock_db(self):
-        db = MagicMock()
-        db.commit = AsyncMock()
-        db.flush = AsyncMock()
-        db.refresh = AsyncMock()
-        db.add = MagicMock()
-        db.execute = AsyncMock()
-        return db
-
-    @pytest.fixture
-    def crud(self):
-        return CRUDAssetManagementHistory()
-
-    async def test_create_record(self, crud, mock_db):
-        """创建经营方历史记录。"""
-        mock_db.refresh = AsyncMock(side_effect=lambda obj: None)
-        await crud.create(
-            mock_db,
-            asset_id="asset-1",
-            manager_party_id="party-new",
-            change_reason="测试变更",
-            changed_by="testuser",
-            commit=False,
-        )
-        mock_db.add.assert_called_once()
-        mock_db.flush.assert_awaited_once()
-        added_obj = mock_db.add.call_args[0][0]
-        assert added_obj.asset_id == "asset-1"
-        assert added_obj.manager_party_id == "party-new"
-        assert added_obj.change_reason == "测试变更"
-
-    async def test_close_active_no_record(self, crud, mock_db):
-        """无活跃记录时，close_active 返回 None。"""
-        execute_result = MagicMock()
-        scalars_mock = MagicMock()
-        scalars_mock.first.return_value = None
-        execute_result.scalars.return_value = scalars_mock
-        mock_db.execute = AsyncMock(return_value=execute_result)
-
-        result = await crud.close_active(
-            mock_db,
-            asset_id="asset-1",
-            manager_party_id="party-old",
-            commit=False,
-        )
-        assert result is None
-
-    async def test_close_active_sets_end_date(self, crud, mock_db):
-        """有活跃记录时，close_active 设置 end_date。"""
-        existing = AssetManagementHistory(
-            asset_id="asset-1",
-            manager_party_id="party-old",
-            start_date=date(2025, 1, 1),
-        )
-        execute_result = MagicMock()
-        scalars_mock = MagicMock()
-        scalars_mock.first.return_value = existing
-        execute_result.scalars.return_value = scalars_mock
-        mock_db.execute = AsyncMock(return_value=execute_result)
-        mock_db.refresh = AsyncMock(side_effect=lambda obj: None)
-
-        result = await crud.close_active(
-            mock_db,
-            asset_id="asset-1",
-            manager_party_id="party-old",
-            commit=False,
-        )
-        assert result is not None
-        assert result.end_date is not None
-
-    async def test_get_by_asset_id(self, crud, mock_db):
-        """按 asset_id 查询全部历史。"""
-        records = [
-            AssetManagementHistory(asset_id="a1", manager_party_id="p1"),
-            AssetManagementHistory(asset_id="a1", manager_party_id="p2"),
-        ]
-        execute_result = MagicMock()
-        scalars_mock = MagicMock()
-        scalars_mock.all.return_value = records
-        execute_result.scalars.return_value = scalars_mock
-        mock_db.execute = AsyncMock(return_value=execute_result)
-
-        result = await crud.get_by_asset_id(mock_db, asset_id="a1")
-        assert len(result) == 2
-
-
-# ---------------------------------------------------------------------------
-# Service: manager_party_id 不再由资产更新独立记录
-# ---------------------------------------------------------------------------
 
 
 class TestManagerChangeTracking:
@@ -136,14 +32,12 @@ class TestManagerChangeTracking:
         db.add = MagicMock()
         return db
 
-    @patch("src.services.asset.asset_service.asset_management_history_crud")
     @patch("src.services.asset.asset_service.party_crud")
     @patch("src.services.asset.asset_service.get_enum_validation_service_async")
     async def test_manager_change_is_ignored_by_asset_update(
         self,
         mock_get_enum_validation_service,
         mock_party_crud,
-        mock_history_crud,
         mock_db,
     ):
         """资产运营方由项目派生，更新资产不应写经营方历史。"""
@@ -169,8 +63,6 @@ class TestManagerChangeTracking:
         user.username = "testuser"
 
         mock_party_crud.get_party = AsyncMock(return_value=MagicMock())
-        mock_history_crud.close_active = AsyncMock(return_value=None)
-        mock_history_crud.create = AsyncMock(return_value=MagicMock())
         validation_service = MagicMock()
         validation_service.validate_asset_data = AsyncMock(return_value=(True, []))
         mock_get_enum_validation_service.return_value = validation_service
@@ -194,8 +86,6 @@ class TestManagerChangeTracking:
                     current_user=user,
                 )
 
-                mock_history_crud.close_active.assert_not_awaited()
-                mock_history_crud.create.assert_not_awaited()
                 update_payload = (
                     mock_asset_crud.update_with_history_async.await_args.kwargs[
                         "obj_in"

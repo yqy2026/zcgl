@@ -11,12 +11,6 @@ from .asset import (  # noqa: F401
     AssetResponse,
     AssetUpdate,
 )
-from .asset_management_history import (  # noqa: F401
-    AssetManagementHistoryBase,
-    AssetManagementHistoryCreate,
-    AssetManagementHistoryResponse,
-    AssetManagementHistoryUpdate,
-)
 from .project import (  # noqa: F401
     ProjectBase,
     ProjectCreate,
@@ -27,11 +21,6 @@ from .project import (  # noqa: F401
     ProjectStatisticsResponse,
     ProjectUpdate,
 )
-from .project_asset import (  # noqa: F401
-    ProjectAssetBindRequest,
-    ProjectAssetResponse,
-    ProjectAssetUnbindRequest,
-)
 
 __all__ = [
     "AssetBase",
@@ -41,10 +30,6 @@ __all__ = [
     "AssetListItemResponse",
     "AssetHistoryResponse",
     "AssetDocumentResponse",
-    "AssetManagementHistoryBase",
-    "AssetManagementHistoryCreate",
-    "AssetManagementHistoryUpdate",
-    "AssetManagementHistoryResponse",
     "ProjectBase",
     "ProjectCreate",
     "ProjectUpdate",
@@ -53,7 +38,4 @@ __all__ = [
     "ProjectDeleteResponse",
     "ProjectSearchRequest",
     "ProjectStatisticsResponse",
-    "ProjectAssetBindRequest",
-    "ProjectAssetUnbindRequest",
-    "ProjectAssetResponse",
 ]

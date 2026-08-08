@@ -5,10 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
 from ..models.auth import User
-from ..models.party import Party, PartyType
 from ..models.project import Project
 from ..models.project_asset import ProjectAsset
-from ..models.project_relations import ProjectOwnershipRelation
 from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
 from .query_builder import PartyFilter
@@ -279,28 +277,6 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         )
         if party_filter is not None:
             query = await self._apply_project_party_filter(db, query, party_filter)
-
-        if search_params.owner_party_id:
-            owner_party_id = str(search_params.owner_party_id).strip()
-            if owner_party_id != "":
-                mapped_ownership_ids = select(Party.external_ref).where(
-                    Party.id == owner_party_id,
-                    Party.party_type == PartyType.LEGAL_ENTITY.value,
-                    Party.external_ref.is_not(None),
-                    Party.external_ref != "",
-                )
-                relation_project_ids = select(
-                    ProjectOwnershipRelation.project_id
-                ).where(
-                    ProjectOwnershipRelation.is_active.is_(True),
-                    or_(
-                        ProjectOwnershipRelation.ownership_id == owner_party_id,
-                        ProjectOwnershipRelation.ownership_id.in_(mapped_ownership_ids),
-                    ),
-                )
-                query = query.where(Project.id.in_(relation_project_ids))
-            else:
-                query = query.where(false())
 
         # 计算总数
         total_stmt = select(func.count()).select_from(query.subquery())

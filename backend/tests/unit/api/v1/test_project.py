@@ -293,13 +293,13 @@ class TestListProjects:
 
         assert response.status_code == status.HTTP_200_OK
 
-    def test_list_projects_passes_owner_party_id_filter(
+    def test_list_projects_ignores_legacy_owner_party_id_param(
         self,
         client,
         admin_user_headers,
         monkeypatch,
     ):
-        """应将 owner_party_id 查询参数透传到服务层搜索参数。"""
+        """owner_party_id 查询参数已下线，应被忽略且不透传（不再查询已删表）。"""
         from src.api.v1.assets import project as project_module
 
         captured: dict[str, object] = {}
@@ -335,330 +335,7 @@ class TestListProjects:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert captured["owner_party_id"] == "party-filter-001"
-
-    def test_list_projects_owner_party_filter_should_limit_results(
-        self,
-        client,
-        admin_user_headers,
-        db_session: Session,
-        test_org_party,
-    ):
-        """owner_party_id 应只返回匹配关系且为有效关系的项目。"""
-        from src.models.ownership import Ownership
-        from src.models.project import Project
-        from src.models.project_relations import ProjectOwnershipRelation
-
-        owner_match = Ownership(
-            name="Filter Owner Match",
-            code="OWN-FILTER-MATCH",
-            is_active=True,
-        )
-        owner_other = Ownership(
-            name="Filter Owner Other",
-            code="OWN-FILTER-OTHER",
-            is_active=True,
-        )
-        db_session.add_all([owner_match, owner_other])
-        db_session.flush()
-
-        project_match = Project(
-            project_name="Owner Filter Match Project",
-            project_code="PRJ-TEST09-900001",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        project_other = Project(
-            project_name="Owner Filter Other Project",
-            project_code="PRJ-TEST09-900002",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        db_session.add_all([project_match, project_other])
-        db_session.flush()
-
-        db_session.add_all(
-            [
-                ProjectOwnershipRelation(
-                    project_id=project_match.id,
-                    ownership_id=owner_match.id,
-                    is_active=True,
-                ),
-                ProjectOwnershipRelation(
-                    project_id=project_other.id,
-                    ownership_id=owner_match.id,
-                    is_active=False,
-                ),
-                ProjectOwnershipRelation(
-                    project_id=project_other.id,
-                    ownership_id=owner_other.id,
-                    is_active=True,
-                ),
-            ]
-        )
-        db_session.flush()
-
-        response = client.get(
-            f"/api/v1/projects/?owner_party_id={owner_match.id}&page=1&page_size=100",
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        returned_ids = {item["id"] for item in items}
-        assert project_match.id in returned_ids
-        assert project_other.id not in returned_ids
-
-    def test_list_projects_owner_party_filter_should_support_party_id_mapping(
-        self,
-        client,
-        admin_user_headers,
-        db_session: Session,
-        test_org_party,
-    ):
-        """owner_party_id 传 Party.id 时，应通过 external_ref 映射到 ownership_id 过滤。"""
-        from uuid import uuid4
-
-        from src.models.ownership import Ownership
-        from src.models.party import Party, PartyType
-        from src.models.project import Project
-        from src.models.project_relations import ProjectOwnershipRelation
-
-        suffix = uuid4().hex[:6].upper()
-        ownership = Ownership(
-            name="Mapped Ownership",
-            code=f"OWN-MAPPED-{suffix}",
-            is_active=True,
-        )
-        other_ownership = Ownership(
-            name="Mapped Ownership Other",
-            code=f"OWN-OTHER-{suffix}",
-            is_active=True,
-        )
-        db_session.add_all([ownership, other_ownership])
-        db_session.flush()
-        ownership_serial_seed = ownership.id.replace("-", "")[-8:]
-        project_serial = f"{int(ownership_serial_seed, 16) % 1_000_000:06d}"
-
-        mapped_party = Party(
-            id=f"party-map-{ownership.id}",
-            party_type=PartyType.LEGAL_ENTITY.value,
-            name=ownership.name,
-            code="LE-910001",
-            external_ref=ownership.id,
-            status="active",
-        )
-        db_session.add(mapped_party)
-        db_session.flush()
-        assert mapped_party.id != ownership.id
-
-        mapped_project = Project(
-            project_name="Mapped Party Project",
-            project_code=f"PRJ-MAPPED01-{project_serial}",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        other_project = Project(
-            project_name="Mapped Party Other Project",
-            project_code=f"PRJ-MAPPED02-{project_serial}",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        db_session.add_all([mapped_project, other_project])
-        db_session.flush()
-
-        db_session.add(
-            ProjectOwnershipRelation(
-                project_id=mapped_project.id,
-                ownership_id=ownership.id,
-                is_active=True,
-            )
-        )
-        db_session.add(
-            ProjectOwnershipRelation(
-                project_id=other_project.id,
-                ownership_id=other_ownership.id,
-                is_active=True,
-            )
-        )
-        db_session.flush()
-
-        response = client.get(
-            f"/api/v1/projects/?owner_party_id={mapped_party.id}&page=1&page_size=100",
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        returned_ids = {item["id"] for item in items}
-        assert mapped_project.id in returned_ids
-        assert other_project.id not in returned_ids
-
-    def test_list_projects_owner_party_filter_should_work_with_status_filter(
-        self,
-        client,
-        admin_user_headers,
-        db_session: Session,
-        test_org_party,
-    ):
-        """GET 列表 owner_party_id + status 组合筛选应取交集。"""
-        from uuid import uuid4
-
-        from src.models.ownership import Ownership
-        from src.models.party import Party, PartyType
-        from src.models.project import Project
-        from src.models.project_relations import ProjectOwnershipRelation
-
-        suffix = uuid4().hex[:6].upper()
-        ownership = Ownership(
-            name="List Combo Ownership",
-            code=f"OWN-LCMB-{suffix}",
-            is_active=True,
-        )
-        db_session.add(ownership)
-        db_session.flush()
-
-        mapped_party = Party(
-            id=f"party-list-combo-{ownership.id}",
-            party_type=PartyType.LEGAL_ENTITY.value,
-            name=ownership.name,
-            code="LE-920001",
-            external_ref=ownership.id,
-            status="active",
-        )
-        db_session.add(mapped_party)
-        db_session.flush()
-
-        serial_seed = ownership.id.replace("-", "")[-8:]
-        project_serial = f"{int(serial_seed, 16) % 1_000_000:06d}"
-        active_project = Project(
-            project_name="List Combo Active Project",
-            project_code=f"PRJ-LCMB01-{project_serial}",
-            status="active",
-            manager_party_id=test_org_party.id,
-        )
-        planning_project = Project(
-            project_name="List Combo Planning Project",
-            project_code=f"PRJ-LCMB02-{project_serial}",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        db_session.add_all([active_project, planning_project])
-        db_session.flush()
-
-        db_session.add_all(
-            [
-                ProjectOwnershipRelation(
-                    project_id=active_project.id,
-                    ownership_id=ownership.id,
-                    is_active=True,
-                ),
-                ProjectOwnershipRelation(
-                    project_id=planning_project.id,
-                    ownership_id=ownership.id,
-                    is_active=True,
-                ),
-            ]
-        )
-        db_session.flush()
-
-        response = client.get(
-            f"/api/v1/projects/?owner_party_id={mapped_party.id}&status=active&page=1&page_size=100",
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        returned_ids = {item["id"] for item in items}
-        assert active_project.id in returned_ids
-        assert planning_project.id not in returned_ids
-
-    def test_list_projects_owner_party_filter_invalid_value_should_return_empty(
-        self,
-        client,
-        admin_user_headers,
-    ):
-        """非法 owner_party_id 字符串应返回空列表，不应误放行。"""
-        response = client.get(
-            "/api/v1/projects/?owner_party_id=%25%25%25invalid%%%25&page=1&page_size=100",
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        assert items == []
-
-    def test_list_projects_owner_party_filter_pagination_should_be_consistent(
-        self,
-        client,
-        admin_user_headers,
-        db_session: Session,
-        test_org_party,
-    ):
-        """owner_party_id 过滤下分页 total/page/items 应保持一致。"""
-        from uuid import uuid4
-
-        from src.models.ownership import Ownership
-        from src.models.party import Party, PartyType
-        from src.models.project import Project
-        from src.models.project_relations import ProjectOwnershipRelation
-
-        suffix = uuid4().hex[:6].upper()
-        ownership = Ownership(
-            name="List Page Ownership",
-            code=f"OWN-LPG-{suffix}",
-            is_active=True,
-        )
-        db_session.add(ownership)
-        db_session.flush()
-
-        mapped_party = Party(
-            id=f"party-list-page-{ownership.id}",
-            party_type=PartyType.LEGAL_ENTITY.value,
-            name=ownership.name,
-            code="LE-930001",
-            external_ref=ownership.id,
-            status="active",
-        )
-        db_session.add(mapped_party)
-        db_session.flush()
-
-        created_project_ids: list[str] = []
-        for index in range(12):
-            project = Project(
-                project_name=f"List Page Project {index}",
-                project_code=f"PRJ-LPG{index:03d}-{index:06d}",
-                status="active",
-                manager_party_id=test_org_party.id,
-            )
-            db_session.add(project)
-            db_session.flush()
-            created_project_ids.append(project.id)
-            db_session.add(
-                ProjectOwnershipRelation(
-                    project_id=project.id,
-                    ownership_id=ownership.id,
-                    is_active=True,
-                )
-            )
-        db_session.flush()
-
-        response = client.get(
-            f"/api/v1/projects/?owner_party_id={mapped_party.id}&page=2&page_size=5",
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        payload = response.json()["data"]
-        items = payload["items"]
-        pagination = payload["pagination"]
-
-        returned_ids = {item["id"] for item in items}
-        assert pagination["total"] == 12
-        assert pagination["page"] == 2
-        assert pagination["page_size"] == 5
-        assert len(items) == 5
-        assert returned_ids.issubset(set(created_project_ids))
+        assert captured["owner_party_id"] is None
 
 
 # ============================================================================
@@ -764,221 +441,51 @@ class TestSearchProjects:
         items = response.json()["data"]["items"]
         assert len(items) == 0
 
-    def test_search_projects_owner_party_filter_should_support_party_id_mapping(
+    def test_search_projects_ignores_legacy_owner_party_id_param(
         self,
         client,
         admin_user_headers,
-        db_session: Session,
-        test_org_party,
+        monkeypatch,
     ):
-        """POST /search 的 owner_party_id 也应支持 Party.external_ref -> ownership_id 映射。"""
-        from uuid import uuid4
+        """POST /search 请求体中的 owner_party_id 已下线，应被忽略且不透传。"""
+        from src.api.v1.assets import project as project_module
 
-        from src.models.ownership import Ownership
-        from src.models.party import Party, PartyType
-        from src.models.project import Project
-        from src.models.project_relations import ProjectOwnershipRelation
+        captured: dict[str, object] = {}
 
-        suffix = uuid4().hex[:6].upper()
-        ownership = Ownership(
-            name="Search Mapped Ownership",
-            code=f"OWN-SRCH-{suffix}",
-            is_active=True,
-        )
-        other_ownership = Ownership(
-            name="Search Mapped Ownership Other",
-            code=f"OWN-SRCH-OTHER-{suffix}",
-            is_active=True,
-        )
-        db_session.add_all([ownership, other_ownership])
-        db_session.flush()
+        async def mock_search_projects(
+            *,
+            db,
+            search_params,
+            current_user_id: str | None = None,
+            party_filter=None,
+        ):
+            _ = db
+            _ = current_user_id
+            _ = party_filter
+            captured["owner_party_id"] = getattr(search_params, "owner_party_id", None)
+            return {
+                "items": [],
+                "total": 0,
+                "page": search_params.page,
+                "page_size": search_params.page_size,
+                "pages": 0,
+            }
 
-        ownership_serial_seed = ownership.id.replace("-", "")[-8:]
-        project_serial = f"{int(ownership_serial_seed, 16) % 1_000_000:06d}"
-
-        mapped_party = Party(
-            id=f"party-search-map-{ownership.id}",
-            party_type=PartyType.LEGAL_ENTITY.value,
-            name=ownership.name,
-            code="LE-940001",
-            external_ref=ownership.id,
-            status="active",
+        monkeypatch.setattr(
+            project_module.project_service,
+            "search_projects",
+            mock_search_projects,
         )
-        db_session.add(mapped_party)
-        db_session.flush()
-        assert mapped_party.id != ownership.id
-
-        mapped_project = Project(
-            project_name="Search Mapped Party Project",
-            project_code=f"PRJ-SRCH01-{project_serial}",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        other_project = Project(
-            project_name="Search Mapped Party Other Project",
-            project_code=f"PRJ-SRCH02-{project_serial}",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        db_session.add_all([mapped_project, other_project])
-        db_session.flush()
-
-        db_session.add_all(
-            [
-                ProjectOwnershipRelation(
-                    project_id=mapped_project.id,
-                    ownership_id=ownership.id,
-                    is_active=True,
-                ),
-                ProjectOwnershipRelation(
-                    project_id=other_project.id,
-                    ownership_id=other_ownership.id,
-                    is_active=True,
-                ),
-            ]
-        )
-        db_session.flush()
 
         response = client.post(
             "/api/v1/projects/search",
-            json={
-                "owner_party_id": mapped_party.id,
-                "page": 1,
-                "page_size": 100,
-            },
+            json={"owner_party_id": "party-filter-001", "page": 1, "page_size": 10},
             headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        returned_ids = {item["id"] for item in items}
-        assert mapped_project.id in returned_ids
-        assert other_project.id not in returned_ids
+        assert captured["owner_party_id"] is None
 
-    def test_search_projects_owner_party_filter_blank_should_fail_closed(
-        self,
-        client,
-        admin_user_headers,
-    ):
-        """owner_party_id 为空白字符串时应 fail-closed 返回空列表。"""
-        response = client.post(
-            "/api/v1/projects/search",
-            json={
-                "owner_party_id": "   ",
-                "page": 1,
-                "page_size": 100,
-            },
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        assert items == []
-
-    def test_search_projects_owner_party_filter_without_mapping_should_return_empty(
-        self,
-        client,
-        admin_user_headers,
-    ):
-        """owner_party_id 无直接命中且无 external_ref 映射时应返回空列表。"""
-        response = client.post(
-            "/api/v1/projects/search",
-            json={
-                "owner_party_id": "party-nonexistent-no-mapping",
-                "page": 1,
-                "page_size": 100,
-            },
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        assert items == []
-
-    def test_search_projects_owner_party_filter_should_work_with_status_filter(
-        self,
-        client,
-        admin_user_headers,
-        db_session: Session,
-        test_org_party,
-    ):
-        """owner_party_id + status 组合筛选应取交集。"""
-        from uuid import uuid4
-
-        from src.models.ownership import Ownership
-        from src.models.party import Party, PartyType
-        from src.models.project import Project
-        from src.models.project_relations import ProjectOwnershipRelation
-
-        suffix = uuid4().hex[:6].upper()
-        ownership = Ownership(
-            name="Search Combo Ownership",
-            code=f"OWN-COMBO-{suffix}",
-            is_active=True,
-        )
-        db_session.add(ownership)
-        db_session.flush()
-
-        serial_seed = ownership.id.replace("-", "")[-8:]
-        project_serial = f"{int(serial_seed, 16) % 1_000_000:06d}"
-        mapped_party = Party(
-            id=f"party-combo-{ownership.id}",
-            party_type=PartyType.LEGAL_ENTITY.value,
-            name=ownership.name,
-            code="LE-950001",
-            external_ref=ownership.id,
-            status="active",
-        )
-        db_session.add(mapped_party)
-        db_session.flush()
-
-        active_project = Project(
-            project_name="Search Combo Active Project",
-            project_code=f"PRJ-CMB01-{project_serial}",
-            status="active",
-            manager_party_id=test_org_party.id,
-        )
-        planning_project = Project(
-            project_name="Search Combo Planning Project",
-            project_code=f"PRJ-CMB02-{project_serial}",
-            status="planning",
-            manager_party_id=test_org_party.id,
-        )
-        db_session.add_all([active_project, planning_project])
-        db_session.flush()
-
-        db_session.add_all(
-            [
-                ProjectOwnershipRelation(
-                    project_id=active_project.id,
-                    ownership_id=ownership.id,
-                    is_active=True,
-                ),
-                ProjectOwnershipRelation(
-                    project_id=planning_project.id,
-                    ownership_id=ownership.id,
-                    is_active=True,
-                ),
-            ]
-        )
-        db_session.flush()
-
-        response = client.post(
-            "/api/v1/projects/search",
-            json={
-                "owner_party_id": mapped_party.id,
-                "status": "active",
-                "page": 1,
-                "page_size": 100,
-            },
-            headers=admin_user_headers,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        items = response.json()["data"]["items"]
-        returned_ids = {item["id"] for item in items}
-        assert active_project.id in returned_ids
-        assert planning_project.id not in returned_ids
 
     def test_list_projects_with_city_filter(
         self, client, admin_user_headers, project_data

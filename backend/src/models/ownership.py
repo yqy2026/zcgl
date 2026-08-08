@@ -4,15 +4,11 @@
 
 import uuid
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
-
-if TYPE_CHECKING:
-    from .project_relations import ProjectOwnershipRelation
 
 
 class Ownership(Base):
@@ -61,13 +57,6 @@ class Ownership(Base):
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
-
-    # 关联关系
-    ownership_relations: Mapped[list["ProjectOwnershipRelation"]] = relationship(
-        "ProjectOwnershipRelation",
-        back_populates="ownership",
-        cascade="all, delete-orphan",
-    )
 
     def __repr__(self) -> str:
         return f"<Ownership(id={self.id}, name={self.name}, code={self.code})>"

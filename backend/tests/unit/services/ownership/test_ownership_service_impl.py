@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.core.exception_handler import (
-    BusinessValidationError,
     DuplicateResourceError,
     OperationNotAllowedError,
     ResourceNotFoundError,
@@ -287,70 +286,7 @@ class TestGetStatistics:
         assert result["recent_created"] == []
 
 
-class TestUpdateRelatedProjects:
-    async def test_update_projects_success(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock
-    ):
-        with patch(
-            "src.crud.ownership.ownership.get", new_callable=AsyncMock
-        ) as mock_get_ownership:
-            mock_get_ownership.return_value = MagicMock(spec=Ownership)
-            mock_db.execute.side_effect = [
-                _result_with_scalars(["project_1", "project_2"]),
-                MagicMock(),
-            ]
-
-            await ownership_service.update_related_projects(
-                mock_db,
-                ownership_id="ownership_123",
-                project_ids=["project_1", "project_2"],
-            )
-
-        assert mock_db.add.call_count == 2
-        mock_db.commit.assert_awaited_once()
-
-    async def test_update_projects_ownership_not_found(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock
-    ):
-        with patch(
-            "src.crud.ownership.ownership.get", new_callable=AsyncMock
-        ) as mock_get_ownership:
-            mock_get_ownership.return_value = None
-
-            with pytest.raises(ResourceNotFoundError, match="权属方"):
-                await ownership_service.update_related_projects(
-                    mock_db,
-                    ownership_id="not-found",
-                    project_ids=["project_1"],
-                )
-
-    async def test_update_projects_invalid_project_id(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock
-    ):
-        with patch(
-            "src.crud.ownership.ownership.get", new_callable=AsyncMock
-        ) as mock_get_ownership:
-            mock_get_ownership.return_value = MagicMock(spec=Ownership)
-            mock_db.execute.side_effect = [_result_with_scalars(["project_1"])]
-
-            with pytest.raises(BusinessValidationError, match="以下项目ID不存在"):
-                await ownership_service.update_related_projects(
-                    mock_db,
-                    ownership_id="ownership_123",
-                    project_ids=["project_1", "project_2"],
-                )
-
-
 class TestCountsAndDelete:
-    async def test_get_project_count(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock
-    ):
-        mock_db.execute.return_value = _result_with_scalar(5)
-
-        result = await ownership_service.get_project_count(mock_db, "ownership_123")
-
-        assert result == 5
-
     async def test_get_asset_count(
         self, ownership_service: OwnershipService, mock_db: AsyncMock
     ):

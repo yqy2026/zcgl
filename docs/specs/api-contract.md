@@ -120,7 +120,6 @@ Organization 代表主体、组织移动、human 用户调动、UserPartyBinding
 | 产权证附件预览/下载 | `GET /api/v1/property-certificates/{certificate_id}/attachments/{attachment_id}/preview`、`GET /api/v1/property-certificates/{certificate_id}/attachments/{attachment_id}/download` | 预览要求 `property_certificate:read` 且不单独记日志；下载使用独立 `property_certificate:export`，并记不含路径或 PII 的轻量日志 |
 | 产权证扫描件解析 | `POST /api/v1/extraction-sessions`（新建暂存上传）和 `POST /api/v1/extraction-sessions`（既有正式附件引用） | 新建临时上传一份 PDF/JPEG/PNG；既有模式只引用通用附件、不接收文件。确认、取消与逐字段人工动作见 §4.10；`should_create_new_asset` / `create_new_asset` 不属于 MVP |
 | 租赁摘要 | `GET /api/v1/assets/{asset_id}/lease-summary` | 按上游、下游、委托、直租展示租赁情况 |
-| 经营方历史 | `GET /api/v1/assets/{asset_id}/management-history` | 返回经营方变更历史 |
 | 项目历史 | `GET /api/v1/assets/{asset_id}/project-history` | 返回项目关系历史 |
 | 审核动作 | `/api/v1/assets/{asset_id}/submit-review|approve-review|reject-review|reverse-review|resubmit-review|withdraw-review`；`POST /api/v1/assets/batch-submit-review`；`POST /api/v1/assets/batch-approve-review` | 资产 `review_status` 两步生命周期流转；`approve-review` 按复核权限门控，**不限制审核人 ≠ 提交人**（持权限者均可，含提交人本人）；批量提交支持 `draft → pending`，批量确认支持 `pending → approved`，已在目标状态的资产幂等成功，状态不匹配逐项返回错误；资产不走路由审批流 |
 | 审核日志 | `GET /api/v1/assets/{asset_id}/review-logs` | 返回资产审核日志 |

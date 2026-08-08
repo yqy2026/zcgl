@@ -17,7 +17,6 @@ from ...core.exception_handler import (
     operation_not_allowed,
     validation_error,
 )
-from ...crud.asset_management_history import asset_management_history_crud
 from ...crud.contract import contract_crud
 from ...crud.history import history_crud
 from ...crud.ownership import ownership
@@ -26,7 +25,6 @@ from ...crud.project_asset import project_asset_crud
 from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset, AssetReviewStatus
 from ...models.asset_history import AssetHistory
-from ...models.asset_management_history import AssetManagementHistory
 from ...models.asset_review_log import AssetReviewLog
 from ...models.associations import contract_assets
 from ...models.auth import User
@@ -593,24 +591,6 @@ class AssetService:
             limit=page_size,
             asset_id=asset_id,
             change_type=change_type,
-        )
-
-    async def get_asset_management_history(
-        self,
-        asset_id: str,
-        *,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
-    ) -> list[AssetManagementHistory]:
-        """获取资产经营方变更历史。"""
-        await self.get_asset(
-            asset_id,
-            party_filter=party_filter,
-            current_user_id=current_user_id,
-        )
-        return await asset_management_history_crud.get_by_asset_id(
-            self.db,
-            asset_id=asset_id,
         )
 
     async def get_asset_project_history(

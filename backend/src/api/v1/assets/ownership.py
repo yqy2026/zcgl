@@ -4,7 +4,7 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import (
@@ -142,13 +142,12 @@ async def get_ownership_dropdown_options(
                 **{
                     k: v
                     for k, v in item_data.items()
-                    if k not in ["asset_count", "project_count"]
+                    if k not in ["asset_count"]
                 }
             )
             response = OwnershipResponse.model_validate(temp_ownership)
             # 设置额外的计数字段
             response.asset_count = item_data["asset_count"]
-            response.project_count = item_data["project_count"]
             responses.append(response)
         return responses
     except Exception as e:
@@ -204,55 +203,6 @@ async def update_ownership(
         if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"更新权属方失败: {str(e)}")
-
-
-@router.put("/{ownership_id}/projects", summary="更新权属方关联项目")
-async def update_ownership_projects(
-    *,
-    db: Annotated[AsyncSession, Depends(get_async_db)],
-    ownership_id: str,
-    project_ids: list[str] = Body(..., description="关联项目ID列表"),
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    _authz_ctx: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="update",
-                resource_type="ownership",
-                resource_id="{ownership_id}",
-            )
-        ),
-    ] = None,
-) -> OwnershipResponse:
-    """更新权属方的关联项目"""
-    db_ownership = await ownership_service.get_ownership(db, ownership_id=ownership_id)
-    if not db_ownership:
-        raise not_found(
-            "权属方不存在", resource_type="ownership", resource_id=ownership_id
-        )
-
-    try:
-        # 更新关联项目
-        await ownership_service.update_related_projects(
-            db, ownership_id=ownership_id, project_ids=project_ids
-        )
-
-        # 返回更新后的权属方信息
-        updated_ownership = await ownership_service.get_ownership(
-            db, ownership_id=ownership_id
-        )
-        response = OwnershipResponse.model_validate(updated_ownership)
-
-        # 获取实际的项目计数
-        actual_project_count = await ownership_service.get_project_count(
-            db, ownership_id
-        )
-        response.project_count = actual_project_count
-        return response
-    except Exception as e:
-        if isinstance(e, BaseBusinessError):
-            raise
-        raise internal_error(f"更新关联项目失败: {str(e)}")
 
 
 @router.delete(
@@ -333,8 +283,6 @@ async def get_ownerships(
         response = OwnershipResponse.model_validate(item)
         # 获取关联资产数量
         response.asset_count = await ownership_service.get_asset_count(db, item.id)
-        # 获取关联项目数量
-        response.project_count = await ownership_service.get_project_count(db, item.id)
         items.append(response)
 
     return ResponseHandler.paginated(
@@ -375,8 +323,6 @@ async def search_ownerships(
         response = OwnershipResponse.model_validate(item)
         # 获取关联资产数量
         response.asset_count = await ownership_service.get_asset_count(db, item.id)
-        # 获取关联项目数量
-        response.project_count = await ownership_service.get_project_count(db, item.id)
         items.append(response)
 
     return ResponseHandler.paginated(

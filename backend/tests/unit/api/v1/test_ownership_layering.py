@@ -40,7 +40,6 @@ def test_ownership_endpoints_should_use_require_authz() -> None:
         r"async def get_ownership_dropdown_options[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"",
         r"async def create_ownership[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_ownership_create_authz\)",
         r"async def update_ownership[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"ownership\"[\s\S]*?resource_id=\"\{ownership_id\}\"",
-        r"async def update_ownership_projects[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"ownership\"[\s\S]*?resource_id=\"\{ownership_id\}\"",
         r"async def delete_ownership[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"ownership\"[\s\S]*?resource_id=\"\{ownership_id\}\"",
         r"async def get_ownerships[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"",
             r"async def search_ownerships[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"",
@@ -68,7 +67,6 @@ async def test_get_ownership_dropdown_options_should_delegate_service() -> None:
         "created_at": datetime.now(UTC),
         "updated_at": datetime.now(UTC),
         "asset_count": 3,
-        "project_count": 1,
     }
     mock_service = MagicMock()
     mock_service.get_ownership_dropdown_options = AsyncMock(return_value=[item])

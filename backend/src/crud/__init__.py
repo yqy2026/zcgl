@@ -16,7 +16,6 @@ from ..models.rbac import (
 from ..models.system_dictionary import AssetCustomField, SystemDictionary
 from ..models.task import AsyncTask, ExcelTaskConfig
 from .asset import asset_crud
-from .asset_management_history import asset_management_history_crud
 from .authz import crud_authz
 
 # Security: Register field whitelists for models
@@ -65,7 +64,6 @@ register_whitelist(ExcelTaskConfig, ExcelTaskConfigWhitelist())
 
 __all__ = [
     "asset_crud",
-    "asset_management_history_crud",
     "project_crud",
     "party_crud",
     "crud_authz",

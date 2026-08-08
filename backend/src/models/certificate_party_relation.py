@@ -11,7 +11,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
-    Numeric,
     String,
     text,
 )
@@ -41,10 +40,6 @@ class CertificatePartyRelation(Base):
         CheckConstraint(
             "valid_to IS NULL OR valid_to >= valid_from",
             name="ck_certificate_party_relations_valid_range",
-        ),
-        CheckConstraint(
-            "share_ratio IS NULL OR (share_ratio > 0 AND share_ratio <= 100)",
-            name="ck_certificate_party_relations_share_ratio",
         ),
         Index(
             "uq_certificate_primary_owner_active",
@@ -85,7 +80,6 @@ class CertificatePartyRelation(Base):
     is_primary: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="是否主角色"
     )
-    share_ratio: Mapped[float | None] = mapped_column(Numeric(5, 2), comment="占比(%)")
     valid_from: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"
     )

@@ -76,15 +76,6 @@ class AssetBase(BaseModel):
         max_length=FieldLengthLimits.SHORT_TEXT_MAX,
         description="资产名称",
     )
-    asset_form: str | None = Field(
-        None, description="资产形态：land/building/structure/parking/warehouse/other"
-    )
-    spatial_level: str | None = Field(
-        None, description="空间层级：plot/campus/building/floor/room/shop"
-    )
-    business_usage: str | None = Field(
-        None, description="经营用途：commercial/office/warehouse/industrial/mixed/other"
-    )
     # 半结构化地址子字段（所有三级行政区上线前可暂时为 null）
     province_code: str | None = Field(None, max_length=20, description="省级行政区代码")
     city_code: str | None = Field(None, max_length=20, description="市级行政区代码")
@@ -266,9 +257,6 @@ class AssetUpdate(BaseModel):
     asset_name: str | None = Field(
         None, min_length=1, max_length=200, description="资产名称"
     )
-    asset_form: str | None = Field(None, description="资产形态")
-    spatial_level: str | None = Field(None, description="空间层级")
-    business_usage: str | None = Field(None, description="经营用途")
     province_code: str | None = Field(None, max_length=20, description="省级行政区代码")
     city_code: str | None = Field(None, max_length=20, description="市级行政区代码")
     district_code: str | None = Field(None, max_length=20, description="区县行政区代码")

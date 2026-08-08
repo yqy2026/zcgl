@@ -28,7 +28,7 @@ def service() -> OwnershipService:
 
 
 class TestOwnershipDropdownOptions:
-    async def test_batches_asset_and_project_counts(self, service: OwnershipService):
+    async def test_batches_asset_counts(self, service: OwnershipService):
         ownership_1 = MagicMock()
         ownership_1.id = "own-1"
         ownership_1.name = "权属方1"
@@ -54,7 +54,6 @@ class TestOwnershipDropdownOptions:
             side_effect=[
                 _result_with_scalars([ownership_1, ownership_2]),
                 _result_with_all([("own-1", 3)]),
-                _result_with_all([("own-1", 1), ("own-2", 2)]),
             ]
         )
 
@@ -62,10 +61,8 @@ class TestOwnershipDropdownOptions:
 
         assert len(result) == 2
         assert result[0]["asset_count"] == 3
-        assert result[0]["project_count"] == 1
         assert result[1]["asset_count"] == 0
-        assert result[1]["project_count"] == 2
-        assert mock_db.execute.await_count == 3
+        assert mock_db.execute.await_count == 2
 
     async def test_returns_early_when_no_ownerships(self, service: OwnershipService):
         mock_db = AsyncMock()

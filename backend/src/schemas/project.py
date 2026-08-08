@@ -468,7 +468,6 @@ class ProjectSearchRequest(BaseModel):
 
     keyword: str | None = Field(None, description="搜索关键词")
     status: str | None = Field(None, description="业务状态")
-    owner_party_id: str | None = Field(None, description="产权方主体ID")
     page: int = Field(1, ge=1, description="页码")
     page_size: int = Field(10, ge=1, le=100, description="每页大小")
 

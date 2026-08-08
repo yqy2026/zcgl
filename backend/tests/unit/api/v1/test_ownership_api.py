@@ -77,7 +77,6 @@ class TestGetOwnershipDropdownOptions:
                 "created_at": datetime.now(UTC),
                 "updated_at": datetime.now(UTC),
                 "asset_count": 5,
-                "project_count": 2,
             }
         ]
 
@@ -97,7 +96,6 @@ class TestGetOwnershipDropdownOptions:
         assert len(result) == 1
         assert result[0].name == "Ownership 1"
         assert result[0].asset_count == 5
-        assert result[0].project_count == 2
 
     async def test_get_dropdown_options_exception(
         self, mock_db: AsyncMock, mock_current_user: SimpleNamespace
@@ -212,51 +210,6 @@ class TestUpdateOwnership:
                     db=mock_db,
                     ownership_id="missing",
                     ownership_in=payload,
-                    current_user=mock_current_user,
-                )
-
-        assert exc_info.value.status_code == 404
-
-
-class TestUpdateOwnershipProjects:
-    async def test_update_projects_success(
-        self, mock_db: AsyncMock, mock_current_user: SimpleNamespace
-    ):
-        from src.api.v1.assets.ownership import update_ownership_projects
-
-        obj = _make_ownership()
-
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
-            mock_service.get_ownership = AsyncMock(side_effect=[obj, obj])
-            mock_service.update_related_projects = AsyncMock(return_value=None)
-            mock_service.get_project_count = AsyncMock(return_value=3)
-
-            result = await update_ownership_projects(
-                db=mock_db,
-                ownership_id=obj.id,
-                project_ids=["project-1", "project-2", "project-3"],
-                current_user=mock_current_user,
-            )
-
-        assert result.project_count == 3
-
-    async def test_update_projects_not_found(
-        self, mock_db: AsyncMock, mock_current_user: SimpleNamespace
-    ):
-        from src.api.v1.assets.ownership import update_ownership_projects
-
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
-            mock_service.get_ownership = AsyncMock(return_value=None)
-
-            with pytest.raises(BaseBusinessError) as exc_info:
-                await update_ownership_projects(
-                    db=mock_db,
-                    ownership_id="missing",
-                    project_ids=["project-1"],
                     current_user=mock_current_user,
                 )
 
