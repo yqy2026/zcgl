@@ -22,9 +22,7 @@ def _mapping_result(row: dict[str, str | None] | None) -> MagicMock:
 
 async def test_resolve_organization_party_reads_only_explicit_link() -> None:
     db = MagicMock()
-    db.execute = AsyncMock(
-        return_value=_mapping_result({"party_id": "party-legal-1"})
-    )
+    db.execute = AsyncMock(return_value=_mapping_result({"party_id": "party-legal-1"}))
 
     result = await resolve_organization_party_id(
         db=db,
@@ -40,9 +38,7 @@ async def test_resolve_organization_party_reads_only_explicit_link() -> None:
 async def test_organization_scope_fails_closed_without_represented_party() -> None:
     db = MagicMock()
     db.execute = AsyncMock(
-        return_value=_mapping_result(
-            {"organization_id": "org-1", "party_id": None}
-        )
+        return_value=_mapping_result({"organization_id": "org-1", "party_id": None})
     )
 
     result = await load_organization_scope_context(db=db, organization_id="org-1")

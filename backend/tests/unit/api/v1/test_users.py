@@ -130,10 +130,15 @@ def mock_request():
 class TestGetUsers:
     @patch("src.api.v1.auth.auth_modules.users.RBACService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
-    def test_get_users_success(self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user):
+    def test_get_users_success(
+        self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user
+    ):
         from src.api.v1.auth.auth_modules.users import get_users
 
-        users = [_build_fake_user("user-01", "user1"), _build_fake_user("user-02", "user2")]
+        users = [
+            _build_fake_user("user-01", "user1"),
+            _build_fake_user("user-02", "user2"),
+        ]
         mock_user_crud = MagicMock()
         mock_user_crud.get_multi_with_filters_async = AsyncMock(return_value=(users, 2))
         mock_user_crud_class.return_value = mock_user_crud
@@ -158,7 +163,9 @@ class TestGetUsers:
 
     @patch("src.api.v1.auth.auth_modules.users.RBACService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
-    def test_get_users_with_search(self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user):
+    def test_get_users_with_search(
+        self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user
+    ):
         from src.api.v1.auth.auth_modules.users import get_users
 
         mock_user_crud = MagicMock()
@@ -191,7 +198,9 @@ class TestGetUsers:
 class TestCreateUser:
     @patch("src.api.v1.auth.auth_modules.users.RBACService")
     @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
-    def test_create_user_success(self, mock_service_class, mock_rbac_class, mock_db, admin_user):
+    def test_create_user_success(
+        self, mock_service_class, mock_rbac_class, mock_db, admin_user
+    ):
         from src.api.v1.auth.auth_modules.users import create_user
 
         user_data = UserCreate(
@@ -212,7 +221,9 @@ class TestCreateUser:
         mock_rbac.get_user_role_summary = AsyncMock(return_value=USER_ROLE_SUMMARY)
         mock_rbac_class.return_value = mock_rbac
 
-        result = asyncio.run(create_user(user_data=user_data, db=mock_db, current_user=admin_user))
+        result = asyncio.run(
+            create_user(user_data=user_data, db=mock_db, current_user=admin_user)
+        )
 
         assert result.username == "new-user"
         assert result.roles == ["asset_viewer"]
@@ -249,7 +260,9 @@ class TestCreateUser:
         )
         mock_rbac_class.return_value = mock_rbac
 
-        asyncio.run(create_user(user_data=user_data, db=mock_db, current_user=admin_user))
+        asyncio.run(
+            create_user(user_data=user_data, db=mock_db, current_user=admin_user)
+        )
 
         created_payload = mock_service.create_user.await_args.args[0]
         assert created_payload.role_ids == ["role-user-id", "role-reviewer-id"]
@@ -267,11 +280,15 @@ class TestCreateUser:
         )
 
         mock_service = MagicMock()
-        mock_service.create_user = AsyncMock(side_effect=BusinessLogicError("用户名已存在"))
+        mock_service.create_user = AsyncMock(
+            side_effect=BusinessLogicError("用户名已存在")
+        )
         mock_service_class.return_value = mock_service
 
         with pytest.raises(InvalidRequestError):
-            asyncio.run(create_user(user_data=user_data, db=mock_db, current_user=admin_user))
+            asyncio.run(
+                create_user(user_data=user_data, db=mock_db, current_user=admin_user)
+            )
 
 
 class TestGetUser:
@@ -284,11 +301,15 @@ class TestGetUser:
         mock_rbac_class.return_value = mock_rbac
 
         with pytest.raises(PermissionDeniedError):
-            asyncio.run(get_user(user_id="another-user", db=mock_db, current_user=regular_user))
+            asyncio.run(
+                get_user(user_id="another-user", db=mock_db, current_user=regular_user)
+            )
 
     @patch("src.api.v1.auth.auth_modules.users.RBACService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
-    def test_get_user_success(self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user):
+    def test_get_user_success(
+        self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user
+    ):
         from src.api.v1.auth.auth_modules.users import get_user
 
         target_user = _build_fake_user("target-id", "target")
@@ -301,7 +322,9 @@ class TestGetUser:
         mock_rbac.get_user_role_summary = AsyncMock(return_value=USER_ROLE_SUMMARY)
         mock_rbac_class.return_value = mock_rbac
 
-        result = asyncio.run(get_user(user_id="target-id", db=mock_db, current_user=admin_user))
+        result = asyncio.run(
+            get_user(user_id="target-id", db=mock_db, current_user=admin_user)
+        )
 
         assert result.id == "target-id"
         assert result.roles == ["asset_viewer"]
@@ -310,7 +333,9 @@ class TestGetUser:
 class TestUpdateUser:
     @patch("src.api.v1.auth.auth_modules.users.RBACService")
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
-    def test_update_user_not_found(self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user):
+    def test_update_user_not_found(
+        self, mock_user_crud_class, mock_rbac_class, mock_db, admin_user
+    ):
         from src.api.v1.auth.auth_modules.users import update_user
 
         mock_user_crud = MagicMock()
@@ -493,7 +518,9 @@ class TestUserStateTransitions:
         mock_user_crud.delete_async = AsyncMock(return_value=True)
         mock_user_crud_class.return_value = mock_user_crud
 
-        result = asyncio.run(deactivate_user(user_id="target-id", db=mock_db, current_user=admin_user))
+        result = asyncio.run(
+            deactivate_user(user_id="target-id", db=mock_db, current_user=admin_user)
+        )
         assert result["message"] == "用户已停用"
 
     @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
@@ -505,7 +532,11 @@ class TestUserStateTransitions:
         mock_user_crud_class.return_value = mock_user_crud
 
         with pytest.raises(ResourceNotFoundError):
-            asyncio.run(deactivate_user(user_id="missing-id", db=mock_db, current_user=admin_user))
+            asyncio.run(
+                deactivate_user(
+                    user_id="missing-id", db=mock_db, current_user=admin_user
+                )
+            )
 
     @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_activate_user_success(self, mock_service_class, mock_db, admin_user):
@@ -515,7 +546,9 @@ class TestUserStateTransitions:
         mock_service.activate_user = AsyncMock(return_value=True)
         mock_service_class.return_value = mock_service
 
-        result = asyncio.run(activate_user(user_id="target-id", db=mock_db, current_user=admin_user))
+        result = asyncio.run(
+            activate_user(user_id="target-id", db=mock_db, current_user=admin_user)
+        )
         assert result["message"] == "用户已激活"
 
     @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
@@ -527,14 +560,21 @@ class TestUserStateTransitions:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(ResourceNotFoundError):
-            asyncio.run(activate_user(user_id="missing-id", db=mock_db, current_user=admin_user))
+            asyncio.run(
+                activate_user(user_id="missing-id", db=mock_db, current_user=admin_user)
+            )
 
 
 class TestUserSecurityActions:
     @patch("src.api.v1.auth.auth_modules.users.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_lock_user_success(
-        self, mock_service_class, mock_audit_crud_class, mock_db, admin_user, mock_request
+        self,
+        mock_service_class,
+        mock_audit_crud_class,
+        mock_db,
+        admin_user,
+        mock_request,
     ):
         from src.api.v1.auth.auth_modules.users import lock_user
 
@@ -565,7 +605,12 @@ class TestUserSecurityActions:
     @patch("src.api.v1.auth.auth_modules.users.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_unlock_user_success(
-        self, mock_service_class, mock_audit_crud_class, mock_db, admin_user, mock_request
+        self,
+        mock_service_class,
+        mock_audit_crud_class,
+        mock_db,
+        admin_user,
+        mock_request,
     ):
         from src.api.v1.auth.auth_modules.users import unlock_user_account
 

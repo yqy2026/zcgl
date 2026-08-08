@@ -299,12 +299,9 @@ class TestBatchUpdate:
         mock_asset.id = "asset_1"
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
-
             mock_history.create_async = AsyncMock()
             mock_history.create_async.return_value = MagicMock()
 
@@ -334,7 +331,6 @@ class TestBatchUpdate:
         _set_asset_query_result(mock_db, mock_assets, mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
-
             mock_history.create_async = AsyncMock()
             mock_history.create_async.return_value = MagicMock()
 
@@ -383,7 +379,6 @@ class TestBatchUpdate:
         _set_asset_query_result(mock_db, [asset_1], mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
-
             mock_history.create_async = AsyncMock()
             mock_history.create_async.return_value = MagicMock()
 
@@ -405,10 +400,10 @@ class TestBatchUpdate:
         """测试更新过程中的异常处理"""
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
-        mock_asset_crud.update_async = AsyncMock(side_effect=Exception("Database error"))
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        mock_asset_crud.update_async = AsyncMock(
+            side_effect=Exception("Database error")
         )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         result = await batch_service.batch_update(
             asset_ids=["asset_1"],
@@ -429,9 +424,7 @@ class TestBatchUpdate:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(side_effect=Exception("Update failed"))
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         # 模拟 begin_nested
         mock_savepoint = _DummyNested()
@@ -455,12 +448,9 @@ class TestBatchUpdate:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
-
             mock_history.create_async = AsyncMock()
             mock_history.create_async.return_value = MagicMock()
 
@@ -507,9 +497,7 @@ class TestBatchUpdate:
         mock_asset_crud.update_async = AsyncMock(
             side_effect=ValueError("usage_status\n  Field required")
         )
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         result = await batch_service.batch_update(
             asset_ids=["asset_1"],
@@ -556,7 +544,9 @@ class TestBatchUpdateAll:
     async def test_batch_update_all_flag(self, mock_asset_crud, batch_service, mock_db):
         """测试 should_update_all=True 标志"""
         mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 4)]
-        mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=(mock_assets, None))
+        mock_asset_crud.get_multi_with_search_async = AsyncMock(
+            return_value=(mock_assets, None)
+        )
         mock_asset_crud.get_async = AsyncMock(side_effect=mock_assets)
         mock_asset_crud.update_async = AsyncMock(return_value=MagicMock())
         _set_asset_query_result(mock_db, mock_assets, mock_asset_crud=mock_asset_crud)
@@ -575,7 +565,9 @@ class TestBatchUpdateAll:
             )
 
     @patch("src.services.asset.batch_service.asset_crud")
-    async def test_batch_update_all_empty_database(self, mock_asset_crud, batch_service):
+    async def test_batch_update_all_empty_database(
+        self, mock_asset_crud, batch_service
+    ):
         """测试空数据库时更新所有"""
         mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=([], None))
 
@@ -640,8 +632,7 @@ class TestBatchDelete:
     ):
         """测试多个资产删除成功"""
         mock_assets = [
-            MagicMock(id=f"asset_{i}", asset_name=f"测试物业{i}")
-            for i in range(1, 4)
+            MagicMock(id=f"asset_{i}", asset_name=f"测试物业{i}") for i in range(1, 4)
         ]
         for asset in mock_assets:
             asset.data_status = "正常"
@@ -771,9 +762,12 @@ class TestValidateAssetData:
 
     async def test_validate_valid_data(self, batch_service, valid_asset_data):
         """测试验证有效数据"""
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=valid_asset_data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=valid_asset_data)
 
         assert is_valid is True
         assert len(errors) == 0
@@ -781,9 +775,12 @@ class TestValidateAssetData:
 
     async def test_validate_invalid_data(self, batch_service, invalid_asset_data):
         """测试验证无效数据"""
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=invalid_asset_data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=invalid_asset_data)
 
         assert is_valid is False
         assert len(errors) > 0
@@ -797,9 +794,12 @@ class TestValidateAssetData:
             # 缺少其他必填字段
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=data)
 
         assert is_valid is False
         assert len(errors) >= 4  # 至少缺少4个必填字段
@@ -815,9 +815,12 @@ class TestValidateAssetData:
             "land_area": "not_a_number",
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=data)
 
         assert is_valid is False
         assert any(e["field"] == "land_area" for e in errors)
@@ -834,9 +837,12 @@ class TestValidateAssetData:
             "rented_area": 150.0,  # 大于可出租面积
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=data)
 
         assert is_valid is False
         assert any("已出租面积不能大于可出租面积" in e["error"] for e in errors)
@@ -852,9 +858,12 @@ class TestValidateAssetData:
             "operation_agreement_start_date": "2024/01/01",  # 错误格式
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=data)
 
         # 日期格式错误应该被检测到
         assert any(e["field"] == "operation_agreement_start_date" for e in errors)
@@ -871,9 +880,12 @@ class TestValidateAssetData:
             # 缺少建议字段
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=data)
 
         # 数据有效但应该有警告
         assert is_valid is True
@@ -893,8 +905,13 @@ class TestValidateAssetData:
         }
 
         # 只验证数据格式，不验证必填字段
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=data, validate_rules=["data_format"])
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(
+            data=data, validate_rules=["data_format"]
         )
 
         # 面积一致性应该被检测到
@@ -914,10 +931,13 @@ class TestValidateAssetData:
             "owner_party_id": "owner-party-1",
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(
-                data=data, enum_validation_service=mock_enum_service
-            )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(
+            data=data, enum_validation_service=mock_enum_service
         )
 
         # 验证枚举服务被调用
@@ -942,10 +962,13 @@ class TestValidateAssetData:
             "usage_status": "在用",
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(
-                data=data, enum_validation_service=mock_enum_service
-            )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(
+            data=data, enum_validation_service=mock_enum_service
         )
 
         assert is_valid is False
@@ -1073,9 +1096,7 @@ class TestErrorHandling:
         mock_asset_crud.update_async = AsyncMock(
             side_effect=ValueError("Validation error: usage_status")
         )
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         result = await batch_service.batch_update(
             asset_ids=["asset_1"],
@@ -1089,7 +1110,9 @@ class TestErrorHandling:
         assert "field_context" in error
 
     @patch("src.services.asset.batch_service.asset_crud")
-    async def test_multiple_different_errors(self, mock_asset_crud, batch_service, mock_db):
+    async def test_multiple_different_errors(
+        self, mock_asset_crud, batch_service, mock_db
+    ):
         """测试多个不同的错误"""
         mock_asset_crud.get_async = AsyncMock(
             side_effect=[
@@ -1130,9 +1153,7 @@ class TestErrorHandling:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1180,9 +1201,7 @@ class TestStatusReporting:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1202,7 +1221,9 @@ class TestStatusReporting:
             assert "updated_assets" in status_dict
 
     @patch("src.services.asset.batch_service.asset_crud")
-    async def test_comprehensive_status_report(self, mock_asset_crud, batch_service, mock_db):
+    async def test_comprehensive_status_report(
+        self, mock_asset_crud, batch_service, mock_db
+    ):
         """测试全面的状态报告"""
         mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 4)]
         mock_asset_crud.get_async = AsyncMock(side_effect=mock_assets)
@@ -1282,9 +1303,12 @@ class TestIntegrationScenarios:
             "owner_party_id": "owner-party-1",
         }
 
-        is_valid, errors, warnings, validated_fields = (
-            await batch_service.validate_asset_data(data=data)
-        )
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await batch_service.validate_asset_data(data=data)
 
         assert is_valid is True
 
@@ -1293,9 +1317,7 @@ class TestIntegrationScenarios:
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.get_by_name_async = AsyncMock(return_value=None)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(
-            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
-        )
+        _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1337,6 +1359,4 @@ class TestBatchServiceSecurityAndOwnershipLookup:
 
         assert has_update is True
         assert ownership_id == "ownership_1"
-        mock_ownership.get.assert_awaited_once_with(
-            batch_service.db, id="ownership_1"
-        )
+        mock_ownership.get.assert_awaited_once_with(batch_service.db, id="ownership_1")

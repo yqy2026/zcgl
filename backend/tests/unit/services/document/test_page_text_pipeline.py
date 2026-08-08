@@ -242,7 +242,9 @@ def test_default_pipeline_processes_a_normal_24_page_contract(tmp_path):
     document.save(path)
     document.close()
 
-    result = OrderedPageTextPipeline(ocr_engine=lambda image: []).extract_pdf_pages(path)
+    result = OrderedPageTextPipeline(ocr_engine=lambda image: []).extract_pdf_pages(
+        path
+    )
 
     assert [page.page_number for page in result.pages] == list(range(1, 25))
     assert all(page.text_source == "pdf_text" for page in result.pages)

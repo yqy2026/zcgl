@@ -337,6 +337,7 @@ class TestSecurityAttackScenarios:
 
         assert "created_by" in str(exc_info.value)
 
+
 class TestWhitelistCompliance:
     """Test that all models comply with whitelist requirements."""
 

@@ -170,7 +170,9 @@ async def test_lock_user_should_delegate_user_service_lock_method() -> None:
         )
         result = await lock_user(
             user_id="user-1",
-            request=MagicMock(headers={"user-agent": "ua"}, client=MagicMock(host="127.0.0.1")),
+            request=MagicMock(
+                headers={"user-agent": "ua"}, client=MagicMock(host="127.0.0.1")
+            ),
             db=MagicMock(),
             current_user=MagicMock(id="admin-id"),
         )
@@ -188,7 +190,9 @@ async def test_reset_password_should_delegate_user_service_admin_reset() -> None
     from src.schemas.auth import AdminPasswordResetRequest
 
     user_service = MagicMock()
-    user_service.admin_reset_password = AsyncMock(return_value=MagicMock(username="tester"))
+    user_service.admin_reset_password = AsyncMock(
+        return_value=MagicMock(username="tester")
+    )
     audit_logger = MagicMock()
     audit_logger.create_async = AsyncMock(return_value=None)
 
@@ -209,7 +213,9 @@ async def test_reset_password_should_delegate_user_service_admin_reset() -> None
                 new_password="NewSecurePass123!",
                 reason="ops",
             ),
-            request=MagicMock(headers={"user-agent": "ua"}, client=MagicMock(host="127.0.0.1")),
+            request=MagicMock(
+                headers={"user-agent": "ua"}, client=MagicMock(host="127.0.0.1")
+            ),
             db=MagicMock(),
             current_user=MagicMock(id="admin-id"),
         )

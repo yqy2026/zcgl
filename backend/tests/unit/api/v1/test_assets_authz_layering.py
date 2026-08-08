@@ -36,8 +36,11 @@ def test_asset_collection_owner_filter_should_use_party_id() -> None:
         r"async def _require_asset_collection_read_authz\(\s*owner_party_id:\s*str",
         module_source,
     )
-    assert re.search(r"async def get_assets\([\s\S]*?owner_party_id:\s*str", module_source)
+    assert re.search(
+        r"async def get_assets\([\s\S]*?owner_party_id:\s*str", module_source
+    )
     assert "ownership_id: str | None = Query" not in module_source
+
 
 def test_assets_endpoints_should_use_authz_dependencies() -> None:
     """assets 本批关键端点应接入统一 ABAC 依赖。"""
@@ -330,7 +333,9 @@ async def test_asset_create_authz_should_not_infer_asset_manager_scope() -> None
 
 
 @pytest.mark.asyncio
-async def test_asset_collection_read_authz_should_merge_owner_party_scope_and_subject_scope() -> None:
+async def test_asset_collection_read_authz_should_merge_owner_party_scope_and_subject_scope() -> (
+    None
+):
     """Collection reads preserve an explicit Party owner scope over subject hints."""
     from src.api.v1.assets import assets as module
 
@@ -367,7 +372,9 @@ async def test_asset_collection_read_authz_should_merge_owner_party_scope_and_su
 
 
 @pytest.mark.asyncio
-async def test_asset_collection_read_authz_should_inject_subject_scope_without_owner_filter() -> None:
+async def test_asset_collection_read_authz_should_inject_subject_scope_without_owner_filter() -> (
+    None
+):
     """Collection reads without a filter still use the authenticated subject scope."""
     from src.api.v1.assets import assets as module
 
@@ -403,6 +410,7 @@ async def test_asset_collection_read_authz_should_inject_subject_scope_without_o
 
     _args, kwargs = mock_authz_service.check_access.await_args
     assert kwargs["resource"]["party_id"] == "subject-owner"
+
 
 @pytest.mark.asyncio
 async def test_create_asset_should_backfill_owner_party_from_authz_context() -> None:

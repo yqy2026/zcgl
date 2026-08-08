@@ -38,7 +38,9 @@ def test_upgrade_should_preserve_existing_english_status_values(
 
     monkeypatch.setattr(module.op, "alter_column", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(module.op, "drop_constraint", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(module.op, "create_unique_constraint", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        module.op, "create_unique_constraint", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(module.op, "add_column", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(module.op, "drop_index", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(module.op, "create_index", lambda *_args, **_kwargs: None)

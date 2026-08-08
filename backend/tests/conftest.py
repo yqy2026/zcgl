@@ -152,7 +152,16 @@ def _ensure_baseline_enum_data(database_url: str) -> None:
         ),
         "usage_status": (
             "使用状态",
-            ["出租", "闲置", "自用", "在用", "空置", "公房（出租）", "公房（闲置）", "其它"],
+            [
+                "出租",
+                "闲置",
+                "自用",
+                "在用",
+                "空置",
+                "公房（出租）",
+                "公房（闲置）",
+                "其它",
+            ],
         ),
         "data_status": ("数据状态", ["正常", "冻结", "已删除", "已归档"]),
     }
@@ -163,9 +172,7 @@ def _ensure_baseline_enum_data(database_url: str) -> None:
     try:
         for code, (name, values) in enum_defs.items():
             enum_type = (
-                session.query(EnumFieldType)
-                .filter(EnumFieldType.code == code)
-                .first()
+                session.query(EnumFieldType).filter(EnumFieldType.code == code).first()
             )
             if enum_type is None:
                 enum_type = EnumFieldType(
@@ -280,9 +287,7 @@ def _is_valid_encryption_key(raw_key: str | None) -> bool:
 
 if not _is_valid_encryption_key(os.getenv("DATA_ENCRYPTION_KEY")):
     # 设置测试数据加密密钥（base64 的 32-byte key + 版本号）
-    os.environ["DATA_ENCRYPTION_KEY"] = (
-        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=:1"
-    )
+    os.environ["DATA_ENCRYPTION_KEY"] = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=:1"
 
 DEFAULT_TEST_DATA_ENCRYPTION_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=:1"
 
@@ -424,7 +429,9 @@ def setup_test_database():
                 if detail_text:
                     print(f"[!] Migration warnings:\n{detail_text}")
                 else:
-                    print("[!] Migration warnings: subprocess returned non-zero exit code")
+                    print(
+                        "[!] Migration warnings: subprocess returned non-zero exit code"
+                    )
 
                 _recreate_test_schema_from_models(database_url)
                 print("[OK] Database schema recreated from models (fallback)")

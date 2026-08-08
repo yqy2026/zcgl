@@ -20,11 +20,13 @@ def _extract_make_target(makefile_text: str, target_name: str) -> str:
     return "\n".join(collected)
 
 
-def test_backend_import_target_should_resolve_secret_key_without_external_injection() -> None:
+def test_backend_import_target_should_resolve_secret_key_without_external_injection() -> (
+    None
+):
     repo_root = Path(__file__).resolve().parents[4]
     makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
     backend_import_block = _extract_make_target(makefile_text, "backend-import")
 
     assert 'RESOLVED_SECRET_KEY="$${SECRET_KEY:-}"' in backend_import_block
-    assert "SECRET_KEY=\"$$RESOLVED_SECRET_KEY\"" in backend_import_block
+    assert 'SECRET_KEY="$$RESOLVED_SECRET_KEY"' in backend_import_block
     assert "BACKEND_IMPORT_FALLBACK_SECRET_KEY" in backend_import_block

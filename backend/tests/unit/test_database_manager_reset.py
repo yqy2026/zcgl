@@ -52,7 +52,9 @@ async def test_init_db_should_not_call_create_tables(monkeypatch):
     mock_status = {"healthy": True}
 
     monkeypatch.setattr(database_module, "create_tables", mock_create_tables)
-    monkeypatch.setattr(database_module, "get_database_status", AsyncMock(return_value=mock_status))
+    monkeypatch.setattr(
+        database_module, "get_database_status", AsyncMock(return_value=mock_status)
+    )
 
     await database_module.init_db()
 
@@ -97,7 +99,9 @@ async def test_get_async_db_should_not_log_critical_for_business_error(monkeypat
 
 
 @pytest.mark.asyncio
-async def test_async_session_scope_should_not_log_critical_for_business_error(monkeypatch):
+async def test_async_session_scope_should_not_log_critical_for_business_error(
+    monkeypatch,
+):
     mock_session = MagicMock()
     mock_session.rollback = AsyncMock()
     _install_session_factory(monkeypatch, mock_session)
@@ -114,7 +118,9 @@ async def test_async_session_scope_should_not_log_critical_for_business_error(mo
 
 
 @pytest.mark.asyncio
-async def test_async_session_scope_should_log_critical_for_unexpected_error(monkeypatch):
+async def test_async_session_scope_should_log_critical_for_unexpected_error(
+    monkeypatch,
+):
     mock_session = MagicMock()
     mock_session.rollback = AsyncMock()
     _install_session_factory(monkeypatch, mock_session)

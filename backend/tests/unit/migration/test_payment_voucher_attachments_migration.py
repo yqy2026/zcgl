@@ -50,9 +50,7 @@ def test_attachment_migration_creates_generic_table(
 
     assert create_calls[0]["table"] == "attachments"
     column_names = {
-        column.name
-        for column in create_calls[0]["columns"]
-        if hasattr(column, "name")
+        column.name for column in create_calls[0]["columns"] if hasattr(column, "name")
     }
     assert {
         "id",

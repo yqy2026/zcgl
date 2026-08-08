@@ -211,7 +211,9 @@ async def test_require_data_scope_context_should_allow_admin_without_header() ->
     assert result.source == "auto"
 
 
-async def test_require_data_scope_context_should_ignore_legacy_header_and_keep_auto_scope() -> None:
+async def test_require_data_scope_context_should_ignore_legacy_header_and_keep_auto_scope() -> (
+    None
+):
     checker = require_data_scope_context()
     request = _build_request(
         method="GET",

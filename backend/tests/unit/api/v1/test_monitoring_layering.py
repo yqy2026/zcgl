@@ -42,7 +42,9 @@ def test_monitoring_create_authz_context_should_use_unscoped_sentinel() -> None:
     from src.api.v1.system import monitoring as module
 
     expected_create_sentinel = "__unscoped__:system_monitoring:create"
-    assert module._SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID == expected_create_sentinel
+    assert (
+        module._SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID == expected_create_sentinel
+    )
     assert module._SYSTEM_MONITORING_CREATE_RESOURCE_CONTEXT == {
         "party_id": expected_create_sentinel,
         "owner_party_id": expected_create_sentinel,
@@ -50,7 +52,9 @@ def test_monitoring_create_authz_context_should_use_unscoped_sentinel() -> None:
     }
 
     expected_update_sentinel = "__unscoped__:system_monitoring:update"
-    assert module._SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID == expected_update_sentinel
+    assert (
+        module._SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID == expected_update_sentinel
+    )
     assert module._SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT == {
         "party_id": expected_update_sentinel,
         "owner_party_id": expected_update_sentinel,

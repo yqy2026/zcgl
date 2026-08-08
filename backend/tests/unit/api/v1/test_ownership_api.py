@@ -80,9 +80,7 @@ class TestGetOwnershipDropdownOptions:
             }
         ]
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.get_ownership_dropdown_options = AsyncMock(
                 return_value=service_data
             )
@@ -102,9 +100,7 @@ class TestGetOwnershipDropdownOptions:
     ):
         from src.api.v1.assets.ownership import get_ownership_dropdown_options
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.get_ownership_dropdown_options = AsyncMock(
                 side_effect=Exception("db error")
             )
@@ -129,9 +125,7 @@ class TestCreateOwnership:
         obj = _make_ownership()
         payload = OwnershipCreate(name="New Ownership", short_name="New")
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.create_ownership = AsyncMock(return_value=obj)
 
             result = await create_ownership(
@@ -150,9 +144,7 @@ class TestCreateOwnership:
 
         payload = OwnershipCreate(name="Existing", short_name="Ex")
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.create_ownership = AsyncMock(
                 side_effect=DuplicateResourceError("权属方", "name", "Existing")
             )
@@ -177,9 +169,7 @@ class TestUpdateOwnership:
         obj = _make_ownership(name="Updated Name")
         payload = OwnershipUpdate(name="Updated Name")
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.update_ownership_by_id = AsyncMock(return_value=obj)
 
             result = await update_ownership(
@@ -198,9 +188,7 @@ class TestUpdateOwnership:
 
         payload = OwnershipUpdate(name="Missing")
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.update_ownership_by_id = AsyncMock(
                 side_effect=ResourceNotFoundError("权属方", "missing")
             )
@@ -224,9 +212,7 @@ class TestDeleteOwnership:
 
         obj = _make_ownership()
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.get_asset_count = AsyncMock(return_value=2)
             mock_service.delete_ownership = AsyncMock(return_value=obj)
 
@@ -244,9 +230,7 @@ class TestDeleteOwnership:
     ):
         from src.api.v1.assets.ownership import delete_ownership
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.get_asset_count = AsyncMock(return_value=3)
             mock_service.delete_ownership = AsyncMock(
                 side_effect=OperationNotAllowedError(
@@ -273,9 +257,7 @@ class TestGetOwnershipsAndSearch:
 
         items = [_make_ownership("ownership-id-1"), _make_ownership("ownership-id-2")]
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.search_ownerships = AsyncMock(
                 return_value={
                     "items": items,
@@ -309,9 +291,7 @@ class TestGetOwnershipsAndSearch:
         items = [_make_ownership("ownership-id-1")]
         search_params = OwnershipSearchRequest(keyword="Test", page=1, page_size=10)
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.search_ownerships = AsyncMock(
                 return_value={
                     "items": items,
@@ -342,9 +322,7 @@ class TestStatisticsAndToggle:
 
         recent = [_make_ownership("ownership-id-1")]
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.get_statistics = AsyncMock(
                 return_value={
                     "total_count": 10,
@@ -370,9 +348,7 @@ class TestStatisticsAndToggle:
         obj = _make_ownership()
         obj.is_active = False
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.toggle_status = AsyncMock(return_value=obj)
 
             result = await toggle_ownership_status(
@@ -403,12 +379,13 @@ class TestFinancialSummary:
             contract_summary=ContractSummary(total_contracts=5, active_contracts=3),
         )
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service, patch(
-            "src.services.asset.ownership_financial_service.OwnershipFinancialService.get_financial_summary",
-            new_callable=AsyncMock,
-        ) as mock_get_financial:
+        with (
+            patch("src.api.v1.assets.ownership.ownership_service") as mock_service,
+            patch(
+                "src.services.asset.ownership_financial_service.OwnershipFinancialService.get_financial_summary",
+                new_callable=AsyncMock,
+            ) as mock_get_financial,
+        ):
             mock_service.get_ownership = AsyncMock(return_value=obj)
             mock_get_financial.return_value = financial_result
 
@@ -427,9 +404,7 @@ class TestFinancialSummary:
     ):
         from src.api.v1.assets.ownership import get_ownership_financial_summary
 
-        with patch(
-            "src.api.v1.assets.ownership.ownership_service"
-        ) as mock_service:
+        with patch("src.api.v1.assets.ownership.ownership_service") as mock_service:
             mock_service.get_ownership = AsyncMock(return_value=None)
 
             with pytest.raises(BaseBusinessError) as exc_info:

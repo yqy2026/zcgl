@@ -191,7 +191,9 @@ def test_organization_party_scope_batch_rejects_state_drift_without_partial_writ
     assert first.represented_party_id == "organization-batch-old-a"
 
 
-def test_organization_party_scope_batch_rejects_overlapping_subtrees(client, db_session) -> None:
+def test_organization_party_scope_batch_rejects_overlapping_subtrees(
+    client, db_session
+) -> None:
     """A batch cannot analyze a parent and descendant against separate baselines."""
     first, _, descendant, next_party = _add_batch_fixture(db_session)
 

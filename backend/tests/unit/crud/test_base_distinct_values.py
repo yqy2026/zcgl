@@ -396,9 +396,7 @@ class TestCacheKeyStability:
             "get_multi",
             skip=0,
             limit=20,
-            party_filter=role_crud._serialize_party_filter(
-                relation_aware_empty_filter
-            ),
+            party_filter=role_crud._serialize_party_filter(relation_aware_empty_filter),
         )
 
         assert legacy_key != relation_aware_empty_key

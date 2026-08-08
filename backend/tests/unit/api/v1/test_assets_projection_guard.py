@@ -113,7 +113,9 @@ async def test_get_assets_without_relations_keeps_contract_projection_empty(
     assert item["lease_contract_number"] is None
     assert item["contract_start_date"] is None
     assert item["contract_end_date"] is None
-    assert not any("Asset.active_contract accessed" in record.message for record in caplog.records)
+    assert not any(
+        "Asset.active_contract accessed" in record.message for record in caplog.records
+    )
 
 
 @pytest.mark.asyncio

@@ -69,7 +69,9 @@ class TestAuthFailureLogging:
     async def test_log_auth_failure_basic(self):
         """Test logging basic auth failure"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "192.168.1.1"
@@ -87,13 +89,17 @@ class TestAuthFailureLogging:
     async def test_log_auth_failure_without_username(self):
         """Test logging auth failure without username"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "192.168.1.1"
             mock_db_log.return_value = mock_event
 
-            result = await logger.log_auth_failure("192.168.1.1", reason="account_locked")
+            result = await logger.log_auth_failure(
+                "192.168.1.1", reason="account_locked"
+            )
 
             # Should still log even without username
             assert result is not None
@@ -101,7 +107,9 @@ class TestAuthFailureLogging:
     async def test_log_auth_failure_with_ipv6(self):
         """Test logging auth failure with IPv6 address"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "::ffff:192.168.1.1"
@@ -120,7 +128,9 @@ class TestPermissionDeniedLogging:
     async def test_log_permission_denied(self):
         """Test logging permission denied event"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "permission_denied"
             mock_event.ip_address = "192.168.1.1"
@@ -138,7 +148,9 @@ class TestPermissionDeniedLogging:
     async def test_log_permission_denied_with_details(self):
         """Test logging permission denied with additional details"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "permission_denied"
             mock_db_log.return_value = mock_event
@@ -157,12 +169,16 @@ class TestRateLimitExceededLogging:
     async def test_log_rate_limit_exceeded(self):
         """Test logging rate limit exceeded"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "rate_limit_exceeded"
             mock_db_log.return_value = mock_event
 
-            result = await logger.log_rate_limit_exceeded("192.168.1.1", "/api/v1/assets")
+            result = await logger.log_rate_limit_exceeded(
+                "192.168.1.1", "/api/v1/assets"
+            )
 
             assert result is not None
             assert result.event_type == "rate_limit_exceeded"
@@ -171,7 +187,10 @@ class TestRateLimitExceededLogging:
 class TestThresholdChecking:
     """Test threshold-based alerting"""
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_should_alert_below_threshold(self, mock_sessionlocal):
         """Test should not alert when below threshold"""
         setup_mock_db_counts(mock_sessionlocal, [3])
@@ -181,7 +200,10 @@ class TestThresholdChecking:
 
         assert should_alert is False
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_should_alert_at_threshold(self, mock_sessionlocal):
         """Test should alert when at threshold"""
         setup_mock_db_counts(mock_sessionlocal, [5])
@@ -191,7 +213,10 @@ class TestThresholdChecking:
 
         assert should_alert is True
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_should_alert_above_threshold(self, mock_sessionlocal):
         """Test should alert when above threshold"""
         setup_mock_db_counts(mock_sessionlocal, [10])
@@ -201,7 +226,10 @@ class TestThresholdChecking:
 
         assert should_alert is True
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_should_alert_custom_threshold(self, mock_sessionlocal):
         """Test should alert with custom threshold"""
         setup_mock_db_counts(mock_sessionlocal, [8])
@@ -211,7 +239,10 @@ class TestThresholdChecking:
 
         assert should_alert is False
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_should_alert_zero_count(self, mock_sessionlocal):
         """Test should not alert when count is zero"""
         setup_mock_db_counts(mock_sessionlocal, [0])
@@ -225,27 +256,40 @@ class TestThresholdChecking:
 class TestEventCounting:
     """Test event counting functionality"""
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_get_event_count(self, mock_sessionlocal):
         """Test getting event count"""
         setup_mock_db_counts(mock_sessionlocal, [7])
 
         logger = SecurityEventLogger()
-        count = await logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
+        count = await logger.get_event_count(
+            "192.168.1.1", SecurityEventType.AUTH_FAILURE
+        )
 
         assert count == 7
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_get_event_count_zero(self, mock_sessionlocal):
         """Test getting event count when no events"""
         setup_mock_db_counts(mock_sessionlocal, [0])
 
         logger = SecurityEventLogger()
-        count = await logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
+        count = await logger.get_event_count(
+            "192.168.1.1", SecurityEventType.AUTH_FAILURE
+        )
 
         assert count == 0
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_get_event_count_different_types(self, mock_sessionlocal):
         """Test counting different event types"""
         setup_mock_db_counts(mock_sessionlocal, [5, 5])
@@ -253,7 +297,9 @@ class TestEventCounting:
         logger = SecurityEventLogger()
 
         # Count auth failures
-        count1 = await logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
+        count1 = await logger.get_event_count(
+            "192.168.1.1", SecurityEventType.AUTH_FAILURE
+        )
         assert count1 == 5
 
         # Count permission denied events
@@ -269,7 +315,9 @@ class TestDatabaseStorage:
     async def test_database_storage_on_log(self):
         """Test events are stored in database"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_failure"
             mock_event.ip_address = "192.168.1.1"
@@ -291,7 +339,9 @@ class TestAllEventTypes:
     async def test_log_auth_success(self):
         """Test logging auth success"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "auth_success"
             mock_db_log.return_value = mock_event
@@ -304,7 +354,9 @@ class TestAllEventTypes:
     async def test_log_suspicious_activity(self):
         """Test logging suspicious activity"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "suspicious_activity"
             mock_db_log.return_value = mock_event
@@ -318,7 +370,9 @@ class TestAllEventTypes:
     async def test_log_account_locked(self):
         """Test logging account locked"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.event_type = "account_locked"
             mock_db_log.return_value = mock_event
@@ -353,17 +407,25 @@ class TestSeverityLevels:
 class TestErrorHandling:
     """Test error handling"""
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock, side_effect=Exception("DB failure"))
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+        side_effect=Exception("DB failure"),
+    )
     async def test_event_count_db_failure_returns_zero(self, mock_sessionlocal):
         """Test graceful handling when database fails"""
         logger = SecurityEventLogger()
-        count = await logger.get_event_count("192.168.1.1", SecurityEventType.AUTH_FAILURE)
+        count = await logger.get_event_count(
+            "192.168.1.1", SecurityEventType.AUTH_FAILURE
+        )
         assert count == 0
 
     async def test_invalid_ip_address(self):
         """Test handling of invalid IP address"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -375,14 +437,19 @@ class TestErrorHandling:
 class TestIntegrationScenarios:
     """Test integration scenarios"""
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_multiple_auth_failures_trigger_alert(self, mock_sessionlocal):
         """Test multiple auth failures trigger alert"""
         setup_mock_db_counts(mock_sessionlocal, [5])
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -395,14 +462,19 @@ class TestIntegrationScenarios:
 
             assert should_alert is True
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_different_ips_separate_tracking(self, mock_sessionlocal):
         """Test different IPs are tracked separately"""
         setup_mock_db_counts(mock_sessionlocal, [5, 2])
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -418,14 +490,19 @@ class TestIntegrationScenarios:
 
             assert await logger.should_alert("192.168.1.2") is False
 
-    @patch("src.security.audit_logger.SecurityEventLogger._count_events_in_window", new_callable=AsyncMock)
+    @patch(
+        "src.security.audit_logger.SecurityEventLogger._count_events_in_window",
+        new_callable=AsyncMock,
+    )
     async def test_mixed_event_types_separate_counts(self, mock_sessionlocal):
         """Test mixed event types are counted separately"""
         setup_mock_db_counts(mock_sessionlocal, [3, 3])
 
         logger = SecurityEventLogger(alert_threshold=5)
 
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_db_log.return_value = mock_event
 
@@ -490,7 +567,9 @@ class TestMethodSignatures:
     async def test_methods_return_security_event(self):
         """Test methods return SecurityEvent object"""
         logger = SecurityEventLogger()
-        with patch.object(logger, "_log_to_database", new_callable=AsyncMock) as mock_db_log:
+        with patch.object(
+            logger, "_log_to_database", new_callable=AsyncMock
+        ) as mock_db_log:
             mock_event = Mock(spec=SecurityEvent)
             mock_event.id = "test-id"
             mock_event.event_type = "auth_failure"

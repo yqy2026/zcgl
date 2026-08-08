@@ -45,46 +45,46 @@ def _result_with_all(values):
 
 class TestAsyncEnumValidationService:
     async def test_get_valid_values_from_cache(self, enum_service):
-        enum_service._cache['ownership_status'] = ['active', 'inactive']
-        enum_service._cache_timestamps['ownership_status'] = time.time()
+        enum_service._cache["ownership_status"] = ["active", "inactive"]
+        enum_service._cache_timestamps["ownership_status"] = time.time()
 
-        result = await enum_service.get_valid_values('ownership_status')
+        result = await enum_service.get_valid_values("ownership_status")
 
-        assert result == ['active', 'inactive']
+        assert result == ["active", "inactive"]
         enum_service.db.execute.assert_not_called()
 
     async def test_get_valid_values_from_database(self, mock_db, enum_service):
-        enum_type = SimpleNamespace(id='enum-1', status='active')
+        enum_type = SimpleNamespace(id="enum-1", status="active")
         mock_db.execute.side_effect = [
             _result_with_first(enum_type),
-            _result_with_all(['value1', 'value2']),
+            _result_with_all(["value1", "value2"]),
         ]
 
-        result = await enum_service.get_valid_values('ownership_status')
+        result = await enum_service.get_valid_values("ownership_status")
 
-        assert result == ['value1', 'value2']
-        assert enum_service._cache['ownership_status'] == ['value1', 'value2']
+        assert result == ["value1", "value2"]
+        assert enum_service._cache["ownership_status"] == ["value1", "value2"]
 
     async def test_get_valid_values_enum_type_missing(self, mock_db, enum_service):
         mock_db.execute.return_value = _result_with_first(None)
 
-        result = await enum_service.get_valid_values('missing')
+        result = await enum_service.get_valid_values("missing")
 
         assert result == []
 
     async def test_validate_value_allows_empty(self, enum_service):
         is_valid, error = await enum_service.validate_value(
-            'ownership_status', '', allow_empty=True
+            "ownership_status", "", allow_empty=True
         )
 
         assert is_valid is True
         assert error is None
 
     async def test_validate_value_invalid_value(self, enum_service):
-        enum_service.get_valid_values = AsyncMock(return_value=['allowed'])
+        enum_service.get_valid_values = AsyncMock(return_value=["allowed"])
 
         is_valid, error = await enum_service.validate_value(
-            'ownership_status', 'invalid', allow_empty=False
+            "ownership_status", "invalid", allow_empty=False
         )
 
         assert is_valid is False
@@ -92,21 +92,28 @@ class TestAsyncEnumValidationService:
 
     async def test_validate_asset_data_collects_errors(self, enum_service):
         enum_service.validate_value = AsyncMock(
-            side_effect=[(False, 'bad'), (True, None), (True, None), (True, None), (True, None), (True, None), (True, None)]
+            side_effect=[
+                (False, "bad"),
+                (True, None),
+                (True, None),
+                (True, None),
+                (True, None),
+                (True, None),
+                (True, None),
+            ]
         )
 
         is_valid, errors = await enum_service.validate_asset_data(
             {
-                'ownership_status': 'invalid',
-                'usage_status': 'ok',
-                'property_nature': 'ok',
-                'revenue_mode': 'ok',
-                'operation_status': 'ok',
-                'tenant_type': 'ok',
-                'data_status': 'ok',
+                "ownership_status": "invalid",
+                "usage_status": "ok",
+                "property_nature": "ok",
+                "revenue_mode": "ok",
+                "operation_status": "ok",
+                "tenant_type": "ok",
+                "data_status": "ok",
             }
         )
 
         assert is_valid is False
-        assert errors == ['ownership_status: bad']
-
+        assert errors == ["ownership_status: bad"]

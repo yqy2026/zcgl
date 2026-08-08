@@ -2,7 +2,6 @@
 Supplemental Task Service Integration Tests (Async)
 """
 
-
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine

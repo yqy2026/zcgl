@@ -16,7 +16,9 @@ pytestmark = pytest.mark.api
 
 
 @pytest.mark.asyncio
-async def test_preview_endpoint_passes_actor_and_proposal_to_sensitive_service() -> None:
+async def test_preview_endpoint_passes_actor_and_proposal_to_sensitive_service() -> (
+    None
+):
     from src.api.v1.auth import organization as module
 
     preview = OrganizationPartyScopePreviewResponse(

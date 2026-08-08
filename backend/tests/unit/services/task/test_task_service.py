@@ -208,9 +208,7 @@ class TestUpdateTask:
             assert result is not None
             mock_db.commit.assert_awaited()
 
-    async def test_update_task_completed_fails(
-        self, task_service, mock_db, mock_task
-    ):
+    async def test_update_task_completed_fails(self, task_service, mock_db, mock_task):
         mock_task.status = TaskStatus.COMPLETED
         obj_in = TaskUpdate(title="新标题")
 
@@ -396,7 +394,9 @@ class TestCleanupOldTasks:
         old_task1 = MagicMock(spec=AsyncTask)
         old_task2 = MagicMock(spec=AsyncTask)
 
-        mock_db.execute = AsyncMock(return_value=_result_with_scalars([old_task1, old_task2]))
+        mock_db.execute = AsyncMock(
+            return_value=_result_with_scalars([old_task1, old_task2])
+        )
 
         result = await task_service.cleanup_old_tasks(mock_db, days=30, dry_run=True)
 

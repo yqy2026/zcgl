@@ -19,4 +19,3 @@ def test_asset_review_status_values_should_match_frozen_codes() -> None:
         "approved",
         "reversed",
     }
-

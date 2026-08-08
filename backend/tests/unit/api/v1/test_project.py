@@ -186,7 +186,9 @@ class TestCreateProject:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_create_project_duplicate_code(self, client, admin_user_headers, monkeypatch):
+    def test_create_project_duplicate_code(
+        self, client, admin_user_headers, monkeypatch
+    ):
         """测试创建重复代码的项目"""
         from src.api.v1.assets import project as project_module
 
@@ -485,7 +487,6 @@ class TestSearchProjects:
 
         assert response.status_code == status.HTTP_200_OK
         assert captured["owner_party_id"] is None
-
 
     def test_list_projects_with_city_filter(
         self, client, admin_user_headers, project_data

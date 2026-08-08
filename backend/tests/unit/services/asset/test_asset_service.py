@@ -278,9 +278,7 @@ class TestTenantFilterResolution:
             "src.services.party_scope.party_scope_resolver.resolve",
             new=AsyncMock(return_value=resolved_scope),
         ):
-            party_filter = await service._resolve_party_filter(
-                current_user_id="user-1"
-            )
+            party_filter = await service._resolve_party_filter(current_user_id="user-1")
 
         assert party_filter is not None
         assert party_filter.party_ids == ["party-1", "party-2"]
@@ -298,9 +296,7 @@ class TestTenantFilterResolution:
             "src.services.party_scope.party_scope_resolver.resolve",
             new=AsyncMock(return_value=resolved_scope),
         ):
-            party_filter = await service._resolve_party_filter(
-                current_user_id="user-1"
-            )
+            party_filter = await service._resolve_party_filter(current_user_id="user-1")
 
         assert party_filter is not None
         assert party_filter.party_ids == ["party-1"]
@@ -320,9 +316,7 @@ class TestTenantFilterResolution:
             "src.services.party_scope.party_scope_resolver.resolve",
             new=AsyncMock(return_value=resolved_scope),
         ):
-            party_filter = await service._resolve_party_filter(
-                current_user_id="user-1"
-            )
+            party_filter = await service._resolve_party_filter(current_user_id="user-1")
 
         assert party_filter is not None
         assert party_filter.party_ids == ["party-1"]
@@ -333,9 +327,7 @@ class TestTenantFilterResolution:
             "src.services.party_scope.party_scope_resolver.resolve",
             new=AsyncMock(side_effect=RuntimeError("boom")),
         ):
-            party_filter = await service._resolve_party_filter(
-                current_user_id="user-1"
-            )
+            party_filter = await service._resolve_party_filter(current_user_id="user-1")
 
         assert party_filter is not None
         assert party_filter.party_ids == []
@@ -391,7 +383,11 @@ class TestGetAsset:
 
     async def test_get_asset_success(self, service, mock_asset):
         """测试成功获取资产"""
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=mock_asset):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
             result = await service.get_asset(TEST_ASSET_ID)
 
             assert result.id == TEST_ASSET_ID
@@ -399,7 +395,11 @@ class TestGetAsset:
 
     async def test_get_asset_not_found(self, service):
         """测试资产不存在"""
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=None):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
             with pytest.raises(ResourceNotFoundError) as excinfo:
                 await service.get_asset(TEST_ASSET_ID)
 
@@ -409,7 +409,11 @@ class TestGetAsset:
     async def test_get_asset_deleted(self, service, mock_asset):
         """测试资产已删除"""
         mock_asset.data_status = "已删除"
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=mock_asset):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
             with pytest.raises(ResourceNotFoundError):
                 await service.get_asset(TEST_ASSET_ID)
 
@@ -470,7 +474,9 @@ class TestGetAssetHistoryRecords:
     async def test_get_asset_history_records_success(self, service) -> None:
         history_records = [MagicMock(id="history-1")]
 
-        with patch.object(service, "get_asset", new_callable=AsyncMock) as mock_get_asset:
+        with patch.object(
+            service, "get_asset", new_callable=AsyncMock
+        ) as mock_get_asset:
             with patch(
                 "src.services.asset.asset_service.history_crud.get_multi_with_count_async",
                 new_callable=AsyncMock,
@@ -498,7 +504,9 @@ class TestGetAssetHistoryRecords:
     ) -> None:
         update_record = MagicMock(operation_type="update", id="history-update")
 
-        with patch.object(service, "get_asset", new_callable=AsyncMock) as mock_get_asset:
+        with patch.object(
+            service, "get_asset", new_callable=AsyncMock
+        ) as mock_get_asset:
             with patch(
                 "src.services.asset.asset_service.history_crud.get_multi_with_count_async",
                 new_callable=AsyncMock,
@@ -597,11 +605,15 @@ class TestCreateAsset:
             mock_validation_service.validate_asset_data.return_value = (True, [])
             mock_validation.return_value = mock_validation_service
 
-            with patch("src.crud.asset.asset_crud.get_by_name_async", new_callable=AsyncMock, return_value=None):
+            with patch(
+                "src.crud.asset.asset_crud.get_by_name_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
                 with patch(
                     "src.crud.asset.asset_crud.create_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ) as mock_create:
                     result = await service.create_asset(asset_in)
 
@@ -629,7 +641,9 @@ class TestCreateAsset:
             assert excinfo.value.status_code == 422
             assert "枚举值验证失败" in str(excinfo.value.message)
 
-    async def test_create_asset_duplicate_name(self, service, asset_create_dict, mock_asset):
+    async def test_create_asset_duplicate_name(
+        self, service, asset_create_dict, mock_asset
+    ):
         """测试资产名称重复"""
         asset_in = AssetCreate(**asset_create_dict)
 
@@ -667,7 +681,11 @@ class TestCreateAsset:
             mock_validation_service.validate_asset_data.return_value = (True, [])
             mock_validation.return_value = mock_validation_service
 
-            with patch("src.crud.asset.asset_crud.get_by_name_async", new_callable=AsyncMock, return_value=None):
+            with patch(
+                "src.crud.asset.asset_crud.get_by_name_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
                 with pytest.raises(BaseBusinessError) as excinfo:
                     await service.create_asset(asset_in)
 
@@ -689,11 +707,15 @@ class TestCreateAsset:
             mock_validation_service.validate_asset_data.return_value = (True, [])
             mock_validation.return_value = mock_validation_service
 
-            with patch("src.crud.asset.asset_crud.get_by_name_async", new_callable=AsyncMock, return_value=None):
+            with patch(
+                "src.crud.asset.asset_crud.get_by_name_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
                 with patch(
                     "src.crud.asset.asset_crud.create_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ):
                     result = await service.create_asset(asset_in, current_user=user)
 
@@ -844,8 +866,8 @@ class TestUpdateAsset:
 
                 with patch(
                     "src.crud.asset.asset_crud.update_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ) as mock_update:
                     result = await service.update_asset(TEST_ASSET_ID, asset_in)
 
@@ -971,13 +993,12 @@ class TestUpdateAsset:
 
                 with patch(
                     "src.crud.asset.asset_crud.update_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ):
                     result = await service.update_asset(TEST_ASSET_ID, asset_in)
 
                     assert result == mock_asset
-
 
     async def test_update_asset_area_validation_fails(self, service, mock_asset):
         """测试更新时面积一致性验证失败"""
@@ -1022,8 +1043,8 @@ class TestUpdateAsset:
 
                 with patch(
                     "src.crud.asset.asset_crud.update_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ):
                     result = await service.update_asset(
                         TEST_ASSET_ID, asset_in, current_user=mock_user
@@ -1052,8 +1073,8 @@ class TestUpdateAsset:
 
                 with patch(
                     "src.crud.asset.asset_crud.update_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ) as mock_update:
                     result = await service.update_asset(TEST_ASSET_ID, asset_in)
 
@@ -1153,13 +1174,21 @@ class TestRestoreAsset:
     async def test_restore_asset_not_deleted(self, service, mock_asset):
         """测试恢复未删除资产"""
         mock_asset.data_status = "正常"
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=mock_asset):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
             with pytest.raises(OperationNotAllowedError):
                 await service.restore_asset(TEST_ASSET_ID)
 
     async def test_restore_asset_not_found(self, service):
         """测试恢复不存在资产"""
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=None):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
             with pytest.raises(ResourceNotFoundError):
                 await service.restore_asset(TEST_ASSET_ID)
 
@@ -1189,7 +1218,9 @@ class TestHardDeleteAsset:
                     "src.services.asset.asset_service.history_crud.remove_by_asset_id_async",
                     new_callable=AsyncMock,
                 ) as mock_remove:
-                    await service.hard_delete_asset(TEST_ASSET_ID, current_user=mock_user)
+                    await service.hard_delete_asset(
+                        TEST_ASSET_ID, current_user=mock_user
+                    )
 
                     mock_remove.assert_awaited_once_with(
                         db=service.db,
@@ -1207,13 +1238,21 @@ class TestHardDeleteAsset:
     async def test_hard_delete_asset_not_deleted(self, service, mock_asset):
         """测试彻底删除未删除资产"""
         mock_asset.data_status = "正常"
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=mock_asset):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
             with pytest.raises(OperationNotAllowedError):
                 await service.hard_delete_asset(TEST_ASSET_ID)
 
     async def test_hard_delete_asset_not_found(self, service):
         """测试彻底删除不存在资产"""
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=None):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
             with pytest.raises(ResourceNotFoundError):
                 await service.hard_delete_asset(TEST_ASSET_ID)
 
@@ -1264,11 +1303,15 @@ class TestEdgeCases:
             mock_validation_service.validate_asset_data.return_value = (True, [])
             mock_validation.return_value = mock_validation_service
 
-            with patch("src.crud.asset.asset_crud.get_by_name_async", new_callable=AsyncMock, return_value=None):
+            with patch(
+                "src.crud.asset.asset_crud.get_by_name_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
                 with patch(
                     "src.crud.asset.asset_crud.create_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ):
                     result = await service.create_asset(asset_in)
 
@@ -1294,8 +1337,8 @@ class TestEdgeCases:
 
                 with patch(
                     "src.crud.asset.asset_crud.update_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ):
                     # 模拟多次更新
                     for i in range(3):
@@ -1347,8 +1390,8 @@ class TestEdgeCases:
 
                 with patch(
                     "src.crud.asset.asset_crud.update_with_history_async",
-            new_callable=AsyncMock,
-            return_value=mock_asset,
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
                 ):
                     result = await service.update_asset(TEST_ASSET_ID, asset_in)
 

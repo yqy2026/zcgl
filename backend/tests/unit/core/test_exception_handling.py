@@ -124,7 +124,9 @@ class TestAuthzStaleHeaderContract:
 class TestAPIExceptionHandling:
     """测试API层异常处理"""
 
-    @patch("src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock)
+    @patch(
+        "src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock
+    )
     @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)
     def test_api_propagates_business_exceptions(
         self,
@@ -150,7 +152,9 @@ class TestAPIExceptionHandling:
         assert data["error"]["code"] == "VALIDATION_ERROR"
         assert data["error"]["message"] == "资产ID格式不正确"
 
-    @patch("src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock)
+    @patch(
+        "src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock
+    )
     @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)
     def test_api_general_exception_masked_as_internal_error(
         self, mock_is_admin, mock_get_asset, client

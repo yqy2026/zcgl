@@ -78,7 +78,9 @@ async def _ensure_organization_enum_data(db_session: AsyncSession) -> None:
         value_result = await db_session.execute(
             select(EnumFieldValue).where(EnumFieldValue.enum_type_id == enum_type.id)
         )
-        existing_values = {value_obj.value: value_obj for value_obj in value_result.scalars().all()}
+        existing_values = {
+            value_obj.value: value_obj for value_obj in value_result.scalars().all()
+        }
 
         for sort_order, value in enumerate(values, start=1):
             value_obj = existing_values.get(value)

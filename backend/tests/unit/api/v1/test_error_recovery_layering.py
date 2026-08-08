@@ -41,10 +41,12 @@ def test_error_recovery_endpoints_should_use_require_authz() -> None:
         assert re.search(pattern, module_source), pattern
 
 
-def test_error_recovery_test_endpoint_should_not_use_path_template_for_body_category() -> None:
+def test_error_recovery_test_endpoint_should_not_use_path_template_for_body_category() -> (
+    None
+):
     """/test 端点的 category 来自 body，不应继续使用 path template。"""
     module_source = _read_module_source()
-    assert 'async def _resolve_test_recovery_category_resource_id(' in module_source
+    assert "async def _resolve_test_recovery_category_resource_id(" in module_source
     assert 'resource_id="{category}"' not in re.search(
         r"async def test_error_recovery[\s\S]*?\)\s*->\s*dict\[str,\s*Any\]:",
         module_source,

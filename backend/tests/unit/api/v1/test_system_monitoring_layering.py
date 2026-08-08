@@ -57,7 +57,9 @@ def test_system_monitoring_create_authz_context_should_use_unscoped_sentinel() -
     }
 
 
-def test_system_monitoring_database_endpoints_module_should_import_authz_dependency() -> None:
+def test_system_monitoring_database_endpoints_module_should_import_authz_dependency() -> (
+    None
+):
     """system_monitoring/database_endpoints.py 应引入统一 ABAC 依赖。"""
     module_source = _read_database_endpoints_source()
     assert "AuthzContext" in module_source
@@ -78,13 +80,14 @@ def test_system_monitoring_database_endpoints_should_use_require_authz() -> None
         assert re.search(pattern, module_source), pattern
 
 
-def test_system_monitoring_database_write_authz_context_should_use_unscoped_sentinel() -> None:
+def test_system_monitoring_database_write_authz_context_should_use_unscoped_sentinel() -> (
+    None
+):
     from src.api.v1.system.system_monitoring import database_endpoints as module
 
     expected_update_sentinel = "__unscoped__:system_monitoring:update"
     assert (
-        module._SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID
-        == expected_update_sentinel
+        module._SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID == expected_update_sentinel
     )
     assert module._SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT == {
         "party_id": expected_update_sentinel,
@@ -94,8 +97,7 @@ def test_system_monitoring_database_write_authz_context_should_use_unscoped_sent
 
     expected_delete_sentinel = "__unscoped__:system_monitoring:delete"
     assert (
-        module._SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID
-        == expected_delete_sentinel
+        module._SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID == expected_delete_sentinel
     )
     assert module._SYSTEM_MONITORING_DELETE_RESOURCE_CONTEXT == {
         "party_id": expected_delete_sentinel,

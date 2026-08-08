@@ -60,7 +60,9 @@ def _build_existing_type(enum_code: str) -> SimpleNamespace:
     )
 
 
-def _build_existing_value(enum_code: str, value_config: dict[str, object]) -> SimpleNamespace:
+def _build_existing_value(
+    enum_code: str, value_config: dict[str, object]
+) -> SimpleNamespace:
     return SimpleNamespace(
         id=f"value-{enum_code}-{value_config['value']}",
         enum_type_id=f"type-{enum_code}",
@@ -135,9 +137,7 @@ async def test_init_enum_data_updates_existing_types_and_values(
         monkeypatch,
         get_type=lambda code: existing_types.get(code),
         get_values=lambda type_ids: [
-            value
-            for type_id in type_ids
-            for value in existing_values.get(type_id, [])
+            value for type_id in type_ids for value in existing_values.get(type_id, [])
         ],
     )
 
@@ -241,9 +241,7 @@ async def test_init_enum_data_uses_advisory_lock(
     await init_enum_data(mock_db, created_by="tester")
 
     execute_sqls = [
-        str(call.args[0])
-        for call in mock_db.execute.await_args_list
-        if call.args
+        str(call.args[0]) for call in mock_db.execute.await_args_list if call.args
     ]
     assert any("pg_advisory_lock" in sql for sql in execute_sqls)
     assert any("pg_advisory_unlock" in sql for sql in execute_sqls)

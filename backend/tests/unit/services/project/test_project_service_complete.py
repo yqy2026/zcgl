@@ -79,7 +79,9 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = await project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(
+                    mock_db, obj_in=project_data
+                )
                 assert result is created_project
 
     async def test_create_project_validates_dates(self, project_service, mock_db):
@@ -96,7 +98,9 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = await project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(
+                    mock_db, obj_in=project_data
+                )
                 assert result is created_project
 
     async def test_create_project_validates_budget(self, project_service, mock_db):
@@ -113,7 +117,9 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = await project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(
+                    mock_db, obj_in=project_data
+                )
                 assert result is created_project
 
     async def test_create_project_sets_default_status(self, project_service, mock_db):
@@ -131,7 +137,9 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = await project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(
+                    mock_db, obj_in=project_data
+                )
                 assert result.status == "planning"
 
     async def test_create_project_duplicate_code(self, project_service, mock_db):
@@ -219,7 +227,9 @@ class TestUpdateProject:
                 )
                 assert result is sample_project
 
-    async def test_update_project_budget(self, project_service, mock_db, sample_project):
+    async def test_update_project_budget(
+        self, project_service, mock_db, sample_project
+    ):
         """Test updating project budget"""
         update_data = ProjectUpdate(
             project_name="Updated Budget Project",
@@ -253,13 +263,17 @@ class TestUpdateProject:
 class TestDeleteProject:
     """Tests for project deletion"""
 
-    async def test_delete_project_success(self, project_service, mock_db, sample_project):
+    async def test_delete_project_success(
+        self, project_service, mock_db, sample_project
+    ):
         """Test successful project deletion"""
         with patch("src.crud.project.project_crud.get_asset_count", return_value=0):
             with patch(
                 "src.crud.project.project_crud.get", return_value=sample_project
             ):
-                with patch("src.crud.project.project_crud.remove", return_value=sample_project):
+                with patch(
+                    "src.crud.project.project_crud.remove", return_value=sample_project
+                ):
                     result = await project_service.delete_project(
                         db=mock_db, project_id="project-123"
                     )
@@ -274,11 +288,15 @@ class TestDeleteProject:
                 )
                 assert result is None
 
-    async def test_delete_project_with_assets(self, project_service, mock_db, sample_project):
+    async def test_delete_project_with_assets(
+        self, project_service, mock_db, sample_project
+    ):
         """Test deleting project that has associated assets"""
         with patch("src.crud.project.project_crud.get_asset_count", return_value=3):
             with pytest.raises(OperationNotAllowedError, match="项目包含.*资产"):
-                await project_service.delete_project(db=mock_db, project_id="project-123")
+                await project_service.delete_project(
+                    db=mock_db, project_id="project-123"
+                )
 
 
 # ============================================================================
@@ -434,7 +452,9 @@ class TestProjectErrorHandling:
                         project_name="Test Project",
                         project_code="PRJ-TEST01-202606-0001",
                     )
-                    await project_service.create_project(db=mock_db, obj_in=project_data)
+                    await project_service.create_project(
+                        db=mock_db, obj_in=project_data
+                    )
 
     async def test_handle_database_error_on_update(
         self, project_service, mock_db, sample_project

@@ -17,7 +17,9 @@ def _load_migration_module() -> ModuleType:
         / "versions"
         / "20260307_m2_contract_number_on_contracts.py"
     )
-    spec = spec_from_file_location("contract_number_on_contracts_migration", module_path)
+    spec = spec_from_file_location(
+        "contract_number_on_contracts_migration", module_path
+    )
     assert spec is not None
     assert spec.loader is not None
     module = module_from_spec(spec)
@@ -53,7 +55,9 @@ def test_upgrade_should_backfill_before_enforcing_not_null(
     monkeypatch.setattr(
         module.op,
         "execute",
-        lambda statement: execute_calls.append(str(getattr(statement, "text", statement))),
+        lambda statement: execute_calls.append(
+            str(getattr(statement, "text", statement))
+        ),
     )
     monkeypatch.setattr(
         module.op,

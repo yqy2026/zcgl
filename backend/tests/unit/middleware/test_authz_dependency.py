@@ -65,7 +65,9 @@ def _mapping_result(payload: dict[str, Any] | None) -> MagicMock:
 
 
 @pytest.mark.asyncio
-async def test_require_authz_ignores_untrusted_body_scope_and_prefers_trusted_context() -> None:
+async def test_require_authz_ignores_untrusted_body_scope_and_prefers_trusted_context() -> (
+    None
+):
     checker = require_authz(
         action="update",
         resource_type="asset",
@@ -221,7 +223,9 @@ async def test_load_organization_scope_context_includes_party_scope_fields() -> 
 
 
 @pytest.mark.asyncio
-async def test_load_organization_scope_context_fails_closed_when_party_missing() -> None:
+async def test_load_organization_scope_context_fails_closed_when_party_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="organization",
@@ -229,9 +233,7 @@ async def test_load_organization_scope_context_fails_closed_when_party_missing()
     )
     db = AsyncMock(spec=AsyncSession)
     db.execute = AsyncMock(
-        return_value=_mapping_result(
-            {"organization_id": "org-1", "party_id": None}
-        )
+        return_value=_mapping_result({"organization_id": "org-1", "party_id": None})
     )
 
     context = await checker._load_organization_scope_context(
@@ -247,7 +249,9 @@ async def test_load_organization_scope_context_fails_closed_when_party_missing()
 
 
 @pytest.mark.asyncio
-async def test_load_property_certificate_scope_context_includes_party_scope_fields() -> None:
+async def test_load_property_certificate_scope_context_includes_party_scope_fields() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="property_certificate",
@@ -278,7 +282,9 @@ async def test_load_property_certificate_scope_context_includes_party_scope_fiel
 
 
 @pytest.mark.asyncio
-async def test_load_property_certificate_scope_context_falls_back_to_unscoped_when_party_missing() -> None:
+async def test_load_property_certificate_scope_context_falls_back_to_unscoped_when_party_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="property_certificate",
@@ -306,7 +312,9 @@ async def test_load_property_certificate_scope_context_falls_back_to_unscoped_wh
     assert context["certificate_id"] == "cert-legacy"
     assert context["party_id"] == "__unscoped__:property_certificate:cert-legacy"
     assert context["owner_party_id"] == "__unscoped__:property_certificate:cert-legacy"
-    assert context["manager_party_id"] == "__unscoped__:property_certificate:cert-legacy"
+    assert (
+        context["manager_party_id"] == "__unscoped__:property_certificate:cert-legacy"
+    )
 
 
 @pytest.mark.asyncio
@@ -370,7 +378,9 @@ async def test_load_project_scope_context_uses_manager_party_directly() -> None:
 
 
 @pytest.mark.asyncio
-async def test_resolve_trusted_resource_context_loads_contract_scope_from_new_tables() -> None:
+async def test_resolve_trusted_resource_context_loads_contract_scope_from_new_tables() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="contract",
@@ -472,7 +482,9 @@ async def test_load_role_scope_context_uses_role_party_id_when_present() -> None
 
 
 @pytest.mark.asyncio
-async def test_load_role_scope_context_falls_back_to_unscoped_when_party_missing() -> None:
+async def test_load_role_scope_context_falls_back_to_unscoped_when_party_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="role",
@@ -502,7 +514,9 @@ async def test_load_role_scope_context_falls_back_to_unscoped_when_party_missing
 
 
 @pytest.mark.asyncio
-async def test_load_user_scope_context_uses_user_binding_party_id_when_present() -> None:
+async def test_load_user_scope_context_uses_user_binding_party_id_when_present() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="user",
@@ -536,7 +550,9 @@ async def test_load_user_scope_context_uses_user_binding_party_id_when_present()
 
 
 @pytest.mark.asyncio
-async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scope() -> None:
+async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scope() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="user",
@@ -567,7 +583,9 @@ async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scop
 
 
 @pytest.mark.asyncio
-async def test_load_task_scope_context_uses_task_user_party_scope_when_present() -> None:
+async def test_load_task_scope_context_uses_task_user_party_scope_when_present() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="task",
@@ -614,7 +632,9 @@ async def test_load_task_scope_context_uses_task_user_party_scope_when_present()
 
 
 @pytest.mark.asyncio
-async def test_load_task_scope_context_uses_unscoped_sentinel_when_task_user_missing() -> None:
+async def test_load_task_scope_context_uses_unscoped_sentinel_when_task_user_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="task",

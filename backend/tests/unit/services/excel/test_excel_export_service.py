@@ -1,4 +1,4 @@
-﻿"""
+"""
 Excel导出服务单元测试
 
 测试 ExcelExportService 的资产数据导出功能
@@ -26,6 +26,7 @@ def test_excel_export_service_module_avoids_datetime_utcnow() -> None:
     content = module_path.read_text(encoding="utf-8")
 
     assert "datetime.utcnow(" not in content
+
 
 # ============================================================================
 # Fixtures

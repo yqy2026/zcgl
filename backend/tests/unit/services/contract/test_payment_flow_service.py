@@ -791,7 +791,9 @@ async def test_correct_flow_replaces_active_flow_in_one_transaction(mock_db) -> 
         ) as mock_create,
         patch(
             "src.services.contract.payment_flow_service.contract_group_crud.replace_payment_allocations",
-            new=AsyncMock(return_value=[SimpleNamespace(allocation_id="allocation-new")]),
+            new=AsyncMock(
+                return_value=[SimpleNamespace(allocation_id="allocation-new")]
+            ),
         ),
         patch(
             "src.services.contract.payment_flow_service.contract_group_crud.sum_active_allocations_by_target",

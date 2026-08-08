@@ -83,7 +83,9 @@ class TestCRUDCustomFieldGetMultiWithFilters:
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
 
-            await crud.get_multi_with_filters_async(mock_db, filters={"field_type": "text"})
+            await crud.get_multi_with_filters_async(
+                mock_db, filters={"field_type": "text"}
+            )
 
         call_args = mock_build.call_args
         assert "field_type" in call_args.kwargs.get("filters", {})
@@ -93,7 +95,9 @@ class TestCRUDCustomFieldGetMultiWithFilters:
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
 
-            await crud.get_multi_with_filters_async(mock_db, filters={"is_required": True})
+            await crud.get_multi_with_filters_async(
+                mock_db, filters={"is_required": True}
+            )
 
         call_args = mock_build.call_args
         assert "is_required" in call_args.kwargs.get("filters", {})
@@ -103,7 +107,9 @@ class TestCRUDCustomFieldGetMultiWithFilters:
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
 
-            await crud.get_multi_with_filters_async(mock_db, filters={"is_active": True})
+            await crud.get_multi_with_filters_async(
+                mock_db, filters={"is_active": True}
+            )
 
         call_args = mock_build.call_args
         assert "is_active" in call_args.kwargs.get("filters", {})

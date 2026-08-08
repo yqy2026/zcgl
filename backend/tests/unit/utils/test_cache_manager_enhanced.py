@@ -52,9 +52,7 @@ class TestCacheManagerCore:
     def test_consume_is_atomic_and_one_shot(self, cache_manager):
         cache_manager.set("preview-token", {"organization_id": "org-1"})
 
-        assert cache_manager.consume("preview-token") == {
-            "organization_id": "org-1"
-        }
+        assert cache_manager.consume("preview-token") == {"organization_id": "org-1"}
         assert cache_manager.consume("preview-token") is None
 
     def test_clear_all(self, cache_manager):

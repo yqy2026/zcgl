@@ -155,8 +155,8 @@ class TestAreaService:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -174,7 +174,9 @@ class TestAreaService:
 
     @patch("src.services.analytics.area_service.asset_crud")
     @pytest.mark.asyncio
-    async def test_calculate_summary_in_memory_partial_data(self, mock_crud, area_service):
+    async def test_calculate_summary_in_memory_partial_data(
+        self, mock_crud, area_service
+    ):
         """测试内存计算处理部分数据缺失的情况"""
         # Mock 部分字段缺失的资产数据
         mock_assets = [
@@ -195,8 +197,8 @@ class TestAreaService:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -225,8 +227,8 @@ class TestAreaService:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -262,8 +264,8 @@ class TestAreaService:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 

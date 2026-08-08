@@ -19,7 +19,8 @@ class AuthFixture:
         token_data = {
             "sub": "testuser",
             "user_id": user_id,
-            "exp": datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=expires_hours),
+            "exp": datetime.now(UTC).replace(tzinfo=None)
+            + timedelta(hours=expires_hours),
         }
         return jwt.encode(token_data, secret, algorithm="HS256")
 

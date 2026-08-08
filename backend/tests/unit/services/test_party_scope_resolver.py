@@ -61,7 +61,9 @@ async def test_builtin_admin_is_unrestricted_but_perm_admin_is_not() -> None:
 
 
 @pytest.mark.asyncio
-async def test_current_explicit_bindings_override_organization_and_keep_both_views() -> None:
+async def test_current_explicit_bindings_override_organization_and_keep_both_views() -> (
+    None
+):
     repository = _repository()
     repository.load_bindings.return_value = [
         {

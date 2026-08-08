@@ -27,7 +27,9 @@ def _load_migration_module() -> ModuleType:
 def test_migration_should_follow_previous_head() -> None:
     module = _load_migration_module()
 
-    assert module.down_revision == "20260304_rename_asset_business_model_to_revenue_mode"
+    assert (
+        module.down_revision == "20260304_rename_asset_business_model_to_revenue_mode"
+    )
 
 
 def test_upgrade_should_not_backfill_address_detail_from_legacy_address(

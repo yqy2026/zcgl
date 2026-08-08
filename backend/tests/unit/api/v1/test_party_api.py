@@ -388,6 +388,7 @@ def test_user_party_bindings_list_should_work(client, db_session) -> None:
     assert listed_payload[0]["relation_type"] == "owner"
     assert "is_primary" not in listed_payload[0]
 
+
 def test_party_review_endpoints_should_transition_review_status(
     client, db_session
 ) -> None:
@@ -1066,4 +1067,6 @@ def test_party_lifecycle_preview_reports_scope_impact_and_rejects_status_drift(
 
     assert stale_commit.status_code == status.HTTP_409_CONFLICT
     assert stale_commit.json()["error"]["code"] == "SCOPE_CHANGE_PREVIEW_STALE"
-    assert db_session.query(PartyLifecycleCommit).filter_by(party_id=party.id).count() == 0
+    assert (
+        db_session.query(PartyLifecycleCommit).filter_by(party_id=party.id).count() == 0
+    )

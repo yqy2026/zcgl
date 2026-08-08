@@ -72,7 +72,9 @@ async def test_sync_import_uses_and_discards_validated_staging_file(
     importer.import_assets_from_excel = AsyncMock(
         return_value={"total": 1, "success": 1, "failed": 0, "errors": []}
     )
-    monkeypatch.setattr(import_ops, "ExcelImportService", MagicMock(return_value=importer))
+    monkeypatch.setattr(
+        import_ops, "ExcelImportService", MagicMock(return_value=importer)
+    )
 
     result = await import_ops.import_excel(
         file=_xlsx_upload(),
@@ -120,7 +122,9 @@ async def test_async_import_defers_staged_file_cleanup_to_background_task(
     )
     importer = MagicMock()
     importer.import_assets_from_excel = AsyncMock(return_value={})
-    monkeypatch.setattr(import_ops, "ExcelImportService", MagicMock(return_value=importer))
+    monkeypatch.setattr(
+        import_ops, "ExcelImportService", MagicMock(return_value=importer)
+    )
     await import_ops._process_excel_import_async(
         task_id="task-1",
         file_path=str(staged_path),

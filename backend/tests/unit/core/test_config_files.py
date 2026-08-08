@@ -10,9 +10,9 @@ def test_file_upload_settings_use_contract_attachment_subdir() -> None:
     assert settings.CONTRACT_ATTACHMENT_SUBDIR == "contracts"
     assert "CONTRACT_ATTACHMENT_SUBDIR" in FileUploadSettings.model_fields
     assert "RENT_CONTRACT_ATTACHMENT_SUBDIR" not in FileUploadSettings.model_fields
-    assert FileUploadSettings.model_fields["CONTRACT_ATTACHMENT_SUBDIR"].json_schema_extra == {
-        "env": "CONTRACT_ATTACHMENT_SUBDIR"
-    }
+    assert FileUploadSettings.model_fields[
+        "CONTRACT_ATTACHMENT_SUBDIR"
+    ].json_schema_extra == {"env": "CONTRACT_ATTACHMENT_SUBDIR"}
 
     constants_module = import_module("src.constants.contract_constants")
     assert constants_module.CONTRACT_ATTACHMENT_SUBDIR == "contracts"

@@ -27,7 +27,9 @@ class TestCustomFieldService:
             "src.crud.custom_field.custom_field_crud.get_by_field_name_async",
             new=AsyncMock(return_value=None),
         ):
-            with patch("src.crud.custom_field.custom_field_crud.create", new=AsyncMock()) as mock_create:
+            with patch(
+                "src.crud.custom_field.custom_field_crud.create", new=AsyncMock()
+            ) as mock_create:
                 mock_create.return_value = AssetCustomField(
                     id=TEST_FIELD_ID, field_name="test_field"
                 )
@@ -88,7 +90,10 @@ class TestCustomFieldService:
     async def test_toggle_active_status_async(self, service, mock_db):
         field = AssetCustomField(id=TEST_FIELD_ID, is_active=True)
 
-        with patch("src.crud.custom_field.custom_field_crud.get", new=AsyncMock(return_value=field)):
+        with patch(
+            "src.crud.custom_field.custom_field_crud.get",
+            new=AsyncMock(return_value=field),
+        ):
             mock_db.commit = AsyncMock()
             mock_db.refresh = AsyncMock()
 

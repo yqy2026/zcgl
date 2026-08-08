@@ -38,10 +38,13 @@ def test_decision_cache_ttl_is_capped_by_next_transition() -> None:
         role_ids=[],
         next_transition_at=now - timedelta(seconds=1),
     )
-    assert AuthzService._decision_cache_ttl_seconds(
-        expired_subject,
-        default_ttl=300,
-    ) == 0
+    assert (
+        AuthzService._decision_cache_ttl_seconds(
+            expired_subject,
+            default_ttl=300,
+        )
+        == 0
+    )
 
 
 async def test_get_capabilities_should_use_resource_perspective_registry() -> None:
@@ -263,7 +266,9 @@ async def test_check_access_should_allow_authenticated_notification_read_without
     assert result.reason_code == "authenticated_default_permission"
 
 
-async def test_check_access_should_not_override_policy_deny_with_authenticated_default() -> None:
+async def test_check_access_should_not_override_policy_deny_with_authenticated_default() -> (
+    None
+):
     db = MagicMock()
     context_builder = MagicMock()
     context_builder.build_subject_context = AsyncMock(
@@ -274,7 +279,9 @@ async def test_check_access_should_not_override_policy_deny_with_authenticated_d
             role_ids=["role-1"],
         )
     )
-    deny_policy = ABACPolicy(name="deny-notification-read", effect=ABACEffect.DENY, priority=1)
+    deny_policy = ABACPolicy(
+        name="deny-notification-read", effect=ABACEffect.DENY, priority=1
+    )
     deny_policy.rules = [
         ABACPolicyRule(
             policy_id="policy-1",

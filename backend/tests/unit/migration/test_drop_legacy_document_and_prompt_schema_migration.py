@@ -172,7 +172,9 @@ def test_initial_revision_upgrades_without_retired_document_schema(
             version_rows = connection.scalars(
                 sa.text("SELECT version_num FROM alembic_version")
             ).all()
-            assert version_rows == [ScriptDirectory.from_config(config).get_current_head()]
+            assert version_rows == [
+                ScriptDirectory.from_config(config).get_current_head()
+            ]
     finally:
         if engine is not None:
             engine.dispose()

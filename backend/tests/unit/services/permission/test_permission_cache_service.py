@@ -406,7 +406,9 @@ class TestUserPermissionSummary:
     @pytest.mark.asyncio
     async def test_set_summary_cache_disabled(self, disabled_cache_service):
         """测试缓存禁用时设置摘要"""
-        result = await disabled_cache_service.set_user_permission_summary("user-123", {})
+        result = await disabled_cache_service.set_user_permission_summary(
+            "user-123", {}
+        )
         assert result is False
 
 

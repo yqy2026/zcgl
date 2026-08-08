@@ -20,7 +20,9 @@ def test_statistics_router_module_should_not_import_authz_dependency() -> None:
     assert "require_authz" not in module_source
 
 
-def test_statistics_router_include_routes_should_not_attach_extra_dependencies() -> None:
+def test_statistics_router_include_routes_should_not_attach_extra_dependencies() -> (
+    None
+):
     """统计聚合路由 include_router 时不应叠加 mount-level dependencies。"""
     module_source = _read_module_source()
     expected_lines = [

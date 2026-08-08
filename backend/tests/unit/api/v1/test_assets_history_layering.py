@@ -27,7 +27,9 @@ async def test_get_asset_history_should_delegate_asset_service() -> None:
     mock_service.get_asset_history_records = AsyncMock(return_value=([], 0))
 
     with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(module, "AsyncAssetService", MagicMock(return_value=mock_service))
+        monkeypatch.setattr(
+            module, "AsyncAssetService", MagicMock(return_value=mock_service)
+        )
         result = await get_asset_history(
             asset_id="asset-1",
             page=1,

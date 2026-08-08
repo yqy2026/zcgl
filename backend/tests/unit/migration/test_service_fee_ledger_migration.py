@@ -72,12 +72,12 @@ def test_upgrade_should_create_service_fee_ledgers_table(
     module.upgrade()
 
     ledger_call = next(
-        call for call in create_table_calls if call["table_name"] == "service_fee_ledgers"
+        call
+        for call in create_table_calls
+        if call["table_name"] == "service_fee_ledgers"
     )
     column_names = [
-        column.name
-        for column in ledger_call["columns"]
-        if hasattr(column, "name")
+        column.name for column in ledger_call["columns"] if hasattr(column, "name")
     ]
 
     assert "service_fee_entry_id" in column_names

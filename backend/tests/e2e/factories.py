@@ -68,7 +68,9 @@ def create_asset_payload(
     }
 
 
-def create_contract_asset_payload(*, suffix: str, ownership_id: str) -> dict[str, object]:
+def create_contract_asset_payload(
+    *, suffix: str, ownership_id: str
+) -> dict[str, object]:
     return create_asset_payload(
         suffix=suffix,
         ownership_id=ownership_id,

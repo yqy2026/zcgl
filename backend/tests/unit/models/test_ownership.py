@@ -14,4 +14,3 @@ def test_ownership_creation_and_repr() -> None:
 
 def test_ownership_table_name() -> None:
     assert Ownership.__tablename__ == "ownerships"
-

@@ -71,7 +71,9 @@ class TestOwnershipService:
         assert create_payload["code"] == "OW2401001"
 
     async def test_update_ownership(self, service, mock_db):
-        db_obj = Ownership(id=TEST_OWNERSHIP_ID, name=TEST_OWNERSHIP_NAME, code="OW2501001")
+        db_obj = Ownership(
+            id=TEST_OWNERSHIP_ID, name=TEST_OWNERSHIP_NAME, code="OW2501001"
+        )
         update_in = OwnershipUpdate(name="New Name")
         expected = MagicMock(spec=Ownership)
         expected.name = "New Name"
@@ -95,7 +97,9 @@ class TestOwnershipService:
         update_mock.assert_awaited_once()
 
     async def test_delete_ownership_with_assets(self, service, mock_db):
-        db_obj = Ownership(id=TEST_OWNERSHIP_ID, name=TEST_OWNERSHIP_NAME, code="OW2501001")
+        db_obj = Ownership(
+            id=TEST_OWNERSHIP_ID, name=TEST_OWNERSHIP_NAME, code="OW2501001"
+        )
 
         execute_result = MagicMock()
         execute_result.scalar.return_value = 5
@@ -116,7 +120,9 @@ class TestOwnershipService:
         assert "关联资产" in str(excinfo.value)
 
     async def test_delete_ownership_success(self, service, mock_db):
-        db_obj = Ownership(id=TEST_OWNERSHIP_ID, name=TEST_OWNERSHIP_NAME, code="OW2501001")
+        db_obj = Ownership(
+            id=TEST_OWNERSHIP_ID, name=TEST_OWNERSHIP_NAME, code="OW2501001"
+        )
 
         execute_result = MagicMock()
         execute_result.scalar.return_value = 0

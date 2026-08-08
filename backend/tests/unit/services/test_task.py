@@ -38,9 +38,7 @@ class TestTaskService:
             parameters={"p": 1},
         )
 
-        result = await service.create_task(
-            mock_db, obj_in=obj_in, user_id=TEST_USER_ID
-        )
+        result = await service.create_task(mock_db, obj_in=obj_in, user_id=TEST_USER_ID)
 
         assert result.title == "Export Task"
         assert result.status == TaskStatus.PENDING

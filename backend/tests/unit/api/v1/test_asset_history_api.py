@@ -43,7 +43,9 @@ async def test_get_asset_history_serializes_items_with_enhanced_fields() -> None
     mock_service.get_asset_history_records = AsyncMock(return_value=([record], 1))
 
     with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(module, "AsyncAssetService", MagicMock(return_value=mock_service))
+        monkeypatch.setattr(
+            module, "AsyncAssetService", MagicMock(return_value=mock_service)
+        )
         result = await get_asset_history(
             asset_id="asset-1",
             page=1,
@@ -88,7 +90,9 @@ async def test_get_asset_history_passes_page_and_change_type_to_service() -> Non
     mock_service.get_asset_history_records = AsyncMock(return_value=([], 0))
 
     with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(module, "AsyncAssetService", MagicMock(return_value=mock_service))
+        monkeypatch.setattr(
+            module, "AsyncAssetService", MagicMock(return_value=mock_service)
+        )
         result = await get_asset_history(
             asset_id="asset-1",
             page=2,
@@ -127,8 +131,7 @@ async def test_get_asset_management_history_endpoint_is_removed() -> None:
     management_history_routes = [
         route
         for route in routes
-        if isinstance(route, APIRoute)
-        and route.path.endswith("/management-history")
+        if isinstance(route, APIRoute) and route.path.endswith("/management-history")
     ]
     assert management_history_routes == [], (
         "management-history 端点应已下线，实际仍存在: "

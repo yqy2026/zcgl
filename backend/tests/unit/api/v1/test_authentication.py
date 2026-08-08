@@ -1120,7 +1120,9 @@ class TestRefreshToken:
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
         mock_session_service = MagicMock()
-        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service.rotate_refresh_session = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
@@ -1180,7 +1182,9 @@ class TestRefreshToken:
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
         mock_session_service = MagicMock()
-        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service.rotate_refresh_session = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
@@ -1235,7 +1239,9 @@ class TestRefreshToken:
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
         mock_session_service = MagicMock()
-        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service.rotate_refresh_session = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
@@ -1316,6 +1322,7 @@ class TestRefreshToken:
         """Test refresh with invalid token"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
+
         mock_request.headers = {
             "user-agent": "test-agent",
             "cookie": "refresh_token=invalid_refresh_token",
@@ -1358,6 +1365,7 @@ class TestRefreshToken:
         """Test refresh when user not found"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
+
         mock_request.headers = {
             "user-agent": "test-agent",
             "cookie": "refresh_token=valid_refresh_token",
@@ -1400,6 +1408,7 @@ class TestRefreshToken:
         """Test refresh when user is inactive"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
+
         mock_request.headers = {
             "user-agent": "test-agent",
             "cookie": "refresh_token=valid_refresh_token",
@@ -1442,6 +1451,7 @@ class TestRefreshToken:
     ):
         """Test refresh with IP change still calls service and succeeds when service accepts"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
+
         mock_request.headers = {
             "user-agent": "test-agent",
             "cookie": "refresh_token=valid_refresh_token",
@@ -1454,7 +1464,9 @@ class TestRefreshToken:
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
         mock_session_service = MagicMock()
-        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service.rotate_refresh_session = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
@@ -1487,6 +1499,7 @@ class TestRefreshToken:
     ):
         """Test refresh when request.client is None"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
+
         mock_request.headers = {
             "user-agent": "test-agent",
             "cookie": "refresh_token=valid_refresh_token",
@@ -1499,7 +1512,9 @@ class TestRefreshToken:
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
         mock_session_service = MagicMock()
-        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service.rotate_refresh_session = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
@@ -1833,9 +1848,7 @@ class TestTestMeDebug:
 
         with patch("src.api.v1.debug.auth_debug.RBACService") as mock_rbac_class:
             mock_rbac = mock_rbac_class.return_value
-            mock_rbac.get_user_role_summary = AsyncMock(
-                return_value=ADMIN_ROLE_SUMMARY
-            )
+            mock_rbac.get_user_role_summary = AsyncMock(return_value=ADMIN_ROLE_SUMMARY)
             result = asyncio.run(
                 test_me_debug(current_user=mock_admin_user, db=mock_db)
             )

@@ -197,9 +197,7 @@ class TestDictionaryStatusToggle:
     async def test_toggle_nonexistent_dictionary_raises_error(self):
         """测试切换不存在的字典项状态抛出异常"""
         with pytest.raises(ResourceNotFoundError):
-            await self.service.toggle_active_status_async(
-                self.db, id="nonexistent-id"
-            )
+            await self.service.toggle_active_status_async(self.db, id="nonexistent-id")
 
 
 # ============================================================================

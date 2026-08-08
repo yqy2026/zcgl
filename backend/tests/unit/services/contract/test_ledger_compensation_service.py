@@ -38,7 +38,9 @@ def _make_entry(*, year_month: str, payment_status: str = "unpaid") -> SimpleNam
     )
 
 
-async def test_compensation_should_fill_missing_months_for_active_contract(mock_db) -> None:
+async def test_compensation_should_fill_missing_months_for_active_contract(
+    mock_db,
+) -> None:
     try:
         from src.services.contract import (
             ledger_compensation_service as ledger_compensation_module,

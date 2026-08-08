@@ -125,7 +125,9 @@ class TestAuthenticationEndpoints:
         # 需要认证，所以预期返回 401
         assert response.status_code == 401
 
-    def test_me_endpoint_with_authenticated_cookie(self, authenticated_client, test_data):
+    def test_me_endpoint_with_authenticated_cookie(
+        self, authenticated_client, test_data
+    ):
         """测试登录后 /me 返回当前用户信息。"""
         response = authenticated_client.get("/api/v1/auth/me")
         assert response.status_code == 200
@@ -375,7 +377,9 @@ class TestRouterStructure:
             if method == "GET":
                 response = client.get(route)
             elif method == "POST":
-                response = client.post(route, json={} if route == "/api/v1/auth/login" else None)
+                response = client.post(
+                    route, json={} if route == "/api/v1/auth/login" else None
+                )
             elif method == "PUT":
                 response = client.put(route)
             elif method == "DELETE":

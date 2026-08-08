@@ -41,7 +41,9 @@ def _legacy_schema_module(name: str) -> str:
 
 
 def _legacy_test_package(*parts: str) -> str:
-    return ".".join(("tests", "integration", "services", "rent" + "_" + "contract", *parts))
+    return ".".join(
+        ("tests", "integration", "services", "rent" + "_" + "contract", *parts)
+    )
 
 
 def test_legacy_contract_service_modules_should_be_retired() -> None:
@@ -55,7 +57,9 @@ def test_legacy_contract_service_modules_should_be_retired() -> None:
     assert _find_spec_or_none(_legacy_service_module("lifecycle_service")) is None
     assert _find_spec_or_none(_legacy_service_module("helpers")) is None
     assert _find_spec_or_none(_legacy_crud_module(legacy_contract_name)) is None
-    assert _find_spec_or_none(_legacy_crud_module(legacy_contract_attachment_name)) is None
+    assert (
+        _find_spec_or_none(_legacy_crud_module(legacy_contract_attachment_name)) is None
+    )
     assert _find_spec_or_none(_legacy_model_module(legacy_contract_name)) is None
     assert _find_spec_or_none(_legacy_schema_module(legacy_contract_name)) is None
     assert not hasattr(crud, legacy_contract_name)

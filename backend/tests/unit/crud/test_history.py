@@ -106,7 +106,9 @@ class TestGetMultiWithCountAsync:
         list_result.scalars.return_value = list_scalars
         mock_db.execute = AsyncMock(side_effect=[count_result, list_result])
 
-        await crud.get_multi_with_count_async(mock_db, skip=0, limit=20, asset_id="asset_123")
+        await crud.get_multi_with_count_async(
+            mock_db, skip=0, limit=20, asset_id="asset_123"
+        )
 
         rendered = self._render(mock_db.execute.await_args_list[1].args[0])
         assert "operation_time DESC" in rendered

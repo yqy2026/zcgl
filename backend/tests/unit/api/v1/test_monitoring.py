@@ -283,9 +283,7 @@ class TestGetSystemHealth:
         # Patch time to cause exception in the health check function
         with patch("src.api.v1.system.monitoring.logger"):
             with patch("time.time", side_effect=Exception("Time error")):
-                with pytest.raises(
-                    InternalServerError, match="获取系统健康状态失败"
-                ):
+                with pytest.raises(InternalServerError, match="获取系统健康状态失败"):
                     get_system_health()
 
 
@@ -986,7 +984,9 @@ class TestMonitoringEdgeCases:
             ]
         )
 
-        with patch("src.api.v1.system.monitoring.collect_system_metrics") as mock_collect_sys:
+        with patch(
+            "src.api.v1.system.monitoring.collect_system_metrics"
+        ) as mock_collect_sys:
             with patch(
                 "src.api.v1.system.monitoring.collect_application_metrics"
             ) as mock_collect_app:

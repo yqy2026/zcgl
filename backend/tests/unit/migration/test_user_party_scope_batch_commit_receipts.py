@@ -29,7 +29,10 @@ def test_migration_follows_organization_party_scope_batch_receipts() -> None:
     module = _load_migration_module()
 
     assert module.revision == "20260806_user_party_scope_batch_commit_receipts"
-    assert module.down_revision == "20260806_organization_party_scope_batch_commit_receipts"
+    assert (
+        module.down_revision
+        == "20260806_organization_party_scope_batch_commit_receipts"
+    )
 
 
 def test_upgrade_creates_durable_user_party_scope_batch_receipt_table(

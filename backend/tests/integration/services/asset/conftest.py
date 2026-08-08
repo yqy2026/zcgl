@@ -48,10 +48,13 @@ def engine(test_database_url):
 
 def _init_enum_data(session):
     """初始化测试所需的枚举数据"""
+
     def get_or_create_enum_type(type_name: str, type_code: str) -> EnumFieldType:
         existing = (
             session.query(EnumFieldType)
-            .filter(EnumFieldType.code == type_code, EnumFieldType.is_deleted.is_(False))
+            .filter(
+                EnumFieldType.code == type_code, EnumFieldType.is_deleted.is_(False)
+            )
             .first()
         )
         if existing is not None:
@@ -95,7 +98,9 @@ def _init_enum_data(session):
     ensure_enum_values(usage_status_type.id, ["在用", "空置", "自用", "出租中"])
 
     property_nature_type = get_or_create_enum_type("物业性质", "property_nature")
-    ensure_enum_values(property_nature_type.id, ["住宅", "商业", "办公", "工业", "综合"])
+    ensure_enum_values(
+        property_nature_type.id, ["住宅", "商业", "办公", "工业", "综合"]
+    )
 
     data_status_type = get_or_create_enum_type("数据状态", "data_status")
     ensure_enum_values(data_status_type.id, ["正常", "草稿", "已审核", "已发布"])

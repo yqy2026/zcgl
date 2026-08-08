@@ -27,9 +27,21 @@ class TestProjectService:
         created_project.project_code = "PRJ-TEST01-202606-0001"
         created_project.project_name = "Test Project"
 
-        with patch.object(service, "_resolve_operator_party_for_code", new_callable=AsyncMock, return_value=("party-1", "TEST01")):
-            with patch.object(service, "generate_project_code", new_callable=AsyncMock, return_value="PRJ-TEST01-202606-0001"):
-                with patch("src.crud.project.project_crud.get_by_code", return_value=None):
+        with patch.object(
+            service,
+            "_resolve_operator_party_for_code",
+            new_callable=AsyncMock,
+            return_value=("party-1", "TEST01"),
+        ):
+            with patch.object(
+                service,
+                "generate_project_code",
+                new_callable=AsyncMock,
+                return_value="PRJ-TEST01-202606-0001",
+            ):
+                with patch(
+                    "src.crud.project.project_crud.get_by_code", return_value=None
+                ):
                     with patch(
                         "src.crud.project.project_crud.create",
                         return_value=created_project,
@@ -41,10 +53,16 @@ class TestProjectService:
         assert result.project_code == "PRJ-TEST01-202606-0001"
         mock_create.assert_awaited_once()
 
-    async def test_create_project_duplicate_code(self, service: ProjectService, mock_db):
-        obj_in = ProjectCreate(project_name="Test Project", project_code="PRJ-TEST01-202606-0002")
+    async def test_create_project_duplicate_code(
+        self, service: ProjectService, mock_db
+    ):
+        obj_in = ProjectCreate(
+            project_name="Test Project", project_code="PRJ-TEST01-202606-0002"
+        )
 
-        with patch("src.crud.project.project_crud.get_by_code", return_value=MagicMock()):
+        with patch(
+            "src.crud.project.project_crud.get_by_code", return_value=MagicMock()
+        ):
             with pytest.raises(DuplicateResourceError) as excinfo:
                 await service.create_project(mock_db, obj_in=obj_in)
 
@@ -103,8 +121,14 @@ class TestProjectService:
 
             mock_crud.remove.assert_awaited_once_with(mock_db, id=TEST_PROJECT_ID)
 
-    async def test_generate_project_code_uses_operator_code(self, service: ProjectService, mock_db):
-        with patch("src.crud.project.project_crud.get_latest_by_code_prefix", new_callable=AsyncMock, return_value=None):
+    async def test_generate_project_code_uses_operator_code(
+        self, service: ProjectService, mock_db
+    ):
+        with patch(
+            "src.crud.project.project_crud.get_latest_by_code_prefix",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
             code = await service.generate_project_code(
                 mock_db, name=None, operator_party_code="test01"
             )

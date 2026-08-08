@@ -172,9 +172,7 @@ class TestUserCRUD:
         assert result == sample_user
         mock_db.execute.assert_awaited_once()
 
-    async def test_find_by_identifier_returns_inactive_user(
-        self, user_crud, mock_db
-    ):
+    async def test_find_by_identifier_returns_inactive_user(self, user_crud, mock_db):
         inactive_user = User(
             id="inactive-user-id",
             username="13800002000",
@@ -258,9 +256,7 @@ class TestUserCRUD:
         assert result == [sample_user]
         mock_db.execute.assert_awaited_once()
 
-    async def test_get_multi_with_filters_search(
-        self, user_crud, mock_db, sample_user
-    ):
+    async def test_get_multi_with_filters_search(self, user_crud, mock_db, sample_user):
         mock_db.execute = AsyncMock(
             side_effect=[
                 _mock_execute_scalar(1),
@@ -337,9 +333,7 @@ class TestUserCRUD:
         assert hasattr(result, "password_hash")
         assert result.password_hash is not None
 
-    async def test_update_user(
-        self, user_crud, mock_db, sample_user, user_update_data
-    ):
+    async def test_update_user(self, user_crud, mock_db, sample_user, user_update_data):
         result = await user_crud.update_async(mock_db, sample_user, user_update_data)
 
         assert result.email == user_update_data.email
@@ -434,7 +428,9 @@ class TestUserSessionCRUD:
     async def test_get_user_sessions_active_only(
         self, session_crud, mock_db, sample_session
     ):
-        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars([sample_session]))
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars([sample_session])
+        )
 
         result = await session_crud.get_user_sessions_async(
             mock_db, "user_123", active_only=True
@@ -442,10 +438,10 @@ class TestUserSessionCRUD:
 
         assert result == [sample_session]
 
-    async def test_get_user_sessions_all(
-        self, session_crud, mock_db, sample_session
-    ):
-        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars([sample_session]))
+    async def test_get_user_sessions_all(self, session_crud, mock_db, sample_session):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars([sample_session])
+        )
 
         result = await session_crud.get_user_sessions_async(
             mock_db, "user_123", active_only=False

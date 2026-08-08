@@ -135,7 +135,9 @@ def sample_value_create() -> EnumFieldValueCreate:
 
 
 class TestEnumFieldTypeCRUD:
-    async def test_get_async_loads_values(self, mock_db, sample_enum_type, sample_enum_value):
+    async def test_get_async_loads_values(
+        self, mock_db, sample_enum_type, sample_enum_value
+    ):
         mock_db.execute = AsyncMock(
             side_effect=[
                 _result_with_scalars([sample_enum_type]),
@@ -239,7 +241,9 @@ class TestEnumFieldTypeCRUD:
     async def test_create_async_records_history(self, mock_db, sample_type_create):
         mock_db.add = MagicMock()
         mock_db.commit = AsyncMock()
-        mock_db.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", "new_id"))
+        mock_db.refresh = AsyncMock(
+            side_effect=lambda obj: setattr(obj, "id", "new_id")
+        )
         mock_db.flush = AsyncMock()
 
         crud = EnumFieldTypeCRUD()
@@ -281,7 +285,9 @@ class TestEnumFieldTypeCRUD:
 
 class TestEnumFieldValueCRUD:
     async def test_get_by_type_and_value_async(self, mock_db, sample_enum_value):
-        mock_db.execute = AsyncMock(return_value=_result_with_scalars([sample_enum_value]))
+        mock_db.execute = AsyncMock(
+            return_value=_result_with_scalars([sample_enum_value])
+        )
 
         crud = EnumFieldValueCRUD()
         result = await crud.get_by_type_and_value_async(
@@ -293,7 +299,9 @@ class TestEnumFieldValueCRUD:
 
     async def test_get_tree_async(self, mock_db, sample_enum_value):
         crud = EnumFieldValueCRUD()
-        mock_db.execute = AsyncMock(return_value=_result_with_scalars([sample_enum_value]))
+        mock_db.execute = AsyncMock(
+            return_value=_result_with_scalars([sample_enum_value])
+        )
         tree = await crud.get_tree_async(mock_db, "enum_type_123")
 
         assert tree

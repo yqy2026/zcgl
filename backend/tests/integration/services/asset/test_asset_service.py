@@ -368,7 +368,9 @@ class TestAssetUpdate:
 
         # 尝试将第一个资产更新为与第二个资产相同的名称
         with pytest.raises(DuplicateResourceError):
-            await self.service.update_asset(self.asset.id, AssetUpdate(asset_name="物业B"))
+            await self.service.update_asset(
+                self.asset.id, AssetUpdate(asset_name="物业B")
+            )
 
     async def test_update_nonexistent_asset_raises_error(self):
         """测试更新不存在的资产抛出异常"""

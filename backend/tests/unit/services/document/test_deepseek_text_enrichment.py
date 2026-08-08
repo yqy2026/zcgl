@@ -95,8 +95,14 @@ def test_enabled_stage_uses_fixed_text_only_request_and_returns_candidates():
         (_Response(429, {}), "llm_http_error"),
         (_Response(500, {}), "llm_http_error"),
         (_Response(200, {"unexpected": "payload"}), "llm_response_invalid"),
-        (_Response(200, _success_payload(version="contract-extraction/v2")), "llm_response_invalid"),
-        (_Response(200, _success_payload(document_type="property_certificate")), "llm_response_invalid"),
+        (
+            _Response(200, _success_payload(version="contract-extraction/v2")),
+            "llm_response_invalid",
+        ),
+        (
+            _Response(200, _success_payload(document_type="property_certificate")),
+            "llm_response_invalid",
+        ),
         (
             _Response(
                 200,
@@ -114,10 +120,12 @@ def test_enabled_stage_uses_fixed_text_only_request_and_returns_candidates():
         ),
     ],
 )
-def test_invalid_or_failed_response_discards_the_entire_llm_batch(response, expected_code):
-    result = DeepSeekTextEnricher(_settings(), post=lambda *args, **kwargs: response).enrich(
-        "contract", _pages(), session_id="session-1"
-    )
+def test_invalid_or_failed_response_discards_the_entire_llm_batch(
+    response, expected_code
+):
+    result = DeepSeekTextEnricher(
+        _settings(), post=lambda *args, **kwargs: response
+    ).enrich("contract", _pages(), session_id="session-1")
 
     assert result.status == "failed"
     assert result.code == expected_code
@@ -148,7 +156,9 @@ def test_enabled_stage_requires_exact_model_key_and_official_base_url():
 
 def test_enabled_stage_batches_a_24_page_contract_and_discards_all_candidates_on_batch_failure():
     pages = [
-        PageText(page_number=index, text_source="pdf_text", text_lines=[f"Page {index}"])
+        PageText(
+            page_number=index, text_source="pdf_text", text_lines=[f"Page {index}"]
+        )
         for index in range(1, 25)
     ]
     first_batch_candidate = {
@@ -157,7 +167,10 @@ def test_enabled_stage_batches_a_24_page_contract_and_discards_all_candidates_on
         "evidence": {"page_number": 1, "text": "Page 1"},
     }
     responses = iter(
-        [_Response(200, _success_payload(candidates=[first_batch_candidate])), _Response(500, {})]
+        [
+            _Response(200, _success_payload(candidates=[first_batch_candidate])),
+            _Response(500, {}),
+        ]
     )
     requests = []
 

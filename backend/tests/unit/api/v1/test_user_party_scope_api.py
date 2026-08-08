@@ -100,9 +100,7 @@ def test_user_party_binding_mutations_require_preview_then_commit(
         f"/api/v1/users/{user.id}/party-bindings/{binding_id}",
         json={"relation_type": "manager"},
     )
-    direct_close = client.delete(
-        f"/api/v1/users/{user.id}/party-bindings/{binding_id}"
-    )
+    direct_close = client.delete(f"/api/v1/users/{user.id}/party-bindings/{binding_id}")
 
     assert direct_create.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
     assert direct_update.status_code == status.HTTP_404_NOT_FOUND

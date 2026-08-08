@@ -60,12 +60,12 @@ def test_upgrade_should_create_contract_ledger_entries_table(
     module.upgrade()
 
     ledger_call = next(
-        call for call in create_table_calls if call["table_name"] == "contract_ledger_entries"
+        call
+        for call in create_table_calls
+        if call["table_name"] == "contract_ledger_entries"
     )
     column_names = [
-        column.name
-        for column in ledger_call["columns"]
-        if hasattr(column, "name")
+        column.name for column in ledger_call["columns"] if hasattr(column, "name")
     ]
 
     assert "entry_id" in column_names

@@ -184,7 +184,9 @@ class TestCRUDSystemDictionaryGetByType:
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
 
-            await crud.get_by_type_async(mock_db, dict_type="asset_status", is_active=False)
+            await crud.get_by_type_async(
+                mock_db, dict_type="asset_status", is_active=False
+            )
 
         call_args = mock_build.call_args
         filters = call_args.kwargs.get("filters", {})

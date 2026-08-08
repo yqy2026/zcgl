@@ -281,12 +281,18 @@ def test_decision_b_skips_tenant_not_null_gate() -> None:
                 """
             )
         )
-        connection.execute(sa.text("INSERT INTO roles (id, name) VALUES ('r1', 'user')"))
         connection.execute(
-            sa.text("INSERT INTO abac_policies (id, name) VALUES ('p1', 'dual_party_viewer')")
+            sa.text("INSERT INTO roles (id, name) VALUES ('r1', 'user')")
         )
         connection.execute(
-            sa.text("INSERT INTO abac_role_policies (role_id, policy_id) VALUES ('r1', 'p1')")
+            sa.text(
+                "INSERT INTO abac_policies (id, name) VALUES ('p1', 'dual_party_viewer')"
+            )
+        )
+        connection.execute(
+            sa.text(
+                "INSERT INTO abac_role_policies (role_id, policy_id) VALUES ('r1', 'p1')"
+            )
         )
 
         snapshot = collect_snapshot(connection)

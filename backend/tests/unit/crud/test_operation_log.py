@@ -255,7 +255,9 @@ class TestGetModuleStatistics:
         mock_db.execute = AsyncMock(
             side_effect=[
                 _ExecuteResult(scalar_value=200),
-                _ExecuteResult(all_value=[("create", 100), ("read", 80), ("update", 20)]),
+                _ExecuteResult(
+                    all_value=[("create", 100), ("read", 80), ("update", 20)]
+                ),
             ]
         )
 

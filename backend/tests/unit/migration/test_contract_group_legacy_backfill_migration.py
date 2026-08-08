@@ -31,7 +31,9 @@ def _load_collection_fk_module() -> ModuleType:
         / "versions"
         / "20260307_m2_collection_records_contract_fk.py"
     )
-    spec = spec_from_file_location("collection_records_contract_fk_migration", module_path)
+    spec = spec_from_file_location(
+        "collection_records_contract_fk_migration", module_path
+    )
     assert spec is not None
     assert spec.loader is not None
     module = module_from_spec(spec)

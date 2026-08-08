@@ -332,8 +332,7 @@ class TestCreateAsset:
             == asset_data["operation_agreement_attachments"]
         )
         assert (
-            result["terminal_contract_files"]
-            == asset_data["terminal_contract_files"]
+            result["terminal_contract_files"] == asset_data["terminal_contract_files"]
         )
         mock_asset_service.create_asset.assert_called_once()
 

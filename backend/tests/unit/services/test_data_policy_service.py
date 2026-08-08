@@ -60,7 +60,9 @@ async def test_list_templates_returns_name_and_description_only(mock_db) -> None
     assert set(templates["platform_admin"].keys()) == {"name", "description"}
 
 
-async def test_get_role_policy_packages_returns_ordered_unique_packages(mock_db) -> None:
+async def test_get_role_policy_packages_returns_ordered_unique_packages(
+    mock_db,
+) -> None:
     service = DataPolicyService(mock_db)
     mock_db.execute.side_effect = [
         _ScalarResult("role-1"),
@@ -117,7 +119,10 @@ async def test_set_role_policy_packages_persists_and_publishes_event(mock_db) ->
     bindings = [call.args[0] for call in mock_db.add.call_args_list]
     assert all(isinstance(binding, ABACRolePolicy) for binding in bindings)
     assert {binding.role_id for binding in bindings} == {"role-1"}
-    assert {binding.policy_id for binding in bindings} == {"policy-owner", "policy-audit"}
+    assert {binding.policy_id for binding in bindings} == {
+        "policy-owner",
+        "policy-audit",
+    }
     assert all(binding.enabled is True for binding in bindings)
     mock_db.commit.assert_awaited_once()
 

@@ -12,7 +12,9 @@ LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
 
 
 def _load_module(filename: str, module_name: str) -> ModuleType:
-    module_path = Path(__file__).resolve().parents[3] / "alembic" / "versions" / filename
+    module_path = (
+        Path(__file__).resolve().parents[3] / "alembic" / "versions" / filename
+    )
     spec = spec_from_file_location(module_name, module_path)
     assert spec is not None
     assert spec.loader is not None
@@ -84,7 +86,9 @@ def test_set_not_null_upgrade_enforces_tenant_decision_and_skips_tenant_for_b(
     alter_calls: list[tuple[str, str]] = []
     monkeypatch.setattr(module.op, "get_bind", lambda: object())
     monkeypatch.setattr(module.sa, "inspect", lambda _bind: inspector)
-    monkeypatch.setattr(module, "_assert_no_null_values", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        module, "_assert_no_null_values", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(
         module.op,
         "alter_column",
@@ -126,7 +130,9 @@ def test_set_not_null_upgrade_hardens_tenant_for_decision_a(
     alter_calls: list[tuple[str, str]] = []
     monkeypatch.setattr(module.op, "get_bind", lambda: object())
     monkeypatch.setattr(module.sa, "inspect", lambda _bind: inspector)
-    monkeypatch.setattr(module, "_assert_no_null_values", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        module, "_assert_no_null_values", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(
         module.op,
         "alter_column",
@@ -186,9 +192,13 @@ def test_drop_legacy_upgrade_drops_expected_columns_and_tables(
     monkeypatch.setattr(
         module.op,
         "drop_column",
-        lambda table_name, column_name: dropped_columns.append((table_name, column_name)),
+        lambda table_name, column_name: dropped_columns.append(
+            (table_name, column_name)
+        ),
     )
-    monkeypatch.setattr(module.op, "drop_table", lambda table_name: dropped_tables.append(table_name))
+    monkeypatch.setattr(
+        module.op, "drop_table", lambda table_name: dropped_tables.append(table_name)
+    )
 
     module.upgrade()
 

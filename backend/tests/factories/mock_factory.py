@@ -32,7 +32,9 @@ class MockFactory:
         user.username = username
         user.email = f"{username}@example.com"
         user.full_name = f"Test {username.capitalize()}"
-        role_id = "role-admin-id" if role in {"admin", "super_admin"} else "role-user-id"
+        role_id = (
+            "role-admin-id" if role in {"admin", "super_admin"} else "role-user-id"
+        )
         user.role_id = role_id
         user.role_name = role
         user.roles = [role]

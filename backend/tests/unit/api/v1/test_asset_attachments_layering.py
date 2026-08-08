@@ -52,7 +52,9 @@ async def test_asset_lookup_adapter_should_delegate_asset_service() -> None:
     mock_service.get_asset = AsyncMock(return_value=MagicMock(id="asset-1"))
 
     with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(module, "AsyncAssetService", MagicMock(return_value=mock_service))
+        monkeypatch.setattr(
+            module, "AsyncAssetService", MagicMock(return_value=mock_service)
+        )
         adapter = AssetCRUD()
         result = await adapter.get_async(db=MagicMock(), id="asset-1")
 

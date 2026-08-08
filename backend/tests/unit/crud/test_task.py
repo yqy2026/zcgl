@@ -145,7 +145,10 @@ class TestTaskCRUDGetStatistics:
 
     async def test_get_statistics_avg_duration_calculation(self, crud):
         now = datetime.now()
-        rows = [(now - timedelta(seconds=100), now), (now - timedelta(seconds=200), now)]
+        rows = [
+            (now - timedelta(seconds=100), now),
+            (now - timedelta(seconds=200), now),
+        ]
         mock_db = AsyncMock()
         mock_db.execute = AsyncMock(
             side_effect=[

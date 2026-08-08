@@ -1,2 +1,1 @@
 """Integration service test package."""
-

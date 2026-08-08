@@ -20,7 +20,9 @@ pytestmark = pytest.mark.asyncio
 async def ensure_postgresql_available():
     database_url = os.getenv("DATABASE_URL", "")
     if not database_url.startswith("postgresql+psycopg://"):
-        pytest.skip("PostgreSQL tests require DATABASE_URL to use postgresql+psycopg://")
+        pytest.skip(
+            "PostgreSQL tests require DATABASE_URL to use postgresql+psycopg://"
+        )
 
     try:
         mgr = get_database_manager()

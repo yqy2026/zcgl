@@ -56,9 +56,9 @@ def normal_user_headers(client, normal_user):
     from src.middleware.auth import get_current_active_user
 
     client.app.dependency_overrides[get_current_active_user] = lambda: normal_user
-    client.app.dependency_overrides[require_system_admin] = lambda: (_ for _ in ()).throw(
-        forbidden("需要管理员权限")
-    )
+    client.app.dependency_overrides[require_system_admin] = lambda: (
+        _ for _ in ()
+    ).throw(forbidden("需要管理员权限"))
     return {}
 
 

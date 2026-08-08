@@ -30,7 +30,9 @@ def test_confirm_accepts_only_explicit_field_actions_and_existing_ids():
     assert payload.party_ids.operator_party_id == "party-1"
 
 
-@pytest.mark.parametrize("forbidden_key", ["field_sources", "accept_all", "confirmed_field_keys"])
+@pytest.mark.parametrize(
+    "forbidden_key", ["field_sources", "accept_all", "confirmed_field_keys"]
+)
 def test_confirm_rejects_client_owned_sources_and_bulk_confirmation(forbidden_key):
     with pytest.raises(ValidationError):
         ExtractionSessionConfirmRequest.model_validate(

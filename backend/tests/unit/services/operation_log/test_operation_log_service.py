@@ -189,4 +189,3 @@ async def test_export_and_cleanup_delegate_to_crud() -> None:
         **filters,
     )
     mock_log_crud.delete_old_logs_async.assert_awaited_once_with(db, 90)
-

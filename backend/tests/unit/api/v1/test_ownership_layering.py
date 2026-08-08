@@ -42,7 +42,7 @@ def test_ownership_endpoints_should_use_require_authz() -> None:
         r"async def update_ownership[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"ownership\"[\s\S]*?resource_id=\"\{ownership_id\}\"",
         r"async def delete_ownership[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"ownership\"[\s\S]*?resource_id=\"\{ownership_id\}\"",
         r"async def get_ownerships[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"",
-            r"async def search_ownerships[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"",
+        r"async def search_ownerships[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"",
         r"async def get_ownership_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"",
         r"async def toggle_ownership_status[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"ownership\"[\s\S]*?resource_id=\"\{ownership_id\}\"",
         r"async def get_ownership_financial_summary[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"ownership\"[\s\S]*?resource_id=\"\{ownership_id\}\"[\s\S]*?deny_as_not_found=True",
@@ -85,7 +85,9 @@ async def test_get_ownership_dropdown_options_should_delegate_service() -> None:
 
 
 @pytest.mark.asyncio
-async def test_ownership_create_authz_should_include_organization_scope_context() -> None:
+async def test_ownership_create_authz_should_include_organization_scope_context() -> (
+    None
+):
     """权属方 create 鉴权应注入组织/主体上下文，避免空资源上下文放行。"""
     from src.api.v1.assets import ownership as module
 

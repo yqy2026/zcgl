@@ -86,7 +86,9 @@ async def test_detail_should_fail_loud_when_history_missing(mock_db, monkeypatch
 
     assert exc_info.value.details["resource_type"] == "history"
     assert exc_info.value.details["resource_id"] == "missing-history"
-    mock_history_crud.get_async.assert_awaited_once_with(db=mock_db, id="missing-history")
+    mock_history_crud.get_async.assert_awaited_once_with(
+        db=mock_db, id="missing-history"
+    )
 
 
 async def test_delete_should_not_remove_missing_history(mock_db, monkeypatch):

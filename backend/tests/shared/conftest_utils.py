@@ -82,7 +82,9 @@ def create_transactional_session(
     """
     connection = engine.connect()
     transaction = connection.begin()
-    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=connection)
+    test_session_local = sessionmaker(
+        autocommit=False, autoflush=False, bind=connection
+    )
     session = test_session_local()
     return session, connection, transaction
 

@@ -15,7 +15,9 @@ def _load_migration_module() -> ModuleType:
         / "versions"
         / "20260804_organization_party_scope_commit_receipts.py"
     )
-    spec = spec_from_file_location("organization_party_scope_receipts_migration", module_path)
+    spec = spec_from_file_location(
+        "organization_party_scope_receipts_migration", module_path
+    )
     assert spec is not None
     assert spec.loader is not None
     module = module_from_spec(spec)
@@ -57,13 +59,17 @@ def test_migration_follows_party_scope_cutover() -> None:
     assert module.down_revision == "20260804_organization_party_scope_model_cutover"
 
 
-def test_upgrade_creates_receipt_table_and_seeds_dedicated_permission(monkeypatch) -> None:
+def test_upgrade_creates_receipt_table_and_seeds_dedicated_permission(
+    monkeypatch,
+) -> None:
     module = _load_migration_module()
     bind = _Bind()
     created_tables: list[str] = []
     created_indexes: list[str] = []
 
-    monkeypatch.setattr(module.op, "create_table", lambda name, *args: created_tables.append(name))
+    monkeypatch.setattr(
+        module.op, "create_table", lambda name, *args: created_tables.append(name)
+    )
     monkeypatch.setattr(
         module.op,
         "create_index",
@@ -74,11 +80,8 @@ def test_upgrade_creates_receipt_table_and_seeds_dedicated_permission(monkeypatc
     module.upgrade()
 
     assert created_tables == ["organization_party_scope_commits"]
-    assert created_indexes == [
-        "ix_organization_party_scope_commits_organization_id"
-    ]
+    assert created_indexes == ["ix_organization_party_scope_commits_organization_id"]
     assert any(
-        params is not None
-        and params.get("name") == "organization:manage_party_scope"
+        params is not None and params.get("name") == "organization:manage_party_scope"
         for params in bind.parameters
     )

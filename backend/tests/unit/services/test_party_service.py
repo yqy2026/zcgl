@@ -33,7 +33,9 @@ def _build_party_service(
     code_service.generate = AsyncMock(return_value=generated_code)
     identifier_service = MagicMock()
     identifier_service.prepare.return_value = PreparedPartyIdentifier(None, None, None)
-    identifier_service.mask.side_effect = lambda *, identifier_type, stored_value: stored_value
+    identifier_service.mask.side_effect = (
+        lambda *, identifier_type, stored_value: stored_value
+    )
     return (
         PartyService(
             data_access=party_crud,
@@ -169,6 +171,7 @@ class TestPartyServiceScopeAndBindingBehavior:
             business_role="terminal_tenant",
             scoped_party_ids=["party-1"],
         )
+
     async def test_get_parties_should_not_scope_when_filter_resolver_returns_none(
         self,
     ) -> None:
@@ -194,7 +197,9 @@ class TestPartyServiceScopeAndBindingBehavior:
             scoped_party_ids=None,
         )
 
-    async def test_update_user_party_binding_should_not_manage_primary_state(self) -> None:
+    async def test_update_user_party_binding_should_not_manage_primary_state(
+        self,
+    ) -> None:
         db = MagicMock()
         binding = SimpleNamespace(
             id="binding-1",
@@ -270,7 +275,9 @@ class TestPartyServiceScopeAndBindingBehavior:
             )
 
         assert closed is True
-        update_payload = party_crud.update_user_party_binding.await_args.kwargs["obj_in"]
+        update_payload = party_crud.update_user_party_binding.await_args.kwargs[
+            "obj_in"
+        ]
         assert set(update_payload) == {"valid_to"}
         mock_publish.assert_awaited_once_with("user-1")
 
@@ -322,7 +329,9 @@ class TestPartyServiceReviewFlow:
         result = await service.create_party(db, obj_in=payload)
 
         assert result is created_party
-        assert party_crud.create_party.await_args.kwargs["obj_in"]["code"] == "LE-000001"
+        assert (
+            party_crud.create_party.await_args.kwargs["obj_in"]["code"] == "LE-000001"
+        )
         code_service.generate.assert_awaited_once_with(
             db, party_type=PartyType.LEGAL_ENTITY.value
         )
@@ -842,7 +851,9 @@ class TestCustomerProfileAggregation:
 
         assert result is True
 
-    async def test_create_party_should_prepare_identifier_before_persistence(self) -> None:
+    async def test_create_party_should_prepare_identifier_before_persistence(
+        self,
+    ) -> None:
         db = MagicMock()
         created = SimpleNamespace(id="party-new")
         party_crud = MagicMock()

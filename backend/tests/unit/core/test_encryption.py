@@ -546,6 +546,7 @@ class TestSensitiveDataHandler:
 
         # Import fresh and patch settings directly (before importing src.crud.asset)
         from src.core import config
+
         fresh_encryption_module = importlib.import_module("src.core.encryption")
 
         # Use monkeypatch to persist the value for the entire test
@@ -585,13 +586,12 @@ class TestSensitiveDataHandler:
 
         # Import modules fresh - settings will read from environment (which is now deleted)
         from src.core import config
+
         fresh_encryption_module = importlib.import_module("src.core.encryption")
 
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", "")
-        monkeypatch.setattr(
-            fresh_encryption_module.settings, "DATA_ENCRYPTION_KEY", ""
-        )
+        monkeypatch.setattr(fresh_encryption_module.settings, "DATA_ENCRYPTION_KEY", "")
 
         from src.crud.asset import SensitiveDataHandler
 

@@ -100,13 +100,15 @@ class TestTokenBlacklistManager:
         # 无 iat 走保守拒绝
         assert self.manager.is_blacklisted(user_id=user_id) is True
         # 撤销前签发：应拒绝
-        assert self.manager.is_blacklisted(
-            user_id=user_id, token_iat=revoked_at - 1
-        ) is True
+        assert (
+            self.manager.is_blacklisted(user_id=user_id, token_iat=revoked_at - 1)
+            is True
+        )
         # 撤销后签发：应放行
-        assert self.manager.is_blacklisted(
-            user_id=user_id, token_iat=revoked_at + 1
-        ) is False
+        assert (
+            self.manager.is_blacklisted(user_id=user_id, token_iat=revoked_at + 1)
+            is False
+        )
 
     # ==================== 清理过期令牌测试 ====================
 
@@ -215,12 +217,14 @@ class TestMiddlewareIntegration:
         assert isinstance(revocation_entry, dict)
         revoked_at = float(revocation_entry["revoked_at"])
 
-        assert _is_token_blacklisted(
-            jti=None, user_id=user_id, token_iat=revoked_at - 1
-        ) is True
-        assert _is_token_blacklisted(
-            jti=None, user_id=user_id, token_iat=revoked_at + 1
-        ) is False
+        assert (
+            _is_token_blacklisted(jti=None, user_id=user_id, token_iat=revoked_at - 1)
+            is True
+        )
+        assert (
+            _is_token_blacklisted(jti=None, user_id=user_id, token_iat=revoked_at + 1)
+            is False
+        )
 
     def test_validate_jwt_token_should_not_log_unexpected_for_blacklisted_token(
         self, monkeypatch
@@ -266,7 +270,9 @@ class TestMiddlewareIntegration:
 
         assert auth._is_token_blacklisted("fail-closed-token") is True
 
-    def test_blacklist_fail_closed_when_circuit_open_in_non_production(self, monkeypatch):
+    def test_blacklist_fail_closed_when_circuit_open_in_non_production(
+        self, monkeypatch
+    ):
         """非生产环境下黑名单熔断也应 fail-closed"""
         import src.middleware.auth as auth
 

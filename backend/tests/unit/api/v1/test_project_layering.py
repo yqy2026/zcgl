@@ -274,8 +274,7 @@ async def test_project_create_authz_should_not_copy_raw_organization_id_into_man
     assert result.resource_context["organization_id"] == "org-1"
     assert "manager_party_id" not in result.resource_context
     assert (
-        result.resource_context["party_id"]
-        == module._PROJECT_CREATE_UNSCOPED_PARTY_ID
+        result.resource_context["party_id"] == module._PROJECT_CREATE_UNSCOPED_PARTY_ID
     )
 
 

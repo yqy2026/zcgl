@@ -51,9 +51,7 @@ def test_custom_field_unscoped_write_context_should_be_defined() -> None:
     from src.api.v1.assets import custom_fields
 
     expected_create = "__unscoped__:asset_custom_field:create"
-    assert (
-        custom_fields._ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID == expected_create
-    )
+    assert custom_fields._ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID == expected_create
     assert custom_fields._ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT == {
         "party_id": expected_create,
         "owner_party_id": expected_create,
@@ -151,7 +149,9 @@ async def test_validate_custom_field_value_should_delegate_service_validation() 
     from src.api.v1.assets.custom_fields import validate_custom_field_value
 
     mock_service = MagicMock()
-    mock_service.validate_custom_field_value_async = AsyncMock(return_value=(True, None))
+    mock_service.validate_custom_field_value_async = AsyncMock(
+        return_value=(True, None)
+    )
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "custom_field_service", mock_service)

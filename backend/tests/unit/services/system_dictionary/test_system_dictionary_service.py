@@ -88,9 +88,7 @@ class TestCreateDictionary:
             return_value=mock_dictionary,
         ):
             with pytest.raises(DuplicateResourceError, match="字典项已存在"):
-                await dictionary_service.create_dictionary_async(
-                    mock_db, obj_in=obj_in
-                )
+                await dictionary_service.create_dictionary_async(mock_db, obj_in=obj_in)
 
 
 # ============================================================================
@@ -386,13 +384,16 @@ class TestDictionaryCacheBehavior:
 
     async def test_get_types_cache_hit(self, dictionary_service, mock_db):
         """缓存命中时不应访问数据库"""
-        with patch(
-            "src.services.system_dictionary.service.cache_manager.get",
-            return_value=["type_a", "type_b"],
-        ), patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get_types_async",
-            new_callable=AsyncMock,
-        ) as mock_get_types:
+        with (
+            patch(
+                "src.services.system_dictionary.service.cache_manager.get",
+                return_value=["type_a", "type_b"],
+            ),
+            patch(
+                "src.crud.system_dictionary.system_dictionary_crud.get_types_async",
+                new_callable=AsyncMock,
+            ) as mock_get_types,
+        ):
             result = await dictionary_service.get_types_async(mock_db)
 
         assert result == ["type_a", "type_b"]
@@ -400,16 +401,20 @@ class TestDictionaryCacheBehavior:
 
     async def test_get_types_cache_miss_sets_cache(self, dictionary_service, mock_db):
         """缓存未命中时应回源并写入缓存"""
-        with patch(
-            "src.services.system_dictionary.service.cache_manager.get",
-            return_value=None,
-        ), patch(
-            "src.services.system_dictionary.service.cache_manager.set",
-            return_value=True,
-        ) as mock_cache_set, patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get_types_async",
-            new_callable=AsyncMock,
-            return_value=["type_c"],
+        with (
+            patch(
+                "src.services.system_dictionary.service.cache_manager.get",
+                return_value=None,
+            ),
+            patch(
+                "src.services.system_dictionary.service.cache_manager.set",
+                return_value=True,
+            ) as mock_cache_set,
+            patch(
+                "src.crud.system_dictionary.system_dictionary_crud.get_types_async",
+                new_callable=AsyncMock,
+                return_value=["type_c"],
+            ),
         ):
             result = await dictionary_service.get_types_async(mock_db)
 
@@ -428,18 +433,22 @@ class TestDictionaryCacheBehavior:
             sort_order=2,
         )
 
-        with patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code_async",
-            new_callable=AsyncMock,
-            return_value=None,
-        ), patch(
-            "src.crud.system_dictionary.system_dictionary_crud.create",
-            new_callable=AsyncMock,
-            return_value=mock_dictionary,
-        ), patch(
-            "src.services.system_dictionary.service.cache_manager.clear",
-            return_value=True,
-        ) as mock_cache_clear:
+        with (
+            patch(
+                "src.crud.system_dictionary.system_dictionary_crud.get_by_type_and_code_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.crud.system_dictionary.system_dictionary_crud.create",
+                new_callable=AsyncMock,
+                return_value=mock_dictionary,
+            ),
+            patch(
+                "src.services.system_dictionary.service.cache_manager.clear",
+                return_value=True,
+            ) as mock_cache_clear,
+        ):
             await dictionary_service.create_dictionary_async(mock_db, obj_in=obj_in)
 
         mock_cache_clear.assert_called()

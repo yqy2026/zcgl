@@ -233,6 +233,7 @@ async def test_upload_voucher_database_failure_removes_promoted_file(
     mock_db.rollback.assert_awaited_once()
     assert list(tmp_path.rglob("*.pdf")) == []
 
+
 async def test_upload_voucher_rollback_failure_still_removes_promoted_file(
     mock_db, tmp_path: Path
 ) -> None:

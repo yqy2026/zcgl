@@ -58,7 +58,9 @@ def test_organization_party_scope_commit_requires_reason_and_idempotency_key() -
         )
 
 
-def test_organization_party_scope_batch_requires_unique_multiple_organizations() -> None:
+def test_organization_party_scope_batch_requires_unique_multiple_organizations() -> (
+    None
+):
     with pytest.raises(ValidationError):
         OrganizationPartyScopeBatchPreviewRequest.model_validate(
             {

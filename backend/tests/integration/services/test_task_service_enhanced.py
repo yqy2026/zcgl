@@ -95,9 +95,7 @@ class TestTaskServiceIntegration:
         )
         await async_db.commit()
 
-        result = await task_service.cleanup_old_tasks(
-            async_db, days=30, dry_run=False
-        )
+        result = await task_service.cleanup_old_tasks(async_db, days=30, dry_run=False)
         assert result["cleaned_count"] >= 1
 
         refreshed = await async_db.get(AsyncTask, str(task.id))

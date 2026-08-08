@@ -174,7 +174,10 @@ class TestGetAssetLeaseSummary:
             )
             result = await service.get_asset_lease_summary(asset_id="asset-1")
 
-        assert [(item.party_name, item.group_relation_type, item.contract_count) for item in result.customer_summary] == [
+        assert [
+            (item.party_name, item.group_relation_type, item.contract_count)
+            for item in result.customer_summary
+        ] == [
             ("租户A", "下游", 2),
             ("直租租户", "直租", 1),
         ]

@@ -94,9 +94,7 @@ class TestAssetServiceBusinessLogic:
         assert result.asset_name == sample_asset.asset_name
         assert result.id == sample_asset.id
 
-    async def test_search_assets_advanced_filters(
-        self, asset_service, sample_asset
-    ):
+    async def test_search_assets_advanced_filters(self, asset_service, sample_asset):
         """测试高级搜索筛选"""
         result, count = await asset_service.get_assets(
             search=sample_asset.asset_name[:2]

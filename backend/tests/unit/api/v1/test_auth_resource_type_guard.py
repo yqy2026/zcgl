@@ -12,7 +12,9 @@ AUTH_API_ROOT = Path(__file__).resolve().parents[4] / "src" / "api" / "v1" / "au
 
 
 def _iter_auth_route_files() -> list[Path]:
-    return sorted(path for path in AUTH_API_ROOT.rglob("*.py") if path.name != "__init__.py")
+    return sorted(
+        path for path in AUTH_API_ROOT.rglob("*.py") if path.name != "__init__.py"
+    )
 
 
 def test_auth_routes_should_not_use_asset_resource_type_for_require_authz() -> None:
@@ -31,7 +33,9 @@ def test_auth_routes_should_not_use_asset_resource_type_for_require_authz() -> N
     for file_path in _iter_auth_route_files():
         content = file_path.read_text(encoding="utf-8")
         if pattern.search(content):
-            violations.append(str(file_path.relative_to(AUTH_API_ROOT.parent.parent.parent)))
+            violations.append(
+                str(file_path.relative_to(AUTH_API_ROOT.parent.parent.parent))
+            )
 
     assert violations == [], (
         "auth route modules must not use require_authz(...resource_type='asset'). "

@@ -80,7 +80,9 @@ class TestCreateAndUpdate:
         )
         created = Organization(id="org-002", name="Org Two", code="ORG002")
 
-        with patch.object(CRUDBase, "create", new=AsyncMock(return_value=created)) as mock_create:
+        with patch.object(
+            CRUDBase, "create", new=AsyncMock(return_value=created)
+        ) as mock_create:
             result = await crud_instance.create_async(mock_db, obj_in=payload)
 
         assert result is created
@@ -98,14 +100,18 @@ class TestCreateAndUpdate:
         }
         created = Organization(id="org-003", name="Org Three", code="ORG003")
 
-        with patch.object(CRUDBase, "create", new=AsyncMock(return_value=created)) as mock_create:
+        with patch.object(
+            CRUDBase, "create", new=AsyncMock(return_value=created)
+        ) as mock_create:
             result = await crud_instance.create_async(mock_db, obj_in=payload)
 
         assert result is created
         assert mock_create.call_args.kwargs["obj_in"]["code"] == "ORG003"
 
     @pytest.mark.asyncio
-    async def test_update_async_encrypts_via_helper(self, crud_instance, mock_db, org_sample):
+    async def test_update_async_encrypts_via_helper(
+        self, crud_instance, mock_db, org_sample
+    ):
         update_payload = OrganizationUpdate(name="Org One Updated", status="inactive")
         updated = Organization(id="org-001", name="Org One Updated", code="ORG001")
 
@@ -148,11 +154,17 @@ class TestGetOperations:
         mock_decrypt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_multi_with_filters_async(self, crud_instance, mock_db, org_sample):
+    async def test_get_multi_with_filters_async(
+        self, crud_instance, mock_db, org_sample
+    ):
         org_two = Organization(id="org-002", name="Org Two", code="ORG002")
-        mock_db.execute = AsyncMock(return_value=_ScalarResult(items=[org_sample, org_two]))
+        mock_db.execute = AsyncMock(
+            return_value=_ScalarResult(items=[org_sample, org_two])
+        )
 
-        with patch.object(crud_instance.sensitive_data_handler, "decrypt_data") as mock_decrypt:
+        with patch.object(
+            crud_instance.sensitive_data_handler, "decrypt_data"
+        ) as mock_decrypt:
             result = await crud_instance.get_multi_with_filters_async(
                 mock_db, skip=0, limit=10, keyword="Org"
             )
@@ -171,8 +183,12 @@ class TestGetOperations:
             ]
         )
 
-        with patch.object(crud_instance.sensitive_data_handler, "decrypt_data") as mock_decrypt:
-            items, total = await crud_instance.get_multi_with_count_async(mock_db, skip=0, limit=10)
+        with patch.object(
+            crud_instance.sensitive_data_handler, "decrypt_data"
+        ) as mock_decrypt:
+            items, total = await crud_instance.get_multi_with_count_async(
+                mock_db, skip=0, limit=10
+            )
 
         assert total == 2
         assert len(items) == 2
@@ -183,7 +199,9 @@ class TestGetOperations:
     async def test_get_tree_async(self, crud_instance, mock_db, org_sample):
         mock_db.execute = AsyncMock(return_value=_ScalarResult(items=[org_sample]))
 
-        with patch.object(crud_instance.sensitive_data_handler, "decrypt_data") as mock_decrypt:
+        with patch.object(
+            crud_instance.sensitive_data_handler, "decrypt_data"
+        ) as mock_decrypt:
             result = await crud_instance.get_tree_async(mock_db, parent_id=None)
 
         assert len(result) == 1
@@ -191,8 +209,12 @@ class TestGetOperations:
 
     @pytest.mark.asyncio
     async def test_get_children_async_recursive(self, crud_instance, mock_db):
-        child = Organization(id="org-010", name="Child", code="C010", parent_id="org-root")
-        grandchild = Organization(id="org-011", name="GrandChild", code="C011", parent_id="org-010")
+        child = Organization(
+            id="org-010", name="Child", code="C010", parent_id="org-root"
+        )
+        grandchild = Organization(
+            id="org-011", name="GrandChild", code="C011", parent_id="org-010"
+        )
 
         mock_db.execute = AsyncMock(
             side_effect=[
@@ -213,7 +235,9 @@ class TestGetOperations:
 
     @pytest.mark.asyncio
     async def test_get_path_to_root_async(self, crud_instance, mock_db):
-        child = Organization(id="org-020", name="Child", code="C020", parent_id="org-021")
+        child = Organization(
+            id="org-020", name="Child", code="C020", parent_id="org-021"
+        )
         parent = Organization(id="org-021", name="Parent", code="C021", parent_id=None)
 
         with patch.object(
@@ -221,7 +245,9 @@ class TestGetOperations:
             "get_async",
             new=AsyncMock(side_effect=[child, parent]),
         ):
-            result = await crud_instance.get_path_to_root_async(mock_db, org_id="org-020")
+            result = await crud_instance.get_path_to_root_async(
+                mock_db, org_id="org-020"
+            )
 
         assert [item.id for item in result] == ["org-021", "org-020"]
 

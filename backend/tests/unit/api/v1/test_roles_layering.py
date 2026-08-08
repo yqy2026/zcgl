@@ -144,7 +144,9 @@ async def test_create_role_authz_context_should_fallback_to_unscoped_sentinel() 
 
 
 @pytest.mark.asyncio
-async def test_assign_role_authz_resource_id_should_parse_user_id_from_payload() -> None:
+async def test_assign_role_authz_resource_id_should_parse_user_id_from_payload() -> (
+    None
+):
     from src.api.v1.auth.roles import _resolve_user_assignment_resource_id
 
     request = MagicMock()
@@ -154,7 +156,9 @@ async def test_assign_role_authz_resource_id_should_parse_user_id_from_payload()
 
 
 @pytest.mark.asyncio
-async def test_assign_role_authz_resource_id_should_return_none_on_invalid_payload() -> None:
+async def test_assign_role_authz_resource_id_should_return_none_on_invalid_payload() -> (
+    None
+):
     from src.api.v1.auth.roles import _resolve_user_assignment_resource_id
 
     request = MagicMock()

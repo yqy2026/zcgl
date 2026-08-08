@@ -23,14 +23,20 @@ async def test_delete_rejects_the_final_attachment(monkeypatch) -> None:
 
     monkeypatch.setattr(service, "list", list_attachments)
 
-    with pytest.raises(BusinessValidationError, match="final property certificate attachment"):
+    with pytest.raises(
+        BusinessValidationError, match="final property certificate attachment"
+    ):
         await service.delete(
-            SimpleNamespace(), certificate_id="certificate-1", attachment_id="attachment-1"
+            SimpleNamespace(),
+            certificate_id="certificate-1",
+            attachment_id="attachment-1",
         )
 
 
 @pytest.mark.asyncio
-async def test_replace_never_compensates_after_database_commit(monkeypatch, tmp_path: Path) -> None:
+async def test_replace_never_compensates_after_database_commit(
+    monkeypatch, tmp_path: Path
+) -> None:
     import src.services.property_certificate.attachment_service as module
     from src.services.file_upload import UploadPurpose
     from src.services.file_upload.staged_files import StagedFile, StoredFile
@@ -59,7 +65,11 @@ async def test_replace_never_compensates_after_database_commit(monkeypatch, tmp_
         size_bytes=staged.size_bytes,
         sha256=staged.sha256,
         storage_key="files/property_certificate/certificate-1/stage-1.pdf",
-        path=tmp_path / "files" / "property_certificate" / "certificate-1" / "stage-1.pdf",
+        path=tmp_path
+        / "files"
+        / "property_certificate"
+        / "certificate-1"
+        / "stage-1.pdf",
     )
 
     class FakeLifecycle:
@@ -90,7 +100,9 @@ async def test_replace_never_compensates_after_database_commit(monkeypatch, tmp_
             self.rollbacks += 1
 
     service = PropertyCertificateAttachmentService()
-    old_attachment = SimpleNamespace(storage_key="files/property_certificate/certificate-1/old.pdf")
+    old_attachment = SimpleNamespace(
+        storage_key="files/property_certificate/certificate-1/old.pdf"
+    )
     restored = []
 
     async def require_certificate(db, certificate_id):
@@ -110,9 +122,17 @@ async def test_replace_never_compensates_after_database_commit(monkeypatch, tmp_
     monkeypatch.setattr(service, "_require_attachment", require_attachment)
     monkeypatch.setattr(module.attachment_crud, "delete_for_owner", delete_attachment)
     monkeypatch.setattr(module.attachment_crud, "create", create_attachment)
-    monkeypatch.setattr(service, "_move_to_quarantine", lambda _path: tmp_path / "backup")
-    monkeypatch.setattr(service, "_discard_quarantine", lambda _backup: (_ for _ in ()).throw(OSError("cleanup failed")))
-    monkeypatch.setattr(service, "_restore_quarantine", lambda *args: restored.append(args))
+    monkeypatch.setattr(
+        service, "_move_to_quarantine", lambda _path: tmp_path / "backup"
+    )
+    monkeypatch.setattr(
+        service,
+        "_discard_quarantine",
+        lambda _backup: (_ for _ in ()).throw(OSError("cleanup failed")),
+    )
+    monkeypatch.setattr(
+        service, "_restore_quarantine", lambda *args: restored.append(args)
+    )
 
     db = FakeDb()
     with pytest.raises(OSError, match="cleanup failed"):

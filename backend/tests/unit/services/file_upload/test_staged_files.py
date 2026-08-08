@@ -230,7 +230,9 @@ async def test_cleanup_failure_is_logged_and_fails_current_operation(
         raise PermissionError("locked")
 
     monkeypatch.setattr(Path, "unlink", fail_unlink)
-    with patch("src.services.file_upload.staged_files.logger.exception") as log_exception:
+    with patch(
+        "src.services.file_upload.staged_files.logger.exception"
+    ) as log_exception:
         with pytest.raises(StagedFileLifecycleError) as exc_info:
             service.compensate_promotion(stored)
 
@@ -254,6 +256,7 @@ async def test_expiry_sweep_is_idempotent(tmp_path: Path) -> None:
     assert service.sweep_expired(ttl_seconds=3600) == 1
     assert service.sweep_expired(ttl_seconds=3600) == 0
     assert not staged.path.exists()
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio

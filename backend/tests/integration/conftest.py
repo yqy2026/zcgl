@@ -57,8 +57,7 @@ def _ensure_alembic_version_capacity(engine) -> None:  # noqa: ANN001
         )
         conn.execute(
             text(
-                "ALTER TABLE alembic_version "
-                "ALTER COLUMN version_num TYPE VARCHAR(128)"
+                "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)"
             )
         )
 
@@ -175,7 +174,9 @@ def db_tables(engine):
                 raise
         except Exception as exc:
             # 某些分支可能暂时存在多 head 等迁移冲突；集成测试优先使用可运行 schema。
-            print(f"[!] Alembic upgrade failed in integration fixture, fallback create_all: {exc}")
+            print(
+                f"[!] Alembic upgrade failed in integration fixture, fallback create_all: {exc}"
+            )
             importlib.import_module("src.models")
             Base.metadata.create_all(bind=engine)
 
@@ -229,7 +230,9 @@ def test_data(db_session):
     password_service = PasswordService()
 
     # Create or reuse test organization
-    test_org = db_session.query(Organization).filter(Organization.code == "TEST_ORG").first()
+    test_org = (
+        db_session.query(Organization).filter(Organization.code == "TEST_ORG").first()
+    )
     if test_org is None:
         test_org = Organization(
             name="Test Organization", code="TEST_ORG", type="department"

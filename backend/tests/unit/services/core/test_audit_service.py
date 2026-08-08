@@ -23,6 +23,7 @@ async def test_audit_service_module_avoids_datetime_utcnow() -> None:
 
     assert "datetime.utcnow(" not in content
 
+
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -100,7 +101,9 @@ class TestCreateAuditLogSuccess:
         mock_audit_log = Mock(spec=AuditLog)
         mock_audit_log.id = "audit-123"
 
-        result = await audit_service.create_audit_log(user_id=mock_user.id, action="login")
+        result = await audit_service.create_audit_log(
+            user_id=mock_user.id, action="login"
+        )
 
         assert result is not None
         assert mock_db.execute.await_count == 2
@@ -108,7 +111,9 @@ class TestCreateAuditLogSuccess:
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once()
 
-    async def test_create_audit_log_with_all_fields(self, audit_service, mock_db, mock_user):
+    async def test_create_audit_log_with_all_fields(
+        self, audit_service, mock_db, mock_user
+    ):
         """测试创建包含所有字段的审计日志"""
         mock_db.execute = AsyncMock(
             side_effect=[_mock_execute_first(mock_user), _mock_execute_scalar("管理员")]
@@ -167,10 +172,14 @@ class TestCreateAuditLogSuccess:
         )
 
         # 第一个日志
-        result1 = await audit_service.create_audit_log(user_id=mock_user.id, action="login")
+        result1 = await audit_service.create_audit_log(
+            user_id=mock_user.id, action="login"
+        )
 
         # 第二个日志
-        result2 = await audit_service.create_audit_log(user_id=mock_user.id, action="logout")
+        result2 = await audit_service.create_audit_log(
+            user_id=mock_user.id, action="logout"
+        )
 
         assert result1 is not None
         assert result2 is not None
@@ -208,7 +217,9 @@ class TestCreateAuditLogErrorHandling:
         mock_db.execute = AsyncMock(side_effect=Exception("Database connection error"))
 
         with pytest.raises(Exception, match="Database connection error"):
-            await audit_service.create_audit_log(user_id="test-user", action="test_action")
+            await audit_service.create_audit_log(
+                user_id="test-user", action="test_action"
+            )
 
     async def test_database_error_on_add(self, audit_service, mock_db, mock_user):
         """测试add时数据库错误"""
@@ -218,7 +229,9 @@ class TestCreateAuditLogErrorHandling:
         mock_db.add.side_effect = Exception("Add failed")
 
         with pytest.raises(Exception, match="Add failed"):
-            await audit_service.create_audit_log(user_id=mock_user.id, action="test_action")
+            await audit_service.create_audit_log(
+                user_id=mock_user.id, action="test_action"
+            )
 
     async def test_database_error_on_commit(self, audit_service, mock_db, mock_user):
         """测试commit时数据库错误"""
@@ -228,7 +241,9 @@ class TestCreateAuditLogErrorHandling:
         mock_db.commit.side_effect = Exception("Commit failed")
 
         with pytest.raises(Exception, match="Commit failed"):
-            await audit_service.create_audit_log(user_id=mock_user.id, action="test_action")
+            await audit_service.create_audit_log(
+                user_id=mock_user.id, action="test_action"
+            )
 
 
 # ============================================================================
@@ -256,7 +271,9 @@ class TestCreateAuditLogActionTypes:
         """测试各种操作类型"""
         mock_db.execute = _mock_execute_user_role(mock_user)
 
-        result = await audit_service.create_audit_log(user_id=mock_user.id, action=action)
+        result = await audit_service.create_audit_log(
+            user_id=mock_user.id, action=action
+        )
 
         assert result is not None
 
@@ -369,7 +386,9 @@ class TestCreateAuditLogEdgeCases:
 
         assert result is not None
 
-    async def test_with_different_response_statuses(self, audit_service, mock_db, mock_user):
+    async def test_with_different_response_statuses(
+        self, audit_service, mock_db, mock_user
+    ):
         """测试不同的响应状态码"""
         status_codes = [200, 201, 204, 400, 401, 403, 404, 500, 503]
 
@@ -473,17 +492,23 @@ class TestAuditServiceIntegration:
 class TestDatabaseOperations:
     """测试数据库操作"""
 
-    async def test_query_called_with_correct_filter(self, audit_service, mock_db, mock_user):
+    async def test_query_called_with_correct_filter(
+        self, audit_service, mock_db, mock_user
+    ):
         """测试使用正确的筛选条件查询"""
         mock_db.execute = _mock_execute_user_role(mock_user)
 
-        await audit_service.create_audit_log(user_id="specific-user-id", action="test_action")
+        await audit_service.create_audit_log(
+            user_id="specific-user-id", action="test_action"
+        )
 
         assert mock_db.execute.await_count == 2
         query_stmt = mock_db.execute.await_args_list[0].args[0]
         assert query_stmt.compile().params["id_1"] == "specific-user-id"
 
-    async def test_database_operations_call_order(self, audit_service, mock_db, mock_user):
+    async def test_database_operations_call_order(
+        self, audit_service, mock_db, mock_user
+    ):
         """测试数据库操作调用顺序"""
         mock_db.execute = _mock_execute_user_role(mock_user)
 

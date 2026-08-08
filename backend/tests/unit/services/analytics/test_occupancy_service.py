@@ -100,7 +100,9 @@ class TestOccupancyService:
         assert result["overall_rate"] == 75.0
         assert result["calculation_method"] == "memory_fallback"
 
-    async def test_calculate_category_with_aggregation(self, occupancy_service, mock_db):
+    async def test_calculate_category_with_aggregation(
+        self, occupancy_service, mock_db
+    ):
         mock_rows = [
             MagicMock(
                 category="商业",
@@ -117,7 +119,9 @@ class TestOccupancyService:
                 rentable_assets_count=2,
             ),
         ]
-        mock_db.execute = AsyncMock(return_value=_mock_execute_result(all_values=mock_rows))
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(all_values=mock_rows)
+        )
 
         result = await occupancy_service.calculate_category_with_aggregation(
             category_field="property_nature",

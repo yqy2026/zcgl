@@ -144,7 +144,9 @@ class TestExcelImportServiceErrorHandling:
             excel_service._find_existing_asset = AsyncMock(
                 return_value=MagicMock(id="existing_id")
             )
-            with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
+            with patch(
+                "src.services.excel.excel_import_service.asset_crud"
+            ) as mock_crud:
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
                 mock_crud.get_by_asset_names_async = AsyncMock(return_value=[])
 
@@ -199,7 +201,9 @@ class TestExcelImportServiceErrorHandling:
             ownership = MagicMock()
             ownership.id = "ownership_123"
             ownership.name = "测试单位"
-            mock_db.execute = AsyncMock(return_value=_result_with_scalars_all([ownership]))
+            mock_db.execute = AsyncMock(
+                return_value=_result_with_scalars_all([ownership])
+            )
 
             with patch(
                 "src.services.excel.excel_import_service.asset_crud"
@@ -272,7 +276,9 @@ class TestExcelImportServiceErrorHandling:
             ownership = MagicMock()
             ownership.id = "ownership_123"
             ownership.name = "测试单位"
-            mock_db.execute = AsyncMock(return_value=_result_with_scalars_all([ownership]))
+            mock_db.execute = AsyncMock(
+                return_value=_result_with_scalars_all([ownership])
+            )
 
             with patch(
                 "src.services.excel.excel_import_service.asset_crud"
@@ -280,8 +286,8 @@ class TestExcelImportServiceErrorHandling:
                 # 第一个成功，第二个失败
                 mock_crud.create_async = AsyncMock(
                     side_effect=[
-                    MagicMock(id="id1"),
-                    Exception("创建失败"),
+                        MagicMock(id="id1"),
+                        Exception("创建失败"),
                     ]
                 )
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
@@ -633,7 +639,9 @@ class TestUpdateExistingAssets:
             ownership = MagicMock()
             ownership.id = "ownership_123"
             ownership.name = "新权属方"
-            mock_db.execute = AsyncMock(return_value=_result_with_scalars_all([ownership]))
+            mock_db.execute = AsyncMock(
+                return_value=_result_with_scalars_all([ownership])
+            )
 
             with patch(
                 "src.services.excel.excel_import_service.asset_crud"
@@ -901,4 +909,3 @@ class TestFieldMappingConstant:
     def test_field_mapping_count(self):
         """测试字段映射数量"""
         assert len(FIELD_MAPPING) == 22
-

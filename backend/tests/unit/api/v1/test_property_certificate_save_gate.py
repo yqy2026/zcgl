@@ -1,7 +1,9 @@
 from pathlib import Path
 
 
-def test_create_certificate_endpoint_does_not_use_extraction_validator_as_save_gate() -> None:
+def test_create_certificate_endpoint_does_not_use_extraction_validator_as_save_gate() -> (
+    None
+):
     from src.api.v1.assets import property_certificate as module
 
     source = Path(module.__file__).read_text(encoding="utf-8")

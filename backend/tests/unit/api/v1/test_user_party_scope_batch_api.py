@@ -101,9 +101,10 @@ def test_user_party_scope_batch_requires_preview_and_commits_all_items(
     preview_payload = preview_response.json()
     assert preview_payload["impact"]["user_count"] == 2
     assert preview_payload["impact"]["binding_change_count"] == 2
-    assert {
-        item["user"]["id"] for item in preview_payload["items"]
-    } == {first_user.id, second_user.id}
+    assert {item["user"]["id"] for item in preview_payload["items"]} == {
+        first_user.id,
+        second_user.id,
+    }
     assert db_session.query(UserPartyBinding).count() == 0
 
     commit_request = {
@@ -177,9 +178,7 @@ def test_user_party_scope_batch_rejects_state_drift_without_partial_write(
     assert db_session.query(UserPartyBinding).count() == 0
 
 
-def test_user_party_scope_batch_can_close_existing_bindings(
-    client, db_session
-) -> None:
+def test_user_party_scope_batch_can_close_existing_bindings(client, db_session) -> None:
     """Close proposals remain valid after preview serialization and commit."""
     from src.models.user_party_binding import UserPartyBinding
     from src.models.user_party_scope_batch_commit import UserPartyScopeBatchCommit

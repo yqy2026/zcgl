@@ -34,7 +34,10 @@ def test_api_v1_should_register_system_settings_router_fail_loud():
     import src.api.v1 as api_v1
 
     module_source = inspect.getsource(api_v1)
-    assert "from .system.system_settings import router as system_settings_router" in module_source
+    assert (
+        "from .system.system_settings import router as system_settings_router"
+        in module_source
+    )
     assert '_load_optional_router(\n    ".system.system_settings"' not in module_source
     assert "if system_settings_router is not None" not in module_source
 
@@ -62,7 +65,9 @@ def test_system_settings_endpoints_should_use_require_authz():
         assert re.search(pattern, module_source), pattern
 
 
-def test_system_settings_backup_create_authz_context_should_use_unscoped_sentinel() -> None:
+def test_system_settings_backup_create_authz_context_should_use_unscoped_sentinel() -> (
+    None
+):
     from src.api.v1.system import system_settings
 
     expected_create_sentinel = "__unscoped__:system_settings:create"

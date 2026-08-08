@@ -27,9 +27,7 @@ class TestAsyncAssetImportService:
             new_callable=AsyncMock,
             return_value=[existing_asset],
         ) as mock_get_assets:
-            result = await service._load_existing_assets_map(
-                [{"asset_name": "物业A"}]
-            )
+            result = await service._load_existing_assets_map([{"asset_name": "物业A"}])
 
         assert result == {"物业A": existing_asset}
         mock_get_assets.assert_awaited_once_with(

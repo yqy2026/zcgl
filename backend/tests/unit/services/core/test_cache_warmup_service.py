@@ -14,12 +14,15 @@ async def test_warmup_low_churn_data_success() -> None:
     service = CacheWarmupService()
     mock_db = MagicMock()
 
-    with patch(
-        "src.services.cache_warmup_service.system_dictionary_service.get_types_async",
-        new=AsyncMock(return_value=["organization_type", "organization_status"]),
-    ), patch(
-        "src.services.cache_warmup_service.organization_service.get_statistics",
-        new=AsyncMock(return_value={"total": 8}),
+    with (
+        patch(
+            "src.services.cache_warmup_service.system_dictionary_service.get_types_async",
+            new=AsyncMock(return_value=["organization_type", "organization_status"]),
+        ),
+        patch(
+            "src.services.cache_warmup_service.organization_service.get_statistics",
+            new=AsyncMock(return_value={"total": 8}),
+        ),
     ):
         result = await service.warmup_low_churn_data(mock_db)
 
@@ -34,12 +37,15 @@ async def test_warmup_low_churn_data_partial_failure() -> None:
     service = CacheWarmupService()
     mock_db = MagicMock()
 
-    with patch(
-        "src.services.cache_warmup_service.system_dictionary_service.get_types_async",
-        new=AsyncMock(side_effect=RuntimeError("dict unavailable")),
-    ), patch(
-        "src.services.cache_warmup_service.organization_service.get_statistics",
-        new=AsyncMock(return_value={"total": 5}),
+    with (
+        patch(
+            "src.services.cache_warmup_service.system_dictionary_service.get_types_async",
+            new=AsyncMock(side_effect=RuntimeError("dict unavailable")),
+        ),
+        patch(
+            "src.services.cache_warmup_service.organization_service.get_statistics",
+            new=AsyncMock(return_value={"total": 5}),
+        ),
     ):
         result = await service.warmup_low_churn_data(mock_db)
 

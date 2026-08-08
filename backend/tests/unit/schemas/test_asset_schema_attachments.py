@@ -36,8 +36,7 @@ class TestAssetSchemaAttachments:
         payload = asset.model_dump()
 
         assert (
-            payload["operation_agreement_attachments"]
-            == "receive-1.pdf,receive-2.pdf"
+            payload["operation_agreement_attachments"] == "receive-1.pdf,receive-2.pdf"
         )
         assert payload["terminal_contract_files"] == "terminal-1.pdf"
 

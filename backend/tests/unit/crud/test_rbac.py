@@ -56,7 +56,9 @@ class TestCRUDRole:
         role.is_system_role = True
         return role
 
-    async def test_create_filters_permission_ids(self, crud: CRUDRole, mock_db: MagicMock):
+    async def test_create_filters_permission_ids(
+        self, crud: CRUDRole, mock_db: MagicMock
+    ):
         role_data = {
             "name": "test_role",
             "display_name": "测试角色",
@@ -124,7 +126,9 @@ class TestCRUDRole:
         mock_db.execute = AsyncMock(side_effect=[mock_roles_result, mock_count_result])
 
         with (
-            patch.object(crud.query_builder, "build_query", return_value=MagicMock()) as mock_build_query,
+            patch.object(
+                crud.query_builder, "build_query", return_value=MagicMock()
+            ) as mock_build_query,
             patch.object(
                 crud.query_builder,
                 "build_count_query",
@@ -137,7 +141,9 @@ class TestCRUDRole:
             )
 
         assert mock_build_query.call_args.kwargs.get("party_filter") == party_filter
-        assert mock_build_count_query.call_args.kwargs.get("party_filter") == party_filter
+        assert (
+            mock_build_count_query.call_args.kwargs.get("party_filter") == party_filter
+        )
 
     async def test_get_multi_with_filters_maps_deprecated_organization_id_alias(
         self, crud: CRUDRole, mock_db: MagicMock
@@ -179,7 +185,9 @@ class TestCRUDRole:
 
     async def test_count_by_flags(self, crud: CRUDRole, mock_db: MagicMock):
         mock_row = MagicMock(total=20, active=16, system=5, custom=15)
-        mock_db.execute = AsyncMock(return_value=_mock_execute_result(one_value=mock_row))
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(one_value=mock_row)
+        )
 
         result = await crud.count_by_flags(mock_db)
 
@@ -237,7 +245,9 @@ class TestCRUDPermission:
         party_filter = PartyFilter(party_ids=["org-1"])
         mock_db.execute = AsyncMock(return_value=_mock_execute_result(all_values=[]))
 
-        with patch.object(crud.query_builder, "build_query", return_value=MagicMock()) as mock_build_query:
+        with patch.object(
+            crud.query_builder, "build_query", return_value=MagicMock()
+        ) as mock_build_query:
             await crud.get_multi_with_filters(
                 mock_db,
                 party_filter=party_filter,
@@ -322,7 +332,9 @@ class TestCRUDUserRoleAssignment:
 
         assert result == []
 
-    async def test_count_by_role(self, crud: CRUDUserRoleAssignment, mock_db: MagicMock):
+    async def test_count_by_role(
+        self, crud: CRUDUserRoleAssignment, mock_db: MagicMock
+    ):
         mock_db.execute = AsyncMock(return_value=_mock_execute_result(scalar_value=10))
 
         result = await crud.count_by_role(mock_db, "role_123")

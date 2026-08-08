@@ -73,8 +73,7 @@ def test_integration_and_e2e_tests_do_not_reintroduce_weak_patterns() -> None:
 
     assert not violations, (
         "Found weak integration-test patterns. Please replace with explicit "
-        "contract assertions.\n"
-        + "\n".join(violations[:30])
+        "contract assertions.\n" + "\n".join(violations[:30])
     )
 
 
@@ -93,6 +92,5 @@ def test_unit_api_tests_do_not_swallow_exceptions_with_pass() -> None:
 
     assert not violations, (
         "Found weak unit-api test patterns. Please replace broad exception swallow "
-        "with explicit cleanup checks.\n"
-        + "\n".join(violations[:30])
+        "with explicit cleanup checks.\n" + "\n".join(violations[:30])
     )

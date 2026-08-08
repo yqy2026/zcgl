@@ -163,9 +163,7 @@ class TestSendWecomNotification:
         result = await scheduler_service._send_wecom_notification(notification)
         assert result is False
 
-    async def test_send_wecom_records_api_failure(
-        self, scheduler_service, mock_db
-    ):
+    async def test_send_wecom_records_api_failure(self, scheduler_service, mock_db):
         notification = MagicMock(spec=Notification)
         notification.id = "notif_123"
         notification.recipient_id = "user_123"
@@ -185,9 +183,7 @@ class TestSendWecomNotification:
             assert "failed" in notification.wecom_send_error
             mock_db.commit.assert_awaited_once()
 
-    async def test_send_wecom_records_exception(
-        self, scheduler_service, mock_db
-    ):
+    async def test_send_wecom_records_exception(self, scheduler_service, mock_db):
         notification = MagicMock(spec=Notification)
         notification.id = "notif_123"
         notification.recipient_id = "user_123"
@@ -207,6 +203,8 @@ class TestSendWecomNotification:
             assert notification.wecom_sent_at is None
             assert "exception" in notification.wecom_send_error
             mock_db.commit.assert_awaited_once()
+
+
 # ============================================================================
 # _create_and_send_notification
 # ============================================================================

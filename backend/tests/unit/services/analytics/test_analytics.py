@@ -278,8 +278,8 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         mock_area_service = MagicMock()
         mock_area_service.calculate_summary_with_aggregation = AsyncMock(
             return_value={
-            "total_assets": 10,
-            "total_land_area": 5000.0,
+                "total_assets": 10,
+                "total_land_area": 5000.0,
             }
         )
         mock_area_cls.return_value = mock_area_service
@@ -357,7 +357,9 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         assert "total_assets" in result
 
     @pytest.mark.asyncio
-    async def test_get_comprehensive_analytics_with_deleted_assets(self, analytics_service):
+    async def test_get_comprehensive_analytics_with_deleted_assets(
+        self, analytics_service
+    ):
         """Test analytics including deleted assets"""
         analytics_service.cache.get = MagicMock(return_value=None)
 
@@ -568,7 +570,9 @@ class TestAreaServiceAggregationCalculation:
     """Tests for area aggregation calculation"""
 
     @pytest.mark.asyncio
-    async def test_calculate_summary_with_aggregation_basic(self, area_service, mock_db):
+    async def test_calculate_summary_with_aggregation_basic(
+        self, area_service, mock_db
+    ):
         """Test basic area aggregation"""
         mock_result = MagicMock()
         mock_result.total_assets = 10
@@ -746,8 +750,8 @@ class TestAreaServiceMemoryCalculation:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -764,7 +768,9 @@ class TestAreaServiceMemoryCalculation:
 
     @patch("src.services.analytics.area_service.asset_crud")
     @pytest.mark.asyncio
-    async def test_calculate_summary_in_memory_partial_data(self, mock_crud, area_service):
+    async def test_calculate_summary_in_memory_partial_data(
+        self, mock_crud, area_service
+    ):
         """Test memory calculation with partial missing data"""
         mock_assets = [
             MagicMock(
@@ -784,8 +790,8 @@ class TestAreaServiceMemoryCalculation:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -799,7 +805,9 @@ class TestAreaServiceMemoryCalculation:
 
     @patch("src.services.analytics.area_service.asset_crud")
     @pytest.mark.asyncio
-    async def test_calculate_summary_in_memory_all_null_values(self, mock_crud, area_service):
+    async def test_calculate_summary_in_memory_all_null_values(
+        self, mock_crud, area_service
+    ):
         """Test memory calculation with all null values"""
         mock_assets = [
             MagicMock(
@@ -812,8 +820,8 @@ class TestAreaServiceMemoryCalculation:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -841,8 +849,8 @@ class TestAreaServiceMemoryCalculation:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -865,8 +873,8 @@ class TestAreaServiceMemoryCalculation:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -879,7 +887,9 @@ class TestAreaServiceMemoryCalculation:
 
     @patch("src.services.analytics.area_service.asset_crud")
     @pytest.mark.asyncio
-    async def test_calculate_summary_in_memory_pagination(self, mock_crud, area_service):
+    async def test_calculate_summary_in_memory_pagination(
+        self, mock_crud, area_service
+    ):
         """Test memory calculation handles pagination correctly"""
         # Create 1500 assets to test pagination (batch_size=1000)
         mock_assets_batch1 = [MagicMock(land_area=100.0, rentable_area=50.0)] * 1000
@@ -887,9 +897,9 @@ class TestAreaServiceMemoryCalculation:
 
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets_batch1, None),
-            (mock_assets_batch2, None),
-            ([], None),
+                (mock_assets_batch1, None),
+                (mock_assets_batch2, None),
+                ([], None),
             ]
         )
 
@@ -901,7 +911,9 @@ class TestAreaServiceMemoryCalculation:
 
     @patch("src.services.analytics.area_service.asset_crud")
     @pytest.mark.asyncio
-    async def test_calculate_summary_in_memory_with_filters(self, mock_crud, area_service):
+    async def test_calculate_summary_in_memory_with_filters(
+        self, mock_crud, area_service
+    ):
         """Test memory calculation with filters"""
         mock_assets = [
             MagicMock(
@@ -914,8 +926,8 @@ class TestAreaServiceMemoryCalculation:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -970,7 +982,9 @@ class TestAreaServiceEdgeCases:
 
     @patch("src.services.analytics.area_service.asset_crud")
     @pytest.mark.asyncio
-    async def test_memory_calculation_with_negative_values(self, mock_crud, area_service):
+    async def test_memory_calculation_with_negative_values(
+        self, mock_crud, area_service
+    ):
         """Test memory calculation handles negative values"""
         mock_assets = [
             MagicMock(
@@ -983,8 +997,8 @@ class TestAreaServiceEdgeCases:
         ]
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (mock_assets, None),
-            ([], None),
+                (mock_assets, None),
+                ([], None),
             ]
         )
 
@@ -1134,8 +1148,8 @@ class TestPerformance:
 
         mock_crud.get_multi_with_search_async = AsyncMock(
             side_effect=[
-            (large_batch, None),
-            ([], None),
+                (large_batch, None),
+                ([], None),
             ]
         )
 
@@ -1151,7 +1165,9 @@ class TestPerformance:
         assert end_time - start_time < 1.0
 
     @pytest.mark.asyncio
-    async def test_analytics_service_large_dataset_distribution(self, analytics_service):
+    async def test_analytics_service_large_dataset_distribution(
+        self, analytics_service
+    ):
         """Test analytics service distribution with large dataset"""
         # Create large dataset
         large_dataset = []

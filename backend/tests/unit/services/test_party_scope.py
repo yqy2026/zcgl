@@ -78,7 +78,9 @@ class TestResolveUserPartyFilter:
 
         assert result is explicit_filter
 
-    async def test_missing_user_id_keeps_unscoped_internal_caller_behavior(self) -> None:
+    async def test_missing_user_id_keeps_unscoped_internal_caller_behavior(
+        self,
+    ) -> None:
         result = await resolve_user_party_filter(
             MagicMock(),
             current_user_id=None,
@@ -142,11 +144,11 @@ class TestResolveUserPartyFilter:
         ):
             result = await resolve_user_party_filter(
                 MagicMock(),
-                    current_user_id="user-1",
-                    party_filter=None,
-                    logger=logging.getLogger(__name__),
-                    skip_invalid_scope=True,
-                )
+                current_user_id="user-1",
+                party_filter=None,
+                logger=logging.getLogger(__name__),
+                skip_invalid_scope=True,
+            )
 
         assert result == PartyFilter(party_ids=[])
 

@@ -136,17 +136,24 @@ class TestGenerateOwnershipCode:
 
 class TestCreateOwnership:
     async def test_create_ownership_success(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
         obj_in = OwnershipCreate(name="新权属方", short_name="新")
 
-        with patch(
-            "src.crud.ownership.ownership.get_by_name", new_callable=AsyncMock
-        ) as mock_get_by_name, patch.object(
-            ownership_service, "generate_ownership_code", new_callable=AsyncMock
-        ) as mock_generate_code, patch(
-            "src.crud.ownership.ownership.create", new_callable=AsyncMock
-        ) as mock_create:
+        with (
+            patch(
+                "src.crud.ownership.ownership.get_by_name", new_callable=AsyncMock
+            ) as mock_get_by_name,
+            patch.object(
+                ownership_service, "generate_ownership_code", new_callable=AsyncMock
+            ) as mock_generate_code,
+            patch(
+                "src.crud.ownership.ownership.create", new_callable=AsyncMock
+            ) as mock_create,
+        ):
             mock_get_by_name.return_value = None
             mock_generate_code.return_value = "OW2501001"
             mock_create.return_value = mock_ownership
@@ -175,15 +182,21 @@ class TestCreateOwnership:
 
 class TestUpdateOwnership:
     async def test_update_ownership_basic(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
         obj_in = OwnershipUpdate(name="更新后的名称")
 
-        with patch(
-            "src.crud.ownership.ownership.get_by_name", new_callable=AsyncMock
-        ) as mock_get_by_name, patch(
-            "src.crud.ownership.ownership.update", new_callable=AsyncMock
-        ) as mock_update:
+        with (
+            patch(
+                "src.crud.ownership.ownership.get_by_name", new_callable=AsyncMock
+            ) as mock_get_by_name,
+            patch(
+                "src.crud.ownership.ownership.update", new_callable=AsyncMock
+            ) as mock_update,
+        ):
             mock_get_by_name.return_value = None
             mock_update.return_value = mock_ownership
 
@@ -199,7 +212,10 @@ class TestUpdateOwnership:
         assert isinstance(update_kwargs["obj_in"]["updated_at"], datetime)
 
     async def test_update_ownership_name_conflict(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
         obj_in = OwnershipUpdate(name="已存在名称")
 
@@ -219,15 +235,21 @@ class TestUpdateOwnership:
                 )
 
     async def test_update_ownership_same_name_allowed(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
         obj_in = OwnershipUpdate(name=mock_ownership.name)
 
-        with patch(
-            "src.crud.ownership.ownership.get_by_name", new_callable=AsyncMock
-        ) as mock_get_by_name, patch(
-            "src.crud.ownership.ownership.update", new_callable=AsyncMock
-        ) as mock_update:
+        with (
+            patch(
+                "src.crud.ownership.ownership.get_by_name", new_callable=AsyncMock
+            ) as mock_get_by_name,
+            patch(
+                "src.crud.ownership.ownership.update", new_callable=AsyncMock
+            ) as mock_update,
+        ):
             mock_update.return_value = mock_ownership
             await ownership_service.update_ownership(
                 mock_db,
@@ -256,7 +278,10 @@ class TestUpdateOwnership:
 
 class TestGetStatistics:
     async def test_get_statistics_basic(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
         mock_db.execute.side_effect = [
             _result_with_one((10, 7)),
@@ -297,13 +322,19 @@ class TestCountsAndDelete:
         assert result == 10
 
     async def test_delete_ownership_success(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
-        with patch(
-            "src.crud.ownership.ownership.get", new_callable=AsyncMock
-        ) as mock_get_ownership, patch(
-            "src.crud.ownership.ownership.remove", new_callable=AsyncMock
-        ) as mock_remove:
+        with (
+            patch(
+                "src.crud.ownership.ownership.get", new_callable=AsyncMock
+            ) as mock_get_ownership,
+            patch(
+                "src.crud.ownership.ownership.remove", new_callable=AsyncMock
+            ) as mock_remove,
+        ):
             mock_get_ownership.return_value = mock_ownership
             mock_db.execute.return_value = _result_with_scalar(0)
 
@@ -327,7 +358,10 @@ class TestCountsAndDelete:
                 await ownership_service.delete_ownership(mock_db, id="not-found")
 
     async def test_delete_ownership_with_assets_fails(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
         with patch(
             "src.crud.ownership.ownership.get", new_callable=AsyncMock
@@ -341,15 +375,21 @@ class TestCountsAndDelete:
 
 class TestToggleStatus:
     async def test_toggle_status_success(
-        self, ownership_service: OwnershipService, mock_db: AsyncMock, mock_ownership: MagicMock
+        self,
+        ownership_service: OwnershipService,
+        mock_db: AsyncMock,
+        mock_ownership: MagicMock,
     ):
         mock_ownership.is_active = True
 
-        with patch(
-            "src.crud.ownership.ownership.get", new_callable=AsyncMock
-        ) as mock_get_ownership, patch.object(
-            ownership_service, "update_ownership", new_callable=AsyncMock
-        ) as mock_update_ownership:
+        with (
+            patch(
+                "src.crud.ownership.ownership.get", new_callable=AsyncMock
+            ) as mock_get_ownership,
+            patch.object(
+                ownership_service, "update_ownership", new_callable=AsyncMock
+            ) as mock_update_ownership,
+        ):
             mock_get_ownership.return_value = mock_ownership
             mock_update_ownership.return_value = mock_ownership
 

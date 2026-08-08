@@ -161,10 +161,16 @@ class TestCreateTask:
             title="Import Assets",
         )
 
-        mock_task_service.create_task = AsyncMock(side_effect=Exception("Database error"))
+        mock_task_service.create_task = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            run(create_task(task_in=task_data, db=mock_db, current_user=mock_current_user))
+            run(
+                create_task(
+                    task_in=task_data, db=mock_db, current_user=mock_current_user
+                )
+            )
 
         assert exc_info.value.status_code == 500
         assert "创建任务失败" in exc_info.value.message
@@ -306,7 +312,11 @@ class TestGetTask:
         mock_task_service.get_task = AsyncMock(return_value=None)
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            run(get_task(task_id="nonexistent", db=mock_db, current_user=mock_current_user))
+            run(
+                get_task(
+                    task_id="nonexistent", db=mock_db, current_user=mock_current_user
+                )
+            )
 
         assert exc_info.value.status_code == 404
         assert "不存在" in exc_info.value.message
@@ -351,9 +361,7 @@ class TestUpdateTask:
         mock_task_service.update_task.assert_called_once()
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_update_task_not_found(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_update_task_not_found(self, mock_task_service, mock_db, mock_current_user):
         """Test updating non-existent task"""
         from src.api.v1.system.tasks import update_task
 
@@ -400,16 +408,16 @@ class TestUpdateTask:
         assert exc_info.value.status_code == 500
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_update_task_exception(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_update_task_exception(self, mock_task_service, mock_db, mock_current_user):
         """Test updating task with exception"""
         from src.api.v1.system.tasks import update_task
 
         task_data = TaskUpdate(progress=50)
 
         mock_task_service.get_task = AsyncMock(return_value=create_mock_task())
-        mock_task_service.update_task = AsyncMock(side_effect=Exception("Database error"))
+        mock_task_service.update_task = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         with pytest.raises(BaseBusinessError) as exc_info:
             run(
@@ -434,9 +442,7 @@ class TestCancelTask:
     """Tests for POST /api/v1/tasks/{task_id}/cancel endpoint"""
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_cancel_task_success(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_cancel_task_success(self, mock_task_service, mock_db, mock_current_user):
         """Test cancelling task successfully"""
         from src.api.v1.system.tasks import cancel_task
 
@@ -492,9 +498,7 @@ class TestCancelTask:
         assert result.status == TaskStatus.CANCELLED.value
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_cancel_task_not_found(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_cancel_task_not_found(self, mock_task_service, mock_db, mock_current_user):
         """Test cancelling non-existent task"""
         from src.api.v1.system.tasks import cancel_task
 
@@ -541,14 +545,14 @@ class TestCancelTask:
         assert exc_info.value.status_code == 500
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_cancel_task_exception(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_cancel_task_exception(self, mock_task_service, mock_db, mock_current_user):
         """Test cancelling task with exception"""
         from src.api.v1.system.tasks import cancel_task
 
         mock_task_service.get_task = AsyncMock(return_value=create_mock_task())
-        mock_task_service.cancel_task = AsyncMock(side_effect=Exception("Database error"))
+        mock_task_service.cancel_task = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         cancel_request = TaskCancelRequest(reason="Test")
 
@@ -575,9 +579,7 @@ class TestDeleteTask:
     """Tests for DELETE /api/v1/tasks/{task_id} endpoint"""
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_delete_task_success(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_delete_task_success(self, mock_task_service, mock_db, mock_current_user):
         """Test deleting task successfully"""
         from src.api.v1.system.tasks import delete_task
 
@@ -594,9 +596,7 @@ class TestDeleteTask:
         )
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_delete_task_not_found(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_delete_task_not_found(self, mock_task_service, mock_db, mock_current_user):
         """Test deleting non-existent task"""
         from src.api.v1.system.tasks import delete_task
 
@@ -612,9 +612,7 @@ class TestDeleteTask:
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
     @patch("src.api.v1.system.tasks.task_service")
-    def test_delete_task_exception(
-        self, mock_task_service, mock_db, mock_current_user
-    ):
+    def test_delete_task_exception(self, mock_task_service, mock_db, mock_current_user):
         """Test deleting task with exception"""
         from src.api.v1.system.tasks import delete_task
 
@@ -964,7 +962,11 @@ class TestGetRecentTasks:
         )
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            run(get_recent_tasks(page_size=10, db=mock_db, current_user=mock_current_user))
+            run(
+                get_recent_tasks(
+                    page_size=10, db=mock_db, current_user=mock_current_user
+                )
+            )
 
         assert exc_info.value.status_code == 500
         assert "获取最近任务失败" in exc_info.value.message
@@ -1087,9 +1089,7 @@ class TestGetExcelConfigs:
 
         mock_task_service.get_excel_configs = AsyncMock(return_value=mock_configs)
 
-        result = run(
-            get_excel_configs(config_type=None, task_type=None, db=mock_db)
-        )
+        result = run(get_excel_configs(config_type=None, task_type=None, db=mock_db))
 
         assert len(result) == 10
         mock_task_service.get_excel_configs.assert_awaited_once_with(
@@ -1362,11 +1362,13 @@ class TestCleanupOldTasks:
         """Test cleanup old tasks in dry run mode"""
         from src.api.v1.system.tasks import cleanup_old_tasks
 
-        mock_task_service.cleanup_old_tasks = AsyncMock(return_value={
-            "message": "试运行模式，发现 25 个可清理的任务",
-            "cleanup_date": "2026-01-16T00:00:00",
-            "task_count": 25,
-        })
+        mock_task_service.cleanup_old_tasks = AsyncMock(
+            return_value={
+                "message": "试运行模式，发现 25 个可清理的任务",
+                "cleanup_date": "2026-01-16T00:00:00",
+                "task_count": 25,
+            }
+        )
 
         result = run(
             cleanup_old_tasks(
@@ -1387,11 +1389,13 @@ class TestCleanupOldTasks:
         """Test actual cleanup of old tasks"""
         from src.api.v1.system.tasks import cleanup_old_tasks
 
-        mock_task_service.cleanup_old_tasks = AsyncMock(return_value={
-            "message": "成功清理 25 个过期任务",
-            "cleanup_date": "2026-01-16T00:00:00",
-            "cleaned_count": 25,
-        })
+        mock_task_service.cleanup_old_tasks = AsyncMock(
+            return_value={
+                "message": "成功清理 25 个过期任务",
+                "cleanup_date": "2026-01-16T00:00:00",
+                "cleaned_count": 25,
+            }
+        )
 
         result = run(
             cleanup_old_tasks(
@@ -1416,7 +1420,10 @@ class TestCleanupOldTasks:
         with pytest.raises(BaseBusinessError) as exc_info:
             run(
                 cleanup_old_tasks(
-                    days=30, is_dry_run=False, db=mock_db, current_user=mock_current_user
+                    days=30,
+                    is_dry_run=False,
+                    db=mock_db,
+                    current_user=mock_current_user,
                 )
             )
 

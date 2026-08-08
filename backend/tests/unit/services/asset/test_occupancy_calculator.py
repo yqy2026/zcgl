@@ -288,6 +288,7 @@ class TestCalculateOverallOccupancyRate:
 
     def test_exception_handling(self):
         """测试异常处理"""
+
         class BadAsset:
             rentable_area = "bad"
             rented_area = 1

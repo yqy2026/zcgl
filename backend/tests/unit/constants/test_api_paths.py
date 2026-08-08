@@ -7,7 +7,9 @@ def test_contract_paths_replace_legacy_rental_paths() -> None:
     assert not hasattr(api_paths_module, "RentalPaths")
 
     assert api_paths_module.ContractPaths.GROUPS["BASE"] == "/contract-groups"
-    assert api_paths_module.ContractPaths.CONTRACTS["DETAIL"] == "/contracts/{contract_id}"
+    assert (
+        api_paths_module.ContractPaths.CONTRACTS["DETAIL"] == "/contracts/{contract_id}"
+    )
     assert (
         api_paths_module.ContractPaths.CONTRACTS["LEDGER"]
         == "/contracts/{contract_id}/ledger"

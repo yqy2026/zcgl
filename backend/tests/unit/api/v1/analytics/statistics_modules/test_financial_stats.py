@@ -54,7 +54,9 @@ def client(mock_db, mock_user):
                 )
             ),
         ),
-        patch("src.middleware.auth.RBACService.is_admin", AsyncMock(return_value=False)),
+        patch(
+            "src.middleware.auth.RBACService.is_admin", AsyncMock(return_value=False)
+        ),
     ):
         with TestClient(app) as test_client:
             yield test_client

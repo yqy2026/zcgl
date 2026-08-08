@@ -183,7 +183,9 @@ class TestValidateFieldValue:
 
 
 class TestAssetFieldValues:
-    async def test_update_asset_field_values_success(self, service, mock_db, sample_field):
+    async def test_update_asset_field_values_success(
+        self, service, mock_db, sample_field
+    ):
         values = [CustomFieldValueItem(field_name="test_field", value="foo")]
 
         with patch(
@@ -219,7 +221,9 @@ class TestAssetFieldValues:
 
                 assert result[0]["field_id"] == TEST_FIELD_ID
 
-    async def test_update_asset_field_values_validation_error(self, service, mock_db, sample_field):
+    async def test_update_asset_field_values_validation_error(
+        self, service, mock_db, sample_field
+    ):
         sample_field.field_type = "number"
         values = [CustomFieldValueItem(field_name="test_field", value="bad")]
 
@@ -257,9 +261,7 @@ class TestToggleAndSort:
             "src.services.custom_field.service.custom_field_crud.get",
             new=AsyncMock(return_value=sample_field),
         ):
-            result = await service.toggle_active_status_async(
-                mock_db, id=TEST_FIELD_ID
-            )
+            result = await service.toggle_active_status_async(mock_db, id=TEST_FIELD_ID)
 
             assert result.is_active is False
             mock_db.commit.assert_called_once()

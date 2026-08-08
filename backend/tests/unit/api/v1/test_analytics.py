@@ -1,4 +1,4 @@
-﻿"""
+"""
 分析API测试
 
 Test coverage for Analytics API endpoints:
@@ -433,9 +433,7 @@ class TestAnalyticsResponseStructure:
         assert "req-ana-001-v2" in response.text
         assert '"total_income"' not in response.text
 
-    def test_export_should_reject_all_view_for_customer_metrics(
-        self, client
-    ):
+    def test_export_should_reject_all_view_for_customer_metrics(self, client):
         response = client.post(
             "/api/v1/analytics/export?export_format=csv&view_mode=all",
         )
@@ -472,7 +470,9 @@ class TestAnalyticsResponseStructure:
         assert data["success"] is True
 
     def test_trend_endpoint_should_use_query_view_mode_scope(self, client):
-        response = client.get("/api/v1/analytics/trend?trend_type=occupancy&view_mode=manager")
+        response = client.get(
+            "/api/v1/analytics/trend?trend_type=occupancy&view_mode=manager"
+        )
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()

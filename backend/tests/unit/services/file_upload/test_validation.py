@@ -266,6 +266,7 @@ def test_contract_pdf_accepts_a_normal_24_page_document(tmp_path: Path) -> None:
 
     assert validated.purpose is UploadPurpose.CONTRACT_EXTRACTION
 
+
 @pytest.mark.unit
 def test_pdf_rejects_encryption_page_limit_and_truncation(tmp_path: Path) -> None:
     encrypted = tmp_path / "encrypted.pdf"

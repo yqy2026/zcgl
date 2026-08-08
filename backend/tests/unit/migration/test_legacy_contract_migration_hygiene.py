@@ -6,13 +6,17 @@ import ast
 from pathlib import Path
 
 
-def test_selected_migration_files_should_not_keep_raw_legacy_contract_table_literal() -> None:
+def test_selected_migration_files_should_not_keep_raw_legacy_contract_table_literal() -> (
+    None
+):
     migration_root = Path(__file__).resolve().parents[3]
     retired_table_name = "_".join(("rent", "contracts"))
     target_files = [
         migration_root / "src/scripts/migration/party_migration/reconciliation.py",
-        migration_root / "src/scripts/migration/party_migration/phase4_no_go_snapshot.py",
-        migration_root / "src/scripts/migration/party_migration/backfill_business_tables.py",
+        migration_root
+        / "src/scripts/migration/party_migration/phase4_no_go_snapshot.py",
+        migration_root
+        / "src/scripts/migration/party_migration/backfill_business_tables.py",
         migration_root / "tests/unit/migration/test_phase4_reconciliation.py",
         migration_root / "tests/unit/migration/test_phase4_no_go_snapshot.py",
         migration_root / "tests/unit/migration/test_backfill.py",
@@ -42,7 +46,9 @@ def test_alembic_env_should_not_import_retired_contract_model_module() -> None:
     assert retired_module_name not in imported_names
 
 
-def test_legacy_v2_migration_fix_script_should_not_import_retired_contract_model() -> None:
+def test_legacy_v2_migration_fix_script_should_not_import_retired_contract_model() -> (
+    None
+):
     backend_root = Path(__file__).resolve().parents[3]
     script_path = backend_root / "scripts" / "v2_migration_fix.py"
     retired_module_name = ".".join(("src", "models", "_".join(("rent", "contract"))))
