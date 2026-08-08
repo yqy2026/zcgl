@@ -150,7 +150,6 @@ export interface CertificatePartyRelation {
   party_id: string;
   relation_role: CertificatePartyRelationRole;
   is_primary: boolean;
-  share_ratio?: number | null;
   valid_from?: string | null;
   valid_to?: string | null;
   party?: Party;
