@@ -740,7 +740,7 @@ jobs:
                     is_active=True,
                     is_locked=False,
                     failed_login_attempts=0,
-                    default_organization_id=organization_id,
+                    organization_id=organization_id,
                     created_by="ci-e2e",
                     updated_by="ci-e2e",
                 )
