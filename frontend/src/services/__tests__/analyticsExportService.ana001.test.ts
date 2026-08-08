@@ -1,19 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import ExcelJS from 'exceljs';
 import { analyticsExportService } from '../analyticsExportService';
 import type { AnalyticsExportData } from '../analyticsExportService';
-
-// Mock xlsx
-vi.mock('xlsx', () => ({
-  utils: {
-    book_new: vi.fn(() => ({ Sheets: {}, SheetNames: [] })),
-    aoa_to_sheet: vi.fn(() => ({})),
-    book_append_sheet: vi.fn((wb, _sheet, name) => {
-      wb.Sheets[name] = {};
-      wb.SheetNames.push(name);
-    }),
-  },
-  writeFile: vi.fn(),
-}));
 
 const makeExportData = (
   overrides?: Partial<AnalyticsExportData['summary']>
@@ -42,6 +30,53 @@ const makeExportData = (
   business_category_distribution: [],
 });
 
+// 拦截导出下载，捕获写出的 .xlsx 字节，供重新加载断言
+const captureExcelDownload = () => {
+  const mockLink = {
+    setAttribute: vi.fn(),
+    click: vi.fn(),
+    style: {} as CSSStyleDeclaration,
+  } as unknown as HTMLAnchorElement;
+  const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink);
+  const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(n => n);
+  const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(n => n);
+  const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+
+  let capturedParts: BlobPart[] | null = null;
+  const OrigBlob = globalThis.Blob;
+  globalThis.Blob = class MockBlob extends OrigBlob {
+    constructor(parts?: BlobPart[], options?: BlobPropertyBag) {
+      super(parts, options);
+      capturedParts = parts ?? null;
+    }
+  } as typeof Blob;
+
+  return {
+    loadWorkbook: async (): Promise<ExcelJS.Workbook> => {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load((capturedParts ?? [])[0] as ArrayBuffer);
+      return workbook;
+    },
+    restore: () => {
+      globalThis.Blob = OrigBlob;
+      createElementSpy.mockRestore();
+      appendChildSpy.mockRestore();
+      removeChildSpy.mockRestore();
+      createObjectURLSpy.mockRestore();
+    },
+  };
+};
+
+const findLabeledRow = (sheet: ExcelJS.Worksheet, label: string): ExcelJS.Row | undefined => {
+  let matched: ExcelJS.Row | undefined;
+  sheet.eachRow(row => {
+    if (row.getCell(1).value === label) {
+      matched = row;
+    }
+  });
+  return matched;
+};
+
 describe('analyticsExportService ANA-001 fields', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,39 +84,54 @@ describe('analyticsExportService ANA-001 fields', () => {
 
   describe('exportToExcel', () => {
     it('should include ANA-001 fields in summary sheet data', async () => {
-      const XLSX = await import('xlsx');
       const data = makeExportData();
+      const capture = captureExcelDownload();
 
-      await analyticsExportService.exportToExcel(data);
+      try {
+        await analyticsExportService.exportToExcel(data);
 
-      // aoa_to_sheet is called for each sheet; first call is summary
-      const aoaCalls = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls;
-      const summaryRows = aoaCalls[0][0] as unknown[][];
+        const workbook = await capture.loadWorkbook();
+        const summary = workbook.getWorksheet('概览统计');
+        expect(summary).toBeDefined();
 
-      // Find ANA-001 rows
-      const rowLabels = summaryRows.map(r => r[0]);
-      expect(rowLabels).toContain('总收入（经营口径）');
-      expect(rowLabels).toContain('自营租金收入');
-      expect(rowLabels).toContain('代理服务费收入');
-      expect(rowLabels).toContain('客户主体数');
-      expect(rowLabels).toContain('客户合同数');
-      expect(rowLabels).toContain('口径版本');
-      expect(rowLabels).toContain('账期归属口径');
+        const labels: (string | number)[] = [];
+        summary!.eachRow(row => {
+          const value = row.getCell(1).value;
+          if (value != null && typeof value !== 'object') {
+            labels.push(value as string | number);
+          }
+        });
+        expect(labels).toContain('总收入（经营口径）');
+        expect(labels).toContain('自营租金收入');
+        expect(labels).toContain('代理服务费收入');
+        expect(labels).toContain('客户主体数');
+        expect(labels).toContain('客户合同数');
+        expect(labels).toContain('口径版本');
+        expect(labels).toContain('账期归属口径');
+      } finally {
+        capture.restore();
+      }
     });
 
     it('should export metrics_version value', async () => {
-      const XLSX = await import('xlsx');
       const data = makeExportData();
+      const capture = captureExcelDownload();
 
-      await analyticsExportService.exportToExcel(data);
+      try {
+        await analyticsExportService.exportToExcel(data);
 
-      const aoaCalls = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls;
-      const summaryRows = aoaCalls[0][0] as unknown[][];
+        const workbook = await capture.loadWorkbook();
+        const summary = workbook.getWorksheet('概览统计');
 
-      const versionRow = summaryRows.find(r => r[0] === '口径版本');
-      const attributionRow = summaryRows.find(r => r[0] === '账期归属口径');
-      expect(versionRow?.[1]).toBe('req-ana-001-v2');
-      expect(attributionRow?.[1]).toBe('按租金账期归属，流水发生日期仅用于查询、导出和审计');
+        const versionRow = findLabeledRow(summary!, '口径版本');
+        const attributionRow = findLabeledRow(summary!, '账期归属口径');
+        expect(versionRow?.getCell(2).value).toBe('req-ana-001-v2');
+        expect(attributionRow?.getCell(2).value).toBe(
+          '按租金账期归属，流水发生日期仅用于查询、导出和审计'
+        );
+      } finally {
+        capture.restore();
+      }
     });
   });
 
@@ -96,7 +146,7 @@ describe('analyticsExportService ANA-001 fields', () => {
       const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink);
       const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(n => n);
       const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(n => n);
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+      const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
 
       let blobContent = '';
       const OrigBlob = globalThis.Blob;
@@ -125,12 +175,12 @@ describe('analyticsExportService ANA-001 fields', () => {
       createElementSpy.mockRestore();
       appendChildSpy.mockRestore();
       removeChildSpy.mockRestore();
+      createObjectURLSpy.mockRestore();
     });
   });
 
   describe('edge: fields default to zero when absent', () => {
     it('should handle undefined ANA-001 fields gracefully', async () => {
-      const XLSX = await import('xlsx');
       const data = makeExportData({
         total_income: undefined as unknown as number,
         self_operated_rent_income: undefined as unknown as number,
@@ -140,14 +190,20 @@ describe('analyticsExportService ANA-001 fields', () => {
         metrics_version: undefined as unknown as string,
         period_attribution_label: undefined,
       });
+      const capture = captureExcelDownload();
 
-      // Should not throw
-      await expect(analyticsExportService.exportToExcel(data)).resolves.not.toThrow();
+      try {
+        // Should not throw
+        await expect(analyticsExportService.exportToExcel(data)).resolves.not.toThrow();
 
-      const aoaCalls = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls;
-      const summaryRows = aoaCalls[0][0] as unknown[][];
-      const incomeRow = summaryRows.find(r => r[0] === '总收入（经营口径）');
-      expect(incomeRow?.[1]).toBe('0.00');
+        const workbook = await capture.loadWorkbook();
+        const summary = workbook.getWorksheet('概览统计');
+
+        const incomeRow = findLabeledRow(summary!, '总收入（经营口径）');
+        expect(incomeRow?.getCell(2).value).toBe('0.00');
+      } finally {
+        capture.restore();
+      }
     });
   });
 });

@@ -198,12 +198,7 @@ const App: React.FC = () => {
           <AuthProvider>
             <AntdApp>
               <AppInitializer>
-                <BrowserRouter
-                  future={{
-                    v7_startTransition: true,
-                    v7_relativeSplatPath: true,
-                  }}
-                >
+                <BrowserRouter>
                   <AppContent />
                 </BrowserRouter>
               </AppInitializer>

@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import type { PartyCreatePayload } from '@/services/partyService';
 import type { PartyType } from '@/types/party';
 
@@ -102,15 +102,63 @@ export const parsePartyImportWorkbook = async (file: File): Promise<PartyCreateP
           };
           reader.readAsArrayBuffer(file);
         });
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const firstSheetName = workbook.SheetNames[0];
-  if (firstSheetName == null) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const worksheet = workbook.worksheets[0];
+  if (worksheet == null) {
     throw new Error('导入文件不包含工作表');
   }
 
-  const worksheet = workbook.Sheets[firstSheetName];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
-    defval: '',
+  // 第一行为表头，其余行按表头映射为记录（与 sheet_to_json 语义一致：空行跳过、缺列补空串）
+  const headerValues: string[] = [];
+  const headerRow = worksheet.getRow(1);
+  headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    headerValues[colNumber] = String(cell.value ?? '').trim();
+  });
+
+  // sheet_to_json 默认返回原始值：日期为 Excel 序列号、超链接/富文本取显示文本
+  const toRawValue = (value: unknown): unknown => {
+    if (value instanceof Date) {
+      return Math.floor(value.getTime() / 86400000) + 25569;
+    }
+    if (typeof value === 'object' && value != null) {
+      const record = value as Record<string, unknown>;
+      if (typeof record.text === 'string') {
+        return record.text;
+      }
+      if (Array.isArray(record.richText)) {
+        return record.richText
+          .map(run =>
+            typeof (run as Record<string, unknown>).text === 'string'
+              ? (run as Record<string, unknown>).text
+              : ''
+          )
+          .join('');
+      }
+    }
+    return value;
+  };
+
+  const rows: Record<string, unknown>[] = [];
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) {
+      return;
+    }
+    const record: Record<string, unknown> = {};
+    let hasAnyValue = false;
+    headerValues.forEach((header, colNumber) => {
+      if (header === '') {
+        return;
+      }
+      const cellValue = toRawValue(row.getCell(colNumber).value);
+      record[header] = cellValue == null ? '' : cellValue;
+      if (String(cellValue ?? '').trim() !== '') {
+        hasAnyValue = true;
+      }
+    });
+    if (hasAnyValue) {
+      rows.push(record);
+    }
   });
 
   if (rows.length === 0) {

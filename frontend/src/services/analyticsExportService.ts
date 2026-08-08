@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export interface ExportData {
   sheetName: string;
@@ -58,7 +58,9 @@ class AnalyticsExportService {
    */
   async exportToExcel(data: AnalyticsExportData, filename?: string): Promise<void> {
     try {
-      const workbook = XLSX.utils.book_new();
+      const workbook = new ExcelJS.Workbook();
+      const columnWidths = [{ width: 15 }, { width: 12 }, { width: 12 }];
+      const trendColumnWidths = [{ width: 12 }, { width: 12 }, { width: 15 }, { width: 15 }];
 
       // 创建概览数据工作表
       const summaryData = [
@@ -71,7 +73,7 @@ class AnalyticsExportService {
         ['年支出', data.summary.total_annual_expense.toFixed(2), '元'],
         ['净收益', data.summary.total_net_income.toFixed(2), '元'],
         ['月租金', data.summary.total_monthly_rent.toFixed(2), '元'],
-        [],
+        ['', '', ''],
         ['经营口径指标', '', ''],
         ['总收入（经营口径）', (data.summary.total_income ?? 0).toFixed(2), '元'],
         ['自营租金收入', (data.summary.self_operated_rent_income ?? 0).toFixed(2), '元'],
@@ -81,16 +83,18 @@ class AnalyticsExportService {
         ['口径版本', data.summary.metrics_version ?? '', ''],
         ['账期归属口径', data.summary.period_attribution_label ?? '', ''],
       ];
-      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(workbook, summarySheet, '概览统计');
+      const summarySheet = workbook.addWorksheet('概览统计');
+      summarySheet.addRows(summaryData);
+      summarySheet.columns = columnWidths;
 
       // 创建物业性质分布工作表
       const propertyNatureData = [
         ['物业性质', '数量', '占比(%)'],
         ...data.property_nature_distribution.map(item => [item.name, item.count, item.percentage]),
       ];
-      const propertyNatureSheet = XLSX.utils.aoa_to_sheet(propertyNatureData);
-      XLSX.utils.book_append_sheet(workbook, propertyNatureSheet, '物业性质分布');
+      const propertyNatureSheet = workbook.addWorksheet('物业性质分布');
+      propertyNatureSheet.addRows(propertyNatureData);
+      propertyNatureSheet.columns = columnWidths;
 
       // 创建确权状态分布工作表
       const ownershipStatusData = [
@@ -101,16 +105,18 @@ class AnalyticsExportService {
           item.percentage,
         ]),
       ];
-      const ownershipStatusSheet = XLSX.utils.aoa_to_sheet(ownershipStatusData);
-      XLSX.utils.book_append_sheet(workbook, ownershipStatusSheet, '确权状态分布');
+      const ownershipStatusSheet = workbook.addWorksheet('确权状态分布');
+      ownershipStatusSheet.addRows(ownershipStatusData);
+      ownershipStatusSheet.columns = columnWidths;
 
       // 创建使用状态分布工作表
       const usageStatusData = [
         ['使用状态', '数量', '占比(%)'],
         ...data.usage_status_distribution.map(item => [item.status, item.count, item.percentage]),
       ];
-      const usageStatusSheet = XLSX.utils.aoa_to_sheet(usageStatusData);
-      XLSX.utils.book_append_sheet(workbook, usageStatusSheet, '使用状态分布');
+      const usageStatusSheet = workbook.addWorksheet('使用状态分布');
+      usageStatusSheet.addRows(usageStatusData);
+      usageStatusSheet.columns = columnWidths;
 
       // 创建业态类别分布工作表
       const businessCategoryData = [
@@ -121,8 +127,9 @@ class AnalyticsExportService {
           item.occupancy_rate,
         ]),
       ];
-      const businessCategorySheet = XLSX.utils.aoa_to_sheet(businessCategoryData);
-      XLSX.utils.book_append_sheet(workbook, businessCategorySheet, '业态类别分布');
+      const businessCategorySheet = workbook.addWorksheet('业态类别分布');
+      businessCategorySheet.addRows(businessCategoryData);
+      businessCategorySheet.columns = columnWidths;
 
       // 创建出租率趋势工作表（如果有数据）
       if (data.occupancy_trend && data.occupancy_trend.length > 0) {
@@ -135,25 +142,9 @@ class AnalyticsExportService {
             item.total_rentable_area,
           ]),
         ];
-        const occupancyTrendSheet = XLSX.utils.aoa_to_sheet(occupancyTrendData);
-        XLSX.utils.book_append_sheet(workbook, occupancyTrendSheet, '出租率趋势');
-      }
-
-      // 设置列宽
-      const columnWidths = [{ wch: 15 }, { wch: 12 }, { wch: 12 }];
-      workbook.Sheets['概览统计']['!cols'] = columnWidths;
-      workbook.Sheets['物业性质分布']['!cols'] = columnWidths;
-      workbook.Sheets['确权状态分布']['!cols'] = columnWidths;
-      workbook.Sheets['使用状态分布']['!cols'] = columnWidths;
-      workbook.Sheets['业态类别分布']['!cols'] = columnWidths;
-
-      if (workbook.Sheets['出租率趋势'] != null) {
-        workbook.Sheets['出租率趋势']['!cols'] = [
-          { wch: 12 },
-          { wch: 12 },
-          { wch: 15 },
-          { wch: 15 },
-        ];
+        const occupancyTrendSheet = workbook.addWorksheet('出租率趋势');
+        occupancyTrendSheet.addRows(occupancyTrendData);
+        occupancyTrendSheet.columns = trendColumnWidths;
       }
 
       // 生成文件名
@@ -162,7 +153,19 @@ class AnalyticsExportService {
       const finalFilename = filename ?? defaultFilename;
 
       // 导出文件
-      XLSX.writeFile(workbook, finalFilename);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', finalFilename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('导出Excel失败:', error);
       throw new Error('导出失败，请重试');
