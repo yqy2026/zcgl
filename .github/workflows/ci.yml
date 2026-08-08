@@ -803,7 +803,7 @@ jobs:
                 await db.refresh(party)
             return party
 
-        async def ensure_owner_binding(db, user_id, party_id, *, is_primary):
+        async def ensure_owner_binding(db, user_id, party_id):
             binding_result = await db.execute(
                 select(UserPartyBinding).where(
                     UserPartyBinding.user_id == user_id,
@@ -817,11 +817,8 @@ jobs:
                     user_id=user_id,
                     party_id=party_id,
                     relation_type=RelationType.OWNER,
-                    is_primary=is_primary,
                 )
                 db.add(binding)
-            else:
-                binding.is_primary = is_primary
             await db.commit()
 
         async def main():
@@ -919,18 +916,8 @@ jobs:
 
                 await ensure_user_role_assignment(db, admin_user.id, admin_role.id)
                 await ensure_user_role_assignment(db, logout_user.id, admin_role.id)
-                await ensure_owner_binding(
-                    db,
-                    admin_user.id,
-                    e2e_party.id,
-                    is_primary=True,
-                )
-                await ensure_owner_binding(
-                    db,
-                    logout_user.id,
-                    e2e_party.id,
-                    is_primary=True,
-                )
+                await ensure_owner_binding(db, admin_user.id, e2e_party.id)
+                await ensure_owner_binding(db, logout_user.id, e2e_party.id)
 
         asyncio.run(main())
         PY
