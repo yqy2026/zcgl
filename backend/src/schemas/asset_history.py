@@ -18,7 +18,9 @@ class AssetHistoryItem(BaseModel):
 
     id: str = Field(..., description="历史记录ID")
     asset_id: str = Field(..., description="资产ID")
-    operation_type: str = Field(..., description="操作类型（create/update/delete 或业务动作）")
+    operation_type: str = Field(
+        ..., description="操作类型（create/update/delete 或业务动作）"
+    )
     change_type: str | None = Field(
         None,
         description="变更类型（增强字段，缺省回填 operation_type）",

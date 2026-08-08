@@ -455,7 +455,9 @@ async def preview_party_lifecycle_change(
     except BaseBusinessError:
         raise
     except Exception as exc:
-        raise internal_error("Preview Party lifecycle change failed", original_error=exc) from exc
+        raise internal_error(
+            "Preview Party lifecycle change failed", original_error=exc
+        ) from exc
 
 
 async def _commit_party_lifecycle_change(
@@ -543,6 +545,7 @@ async def reactivate_party(
         raise
     except Exception as exc:
         raise internal_error("Reactivate Party failed", original_error=exc) from exc
+
 
 @router.get(
     "/parties/{party_id}/review-logs",

@@ -144,9 +144,7 @@ class AuthzDecisionCache:
     ) -> None:
         now = time.time()
         self._evict_expired_l1_entries(now=now)
-        effective_ttl = (
-            ttl_seconds if ttl_seconds is not None else self._l1_ttl_seconds
-        )
+        effective_ttl = ttl_seconds if ttl_seconds is not None else self._l1_ttl_seconds
         self._l1[key] = _CacheEntry(
             value=value,
             expires_at=now + max(0, effective_ttl),

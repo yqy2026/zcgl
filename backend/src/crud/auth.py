@@ -139,11 +139,7 @@ class UserCRUD:
         user_ids: list[str],
     ) -> list[User]:
         normalized_ids = sorted(
-            {
-                str(user_id).strip()
-                for user_id in user_ids
-                if str(user_id).strip() != ""
-            }
+            {str(user_id).strip() for user_id in user_ids if str(user_id).strip() != ""}
         )
         if len(normalized_ids) == 0:
             return []
@@ -158,6 +154,7 @@ class UserCRUD:
             .order_by(User.id)
         )
         return list((await db.execute(stmt)).scalars().all())
+
     async def get_username_map_async(
         self, db: AsyncSession, user_ids: set[str]
     ) -> dict[str, str]:

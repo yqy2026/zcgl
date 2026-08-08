@@ -280,9 +280,7 @@ class UserPartyScopeBatchChangeService:
 
         impact = UserPartyScopeBatchImpact(
             user_count=len(analysis_items),
-            binding_change_count=sum(
-                len(item.proposals) for item in analysis_items
-            ),
+            binding_change_count=sum(len(item.proposals) for item in analysis_items),
             scope_change_count=sum(
                 1 for item in analysis_items if item.analysis.impact.scope_changed
             ),
@@ -321,9 +319,7 @@ class UserPartyScopeBatchChangeService:
         return _BatchAnalysis(
             items=tuple(analysis_items),
             impact=impact,
-            state_fingerprint=hashlib.sha256(
-                normalized.encode("utf-8")
-            ).hexdigest(),
+            state_fingerprint=hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
             lock_user_ids=lock_user_ids,
             lock_binding_ids=lock_binding_ids,
             analysis_now=analysis_now,
@@ -439,9 +435,7 @@ class UserPartyScopeBatchChangeService:
                     if field in proposal.model_fields_set:
                         value = getattr(proposal, field)
                         item[field] = (
-                            value.isoformat()
-                            if isinstance(value, datetime)
-                            else value
+                            value.isoformat() if isinstance(value, datetime) else value
                         )
             payload.append(item)
         return payload

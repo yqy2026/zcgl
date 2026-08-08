@@ -453,7 +453,10 @@ class OrganizationPartyScopeService:
             db,
             organization_ids=[str(item.id) for item in subtree],
         )
-        user_scope_changes, user_scope_signatures = await self._count_user_scope_changes(
+        (
+            user_scope_changes,
+            user_scope_signatures,
+        ) = await self._count_user_scope_changes(
             db,
             users=users,
             organization_id=organization_id,
@@ -542,9 +545,9 @@ class OrganizationPartyScopeService:
                     "after": self._effective_scope_signature(after),
                 }
             )
-            if self._effective_scope_signature(before) != self._effective_scope_signature(
-                after
-            ):
+            if self._effective_scope_signature(
+                before
+            ) != self._effective_scope_signature(after):
                 changed_count += 1
         return changed_count, tuple(signatures)
 
@@ -647,9 +650,7 @@ class OrganizationPartyScopeService:
         if override is not None:
             return (
                 cls._normalize_identifier(override["represented_party_id"]),
-                cls._normalize_identifier(
-                    override["represented_party_perspective"]
-                ),
+                cls._normalize_identifier(override["represented_party_perspective"]),
             )
         return (
             cls._normalize_identifier(

@@ -632,7 +632,11 @@ class UserPartyScopeChangeService:
         relation_type = _normalize_enum(raw_proposal.get("relation_type"))
         valid_from = _deserialize_datetime(raw_proposal.get("valid_from"))
         valid_to = _deserialize_datetime(raw_proposal.get("valid_to"), allow_none=True)
-        if party_id is None or relation_type not in {"owner", "manager"} or valid_from is None:
+        if (
+            party_id is None
+            or relation_type not in {"owner", "manager"}
+            or valid_from is None
+        ):
             raise UserPartyScopePreviewStaleError("proposal_invalid")
         if operation == "create" and binding_id is not None:
             raise UserPartyScopePreviewStaleError("proposal_invalid")
@@ -796,9 +800,7 @@ class UserPartyScopeChangeService:
                 }
                 for party in proposed_parties
             ],
-            "proposals": [
-                self._serialize_proposal(proposal) for proposal in proposals
-            ],
+            "proposals": [self._serialize_proposal(proposal) for proposal in proposals],
             "before_scope": before_scope.model_dump(mode="json"),
             "after_scope": after_scope.model_dump(mode="json"),
             "impact": impact.model_dump(mode="json"),

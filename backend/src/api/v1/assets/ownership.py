@@ -139,11 +139,7 @@ async def get_ownership_dropdown_options(
         for item_data in dropdown_data:
             # 创建临时Ownership对象以便model_validate使用
             temp_ownership = Ownership(
-                **{
-                    k: v
-                    for k, v in item_data.items()
-                    if k not in ["asset_count"]
-                }
+                **{k: v for k, v in item_data.items() if k not in ["asset_count"]}
             )
             response = OwnershipResponse.model_validate(temp_ownership)
             # 设置额外的计数字段

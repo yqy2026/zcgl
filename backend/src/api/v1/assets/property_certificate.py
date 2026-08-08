@@ -87,7 +87,9 @@ async def _build_property_certificate_create_resource_context(
         db=db,
         organization_id=organization_id,
     )
-    resolved_party_id = scoped_party_id or _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+    resolved_party_id = (
+        scoped_party_id or _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+    )
     resource_context["party_id"] = resolved_party_id
     resource_context["owner_party_id"] = resolved_party_id
     resource_context["manager_party_id"] = resolved_party_id

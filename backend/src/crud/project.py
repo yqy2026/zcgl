@@ -33,9 +33,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.organization_id.in_(
-                org_ids
-            )  # DEPRECATED legacy org scope fallback
+            User.organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
         )
         rows = (await db.execute(stmt)).all()
         principals: set[str] = set()

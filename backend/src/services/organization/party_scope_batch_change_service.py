@@ -210,7 +210,9 @@ class OrganizationPartyScopeBatchService:
             )
 
         response = OrganizationPartyScopeBatchCommitResponse(
-            items=self._response_items(analysis.items, organizations=locked_organizations),
+            items=self._response_items(
+                analysis.items, organizations=locked_organizations
+            ),
             impact=analysis.impact,
             committed_at=committed_at,
             idempotent=False,
@@ -266,7 +268,9 @@ class OrganizationPartyScopeBatchService:
             )
 
         impact = OrganizationPartyScopeImpact(
-            organization_count=sum(item.analysis.impact.organization_count for item in analysis_items),
+            organization_count=sum(
+                item.analysis.impact.organization_count for item in analysis_items
+            ),
             organization_scope_change_count=sum(
                 item.analysis.impact.organization_scope_change_count
                 for item in analysis_items
@@ -306,9 +310,7 @@ class OrganizationPartyScopeBatchService:
         return _BatchPreviewAnalysis(
             items=tuple(analysis_items),
             impact=impact,
-            state_fingerprint=hashlib.sha256(
-                normalized.encode("utf-8")
-            ).hexdigest(),
+            state_fingerprint=hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
             lock_organization_ids=lock_organization_ids,
         )
 

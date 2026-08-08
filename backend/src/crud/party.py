@@ -100,7 +100,9 @@ class CRUDParty:
                     )
                     .order_by(Asset.id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         ]
         project_ids = [
             str(value)
@@ -110,7 +112,9 @@ class CRUDParty:
                     .where(Project.manager_party_id == party_id)
                     .order_by(Project.id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         ]
         contract_group_ids = [
             str(value)
@@ -125,7 +129,9 @@ class CRUDParty:
                     )
                     .order_by(ContractGroup.contract_group_id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         ]
         contract_ids = [
             str(value)
@@ -140,7 +146,9 @@ class CRUDParty:
                     )
                     .order_by(Contract.contract_id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         ]
         binding_rows = list(
             (
@@ -176,6 +184,7 @@ class CRUDParty:
                 for binding in binding_rows
             ),
         }
+
     async def get_party_by_type_and_code(
         self,
         db: AsyncSession,
@@ -276,6 +285,7 @@ class CRUDParty:
                 model.effective_from <= as_of,
                 or_(model.effective_to.is_(None), model.effective_to >= as_of),
             )
+
         owner_roles = select(
             Asset.owner_party_id.label("party_id"),
             literal("owner").label("business_role"),
@@ -388,6 +398,7 @@ class CRUDParty:
                 ),
             )
         return parties
+
     async def update_party(
         self,
         db: AsyncSession,

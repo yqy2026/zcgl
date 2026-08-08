@@ -329,9 +329,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.organization_id.in_(
-                org_ids
-            )  # DEPRECATED legacy org scope fallback
+            User.organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
         )
         result = await db.execute(stmt)
         rows: list[tuple[object, object]] = await _result_all(result)

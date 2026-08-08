@@ -348,19 +348,23 @@ class PartyLifecycleChangeService:
             party_id=party_id,
             now=now,
         )
-        organization_users = await self.user_crud.get_active_human_by_organization_ids_async(
-            db,
-            organization_ids=[str(item.id) for item in affected_organizations],
+        organization_users = (
+            await self.user_crud.get_active_human_by_organization_ids_async(
+                db,
+                organization_ids=[str(item.id) for item in affected_organizations],
+            )
         )
         binding_users = await self.user_crud.get_active_human_by_ids_async(
             db,
             user_ids=[
-                str(binding["user_id"])
-                for binding in reference_snapshot["bindings"]
+                str(binding["user_id"]) for binding in reference_snapshot["bindings"]
             ],
         )
         users = self._deduplicate_users([*organization_users, *binding_users])
-        user_scope_changes, user_scope_signatures = await self._count_user_scope_changes(
+        (
+            user_scope_changes,
+            user_scope_signatures,
+        ) = await self._count_user_scope_changes(
             db,
             users=users,
             party_id=party_id,
@@ -372,15 +376,15 @@ class PartyLifecycleChangeService:
             represented_organization_count=len(represented_organizations),
             potentially_affected_organization_count=len(affected_organizations),
             current_user_binding_count=sum(
-                1
-                for binding in bindings
-                if self._is_current_binding(binding, now=now)
+                1 for binding in bindings if self._is_current_binding(binding, now=now)
             ),
             affected_user_count=len(users),
             user_scope_change_count=user_scope_changes,
             asset_reference_count=len(reference_snapshot["asset_ids"]),
             project_reference_count=len(reference_snapshot["project_ids"]),
-            contract_group_reference_count=len(reference_snapshot["contract_group_ids"]),
+            contract_group_reference_count=len(
+                reference_snapshot["contract_group_ids"]
+            ),
             contract_reference_count=len(reference_snapshot["contract_ids"]),
         )
         fingerprint = self._state_fingerprint(
@@ -559,7 +563,9 @@ class PartyLifecycleChangeService:
         return (
             isinstance(valid_from, datetime)
             and valid_from <= now
-            and (valid_to is None or (isinstance(valid_to, datetime) and valid_to >= now))
+            and (
+                valid_to is None or (isinstance(valid_to, datetime) and valid_to >= now)
+            )
         )
 
     def _state_fingerprint(
@@ -589,8 +595,7 @@ class PartyLifecycleChangeService:
             "before_state": before_state.model_dump(mode="json"),
             "after_state": after_state.model_dump(mode="json"),
             "represented_organizations": [
-                self._organization_signature(item)
-                for item in represented_organizations
+                self._organization_signature(item) for item in represented_organizations
             ],
             "affected_organizations": [
                 self._organization_signature(item) for item in affected_organizations

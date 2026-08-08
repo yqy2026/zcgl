@@ -78,4 +78,5 @@ class AuthzContextBuilder:
             return list(subject_context.owner_party_ids)
         return list(subject_context.manager_party_ids)
 
+
 __all__ = ["AuthzContextBuilder", "SubjectContext"]

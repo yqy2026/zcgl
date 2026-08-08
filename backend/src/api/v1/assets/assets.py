@@ -898,7 +898,9 @@ async def get_asset_history(
         le=PaginationLimits.MAX_PAGE_SIZE,
         description="每页记录数",
     ),
-    change_type: str | None = Query(None, description="按操作类型过滤（如 create/update/delete）"),
+    change_type: str | None = Query(
+        None, description="按操作类型过滤（如 create/update/delete）"
+    ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(

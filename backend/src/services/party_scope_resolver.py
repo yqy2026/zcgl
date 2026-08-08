@@ -358,9 +358,7 @@ class PartyScopeResolver:
                     != "legal_entity"
                     or self._normalize_enum(organization.get("party_status"))
                     != "active"
-                    or self._normalize_enum(
-                        organization.get("party_review_status")
-                    )
+                    or self._normalize_enum(organization.get("party_review_status"))
                     != "approved"
                 ):
                     return self._denied(
@@ -373,9 +371,7 @@ class PartyScopeResolver:
                         next_transition_at=next_transition_at,
                     )
                 owner_ids = [represented_party_id] if perspective == "owner" else []
-                manager_ids = (
-                    [represented_party_id] if perspective == "manager" else []
-                )
+                manager_ids = [represented_party_id] if perspective == "manager" else []
                 return EffectivePartyScope(
                     user_id=user_id,
                     source="organization",
@@ -416,15 +412,15 @@ class PartyScopeResolver:
         return "manager"
 
     @classmethod
-    def _is_current_binding(
-        cls, binding: Mapping[str, Any], *, now: datetime
-    ) -> bool:
+    def _is_current_binding(cls, binding: Mapping[str, Any], *, now: datetime) -> bool:
         valid_from = binding.get("valid_from")
         valid_to = binding.get("valid_to")
         return (
             isinstance(valid_from, datetime)
             and valid_from <= now
-            and (valid_to is None or (isinstance(valid_to, datetime) and valid_to >= now))
+            and (
+                valid_to is None or (isinstance(valid_to, datetime) and valid_to >= now)
+            )
         )
 
     @classmethod

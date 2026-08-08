@@ -165,9 +165,7 @@ class PartyService:
             )
 
         payload = self._normalize_party_payload(obj_in.model_dump(exclude_unset=True))
-        next_party_type = self._normalize_party_type(
-            getattr(party, "party_type", "")
-        )
+        next_party_type = self._normalize_party_type(getattr(party, "party_type", ""))
         if {"identifier_type", "identifier_value"}.intersection(payload):
             self._prepare_identifier_payload(payload, party_type=next_party_type)
         next_name = str(payload.get("name", getattr(party, "name", "")))
@@ -902,7 +900,10 @@ class PartyService:
         party = await self.party_crud.get_party(db, party_id=party_id)
         if party is None:
             raise ResourceNotFoundError("主体", party_id)
-        if party.review_status != PartyReviewStatus.APPROVED or party.status != "active":
+        if (
+            party.review_status != PartyReviewStatus.APPROVED
+            or party.status != "active"
+        ):
             raise OperationNotAllowedError(
                 "用户数据范围只能绑定已审核且启用的主体",
                 reason="user_party_binding_target_invalid",

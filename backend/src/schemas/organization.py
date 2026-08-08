@@ -34,9 +34,9 @@ class RepresentingOrganizationItem(BaseModel):
     level: int = Field(..., description="组织层级")
     status: str = Field(..., description="组织状态")
     parent_id: str | None = Field(None, description="上级组织ID")
-    represented_party_perspective: (
-        RepresentedPartyPerspective | None
-    ) = Field(None, description="代表视角（owner/manager）")
+    represented_party_perspective: RepresentedPartyPerspective | None = Field(
+        None, description="代表视角（owner/manager）"
+    )
 
 
 class OrganizationBase(BaseModel):

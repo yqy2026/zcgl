@@ -283,10 +283,7 @@ class QueryBuilder[ModelType]:
             )
             return query
 
-        if (
-            len(owner_party_ids) == 0
-            and len(manager_party_ids) == 0
-        ):
+        if len(owner_party_ids) == 0 and len(manager_party_ids) == 0:
             logger.warning(
                 "Applying fail-closed relation-aware party filter for %s: empty owner/manager scope",
                 self.model.__name__,

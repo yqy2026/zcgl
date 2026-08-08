@@ -26,8 +26,12 @@ class PartyCreate(BaseModel):
 
     party_type: PartyType = Field(..., description="主体类型")
     name: str = Field(..., min_length=1, max_length=200, description="主体名称")
-    identifier_type: PartyIdentifierType | None = Field(None, description="正式标识类型")
-    identifier_value: str | None = Field(None, min_length=1, max_length=500, description="正式标识值")
+    identifier_type: PartyIdentifierType | None = Field(
+        None, description="正式标识类型"
+    )
+    identifier_value: str | None = Field(
+        None, min_length=1, max_length=500, description="正式标识值"
+    )
     external_ref: str | None = Field(None, max_length=200, description="外部引用")
     metadata: dict[str, Any] | None = Field(default=None, description="扩展元数据")
 
@@ -44,8 +48,12 @@ class PartyUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str | None = Field(None, min_length=1, max_length=200, description="主体名称")
-    identifier_type: PartyIdentifierType | None = Field(None, description="正式标识类型")
-    identifier_value: str | None = Field(None, min_length=1, max_length=500, description="正式标识值")
+    identifier_type: PartyIdentifierType | None = Field(
+        None, description="正式标识类型"
+    )
+    identifier_value: str | None = Field(
+        None, min_length=1, max_length=500, description="正式标识值"
+    )
     external_ref: str | None = Field(None, max_length=200, description="外部引用")
     metadata: dict[str, Any] | None = Field(default=None, description="扩展元数据")
 
@@ -58,7 +66,9 @@ class PartyUpdate(BaseModel):
         if len(supplied_fields) == 2 and (
             (self.identifier_type is None) != (self.identifier_value is None)
         ):
-            raise ValueError("identifier_type 与 identifier_value 必须同时为空或同时有值")
+            raise ValueError(
+                "identifier_type 与 identifier_value 必须同时为空或同时有值"
+            )
         return self
 
 
@@ -154,6 +164,7 @@ class PartyLifecycleCommitResponse(BaseModel):
     impact: PartyLifecycleImpact
     committed_at: datetime
     idempotent: bool = False
+
 
 class PartyReviewRejectRequest(BaseModel):
     """Party review reject payload."""

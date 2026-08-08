@@ -41,6 +41,7 @@ class UserPartyBindingScopeProposal(BaseModel):
         if value is None or value.tzinfo is None:
             return value
         return value.astimezone(UTC).replace(tzinfo=None)
+
     @field_validator("binding_id", "party_id")
     @classmethod
     def reject_blank_identifier(cls, value: str | None) -> str | None:
@@ -199,9 +200,7 @@ class UserPartyScopeBatchImpact(BaseModel):
 
 
 class UserPartyScopeBatchPreviewRequest(BaseModel):
-    items: list[UserPartyScopeBatchProposal] = Field(
-        ..., min_length=2, max_length=100
-    )
+    items: list[UserPartyScopeBatchProposal] = Field(..., min_length=2, max_length=100)
 
     @model_validator(mode="after")
     def reject_duplicate_users(self) -> "UserPartyScopeBatchPreviewRequest":
