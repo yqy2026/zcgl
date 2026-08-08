@@ -797,10 +797,15 @@ jobs:
                     name="E2E Legal Entity",
                     code=PARTY_CODE,
                     status="active",
+                    review_status="approved",
                 )
                 db.add(party)
                 await db.commit()
                 await db.refresh(party)
+            elif party.review_status != "approved":
+                # 组织 scope 解析要求代表主体已过审（party_review_status == approved）
+                party.review_status = "approved"
+                await db.commit()
             return party
 
         async def ensure_owner_binding(db, user_id, party_id):
