@@ -1139,6 +1139,7 @@ jobs:
       run: |
         cd backend
         export DATABASE_URL=postgresql+psycopg://postgres:test_password@localhost:5432/test_land_property
+        export TEST_DATABASE_URL=postgresql+psycopg://postgres:test_password@localhost:5432/test_land_property
         export REDIS_URL=redis://localhost:6379/0
         export ENVIRONMENT=testing
         uv run pytest tests/integration/ -v
