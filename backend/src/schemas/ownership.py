@@ -80,7 +80,6 @@ class OwnershipResponse(OwnershipInDB):
     """权属方响应模式"""
 
     asset_count: int | None = Field(None, title="关联资产数量")
-    project_count: int | None = Field(None, title="关联项目数量")
 
     model_config = ConfigDict(from_attributes=True)
 

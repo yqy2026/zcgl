@@ -5,7 +5,6 @@ Pydantic数据验证模型模块
 from .asset import (  # noqa: F401
     AssetBase,
     AssetCreate,
-    AssetDocumentResponse,
     AssetHistoryResponse,
     AssetListItemResponse,
     AssetResponse,
@@ -29,7 +28,6 @@ __all__ = [
     "AssetResponse",
     "AssetListItemResponse",
     "AssetHistoryResponse",
-    "AssetDocumentResponse",
     "ProjectBase",
     "ProjectCreate",
     "ProjectUpdate",

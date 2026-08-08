@@ -97,7 +97,7 @@ describe('ProjectService', () => {
         data: { items: [], total: 0, page: 1, page_size: 10, pages: 0 },
       });
 
-      await service.getProjects({ keyword: '测试', status: 'active', owner_party_id: 'own-1' });
+      await service.getProjects({ keyword: '测试', status: 'active' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
@@ -105,29 +105,6 @@ describe('ProjectService', () => {
           params: expect.objectContaining({
             keyword: '测试',
             status: 'active',
-            owner_party_id: 'own-1',
-          }),
-        })
-      );
-
-      const [, options] = vi.mocked(apiClient.get).mock.calls[0] ?? [];
-      const params = (options as { params?: Record<string, unknown> } | undefined)?.params;
-      expect(params).not.toHaveProperty('ownership_id');
-    });
-
-    it('should apply owner_party_id filter', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        success: true,
-        data: { items: [], total: 0, page: 1, page_size: 10, pages: 0 },
-      });
-
-      await service.getProjects({ owner_party_id: 'party-1' });
-
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          params: expect.objectContaining({
-            owner_party_id: 'party-1',
           }),
         })
       );
@@ -433,30 +410,6 @@ describe('ProjectService', () => {
       expect(result.items).toHaveLength(1);
     });
 
-    it('should forward owner_party_id filter', async () => {
-      vi.mocked(apiClient.post).mockResolvedValue({
-        success: true,
-        data: {
-          items: [],
-          total: 0,
-          page: 1,
-          page_size: 10,
-          pages: 0,
-        },
-      });
-
-      await service.searchProjects({ owner_party_id: 'party-1' });
-
-      expect(apiClient.post).toHaveBeenCalledWith(
-        '/projects/search',
-        expect.objectContaining({
-          owner_party_id: 'party-1',
-        }),
-        expect.objectContaining({
-          smartExtract: true,
-        })
-      );
-    });
   });
 
   describe('searchProjectsByKeyword', () => {
@@ -714,41 +667,6 @@ describe('ProjectService', () => {
       const result = await service.canDeleteProject('999');
 
       expect(result.canDelete).toBe(false);
-    });
-  });
-
-  // ==========================================================================
-  // 权属方筛选测试
-  // ==========================================================================
-
-  describe('getProjectsByOwnerParty', () => {
-    it('should return projects for owner party', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        success: true,
-        data: {
-          items: [{ id: '1', project_name: '项目A', project_code: 'PRJ-001', status: 'active' }],
-          total: 1,
-          page: 1,
-          page_size: 10,
-          pages: 1,
-        },
-      });
-
-      const result = await service.getProjectsByOwnerParty('party-1');
-
-      expect(result).toHaveLength(1);
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          params: expect.objectContaining({
-            owner_party_id: 'party-1',
-          }),
-        })
-      );
-
-      const [, options] = vi.mocked(apiClient.get).mock.calls[0] ?? [];
-      const params = (options as { params?: Record<string, unknown> } | undefined)?.params;
-      expect(params).not.toHaveProperty('ownership_id');
     });
   });
 

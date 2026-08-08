@@ -627,7 +627,6 @@ class TestAssetRelationships:
         legacy_contract_relation = "_".join(("rent", "contracts"))
 
         assert hasattr(asset, "history_records")
-        assert hasattr(asset, "documents")
         assert hasattr(asset, "contracts")
         assert not hasattr(asset, legacy_contract_relation)
         assert hasattr(asset, "certificates")
@@ -636,7 +635,7 @@ class TestAssetRelationships:
         """Test that relationships are list types"""
         # Without actual database session, relationships are empty lists
         assert isinstance(asset.history_records, list)
-        assert isinstance(asset.documents, list)
+        assert isinstance(asset.contracts, list)
 
 
 class TestAssetStringRepresentation:

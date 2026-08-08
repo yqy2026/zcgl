@@ -319,7 +319,6 @@ describe('OwnershipList 组件测试', () => {
                 short_name: '权属1',
                 is_active: true,
                 asset_count: 10,
-                project_count: 5,
               },
               {
                 id: '2',
@@ -328,7 +327,6 @@ describe('OwnershipList 组件测试', () => {
                 short_name: '权属2',
                 is_active: false,
                 asset_count: 5,
-                project_count: 2,
               },
             ],
             total: 2,

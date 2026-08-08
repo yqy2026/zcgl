@@ -463,7 +463,7 @@ describe('ProjectList', () => {
             'user:user-1|scope:owner,manager',
             1,
             10,
-            { keyword: '', status: '', ownerPartyId: '' },
+            { keyword: '', status: '' },
           ],
         })
       );
@@ -487,7 +487,7 @@ describe('ProjectList', () => {
             'user:user-1|scope:owner,manager',
             1,
             10,
-            { keyword: '', status: '', ownerPartyId: '' },
+            { keyword: '', status: '' },
           ],
         })
       );

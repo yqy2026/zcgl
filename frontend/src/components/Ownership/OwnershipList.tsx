@@ -300,13 +300,6 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
       render: (count: number) => count ?? 0,
     },
     {
-      title: '关联项目',
-      dataIndex: 'project_count',
-      key: 'project_count',
-      width: 100,
-      render: (count: number) => count ?? 0,
-    },
-    {
       title: '状态',
       dataIndex: 'is_active',
       key: 'is_active',

@@ -10,7 +10,7 @@ from .abac import (  # noqa: F401
     ABACRolePolicy,
 )
 from .asset import Asset  # noqa: F401
-from .asset_history import AssetDocument, AssetHistory  # noqa: F401
+from .asset_history import AssetHistory  # noqa: F401
 from .asset_review_log import AssetReviewLog  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
 from .associations import (  # noqa: F401  # noqa: F401
@@ -74,7 +74,6 @@ from .party import (  # noqa: F401
 )
 from .party_lifecycle_commit import PartyLifecycleCommit  # noqa: F401
 from .party_review_log import PartyReviewLog  # noqa: F401
-from .party_role import PartyRoleBinding, PartyRoleDef  # noqa: F401
 from .project import Project  # noqa: F401
 from .project_asset import ProjectAsset  # noqa: F401
 from .property_certificate import CertificateType, PropertyCertificate  # noqa: F401
@@ -104,7 +103,6 @@ __all__ = [
     "Attachment",
     "Asset",
     "AssetHistory",
-    "AssetDocument",
     "AssetReviewLog",
     "Ownership",
     "Project",
@@ -164,8 +162,6 @@ __all__ = [
     "Party",
     "PartyContact",
     "PartyLifecycleCommit",
-    "PartyRoleDef",
-    "PartyRoleBinding",
     "RelationType",
     "UserPartyBinding",
     "UserOrganizationTransferCommit",

@@ -65,7 +65,6 @@ export function createOwnershipWithProjects(
   overrides?: Partial<Ownership>
 ): Ownership {
   return createMockOwnership({
-    project_count: projectCount,
     related_projects: Array.from({ length: projectCount }, (_, i) => ({
       id: `project-${i + 1}`,
       name: `关联项目 ${i + 1}`,

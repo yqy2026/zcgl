@@ -69,7 +69,6 @@ export interface ProjectDeleteResponse {
 export interface ProjectSearchRequest {
   keyword?: string;
   status?: string;
-  owner_party_id?: string;
   page?: number;
   page_size?: number;
 }
@@ -217,7 +216,6 @@ export interface ProjectAnalyticsResponse {
 export interface ProjectSearchParams {
   keyword?: string;
   status?: string;
-  owner_party_id?: string;
   page?: number;
   page_size?: number;
 }

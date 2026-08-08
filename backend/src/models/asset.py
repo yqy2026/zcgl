@@ -30,7 +30,7 @@ from ..database import Base
 from .project_asset import ProjectAsset
 
 if TYPE_CHECKING:
-    from .asset_history import AssetDocument, AssetHistory
+    from .asset_history import AssetHistory
     from .asset_review_log import AssetReviewLog
     from .contract_group import Contract
     from .party import Party
@@ -276,9 +276,6 @@ class Asset(Base):
         back_populates="asset",
         cascade="all, delete-orphan",
         order_by="AssetReviewLog.created_at.desc()",
-    )
-    documents: Mapped[list["AssetDocument"]] = relationship(
-        "AssetDocument", back_populates="asset", cascade="all, delete-orphan"
     )
     contracts: Mapped[list["Contract"]] = relationship(
         "Contract",

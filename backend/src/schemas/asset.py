@@ -617,23 +617,6 @@ class AssetHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class AssetDocumentResponse(BaseModel):
-    """资产文档响应模型"""
-
-    id: str = Field(..., description="文档ID")
-    asset_id: str = Field(..., description="资产ID")
-    document_name: str = Field(..., description="文档名称")
-    document_type: str = Field(..., description="文档类型")
-    file_path: str | None = Field(None, description="文件路径")
-    file_size: int | None = Field(None, description="文件大小(字节)")
-    mime_type: str | None = Field(None, description="文件MIME类型")
-    upload_time: datetime = Field(..., description="上传时间")
-    uploader: str | None = Field(None, description="上传人")
-    description: str | None = Field(None, description="文档描述")
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class SystemDictionaryCreate(BaseModel):
     """系统数据字典创建模型"""
 

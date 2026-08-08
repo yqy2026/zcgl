@@ -26,10 +26,6 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
             use_cache=use_cache,
             party_filter=party_filter,
         )
-        if ownership_obj:
-            # 临时禁用项目关联数据查询
-            setattr(ownership_obj, "project_relations_data", [])
-
         return ownership_obj
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Ownership | None:
@@ -74,10 +70,6 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         # 执行查询
         result = (await db.execute(stmt)).scalars().all()
         items = list(result)
-
-        # 临时禁用项目关联数据查询
-        for item in items:
-            item.project_relations_data = []
 
         return items
 

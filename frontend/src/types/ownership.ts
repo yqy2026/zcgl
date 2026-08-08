@@ -12,7 +12,6 @@ export interface Ownership {
   created_at: string;
   updated_at: string;
   asset_count?: number;
-  project_count?: number;
   related_projects?: Array<{
     id: string;
     name: string;

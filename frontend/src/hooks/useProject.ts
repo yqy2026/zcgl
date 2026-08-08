@@ -32,7 +32,6 @@ interface ApiErrorResponse {
 interface ProjectQueryParams {
   keyword?: string;
   status?: string;
-  owner_party_id?: string;
   page?: number;
   page_size?: number;
 }

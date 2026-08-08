@@ -23,7 +23,6 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .party_review_log import PartyReviewLog
-    from .party_role import PartyRoleBinding
     from .user_party_binding import UserPartyBinding
 
 
@@ -162,9 +161,6 @@ class Party(Base):
 
     contacts: Mapped[list["PartyContact"]] = relationship(
         "PartyContact", back_populates="party", cascade="all, delete-orphan"
-    )
-    role_bindings: Mapped[list["PartyRoleBinding"]] = relationship(
-        "PartyRoleBinding", back_populates="party", cascade="all, delete-orphan"
     )
     user_bindings: Mapped[list["UserPartyBinding"]] = relationship(
         "UserPartyBinding", back_populates="party", cascade="all, delete-orphan"

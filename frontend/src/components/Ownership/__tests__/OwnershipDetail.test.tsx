@@ -149,7 +149,6 @@ describe('OwnershipDetail 组件测试', () => {
     short_name: '测试',
     is_active: true,
     asset_count: 10,
-    project_count: 5,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-15T00:00:00Z',
     related_projects: [
@@ -344,16 +343,6 @@ describe('OwnershipDetail 组件测试', () => {
       const tags = screen.getAllByTestId('tag');
       const zeroTag = tags.find(tag => tag.textContent === '0 个');
       expect(zeroTag).toBeInTheDocument();
-    });
-
-    it('项目数量为undefined时应该显示0', () => {
-      const ownershipWithNoProjectCount = { ...mockOwnership, project_count: undefined };
-      renderWithProviders(
-        <OwnershipDetail ownership={ownershipWithNoProjectCount} onEdit={mockOnEdit} />
-      );
-
-      const tags = screen.getAllByTestId('tag');
-      expect(tags.length).toBeGreaterThan(0);
     });
   });
 });

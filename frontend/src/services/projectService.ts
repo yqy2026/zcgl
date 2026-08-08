@@ -244,9 +244,6 @@ export class ProjectService {
           ? { keyword: params.keyword }
           : {}),
         ...(params?.status != null && params.status.trim() !== '' ? { status: params.status } : {}),
-        ...(params?.owner_party_id != null && params.owner_party_id.trim() !== ''
-          ? { owner_party_id: params.owner_party_id }
-          : {}),
       };
 
       const result = await apiClient.get<ProjectListResponse>(this.baseUrl, {
@@ -565,20 +562,6 @@ export class ProjectService {
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('关键词搜索项目失败:', undefined, { error: enhancedError.message });
-      return [];
-    }
-  }
-
-  /**
-   * 根据权属方获取项目列表
-   */
-  async getProjectsByOwnerParty(ownerPartyId: string): Promise<Project[]> {
-    try {
-      const result = await this.getProjects({ owner_party_id: ownerPartyId });
-      return result.items;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      projectLogger.error('根据主体获取项目失败:', undefined, { error: enhancedError.message });
       return [];
     }
   }

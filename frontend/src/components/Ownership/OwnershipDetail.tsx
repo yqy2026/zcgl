@@ -137,11 +137,6 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) 
               {ownership.asset_count ?? 0} 个
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="关联项目数量">
-            <Tag color="green" className={styles.counterTag}>
-              {ownership.project_count ?? 0} 个
-            </Tag>
-          </Descriptions.Item>
         </Descriptions>
       </Card>
 

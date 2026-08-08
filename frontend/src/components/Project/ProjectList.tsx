@@ -35,7 +35,6 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 
 import { projectService } from '@/services/projectService';
-import { partyService } from '@/services/partyService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useQuery } from '@tanstack/react-query';
@@ -66,13 +65,11 @@ interface ProjectQueryParams {
   page_size: number;
   keyword?: string;
   status?: string;
-  owner_party_id?: string;
 }
 
 interface ProjectFilters {
   keyword: string;
   status: string;
-  ownerPartyId: string;
 }
 
 const PROJECT_STATUS_MAP: Record<string, { text: string; color: string }> = {
@@ -96,9 +93,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
     status: '',
-    ownerPartyId: '',
   });
-  const [ownerPartySearchKeyword, setOwnerPartySearchKeyword] = useState('');
   const [paginationState, setPaginationState] = useState({
     current: 1,
     pageSize: 10,
@@ -124,15 +119,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       params.status = filters.status;
     }
 
-    const trimmedOwnerPartyId = filters.ownerPartyId.trim();
-    if (trimmedOwnerPartyId !== '') {
-      params.owner_party_id = trimmedOwnerPartyId;
-    }
-
     return await projectService.getProjects(params);
   }, [
     filters.keyword,
-    filters.ownerPartyId,
     filters.status,
     paginationState.current,
     paginationState.pageSize,
@@ -189,25 +178,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     };
   }, [projects]);
 
-  const {
-    data: ownerParties = [],
-    isLoading: isOwnerPartiesLoading,
-    isFetching: isOwnerPartiesFetching,
-  } = useQuery<Party[]>({
-    queryKey: ['project-owner-party-options', queryScopeKey, ownerPartySearchKeyword],
-    queryFn: async () =>
-      (
-        await partyService.searchParties(ownerPartySearchKeyword, {
-          status: 'active',
-          limit: 20,
-        })
-      ).items,
-    staleTime: 10 * 60 * 1000,
-    retry: 1,
-  });
-
-  const ownerPartiesLoading = isOwnerPartiesLoading || isOwnerPartiesFetching;
-
   const refreshProjects = useCallback(() => {
     void refetchProjects();
   }, [refetchProjects]);
@@ -221,9 +191,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     setFilters({
       keyword: '',
       status: '',
-      ownerPartyId: '',
     });
-    setOwnerPartySearchKeyword('');
     setPaginationState(prev => ({ ...prev, current: 1 }));
   }, []);
 
@@ -470,17 +438,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     [updateFilters]
   );
 
-  const handleOwnerPartyChange = useCallback(
-    (value: string | undefined) => {
-      updateFilters({ ownerPartyId: value ?? '' });
-    },
-    [updateFilters]
-  );
-
-  const handleOwnerPartySearch = useCallback((value: string) => {
-    setOwnerPartySearchKeyword(value.trim());
-  }, []);
-
   return (
     <div className="project-list">
       {/* 统计卡片 */}
@@ -572,30 +529,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
                 <Option value="paused">已暂停</Option>
                 <Option value="completed">已完成</Option>
                 <Option value="terminated">已终止</Option>
-              </Select>
-            ),
-          },
-          {
-            key: 'ownership',
-            col: { xs: 24, sm: 12, md: 6, lg: 4 },
-            content: (
-              <Select
-                placeholder="所有方主体"
-                allowClear
-                className={styles.fullWidthSelect}
-                value={filters.ownerPartyId === '' ? undefined : filters.ownerPartyId}
-                onChange={handleOwnerPartyChange}
-                onSearch={handleOwnerPartySearch}
-                onClear={() => setOwnerPartySearchKeyword('')}
-                loading={ownerPartiesLoading}
-                showSearch
-                filterOption={false}
-              >
-                {ownerParties.map(party => (
-                  <Option key={party.id} value={party.id}>
-                    {party.name}
-                  </Option>
-                ))}
               </Select>
             ),
           },

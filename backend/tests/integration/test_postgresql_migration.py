@@ -446,7 +446,6 @@ class TestPostgreSQLMigrationCompleteness:
             required_tables = [
                 "assets",
                 "asset_custom_fields",
-                "asset_documents",
                 "asset_history",
                 "organizations",
                 "users",
@@ -467,6 +466,12 @@ class TestPostgreSQLMigrationCompleteness:
 
             assert "collection_records" not in tables
             assert "contacts" not in tables
+            # 20260808_drop_unused_tables_fields 迁移删除的空表
+            assert "asset_documents" not in tables
+            assert "party_role_defs" not in tables
+            assert "party_role_bindings" not in tables
+            assert "asset_management_history" not in tables
+            assert "project_ownership_relations" not in tables
 
     async def test_alembic_version_table(self):
         """测试Alembic版本表存在"""
