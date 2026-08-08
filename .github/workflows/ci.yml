@@ -620,7 +620,7 @@ jobs:
         LOGOUT_USERNAME = os.getenv("E2E_LOGOUT_USERNAME", "e2e_logout_admin")
         LOGOUT_PASSWORD = os.getenv("E2E_LOGOUT_PASSWORD", "Logout123!@#")
         ORG_CODE = "E2E-ORG-ROOT"
-        PARTY_CODE = "E2E-LEGAL-ADMIN"
+        PARTY_CODE = "LE-000001"  # 满足 ck_parties_code_format：legal_entity 需匹配 ^LE-[0-9]{6}$
 
         async def ensure_organization(db):
             result = await db.execute(
