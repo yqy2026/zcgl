@@ -40,7 +40,7 @@ const captureExcelDownload = () => {
   const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink);
   const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(n => n);
   const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(n => n);
-  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+  const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
 
   let capturedParts: BlobPart[] | null = null;
   const OrigBlob = globalThis.Blob;
@@ -62,6 +62,7 @@ const captureExcelDownload = () => {
       createElementSpy.mockRestore();
       appendChildSpy.mockRestore();
       removeChildSpy.mockRestore();
+      createObjectURLSpy.mockRestore();
     },
   };
 };
@@ -145,7 +146,7 @@ describe('analyticsExportService ANA-001 fields', () => {
       const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink);
       const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(n => n);
       const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(n => n);
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+      const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
 
       let blobContent = '';
       const OrigBlob = globalThis.Blob;
@@ -174,6 +175,7 @@ describe('analyticsExportService ANA-001 fields', () => {
       createElementSpy.mockRestore();
       appendChildSpy.mockRestore();
       removeChildSpy.mockRestore();
+      createObjectURLSpy.mockRestore();
     });
   });
 

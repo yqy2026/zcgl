@@ -116,6 +116,29 @@ export const parsePartyImportWorkbook = async (file: File): Promise<PartyCreateP
     headerValues[colNumber] = String(cell.value ?? '').trim();
   });
 
+  // sheet_to_json 默认返回原始值：日期为 Excel 序列号、超链接/富文本取显示文本
+  const toRawValue = (value: unknown): unknown => {
+    if (value instanceof Date) {
+      return Math.floor(value.getTime() / 86400000) + 25569;
+    }
+    if (typeof value === 'object' && value != null) {
+      const record = value as Record<string, unknown>;
+      if (typeof record.text === 'string') {
+        return record.text;
+      }
+      if (Array.isArray(record.richText)) {
+        return record.richText
+          .map(run =>
+            typeof (run as Record<string, unknown>).text === 'string'
+              ? (run as Record<string, unknown>).text
+              : ''
+          )
+          .join('');
+      }
+    }
+    return value;
+  };
+
   const rows: Record<string, unknown>[] = [];
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) {
@@ -127,7 +150,7 @@ export const parsePartyImportWorkbook = async (file: File): Promise<PartyCreateP
       if (header === '') {
         return;
       }
-      const cellValue = row.getCell(colNumber).value;
+      const cellValue = toRawValue(row.getCell(colNumber).value);
       record[header] = cellValue == null ? '' : cellValue;
       if (String(cellValue ?? '').trim() !== '') {
         hasAnyValue = true;

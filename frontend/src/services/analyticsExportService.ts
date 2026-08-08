@@ -59,6 +59,8 @@ class AnalyticsExportService {
   async exportToExcel(data: AnalyticsExportData, filename?: string): Promise<void> {
     try {
       const workbook = new ExcelJS.Workbook();
+      const columnWidths = [{ width: 15 }, { width: 12 }, { width: 12 }];
+      const trendColumnWidths = [{ width: 12 }, { width: 12 }, { width: 15 }, { width: 15 }];
 
       // 创建概览数据工作表
       const summaryData = [
@@ -83,7 +85,7 @@ class AnalyticsExportService {
       ];
       const summarySheet = workbook.addWorksheet('概览统计');
       summarySheet.addRows(summaryData);
-      summarySheet.columns = [{ width: 15 }, { width: 12 }, { width: 12 }];
+      summarySheet.columns = columnWidths;
 
       // 创建物业性质分布工作表
       const propertyNatureData = [
@@ -92,7 +94,7 @@ class AnalyticsExportService {
       ];
       const propertyNatureSheet = workbook.addWorksheet('物业性质分布');
       propertyNatureSheet.addRows(propertyNatureData);
-      propertyNatureSheet.columns = [{ width: 15 }, { width: 12 }, { width: 12 }];
+      propertyNatureSheet.columns = columnWidths;
 
       // 创建确权状态分布工作表
       const ownershipStatusData = [
@@ -105,7 +107,7 @@ class AnalyticsExportService {
       ];
       const ownershipStatusSheet = workbook.addWorksheet('确权状态分布');
       ownershipStatusSheet.addRows(ownershipStatusData);
-      ownershipStatusSheet.columns = [{ width: 15 }, { width: 12 }, { width: 12 }];
+      ownershipStatusSheet.columns = columnWidths;
 
       // 创建使用状态分布工作表
       const usageStatusData = [
@@ -114,7 +116,7 @@ class AnalyticsExportService {
       ];
       const usageStatusSheet = workbook.addWorksheet('使用状态分布');
       usageStatusSheet.addRows(usageStatusData);
-      usageStatusSheet.columns = [{ width: 15 }, { width: 12 }, { width: 12 }];
+      usageStatusSheet.columns = columnWidths;
 
       // 创建业态类别分布工作表
       const businessCategoryData = [
@@ -127,7 +129,7 @@ class AnalyticsExportService {
       ];
       const businessCategorySheet = workbook.addWorksheet('业态类别分布');
       businessCategorySheet.addRows(businessCategoryData);
-      businessCategorySheet.columns = [{ width: 15 }, { width: 12 }, { width: 12 }];
+      businessCategorySheet.columns = columnWidths;
 
       // 创建出租率趋势工作表（如果有数据）
       if (data.occupancy_trend && data.occupancy_trend.length > 0) {
@@ -142,7 +144,7 @@ class AnalyticsExportService {
         ];
         const occupancyTrendSheet = workbook.addWorksheet('出租率趋势');
         occupancyTrendSheet.addRows(occupancyTrendData);
-        occupancyTrendSheet.columns = [{ width: 12 }, { width: 12 }, { width: 15 }, { width: 15 }];
+        occupancyTrendSheet.columns = trendColumnWidths;
       }
 
       // 生成文件名
@@ -163,6 +165,7 @@ class AnalyticsExportService {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('导出Excel失败:', error);
       throw new Error('导出失败，请重试');
