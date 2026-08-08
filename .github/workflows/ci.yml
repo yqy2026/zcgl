@@ -894,6 +894,11 @@ jobs:
                 for permission in required_permissions:
                     await ensure_role_permission(db, admin_role.id, permission.id)
                 e2e_party = await ensure_e2e_party(db)
+                # 组织需代表一个 Party 才能解析出有效 Party scope（user organization transfer 前提）
+                if organization.represented_party_id is None:
+                    organization.represented_party_id = e2e_party.id
+                    organization.represented_party_perspective = "owner"
+                    await db.commit()
 
                 admin_user = await upsert_admin_user(
                     db,
