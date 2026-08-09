@@ -300,6 +300,23 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         result = await db.execute(stmt)
         return int(result.scalar() or 0)
 
+    async def get_asset_counts(
+        self, db: AsyncSession, project_ids: list[str]
+    ) -> dict[str, int]:
+        """批量获取项目的活跃关联资产数，避免列表场景 N+1"""
+        if not project_ids:
+            return {}
+        stmt = (
+            select(ProjectAsset.project_id, func.count(ProjectAsset.id))
+            .where(
+                ProjectAsset.project_id.in_(project_ids),
+                ProjectAsset.valid_to.is_(None),
+            )
+            .group_by(ProjectAsset.project_id)
+        )
+        rows = (await db.execute(stmt)).all()
+        return {str(project_id): int(count) for project_id, count in rows}
+
     async def get_dropdown_options(self, db: AsyncSession) -> list[dict[str, Any]]:
         """获取下拉选项"""
         stmt = select(Project.id, Project.project_name).where(

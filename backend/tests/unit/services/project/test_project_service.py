@@ -871,7 +871,12 @@ class TestSearchProjects:
             new_callable=AsyncMock,
             return_value=(mock_items, 2),
         ):
-            result = await project_service.search_projects(mock_db, search_params)
+            with patch(
+                "src.crud.project.project_crud.get_asset_counts",
+                new_callable=AsyncMock,
+                return_value={},
+            ):
+                result = await project_service.search_projects(mock_db, search_params)
 
         assert result["total"] == 2
         assert result["page"] == 1
@@ -889,7 +894,12 @@ class TestSearchProjects:
             new_callable=AsyncMock,
             return_value=(mock_items, 25),
         ):
-            result = await project_service.search_projects(mock_db, search_params)
+            with patch(
+                "src.crud.project.project_crud.get_asset_counts",
+                new_callable=AsyncMock,
+                return_value={},
+            ):
+                result = await project_service.search_projects(mock_db, search_params)
 
         assert result["page"] == 2
         assert result["pages"] == 2
@@ -908,6 +918,32 @@ class TestSearchProjects:
 
         assert result["total"] == 0
         assert result["items"] == []
+
+    async def test_search_projects_fills_asset_count(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        """列表项目必须带活跃关联资产数，否则前端误标"待补绑定"（验收 3.3）"""
+        search_params = ProjectSearchRequest(keyword="", page=1, page_size=10)
+        mock_item_a = MagicMock()
+        mock_item_a.id = "project-a"
+        mock_item_b = MagicMock()
+        mock_item_b.id = "project-b"
+        mock_items = [mock_item_a, mock_item_b]
+
+        with patch(
+            "src.crud.project.project_crud.search",
+            new_callable=AsyncMock,
+            return_value=(mock_items, 2),
+        ):
+            with patch(
+                "src.crud.project.project_crud.get_asset_counts",
+                new_callable=AsyncMock,
+                return_value={"project-a": 3, "project-b": 0},
+            ):
+                result = await project_service.search_projects(mock_db, search_params)
+
+        assert result["items"][0].asset_count == 3
+        assert result["items"][1].asset_count == 0
 
 
 class TestProjectDropdownOptions:

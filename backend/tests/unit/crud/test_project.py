@@ -258,3 +258,26 @@ class TestCRUDProjectPartyFilter:
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
         assert "assets.manager_party_id IN ('manager-1')" in compiled
         assert mock_apply_party_filter.call_count == 1
+
+
+class TestCRUDProjectGetAssetCounts:
+    async def test_get_asset_counts_returns_grouped_map(
+        self, crud: CRUDProject, mock_db: MagicMock
+    ) -> None:
+        """批量计数必须按项目分组返回活跃关联资产数（列表填充用）"""
+        result = MagicMock()
+        result.all.return_value = [("project-a", 3), ("project-b", 1)]
+        mock_db.execute.return_value = result
+
+        counts = await crud.get_asset_counts(
+            mock_db, ["project-a", "project-b", "project-c"]
+        )
+
+        assert counts == {"project-a": 3, "project-b": 1}
+
+    async def test_get_asset_counts_empty_input(
+        self, crud: CRUDProject, mock_db: MagicMock
+    ) -> None:
+        counts = await crud.get_asset_counts(mock_db, [])
+        assert counts == {}
+        mock_db.execute.assert_not_called()

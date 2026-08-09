@@ -696,6 +696,12 @@ class ProjectService:
                 search_params,
                 party_filter=resolved_party_filter,
             )
+            if items:
+                asset_counts = await project_crud.get_asset_counts(
+                    db, [str(item.id) for item in items]
+                )
+                for item in items:
+                    setattr(item, "asset_count", asset_counts.get(str(item.id), 0))
         return {
             "items": items,
             "total": total,
