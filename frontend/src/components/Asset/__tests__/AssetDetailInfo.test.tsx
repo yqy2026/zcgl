@@ -283,6 +283,16 @@ describe('AssetDetailInfo', () => {
       expect(screen.getByText('测试集团有限公司')).toBeInTheDocument();
     });
 
+    it('后端仅返回 ownership_entity 时应该回退显示权属方（与 AssetList 语义一致）', () => {
+      const asset = createMockAsset({
+        owner_party_name: undefined,
+        ownership_entity: '广州国有资产管理集团有限公司',
+      });
+      renderWithProviders(<AssetDetailInfo asset={asset} />);
+
+      expect(screen.getByText('广州国有资产管理集团有限公司')).toBeInTheDocument();
+    });
+
     it('应该显示地址', () => {
       const asset = createMockAsset({ address: '深圳市南山区科技园' });
       renderWithProviders(<AssetDetailInfo asset={asset} />);
