@@ -33,10 +33,12 @@ from src.models.contract_group import (
 from src.models.project import Project
 from src.schemas.contract_group import (
     ContractCreate,
+    ContractDetail,
     ContractGroupCreate,
     ContractRentTermCreate,
     ContractScanDocumentCreate,
     ContractScanDocumentReplaceRequest,
+    ContractSummary,
     LeaseDetailCreate,
     SettlementRuleSchema,
 )
@@ -1804,3 +1806,52 @@ class TestContractScanDocuments:
             document_id="doc-1",
         )
         mock_db.commit.assert_awaited_once()
+
+
+class TestContractDetailEnumCoercion:
+    """同 session ORM 对象携带枚举 name 字符串时，详情/摘要序列化必须归一化为中文值。
+
+    验收 5.1：add_contract_to_group 用 .name 构造 ORM 对象后，同一 session 的
+    get_contract_detail 从 identity map 命中字符串属性，ContractDetail 枚举校验
+    失败导致端点 500（数据已提交）。本测试锁定响应层归一化行为。
+    """
+
+    def _orm_like_contract(self) -> SimpleNamespace:
+        return SimpleNamespace(
+            contract_id="contract-1",
+            contract_group_id="group-1",
+            project_id="project-1",
+            contract_number="CT-1",
+            contract_direction="LESSEE",
+            group_relation_type="UPSTREAM",
+            lessor_party_id="lessor-1",
+            lessee_party_id="lessee-1",
+            lessor_name_snapshot=None,
+            lessee_name_snapshot=None,
+            sign_date=date(2026, 8, 1),
+            effective_from=date(2026, 8, 1),
+            effective_to=date(2027, 7, 31),
+            currency_code="CNY",
+            tax_rate=None,
+            is_tax_included=True,
+            status="ACTIVE",
+            contract_notes=None,
+            data_status="正常",
+            created_at=datetime(2026, 8, 1),
+            updated_at=datetime(2026, 8, 1),
+            lease_detail=None,
+            agency_detail=None,
+        )
+
+    def test_contract_detail_coerces_enum_names(self) -> None:
+        detail = ContractDetail.model_validate(self._orm_like_contract())
+
+        assert detail.contract_direction == "承租"
+        assert detail.group_relation_type == "上游"
+        assert detail.status == "生效"
+
+    def test_contract_summary_coerces_enum_names(self) -> None:
+        summary = ContractSummary.model_validate(self._orm_like_contract())
+
+        assert summary.contract_direction == "承租"
+        assert summary.group_relation_type == "上游"

@@ -8,7 +8,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from ..models.contract_group import (
@@ -263,6 +263,29 @@ class ContractCreate(BaseModel):
         return self
 
 
+# 同 session 场景下 ORM 对象可能携带枚举 name 字符串（如 'LESSEE'），
+# 响应 schema 的枚举为中文值（'承租'）。创建后立即序列化详情会命中
+# identity map 缓存对象，需要归一化（见 2026-08-09 验收 5.1）。
+_ENUM_NAME_TO_VALUE: dict[str, str] = {
+    "LESSEE": "承租",
+    "LESSOR": "出租",
+    "UPSTREAM": "上游",
+    "DOWNSTREAM": "下游",
+    "ENTRUSTED": "委托",
+    "DIRECT_LEASE": "直租",
+    "DRAFT": "草稿",
+    "ACTIVE": "生效",
+    "TERMINATED": "已终止",
+}
+
+
+def _coerce_enum_name(value: Any) -> Any:
+    """枚举 name 字符串归一化为 .value；枚举对象与原值直接透传。"""
+    if isinstance(value, str):
+        return _ENUM_NAME_TO_VALUE.get(value, value)
+    return value
+
+
 class ContractSummary(BaseModel):
     """合同组内合同摘要"""
 
@@ -279,6 +302,13 @@ class ContractSummary(BaseModel):
     status: ContractLifecycleStatus
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator(
+        "contract_direction", "group_relation_type", "status", mode="before"
+    )
+    @classmethod
+    def coerce_enum_names(cls, v: Any) -> Any:
+        return _coerce_enum_name(v)
 
 
 class ContractDetail(BaseModel):
@@ -309,6 +339,13 @@ class ContractDetail(BaseModel):
     agency_detail: AgencyDetailResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator(
+        "contract_direction", "group_relation_type", "status", mode="before"
+    )
+    @classmethod
+    def coerce_enum_names(cls, v: Any) -> Any:
+        return _coerce_enum_name(v)
 
 
 class ContractScanDocumentCreate(BaseModel):

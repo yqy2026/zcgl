@@ -7,10 +7,13 @@
   /contracts/{id}           (合同 CRUD)
 """
 
+import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from ....core.exception_handler import (
     BaseBusinessError,
@@ -339,6 +342,7 @@ async def add_contract_to_group(
     except BaseBusinessError:
         raise
     except Exception as exc:
+        logger.exception("添加合同失败（原始异常需可见以便排障）", exc_info=exc)
         raise internal_error("添加合同失败", original_error=exc) from exc
 
 
