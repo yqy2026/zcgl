@@ -20,6 +20,8 @@
 
 ## 3. 追踪矩阵
 
+> 放量前验收执行清单见 [mvp-acceptance-checklist.md](mvp-acceptance-checklist.md)。当前 36 个 MVP REQ 均未完成产品验收（2026-08-09 基线），本表实现状态仅代表代码与测试证据。
+
 ### 3.1 资产域
 
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |

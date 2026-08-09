@@ -5,6 +5,7 @@
 | 文档 | 用途 |
 |---|---|
 | [requirements-trace.md](requirements-trace.md) | REQ 到产品状态、实现状态、代码证据、测试证据的映射 |
+| [mvp-acceptance-checklist.md](mvp-acceptance-checklist.md) | MVP 放量前验收清单（PRD §9 G1-G3 门槛与 ACC 验收项逐条追踪） |
 
 维护规则：
 
