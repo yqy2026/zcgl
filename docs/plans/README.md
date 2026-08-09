@@ -6,7 +6,11 @@
 
 ## 活跃方案
 
-当前无活跃方案。历史方案见 [`docs/archive/backend-plans/`](../archive/backend-plans/README.md)。
+| 方案 | 状态 |
+|------|------|
+| [anydoc 办公文档解析引入评估](2026-08-08-anydoc-office-doc-parsing.md) | ⏸ 搁置（备选技术方案，无对应活跃 REQ） |
+
+历史方案见 [`docs/archive/backend-plans/`](../archive/backend-plans/README.md)。
 
 ## 状态说明
 
