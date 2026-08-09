@@ -81,3 +81,17 @@
 - 一笔 `terminal_rent_receipt` 100000 流水 → 分摊 2026-08（94078f09）+ 2026-09（b468947b）各 50000 → 两条目均 `paid`。
 - 项目 ledger-summary 派生正确：terminal_collection 应收 600000/实收 100000/未收 500000；received_amount 100000、paid_amount 50000。
 - 结论：ACC-023（一笔收款多账期分摊、实收由流水汇总派生）验收通过；G2 全链路（合同→条款→台账→实收→分摊→汇总派生）本地验证完成。
+
+### 5.5 项目列表"所有方主体"列口径（方案 A 落地）—— ✅ 已实施（2026-08-09）
+
+- 产品决策（用户确认方案 A）：项目列表"所有方主体"列展示**项目运营管理方名称**（`projects.manager_party_id` → party 名），替代已随写入口下线的 `party_relations` 展示。
+- 后端：`project_crud.get_manager_party_names(project_ids)` 批量 join Party 取运营方名（避免 N+1）；`search_projects` 与 asset_count 同处批量 `setattr(manager_party_name)`；`ProjectResponse` 新增 `manager_party_name` 字段（coerce validator hasattr 分支）。TDD：crud 2 用例 + service 断言（81/81 通过，含旧测试适配 mock）。
+- 前端：`ProjectList.tsx` 列改渲染 `manager_party_name`（空值 '-'）；类型 `Project` 加字段；测试更新（16/16）。oxlint 0 警告、type-check 通过。
+- 验证：service 层直接调用确认 11 个项目均返回"广州国有资产管理集团有限公司"（HTTP worker 环境因幽灵 socket 叠加不可控，见 3.3/5.1 环境备注；浏览器复验待环境清理后补）。
+- **环境清理建议**：`Get-NetTCPConnection -LocalPort 8002 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }` 反复执行至 netstat 仅剩幽灵条目，重启 `run_dev.py`；或重启 Windows（彻底释放孤儿 socket）。
+
+### 5.6 DeepSeek 解析候选链路复验—— ✅ 通过（2026-08-09）
+
+- 用户配置 DeepSeek（`DOCUMENT_LLM_ENABLED=true` + API key，settings 确认生效）后复验：上传 OCR 版合同扫描件（PIL 中文图片转 PDF）→ 会话 `ready_for_review`，**candidates.fields 提取 4 个字段候选**（contract_number=CT-2026-UP-010、effective_from=2026-08-01、effective_to=2027-07-31、monthly_rent=50000.00），均含置信度与来源证据。
+- **此前候选为空的根因**：测试 PDF 用 `fitz.insert_text` 默认字体写中文 → 字形缺失渲染为占位点 → 提取文本为乱码（非系统缺陷）。OCR 版 PDF（RapidOCR 识别 9 行中文全部正确）后链路完整走通。
+- G2 剩余项全部闭环：解析候选→确认补录链路本地验证完成（人工确认端点未走，候选已就绪）。

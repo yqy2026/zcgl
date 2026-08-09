@@ -876,7 +876,12 @@ class TestSearchProjects:
                 new_callable=AsyncMock,
                 return_value={},
             ):
-                result = await project_service.search_projects(mock_db, search_params)
+                with patch(
+                    "src.crud.project.project_crud.get_manager_party_names",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ):
+                    result = await project_service.search_projects(mock_db, search_params)
 
         assert result["total"] == 2
         assert result["page"] == 1
@@ -899,7 +904,12 @@ class TestSearchProjects:
                 new_callable=AsyncMock,
                 return_value={},
             ):
-                result = await project_service.search_projects(mock_db, search_params)
+                with patch(
+                    "src.crud.project.project_crud.get_manager_party_names",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ):
+                    result = await project_service.search_projects(mock_db, search_params)
 
         assert result["page"] == 2
         assert result["pages"] == 2
@@ -940,10 +950,17 @@ class TestSearchProjects:
                 new_callable=AsyncMock,
                 return_value={"project-a": 3, "project-b": 0},
             ):
-                result = await project_service.search_projects(mock_db, search_params)
+                with patch(
+                    "src.crud.project.project_crud.get_manager_party_names",
+                    new_callable=AsyncMock,
+                    return_value={"project-a": "广州国有资产管理集团有限公司"},
+                ):
+                    result = await project_service.search_projects(mock_db, search_params)
 
         assert result["items"][0].asset_count == 3
         assert result["items"][1].asset_count == 0
+        assert result["items"][0].manager_party_name == "广州国有资产管理集团有限公司"
+        assert result["items"][1].manager_party_name is None
 
 
 class TestProjectDropdownOptions:

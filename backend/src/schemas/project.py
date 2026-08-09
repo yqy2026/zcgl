@@ -157,6 +157,9 @@ class ProjectResponse(ProjectBase):
     created_by: str | None = None
     updated_by: str | None = None
     asset_count: int = 0
+    manager_party_name: str | None = Field(
+        None, title="运营管理方名称（列表由 service 批量填充）"
+    )
     party_relations: list[dict[str, Any]] = Field(
         default_factory=list, title="主体关系"
     )
@@ -251,6 +254,8 @@ class ProjectResponse(ProjectBase):
 
         if hasattr(v, "asset_count"):
             data["asset_count"] = getattr(v, "asset_count")
+        if hasattr(v, "manager_party_name"):
+            data["manager_party_name"] = getattr(v, "manager_party_name")
 
         if "created_by" not in data:
             data["created_by"] = getattr(v, "created_by", None)

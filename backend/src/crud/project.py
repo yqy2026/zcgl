@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
 from ..models.auth import User
+from ..models.party import Party
 from ..models.project import Project
 from ..models.project_asset import ProjectAsset
 from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
@@ -316,6 +317,20 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         )
         rows = (await db.execute(stmt)).all()
         return {str(project_id): int(count) for project_id, count in rows}
+
+    async def get_manager_party_names(
+        self, db: AsyncSession, project_ids: list[str]
+    ) -> dict[str, str]:
+        """批量获取项目的运营管理方名称，避免列表场景 N+1"""
+        if not project_ids:
+            return {}
+        stmt = (
+            select(Project.id, Party.name)
+            .join(Party, Party.id == Project.manager_party_id)
+            .where(Project.id.in_(project_ids))
+        )
+        rows = (await db.execute(stmt)).all()
+        return {str(project_id): str(name) for project_id, name in rows}
 
     async def get_dropdown_options(self, db: AsyncSession) -> list[dict[str, Any]]:
         """获取下拉选项"""

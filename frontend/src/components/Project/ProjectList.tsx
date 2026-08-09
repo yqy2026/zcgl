@@ -274,34 +274,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     },
     {
       title: '所有方主体',
-      dataIndex: 'party_relations',
+      dataIndex: 'manager_party_name',
       key: 'owner_party',
       width: 150,
-      render: (_relations: Project['party_relations'], record: Project) => {
-        // 优先展示 active 的 party_relations
-        if (record.party_relations != null && record.party_relations.length > 0) {
-          const activeRelations = record.party_relations.filter(rel => isRelationActive(rel));
-          if (activeRelations.length > 0) {
-            return (
-              <div>
-                {activeRelations.slice(0, 2).map((rel, index) => (
-                  <Tag
-                    key={rel.id ?? `${rel.party_id}-${index}`}
-                    color="blue"
-                    className={styles.ownershipTag}
-                  >
-                    {rel.party_name ?? '主体已关联'}
-                  </Tag>
-                ))}
-                {activeRelations.length > 2 && (
-                  <Tag color="gray">+{activeRelations.length - 2}</Tag>
-                )}
-              </div>
-            );
-          }
-        }
-
-        return '-';
+      render: (_value: Project['manager_party_name'], record: Project) => {
+        // 口径（方案 A）：展示项目运营管理方名称（后端列表填充）；
+        // 旧 party_relations 展示已随写入口下线而失效，不再回退。
+        const managerName = record.manager_party_name?.trim();
+        return managerName != null && managerName !== '' ? (
+          <Tag color="blue" className={styles.ownershipTag}>
+            {managerName}
+          </Tag>
+        ) : (
+          '-'
+        );
       },
     },
     {

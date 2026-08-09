@@ -515,8 +515,8 @@ describe('ProjectList', () => {
     });
   });
 
-  describe('权属方显示', () => {
-    it('应过滤停用关系，避免将停用主体显示为有效主体', async () => {
+  describe('所有方主体显示', () => {
+    it('应展示项目运营管理方名称（方案 A 口径，替代已下线的 party_relations）', async () => {
       vi.mocked(useQuery).mockImplementation(options => {
         const queryKey = (options as { queryKey?: unknown[] }).queryKey;
         const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
@@ -527,26 +527,11 @@ describe('ProjectList', () => {
               items: [
                 {
                   id: 'project-1',
-                  project_name: '项目关系过滤测试',
+                  project_name: '项目运营管理方展示测试',
                   project_code: 'PRJ-REL-001',
                   status: 'active',
                   asset_count: 0,
-                  party_relations: [
-                    {
-                      id: 'rel-inactive',
-                      party_id: 'ownership-inactive',
-                      party_name: '已停用主体',
-                      relation_type: 'owner',
-                      is_active: false,
-                    },
-                    {
-                      id: 'rel-active',
-                      party_id: 'ownership-active',
-                      party_name: '有效主体',
-                      relation_type: 'owner',
-                      is_active: true,
-                    },
-                  ],
+                  manager_party_name: '广州国有资产管理集团有限公司',
                 },
               ],
               total: 1,
@@ -572,8 +557,7 @@ describe('ProjectList', () => {
 
       await renderProjectList();
 
-      expect(screen.getByText('有效主体')).toBeInTheDocument();
-      expect(screen.queryByText('已停用主体')).not.toBeInTheDocument();
+      expect(screen.getByText('广州国有资产管理集团有限公司')).toBeInTheDocument();
     });
   });
 

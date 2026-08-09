@@ -281,3 +281,29 @@ class TestCRUDProjectGetAssetCounts:
         counts = await crud.get_asset_counts(mock_db, [])
         assert counts == {}
         mock_db.execute.assert_not_called()
+
+    async def test_get_manager_party_names_returns_map(
+        self, crud: CRUDProject, mock_db: MagicMock
+    ) -> None:
+        result = MagicMock()
+        result.all.return_value = [
+            ("project-a", "广州国有资产管理集团有限公司"),
+            ("project-b", "测试运营方"),
+        ]
+        mock_db.execute.return_value = result
+
+        names = await crud.get_manager_party_names(
+            mock_db, ["project-a", "project-b"]
+        )
+
+        assert names == {
+            "project-a": "广州国有资产管理集团有限公司",
+            "project-b": "测试运营方",
+        }
+
+    async def test_get_manager_party_names_empty_input(
+        self, crud: CRUDProject, mock_db: MagicMock
+    ) -> None:
+        names = await crud.get_manager_party_names(mock_db, [])
+        assert names == {}
+        mock_db.execute.assert_not_called()

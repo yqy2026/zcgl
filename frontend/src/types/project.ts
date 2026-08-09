@@ -30,6 +30,8 @@ export interface Project {
   created_by?: string;
   updated_by?: string;
   asset_count?: number;
+  /** 运营管理方名称（后端列表填充；"所有方主体"列展示口径，方案 A） */
+  manager_party_name?: string;
   party_relations?: ProjectPartyRelation[];
 }
 

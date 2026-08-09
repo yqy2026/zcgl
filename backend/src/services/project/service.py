@@ -700,8 +700,15 @@ class ProjectService:
                 asset_counts = await project_crud.get_asset_counts(
                     db, [str(item.id) for item in items]
                 )
+                manager_names = await project_crud.get_manager_party_names(
+                    db, [str(item.id) for item in items]
+                )
                 for item in items:
-                    setattr(item, "asset_count", asset_counts.get(str(item.id), 0))
+                    item_id = str(item.id)
+                    setattr(item, "asset_count", asset_counts.get(item_id, 0))
+                    setattr(
+                        item, "manager_party_name", manager_names.get(item_id)
+                    )
         return {
             "items": items,
             "total": total,
