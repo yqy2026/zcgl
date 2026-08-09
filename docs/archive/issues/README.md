@@ -4,6 +4,7 @@
 
 | 文档 | 内容 | 归档原因 |
 |------|------|------|
+| [2026-08-09-fe-blank-pages-diagnosis.md](./2026-08-09-fe-blank-pages-diagnosis.md) | 前端「空白页/冻结页」点检诊断：死路由渲染 null、rAF 冻结假设被实验推翻、backup `/list[Any]` 路由缺陷、WebBridge 后台标签快照伪影疑点 | 根因与修复已落地（404 兜底 `56a038d0`、backup 路由 `470d0810`），冒烟回归 `34c8f40a` + CI 全绿；WebBridge 伪影疑点留档供后续点检参考 |
 | [2026-04-party-architecture-analysis.md](./2026-04-party-architecture-analysis.md) | Party 业务角色体验问题与旧 A+C 方案 | REQ-PTY-003 已实施当前关系实时派生；旧 JSONB 缓存方案保持拒绝 |
 | [2026-07-10-payment-flow-lifecycle-and-voucher-audit.md](./2026-07-10-payment-flow-lifecycle-and-voucher-audit.md) | 收付流水作废/更正状态机与凭证下载审计 | 生命周期、事务重算、凭证权限/审计和前端操作已实施并通过定向门禁 |
 | [2026-07-06-operations-ledger-prd-revision.md](./2026-07-06-operations-ledger-prd-revision.md) | 经营台账、收付流水、四类经营口径与服务费结算修订 | 核心口径已被 PRD/spec/traceability 和实现吸收；拆出的流水生命周期与凭证审计已在 2026-07-13 完成并归档 |
