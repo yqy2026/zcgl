@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, renderWithProviders, screen } from '@/test/utils/test-helpers';
 import ContractGroupListPage from '../ContractGroupListPage';
+import { MessageManager } from '@/utils/messageManager';
 
 const mockNavigate = vi.fn();
 
@@ -69,12 +70,16 @@ describe('ContractGroupListPage', () => {
     expect(screen.queryByText('产权方主体 ID')).not.toBeInTheDocument();
   });
 
-  it('navigates to the create page', async () => {
+  it('guides to project detail instead of navigating to the context-less page', async () => {
+    const warningSpy = vi.spyOn(MessageManager, 'warning').mockImplementation(() => {});
     renderWithProviders(<ContractGroupListPage />);
 
     fireEvent.click(await screen.findByText('新建合同关系'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/new');
+    // 合同关系必须从项目详情发起（缺少项目上下文无法提交，验收 5.2）
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(warningSpy).toHaveBeenCalledWith('请先从项目详情发起新建合同关系');
+    warningSpy.mockRestore();
   });
 
   it('navigates to the pdf import page', async () => {

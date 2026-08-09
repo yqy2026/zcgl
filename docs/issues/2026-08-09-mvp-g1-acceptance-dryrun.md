@@ -62,9 +62,10 @@
 - **可观测性改进（随修复落地）**：`add_contract_to_group` 端点 `except Exception` 增加 `logger.exception(..., exc_info=exc)`，原始异常堆栈现在进日志（原 `internal_error(original_error=...)` 不落日志导致排障困难）。
 - **影响范围**：G2 合同补录主路径（已修复）；台账生成正常（数据正确性无问题，仅响应异常）。
 
-### 5.2 合同中心列表页"新建合同关系"按钮进入无项目上下文受限页（UX）
+### 5.2 合同中心列表页"新建合同关系"按钮进入无项目上下文受限页（UX）—— ✅ 已修复（2026-08-09）
 
-- 列表页按钮 → `/contract-center/new`（无 `project_id`）→ 页面提示"请先从项目详情发起新建合同关系"，无法提交。属入口 UX 瑕疵（按钮应隐藏或跳转项目选择），不影响从项目详情发起的正常路径。见验收清单 G2 行。
+- 列表页按钮 → `/contract-center/new`（无 `project_id`）→ 页面提示"请先从项目详情发起新建合同关系"，无法提交。属入口 UX 瑕疵，不影响从项目详情发起的正常路径。
+- **修复**：`ContractGroupListPage.tsx` 按钮点击改为 `MessageManager.warning('请先从项目详情发起新建合同关系')` 提示引导，不再导航到受限页（保留 PDF 导入按钮导航）。测试更新：断言不导航 + 提示出现（3/3 通过）；oxlint 0 警告、type-check 通过；浏览器实测：URL 保持 /contract-center、提示出现。
 
 ### 5.3 收付流水创建 500（occurred_on 被字符串化，asyncpg 拒绝）—— ✅ 已修复（2026-08-09）
 

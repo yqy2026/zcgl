@@ -7,6 +7,7 @@ import { PageContainer } from '@/components/Common';
 import { CONTRACT_CENTER_ROUTES } from '@/constants/routes';
 import { contractGroupService } from '@/services/contractGroupService';
 import type { ContractGroupListItem, GroupRelationType, RevenueMode } from '@/types/contractGroup';
+import { MessageManager } from '@/utils/messageManager';
 
 const PAGE_SIZE = 20;
 
@@ -163,7 +164,10 @@ const ContractGroupListPage: React.FC = () => {
             ]}
           />
           <Button onClick={() => navigate(CONTRACT_CENTER_ROUTES.IMPORT)}>PDF导入</Button>
-          <Button type="primary" onClick={() => navigate(CONTRACT_CENTER_ROUTES.NEW)}>
+          <Button
+            type="primary"
+            onClick={() => MessageManager.warning('请先从项目详情发起新建合同关系')}
+          >
             新建合同关系
           </Button>
         </Space>
