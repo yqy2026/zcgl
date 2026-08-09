@@ -508,6 +508,7 @@ jobs:
       E2E_ADMIN_PASSWORD: Admin123!@#
       E2E_LOGOUT_USERNAME: e2e_logout_admin
       E2E_LOGOUT_PASSWORD: Logout123!@#
+      E2E_ORG_CODE: E2E-ORG-ROOT
       E2E_REQUIRE_AUTH_STATE: "true"
       E2E_FULL_MATRIX: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.e2e_full_matrix) }}
       BASE_URL: http://127.0.0.1:5173
@@ -619,7 +620,7 @@ jobs:
         ADMIN_PASSWORD = os.getenv("E2E_ADMIN_PASSWORD", "Admin123!@#")
         LOGOUT_USERNAME = os.getenv("E2E_LOGOUT_USERNAME", "e2e_logout_admin")
         LOGOUT_PASSWORD = os.getenv("E2E_LOGOUT_PASSWORD", "Logout123!@#")
-        ORG_CODE = "E2E-ORG-ROOT"
+        ORG_CODE = os.getenv("E2E_ORG_CODE", "E2E-ORG-ROOT")
         PARTY_CODE = "LE-000001"  # 满足 ck_parties_code_format：legal_entity 需匹配 ^LE-[0-9]{6}$
 
         async def ensure_organization(db):

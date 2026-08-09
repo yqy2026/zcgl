@@ -22,6 +22,9 @@ from tests.shared.conftest_utils import (
 # E2E tests use file database (not memory)
 TEST_DATABASE_URL = os.getenv("E2E_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
 
+# 组织 code 与 CI seed / 前端 E2E spec 共用 E2E_ORG_CODE 环境变量（默认值保持一致，避免字面量漂移）
+E2E_ORG_CODE = os.getenv("E2E_ORG_CODE", "E2E-ORG-ROOT")
+
 
 def create_test_user(
     db_session,
@@ -247,18 +250,18 @@ def ensure_test_organization(db_session):
 
     organization = (
         db_session.query(Organization)
-        .filter(Organization.code == "E2E-ORG-ROOT")
+        .filter(Organization.code == E2E_ORG_CODE)
         .first()
     )
     if organization is None:
         organization = Organization(
             name="E2E Test Organization",
-            code="E2E-ORG-ROOT",
+            code=E2E_ORG_CODE,
             level=1,
             sort_order=0,
             type="总部",
             status="active",
-            path="/E2E-ORG-ROOT",
+            path=f"/{E2E_ORG_CODE}",
             is_deleted=False,
             created_by="e2e-fixture",
             updated_by="e2e-fixture",

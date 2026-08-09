@@ -7,6 +7,10 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-08-09
+
+- fix(e2e): hoist the `E2E-ORG-ROOT` organization code into the shared `E2E_ORG_CODE` env var to close the cross-file magic-string coupling. All three consumers now read one source with the same default: ① the `frontend-e2e` job's `env` block in `.github/workflows/ci.yml` defines `E2E_ORG_CODE: E2E-ORG-ROOT` (the explicit definition point); ② the inline CI seed reads it via `os.getenv("E2E_ORG_CODE", "E2E-ORG-ROOT")` (same pattern as `E2E_ADMIN_USERNAME`); ③ the backend pytest fixture `backend/tests/e2e/conftest.py` reads it for its organization seed, and `access-denied.spec.ts` resolves it from `process.env.E2E_ORG_CODE` with the same default — the spec's not-found error message now reports the actual code in use. A seed code rename now only needs to touch the job env block; local runs and the `backend-e2e` job (which sets no E2E_* vars) keep the previous behavior via the default. Validation: `type-check:e2e` clean, oxlint 0 warnings/errors, oxfmt format-check clean on the spec; ruff check clean on `conftest.py`; CI E2E behavior unchanged (env default matches the old literal).
+
 ### 2026-08-08
 
 - fix(ci): run the main-only integration suite without the full-suite coverage gate. The pytest `addopts` carries `--cov-fail-under=70`, which a standalone `tests/integration/` run cannot reach (~46% — the coverage gate belongs to the Backend Tests job that runs the whole suite), so the job kept failing right after all 297 tests passed. The step now runs `pytest tests/integration/ -v --no-cov`. Validation: main CI Pipeline fully green — all 9 jobs success (Backend/Frontend Lint & Type-Check, Backend/Frontend Tests, Backend/Frontend E2E, Integration Tests, API Consistency, CI Summary); Security Scanning success.

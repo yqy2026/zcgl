@@ -27,6 +27,9 @@ const normalizeNonEmpty = (value: unknown): string | null => {
   return normalized !== '' ? normalized : null;
 };
 
+// 与 CI seed（.github/workflows/ci.yml 的 E2E_ORG_CODE）共用同一来源，避免两处字面量漂移。
+const E2E_ORG_CODE = normalizeNonEmpty(process.env.E2E_ORG_CODE) ?? 'E2E-ORG-ROOT';
+
 const buildPhone = (serial: number): string => {
   const suffix = String(serial % 1000000000).padStart(9, '0');
   return `13${suffix}`;
@@ -173,10 +176,10 @@ const resolveE2EOrganizationId = async (page: Page): Promise<string> => {
   }
   const orgPayload = (await orgResponse.json()) as unknown;
   const orgs = extractData<{ items?: OrganizationListItem[] }>(orgPayload);
-  const matched = (orgs.items ?? []).find(item => item.code === 'E2E-ORG-ROOT');
+  const matched = (orgs.items ?? []).find(item => item.code === E2E_ORG_CODE);
   const organizationId = normalizeNonEmpty(matched?.id);
   if (organizationId == null) {
-    throw new Error('Unable to resolve E2E organization: E2E-ORG-ROOT not found.');
+    throw new Error(`Unable to resolve E2E organization: ${E2E_ORG_CODE} not found.`);
   }
   return organizationId;
 };
