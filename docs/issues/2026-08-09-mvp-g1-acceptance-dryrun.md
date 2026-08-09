@@ -73,3 +73,10 @@
 - **修复**：端点改 `payload.model_dump()`（python 模式保留 date/Decimal 原生类型）。TDD：新增 `test_create_payment_flow_passes_native_date_to_service`（断言传给 service 的 `occurred_on` 是 `date` 对象）→ red（str）→ green；ledger API + payment-flow service 51/51、ruff 通过；HTTP 复验创建流水 200。
 - **验证闭环**：流水创建 200 → 分摊到 2026-08 账期（`contract_ledger_entry`）200 → 台账条目实付 50000、状态 `paid`（G2 实收登记链路 ✅）。
 - **同类风险提示**：`model_dump(mode="json")` 传给 service 的模式在别处也存在（`ledger.py` 其他端点已排查无 date 字段透传；后续新增端点应避免 json dump 直传 DB 参数）。
+
+### 5.4 ACC-023 多账期分摊验收（2026-08-09）—— ✅ 通过
+
+- 补录下游转租合同 `CT-2026-DN-001`（出租/下游，月租 50000，12 条台账视图 `terminal_collection + operator_income`）→ 201；承租转租上下游结构完整。
+- 一笔 `terminal_rent_receipt` 100000 流水 → 分摊 2026-08（94078f09）+ 2026-09（b468947b）各 50000 → 两条目均 `paid`。
+- 项目 ledger-summary 派生正确：terminal_collection 应收 600000/实收 100000/未收 500000；received_amount 100000、paid_amount 50000。
+- 结论：ACC-023（一笔收款多账期分摊、实收由流水汇总派生）验收通过；G2 全链路（合同→条款→台账→实收→分摊→汇总派生）本地验证完成。
