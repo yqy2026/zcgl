@@ -4,6 +4,7 @@ import { Button, Result, Spin, App as AntdApp } from 'antd';
 import { protectedRoutes, type ProtectedRouteItem } from './routes/AppRoutes';
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/LoginPage';
+import NotFoundPage from './pages/NotFoundPage';
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorHandlingProvider } from './contexts/ErrorHandlingContext';
@@ -130,6 +131,8 @@ const ProtectedRoutes: React.FC = () => {
           ))}
           {/* 默认路由重定向到仪表板 */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* 未匹配路由兜底：渲染 404 页而非静默空白 */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AnimatePresence>
     </AppLayout>
