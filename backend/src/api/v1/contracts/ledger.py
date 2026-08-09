@@ -267,7 +267,7 @@ async def create_payment_flow(
     try:
         result = await payment_flow_service.create_flow(
             db,
-            data=payload.model_dump(mode="json"),
+            data=payload.model_dump(),
             registered_by=str(current_user.id),
         )
         return OperationalPaymentFlowResponse.model_validate(result)

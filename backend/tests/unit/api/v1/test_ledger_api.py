@@ -250,8 +250,7 @@ def test_create_payment_flow_delegates_to_service(client) -> None:
         "occurred_on": "2026-05-10",
         "amount": "1200.00",
         "registered_by": "user-001",
-        "counterparty_id": "tenant-001",
-        "voucher_attachment_ids": ["attachment-001"],
+        "counterparty_id": "tenant-001",        "voucher_attachment_ids": ["attachment-001"],
         "notes": "offline receipt",
         "status": "active",
         "created_at": "2026-05-10T10:00:00",
@@ -290,6 +289,32 @@ def test_create_payment_flow_delegates_to_service(client) -> None:
         },
         registered_by="test_user_001",
     )
+
+
+def test_create_payment_flow_passes_native_date_to_service(client) -> None:
+    """occurred_on 必须以 date 对象传给 service。
+
+    model_dump(mode="json") 会把 date 序列化为字符串，asyncpg DATE 参数拒绝
+    字符串（'str' object has no attribute 'toordinal'）→ 创建流水 500（验收 5.3）。
+    """
+    with patch(
+        "src.api.v1.contracts.ledger.payment_flow_service.create_flow",
+        new=AsyncMock(return_value={}),
+        create=True,
+    ) as mock_create:
+        client.post(
+            "/api/v1/ledger/payment-flows",
+            json={
+                "flow_type": "terminal_rent_receipt",
+                "occurred_on": "2026-05-10",
+                "amount": "1200.00",
+                "counterparty_id": "tenant-001",
+            },
+        )
+
+    called_data = mock_create.call_args.kwargs["data"]
+    assert isinstance(called_data["occurred_on"], date)
+    assert called_data["occurred_on"] == date(2026, 5, 10)
 
 
 def test_list_payment_flows_for_target_delegates_scope_to_service(client) -> None:

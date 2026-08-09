@@ -65,3 +65,11 @@
 ### 5.2 合同中心列表页"新建合同关系"按钮进入无项目上下文受限页（UX）
 
 - 列表页按钮 → `/contract-center/new`（无 `project_id`）→ 页面提示"请先从项目详情发起新建合同关系"，无法提交。属入口 UX 瑕疵（按钮应隐藏或跳转项目选择），不影响从项目详情发起的正常路径。见验收清单 G2 行。
+
+### 5.3 收付流水创建 500（occurred_on 被字符串化，asyncpg 拒绝）—— ✅ 已修复（2026-08-09）
+
+- **现象**：`POST /api/v1/ledger/payment-flows`（upstream_cost_payment 50000）返回 500；本地复现堆栈：`asyncpg.exceptions.DataError: invalid input for query argument $3: '2026-08-05' ('str' object has no attribute 'toordinal')`。
+- **根因**：`create_payment_flow` 端点调用 service 时用 `payload.model_dump(mode="json")`——把 `occurred_on`（date）序列化为字符串 `'2026-08-05'`，service 透传给 asyncpg DATE 列参数被拒（Decimal 金额字符串被 NUMERIC 接受、date 字符串不被接受）。
+- **修复**：端点改 `payload.model_dump()`（python 模式保留 date/Decimal 原生类型）。TDD：新增 `test_create_payment_flow_passes_native_date_to_service`（断言传给 service 的 `occurred_on` 是 `date` 对象）→ red（str）→ green；ledger API + payment-flow service 51/51、ruff 通过；HTTP 复验创建流水 200。
+- **验证闭环**：流水创建 200 → 分摊到 2026-08 账期（`contract_ledger_entry`）200 → 台账条目实付 50000、状态 `paid`（G2 实收登记链路 ✅）。
+- **同类风险提示**：`model_dump(mode="json")` 传给 service 的模式在别处也存在（`ledger.py` 其他端点已排查无 date 字段透传；后续新增端点应避免 json dump 直传 DB 参数）。
