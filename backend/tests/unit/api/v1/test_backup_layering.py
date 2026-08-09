@@ -60,6 +60,19 @@ def test_backup_write_authz_context_should_use_unscoped_sentinel() -> None:
     }
 
 
+def test_list_backups_route_path_should_be_plain_list() -> None:
+    """回归（2026-08-09 点检）：GET /list 路由不得写成字面量 /list[Any]。
+
+    历史缺陷：``@router.get("/list[Any]")`` 被当作普通路径注册，
+    导致 ``/system/backup/list`` 404 而 ``/system/backup/list[Any]`` 意外可访问。
+    """
+    from src.api.v1.system.backup import router
+
+    paths = [route.path for route in router.routes]
+    assert "/list" in paths
+    assert "/list[Any]" not in paths
+
+
 def test_list_backups_should_delegate_to_backup_service() -> None:
     """备份列表端点应委托给 BackupService.list_backups。"""
     from src.api.v1.system import backup as module

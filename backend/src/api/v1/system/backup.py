@@ -87,7 +87,7 @@ async def create_backup(
     }
 
 
-@router.get("/list[Any]", summary="获取备份列表")
+@router.get("/list", summary="获取备份列表")
 @handle_api_errors
 def list_backups(
     _authz_ctx: AuthzContext = Depends(
