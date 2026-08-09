@@ -9,6 +9,8 @@
 
 ### 2026-08-09
 
+- docs(plans): commit the shelved anydoc office-doc parsing evaluation and the restored active-plans index entry (the files recorded in the 2026-08-08 changelog entry had not been committed). `docs/plans/2026-08-08-anydoc-office-doc-parsing.md` (status ⏸) plus the plans/README.md active-plans table entry are now in the repo.
+
 - docs(issues): archive the 2026-08-09 blank/frozen page diagnosis as `docs/issues/2026-08-09-fe-blank-pages-diagnosis.md`. Records the disproven rAF-freeze hypothesis (strict init-script patch experiment), the confirmed root cause of the blank pages (unregistered routes rendering `null` with no `*` fallback — canonical paths are `/contract-center/list`, `/system/parties`, `/operations/ledger`), the backup `/list[Any]` route defect, and the suspected WebBridge background-tab DOM-snapshot artifact behind the one "frozen page" observation. Includes the point-check guideline: verify the URL is a registered route before treating a blank page as a defect.
 
 - test(frontend): add a main-pages render smoke suite (`tests/e2e/smoke/main-pages-render.spec.ts`). Locks the canonical pages — `/dashboard`, `/assets/list`, `/contract-center/list`, `/operations/ledger`, `/system/parties` — to render their content markers inside `<main>` (not blank, not 404), and locks dead routes (`/no-such-page-xyz`) to render the 404 page instead of a silently blank `<main>`: the exact regression surface the 2026-08-09 daily point-check's "5 blank pages" report maps to (it had probed unregistered paths). Validation: suite 6 passed locally via a temporary local config driving the installed chromium full build (the project-pinned 1208 headless-shell download was still pending); `type-check:e2e` clean.
