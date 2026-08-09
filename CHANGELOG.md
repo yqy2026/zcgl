@@ -9,6 +9,8 @@
 
 ### 2026-08-09
 
+- docs(issues): move the 2026-08-09 blank-page diagnosis report from `docs/issues/` to `docs/archive/issues/` (resolved reports belong in the archive per the issues-index governance — `docs-lint` Check 8 rejects active reports that are not indexed) and register it in `docs/archive/issues/README.md`. `make docs-lint` 10/10 PASS after the move.
+
 - docs(plans): commit the shelved anydoc office-doc parsing evaluation and the restored active-plans index entry (the files recorded in the 2026-08-08 changelog entry had not been committed). `docs/plans/2026-08-08-anydoc-office-doc-parsing.md` (status ⏸) plus the plans/README.md active-plans table entry are now in the repo.
 
 - docs(issues): archive the 2026-08-09 blank/frozen page diagnosis as `docs/issues/2026-08-09-fe-blank-pages-diagnosis.md`. Records the disproven rAF-freeze hypothesis (strict init-script patch experiment), the confirmed root cause of the blank pages (unregistered routes rendering `null` with no `*` fallback — canonical paths are `/contract-center/list`, `/system/parties`, `/operations/ledger`), the backup `/list[Any]` route defect, and the suspected WebBridge background-tab DOM-snapshot artifact behind the one "frozen page" observation. Includes the point-check guideline: verify the URL is a registered route before treating a blank page as a defect.
