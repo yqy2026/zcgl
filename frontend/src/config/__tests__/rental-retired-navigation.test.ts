@@ -51,9 +51,6 @@ describe('legacy rental navigation removal', () => {
       MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
     ]);
     expect(getSelectedKeys('/contract-groups')).toEqual([MENU_ACTION_KEYS.CONTRACT_CENTER_LIST]);
-    expect(getSelectedKeys('/contract-groups/import')).toEqual([
-      MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
-    ]);
     expect(getSelectedKeys('/contract-groups/new')).toEqual([
       MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
     ]);

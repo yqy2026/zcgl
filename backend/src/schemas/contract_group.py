@@ -244,6 +244,9 @@ class ContractCreate(BaseModel):
     is_tax_included: bool = Field(True)
     contract_notes: str | None = Field(None)
     source_session_id: str | None = Field(None, max_length=100)
+    payment_cycle: str | None = Field(
+        None, max_length=20, description="付款周期：月付/季付/半年付/年付"
+    )
     asset_ids: list[str] = Field(default_factory=list, description="关联资产 ID 列表")
     lease_detail: LeaseDetailCreate | None = Field(None, description="租赁合同明细")
     agency_detail: AgencyDetailCreate | None = Field(None, description="代理协议明细")
@@ -258,6 +261,16 @@ class ContractCreate(BaseModel):
             raise PydanticCustomError(
                 "invalid_date_range",
                 "合同结束日期必须晚于开始日期",
+                {},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_payment_cycle(self) -> "ContractCreate":
+        if self.payment_cycle is not None and self.payment_cycle not in _VALID_PAYMENT_CYCLES:
+            raise PydanticCustomError(
+                "invalid_payment_cycle",
+                f"付款周期必须为 {sorted(_VALID_PAYMENT_CYCLES)} 之一",
                 {},
             )
         return self

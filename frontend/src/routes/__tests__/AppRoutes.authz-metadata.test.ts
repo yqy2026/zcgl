@@ -28,7 +28,6 @@ describe('AppRoutes authz metadata', () => {
       [CONTRACT_CENTER_ROUTES.NEW_CONTRACT_PATH, 'contract_group:create'],
       [CONTRACT_GROUP_ROUTES.LIST, 'contract_group:read'],
       [CONTRACT_GROUP_ROUTES.NEW, 'contract_group:create'],
-      [CONTRACT_GROUP_ROUTES.IMPORT, 'contract_group:create'],
       [CONTRACT_GROUP_ROUTES.DETAIL_PATH, 'contract_group:read'],
       [CONTRACT_GROUP_ROUTES.EDIT_PATH, 'contract_group:update'],
       [CONTRACT_GROUP_ROUTES.NEW_CONTRACT_PATH, 'contract_group:create'],

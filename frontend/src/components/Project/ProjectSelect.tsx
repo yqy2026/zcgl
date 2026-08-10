@@ -19,6 +19,8 @@ interface ProjectSelectProps {
   size?: 'large' | 'middle' | 'small';
   showCreateButton?: boolean;
   onlyActive?: boolean;
+  /** Form.Item 关联用控件 id（透传给内部 Select） */
+  id?: string;
 }
 
 interface ProjectOption extends Omit<DefaultOptionType, 'label' | 'title' | 'value'> {
@@ -38,6 +40,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   size = 'middle',
   showCreateButton = true,
   onlyActive = true,
+  id,
 }) => {
   const [selectModalVisible, setSelectModalVisible] = useState(false);
 
@@ -105,6 +108,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
     <div style={style}>
       <Space.Compact className={styles.fullWidthCompact}>
         <Select<string, ProjectOption>
+          id={id}
           value={value}
           onChange={handleChange}
           onClear={handleClear}

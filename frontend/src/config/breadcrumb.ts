@@ -34,7 +34,6 @@ export const staticBreadcrumbMap: Record<string, string> = {
   '/contract-center/import': 'PDF导入',
   '/contract-center/new': '新建合同关系',
   '/contract-groups': '合同关系管理',
-  '/contract-groups/import': 'PDF导入',
   '/contract-groups/new': '新建合同关系',
 
   // 系统管理

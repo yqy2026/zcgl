@@ -713,7 +713,7 @@ const ProjectDetailPage: React.FC = () => {
                   aria-label="新建合同关系"
                   onClick={() =>
                     navigate(
-                      `${CONTRACT_CENTER_ROUTES.NEW}?project_id=${encodeURIComponent(id as string)}`
+                      `${CONTRACT_CENTER_ROUTES.IMPORT}?project_id=${encodeURIComponent(id as string)}`
                     )
                   }
                 >

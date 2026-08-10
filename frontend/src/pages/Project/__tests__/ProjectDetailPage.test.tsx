@@ -597,12 +597,13 @@ describe('ProjectDetailPage', () => {
     expect(screen.queryByText('暂无风险提示')).not.toBeInTheDocument();
   });
 
-  it('starts creating a contract relation from the current project', () => {
+  it('starts creating a contract relation from the current project via PDF import', () => {
     renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
 
     fireEvent.click(screen.getByRole('button', { name: '新建合同关系' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/new?project_id=project-1');
+    // D9 语义维持：仅项目详情发起，落地为解析流程并携带 project_id 预填锁定
+    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/import?project_id=project-1');
   });
 
   it('starts creating an upstream lease contract from a project relation card', () => {

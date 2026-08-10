@@ -95,6 +95,7 @@ _CONTRACT_FIELDS = {
     "effective_to": _FieldPolicy(date, True),
     "monthly_rent": _FieldPolicy(Decimal, True),
     "contract_notes": _FieldPolicy(str, True),
+    "payment_cycle": _FieldPolicy(str, True),
 }
 _PROPERTY_CERTIFICATE_FIELDS = {
     "certificate_number": _FieldPolicy(str, False),

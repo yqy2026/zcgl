@@ -110,9 +110,9 @@ test.describe('@user-usable 用户可用性冒烟', () => {
     await expect(page).toHaveURL(/\/assets\/new/);
     await expect(page.getByRole('heading', { name: /新增资产|编辑资产/i })).toBeVisible();
 
-    await page.goto('/contract-groups/import');
-    await expect(page).toHaveURL(/\/contract-groups\/import$/);
-    await expect(page.getByRole('heading', { name: 'Contract document review' })).toBeVisible();
+    await page.goto('/contract-center/import');
+    await expect(page).toHaveURL(/\/contract-center\/import$/);
+    await expect(page.getByRole('heading', { name: '合同文件解析' })).toBeVisible();
 
     await page.goto('/project');
     await expect(page).toHaveURL(/\/project$/);

@@ -3,9 +3,9 @@ import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
 
 type FileInputScope = Page | { locator: Page['locator'] };
 
-const CONTRACT_DOCUMENT_REVIEW_PATH = '/contract-groups/import';
+const CONTRACT_DOCUMENT_REVIEW_PATH = '/contract-center/import';
 const CONTRACT_EXTRACTION_ENDPOINT = '/api/v1/extraction-sessions';
-const CONTRACT_DOCUMENT_REVIEW_HEADING = 'Contract document review';
+const CONTRACT_DOCUMENT_REVIEW_HEADING = '合同文件解析';
 
 const uploadPlainTextFile = async (scope: FileInputScope, filename: string): Promise<void> => {
   const uploadInput = scope.locator('input[type="file"]').first();
@@ -40,18 +40,18 @@ test.describe('@user-usable contract document review validation', () => {
 
   test('rejects a non-PDF file before creating an extraction session', async ({ page }) => {
     await page.goto(CONTRACT_DOCUMENT_REVIEW_PATH);
-    await expect(page).toHaveURL(/\/contract-groups\/import$/);
+    await expect(page).toHaveURL(/\/contract-center\/import$/);
     await expect(
       page.getByRole('heading', { name: CONTRACT_DOCUMENT_REVIEW_HEADING })
     ).toBeVisible();
 
     await uploadPlainTextFile(page, 'contract.txt');
-    await expectMessageVisible(page, /Only PDF files are supported/i);
+    await expectMessageVisible(page, /仅支持 PDF 文件/i);
   });
 
   test('does not send an extraction request for a rejected file', async ({ page }) => {
     await page.goto(CONTRACT_DOCUMENT_REVIEW_PATH);
-    await expect(page).toHaveURL(/\/contract-groups\/import$/);
+    await expect(page).toHaveURL(/\/contract-center\/import$/);
     await expect(
       page.getByRole('heading', { name: CONTRACT_DOCUMENT_REVIEW_HEADING })
     ).toBeVisible();
@@ -65,7 +65,7 @@ test.describe('@user-usable contract document review validation', () => {
     page.on('request', requestListener);
     try {
       await uploadPlainTextFile(page, 'contract.txt');
-      await expectMessageVisible(page, /Only PDF files are supported/i);
+      await expectMessageVisible(page, /仅支持 PDF 文件/i);
       await page.waitForTimeout(500);
       expect(uploadRequestCount).toBe(0);
     } finally {

@@ -273,3 +273,33 @@ def test_property_certificate_enrichment_candidates_merge_without_auto_selection
         "CERT-001",
         "CERT-002",
     }
+
+
+def test_payment_cycle_optional_field_accepts_manual_entry():
+    result = CandidateReviewService().apply_actions(
+        CandidateReviewService().build_contract_candidates([]),
+        [
+            FieldAction(field_key="contract_number", action="manual", value="HT-1"),
+            FieldAction(
+                field_key="effective_from", action="manual", value=date(2026, 1, 1)
+            ),
+            FieldAction(field_key="payment_cycle", action="manual", value="季付"),
+        ],
+    )
+
+    assert result.values["payment_cycle"] == "季付"
+
+
+def test_payment_cycle_optional_field_accepts_clear():
+    result = CandidateReviewService().apply_actions(
+        CandidateReviewService().build_contract_candidates([]),
+        [
+            FieldAction(field_key="contract_number", action="manual", value="HT-1"),
+            FieldAction(
+                field_key="effective_from", action="manual", value=date(2026, 1, 1)
+            ),
+            FieldAction(field_key="payment_cycle", action="clear_optional"),
+        ],
+    )
+
+    assert result.values["payment_cycle"] is None

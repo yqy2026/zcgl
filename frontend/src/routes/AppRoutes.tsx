@@ -165,11 +165,6 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'contract_group', action: 'create' }],
   },
   {
-    path: CONTRACT_GROUP_ROUTES.IMPORT,
-    element: React.lazy(() => import('../pages/Contract/PDFImportPage')),
-    permissions: [{ resource: 'contract_group', action: 'create' }],
-  },
-  {
     path: CONTRACT_GROUP_ROUTES.DETAIL_PATH,
     element: contractGroupDetailPage,
     permissions: [{ resource: 'contract_group', action: 'read' }],

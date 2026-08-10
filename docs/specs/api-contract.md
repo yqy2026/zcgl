@@ -242,7 +242,7 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 | 确认已有产权证附件复核 | `POST /api/v1/extraction-sessions/{session_id}/confirm` | 只提交逐字段人工动作，不创建 Party、Asset、产权证、关系或附件；会话必须绑定同一产权证和既有正式附件，要求读取权限。 |
 | 取消产权证解析会话 | `POST /api/v1/extraction-sessions/{session_id}/cancel` | 取消新建会话会清理暂存文件；已有正式附件复核只删除临时会话，不删除正式附件。 |
 | Query extraction capabilities | `GET /api/v1/document-extraction/capabilities` | Returns target types, input methods, and public limits without provider or engine details: contract PDFs are at most 50 MiB and 50 pages; optional DeepSeek text enrichment uses consecutive batches of at most 20 pages; property-certificate PDFs remain at most 20 pages. |
-解析会话语义统一见 domain-model §2「字段来源」「扫描件解析确认」与 §4.23 ScanExtractionSession：临时不留档、无草稿 / 历史档案、失败 / 超时可重新创建会话或完全手工补录、低置信逐项处理、候选不自动绑定或覆盖、未匹配已审核 Party 或既有资产只提示不在确认动作中创建、不持久化解析工具 / 模型 / 置信度 / 页码 / 截图等元信息、字段来源枚举不拆子类型；产品级规则见 PRD §6.5。合同补录须保留 ≥1 盖章扫描件；新建产权证的暂存文件只在确认成功后晋升为通用附件，正式产权证须 ≥1 附件且 ≥1 既有资产关联。
+解析会话语义统一见 domain-model §2「字段来源」「扫描件解析确认」与 §4.23 ScanExtractionSession：临时不留档、无草稿 / 历史档案、失败 / 超时可重新创建会话或完全手工补录、低置信逐项处理、候选不自动绑定或覆盖、未匹配已审核 Party 或既有资产只提示不在确认动作中创建、不持久化解析工具 / 模型 / 置信度 / 页码 / 截图等元信息、字段来源枚举不拆子类型；产品级规则见 PRD §6.5。合同补录须保留 ≥1 盖章扫描件；新建产权证的暂存文件只在确认成功后晋升为通用附件，正式产权证须 ≥1 附件且 ≥1 既有资产关联。合同确认动作（`POST /api/v1/extraction-sessions/{session_id}/confirm`）可选携带 `payment_cycle` 字段动作（月付/季付/半年付/年付，2026-08-10 #76 起支持），经候选审核后映射到 `ContractCreate.payment_cycle`。
 
 ### 4.11 审批（MVP 已删除）
 

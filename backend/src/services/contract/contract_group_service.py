@@ -1256,6 +1256,7 @@ class ContractGroupService:
             "status": ContractLifecycleStatus.ACTIVE.name,
             "contract_notes": obj_in.contract_notes,
             "source_session_id": obj_in.source_session_id,
+            "payment_cycle": obj_in.payment_cycle or "月付",
             "data_status": "正常",
             "created_at": now,
             "updated_at": now,

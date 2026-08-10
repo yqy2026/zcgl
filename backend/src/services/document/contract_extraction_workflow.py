@@ -215,6 +215,7 @@ class ContractExtractionWorkflow:
                     "effective_from": effective_from,
                     "effective_to": self._optional_date(values, "effective_to"),
                     "contract_notes": self._optional_string(values, "contract_notes"),
+                    "payment_cycle": self._optional_string(values, "payment_cycle"),
                     "asset_ids": asset_ids,
                     "lease_detail": lease_detail,
                 }

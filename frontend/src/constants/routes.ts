@@ -43,7 +43,6 @@ export const ASSET_ROUTES = {
 export const CONTRACT_GROUP_ROUTES = {
   LIST: '/contract-groups',
   NEW: '/contract-groups/new',
-  IMPORT: '/contract-groups/import',
   DETAIL_PATH: '/contract-groups/:id',
   EDIT_PATH: '/contract-groups/:id/edit',
   NEW_CONTRACT_PATH: '/contract-groups/:id/contracts/new',

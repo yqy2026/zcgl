@@ -36,7 +36,6 @@ describe('rental route config contract resources', () => {
     );
     expect(ROUTES.CONTRACT_GROUP_ROUTES.LIST).toBe('/contract-groups');
     expect(ROUTES.CONTRACT_GROUP_ROUTES.NEW).toBe('/contract-groups/new');
-    expect(ROUTES.CONTRACT_GROUP_ROUTES.IMPORT).toBe('/contract-groups/import');
     expect(ROUTES.CONTRACT_GROUP_ROUTES.DETAIL_PATH).toBe('/contract-groups/:id');
     expect(ROUTES.CONTRACT_GROUP_ROUTES.EDIT_PATH).toBe('/contract-groups/:id/edit');
     expect(ROUTES.CONTRACT_GROUP_ROUTES.NEW_CONTRACT_PATH).toBe(
