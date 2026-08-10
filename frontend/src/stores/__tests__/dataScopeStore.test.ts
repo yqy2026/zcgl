@@ -76,7 +76,7 @@ describe('dataScopeStore', () => {
     expect(state.getEffectiveViewMode()).toBe('manager');
   });
 
-  it('defaults dual binding users to owner view mode', () => {
+  it('leaves dual binding view mode unselected until user explicitly chooses', () => {
     const response = createResponse([
       {
         perspectives: ['owner', 'manager'],
@@ -88,8 +88,27 @@ describe('dataScopeStore', () => {
     const state = useDataScopeStore.getState();
 
     expect(state.isDualBinding).toBe(true);
-    expect(state.currentViewMode).toBe('owner');
-    expect(state.getEffectiveViewMode()).toBe('owner');
+    expect(state.currentViewMode).toBeNull();
+    expect(state.getEffectiveViewMode()).toBeNull();
+    expect(localStorage.getItem('data-scope:view-mode')).toBeNull();
+  });
+
+  it('allows dual binding user to clear an explicit selection back to unselected', () => {
+    const response = createResponse([
+      {
+        perspectives: ['owner', 'manager'],
+        data_scope: { owner_party_ids: ['owner-1'], manager_party_ids: ['manager-1'] },
+      },
+    ]);
+
+    useDataScopeStore.getState().initFromCapabilities(response, false);
+    useDataScopeStore.getState().setCurrentViewMode('owner');
+    expect(useDataScopeStore.getState().currentViewMode).toBe('owner');
+
+    useDataScopeStore.getState().setCurrentViewMode(null);
+
+    expect(useDataScopeStore.getState().currentViewMode).toBeNull();
+    expect(localStorage.getItem('data-scope:view-mode')).toBeNull();
   });
 
   it('stores admin flag', () => {

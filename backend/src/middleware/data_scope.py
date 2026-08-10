@@ -204,6 +204,10 @@ class DataScopeContextChecker:
         if any(
             request_path.startswith(prefix) for prefix in cls.ANALYTICS_PATH_PREFIXES
         ):
+            # PRD §5：省略 view_mode 时，范围只有一种视角则自动采用；
+            # 同时含 owner/manager 时解析为 scope_mode=all，不得从绑定顺序或展示偏好猜选
+            if "owner" in subject_binding_types and "manager" in subject_binding_types:
+                return "all"
             if "owner" in subject_binding_types:
                 return "owner"
             if "manager" in subject_binding_types:

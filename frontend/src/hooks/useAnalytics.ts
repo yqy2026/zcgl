@@ -7,10 +7,13 @@ import { useDataScopeStore } from '@/stores/dataScopeStore';
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
   const initialized = useDataScopeStore(state => state.initialized);
+  const isDualBinding = useDataScopeStore(state => state.isDualBinding);
   const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
   const queryScopeKey = buildQueryScopeKey();
+  // PRD §5：双视角用户未显式选择前不静默携带 view_mode，不发请求，展示选择引导
+  const needsViewModeSelection = isDualBinding && currentViewMode == null;
 
-  return useQuery<AnalyticsResponse>({
+  const query = useQuery<AnalyticsResponse>({
     queryKey: ['analytics', queryScopeKey, currentViewMode, 'comprehensive', filters],
     queryFn: async (): Promise<AnalyticsResponse> => {
       const result = await analyticsService.getComprehensiveAnalytics(filters, currentViewMode);
@@ -22,9 +25,11 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
     retryDelay: 1000,
     refetchOnWindowFocus: false, // 禁用自动刷新避免循环请求
     refetchOnMount: true,
-    enabled: initialized,
+    enabled: initialized && !needsViewModeSelection,
     // 添加依赖项数组，确保filters变化时重新请求
   });
+
+  return { ...query, needsViewModeSelection };
 };
 
 export const useBasicStatistics = (filters?: AssetSearchParams) => {

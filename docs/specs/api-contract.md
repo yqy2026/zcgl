@@ -137,8 +137,8 @@ Organization 代表主体、组织移动、human 用户调动、UserPartyBinding
 | 合同与协议 | `GET /api/v1/projects/{project_id}/contract-relations` | 返回项目下承租合同、转租合同、委托协议、直租合同摘要投影；路径可沿用内部 `contract-relations`，用户侧文案不得展示“合同关系” |
 | 经营台账摘要 | `GET /api/v1/projects/{project_id}/ledger-summary` | 返回项目维度四类视图摘要：终端租户收缴、运营方收入、运营方成本、服务费结算；终端租户收缴包含承租转租下游租金和代理直租租金，是唯一逾期来源；运营方收入包含承租转租租金收入和代理服务费收入，不含代理直租租金；运营方成本记录承租上游租金应付/实付/未付，不产生逾期 |
 | 风险摘要 | `GET /api/v1/projects/{project_id}/risks` | 返回项目风险项；MVP 已覆盖人工风险标签、30 天内合同/协议到期提醒、终端租户租金逾期、当前有效资产可出租面积大于已出租面积时的空置风险（MVP 不含主合同覆盖类风险）、合同更正后已收付台账与当前条款不一致的 `ledger_stale_after_correction` 风险（见 ADR-0008）、已生成服务费台账与当前来源租金不一致或冻结来源租金条目已与当前合同条款不一致的 `service_fee_source_mismatch` 风险，以及产权证证照信息不完整或权利人与关联资产当前主产权主体不一致的 `warning` 级数据质量风险（MVP 已删「未核验」触发，见 ADR-0005）；运营方成本未付、服务费未收不作为逾期风险；该风险只作为项目风险摘要或详情页数据质量提示；接口不返回任务、待办、审批或处置工单对象；产权证数据质量风险由当前数据实时派生，接口不接受关闭、忽略或标记已处理请求 |
-| 租户客户 | `GET /api/v1/projects/{project_id}/tenants` | 返回项目下终端租户、客户主体和合同数摘要 |
-| 项目分析 | `GET /api/v1/projects/{project_id}/analytics` | 返回项目维度分析摘要，包含有效资产汇总、合同/协议数、客户数、风险数、终端租户收缴、运营方收入、运营方成本、服务费结算、经营结果和按租金账期聚合的月度趋势，并按承租转租、代理运营分区返回；代理直租租金计入终端租户收缴但不计入运营方收入；`scope_mode=all` 混合视图下客户双指标置空并返回 `customer_metrics_suppression_reason=customer_metrics_requires_single_perspective`，其余项目分析字段照常返回 |
+| 租户客户 | `GET /api/v1/projects/{project_id}/tenants` | 返回项目下终端租户、客户主体和合同数摘要；支持可选 `view_mode=owner\|manager` 查询参数——双视角用户显式选择后以单一视角解析租户/客户摘要（客户双指标单视图约束） |
+| 项目分析 | `GET /api/v1/projects/{project_id}/analytics` | 返回项目维度分析摘要，包含有效资产汇总、合同/协议数、客户数、风险数、终端租户收缴、运营方收入、运营方成本、服务费结算、经营结果和按租金账期聚合的月度趋势，并按承租转租、代理运营分区返回；代理直租租金计入终端租户收缴但不计入运营方收入；支持可选 `view_mode=owner\|manager` 查询参数——双视角用户显式选择单一视角后以该视角主体解析并解除客户双指标抑制；省略或 `scope_mode=all` 混合视图下客户双指标置空并返回 `customer_metrics_suppression_reason=customer_metrics_requires_single_perspective`，其余项目分析字段照常返回 |
 
 ### 4.5 合同与协议
 

@@ -93,6 +93,7 @@ const AssetAnalyticsPage: React.FC = () => {
     filters,
     dimension,
     hasData,
+    needsViewModeSelection,
     handleFilterChange,
     handleFilterReset,
     handleDimensionChange,
@@ -100,6 +101,33 @@ const AssetAnalyticsPage: React.FC = () => {
   } = useAssetAnalytics();
 
   const { isFullscreen, toggleFullscreen } = useFullscreen();
+
+  if (needsViewModeSelection) {
+    return (
+      <div className={styles.analyticsContainer}>
+        <Card className={styles.sectionCard}>
+          <Row justify="space-between" align="middle" gutter={[16, 16]}>
+            <Col xs={24} sm={12}>
+              <Space align="center" wrap>
+                <Typography.Title level={3} className={styles.pageTitle}>
+                  经营分析
+                </Typography.Title>
+                <ViewModeSegment />
+              </Space>
+            </Col>
+          </Row>
+        </Card>
+        <Card>
+          <Alert
+            type="info"
+            showIcon
+            message="请先选择产权方或运营方口径后查看经营分析"
+            description="您的账号同时拥有产权方与运营方数据范围，经营分析需要明确的单一视角口径。"
+          />
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

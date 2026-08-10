@@ -47,6 +47,8 @@ import type { GroupRelationType } from '@/types/contractGroup';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
+import ViewModeSegment from '@/components/Analytics/ViewModeSegment';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { buildQueryScopeKey } from '@/utils/queryScope';
 import {
   CONTRACT_CENTER_ROUTES,
@@ -359,16 +361,20 @@ const ProjectDetailPage: React.FC = () => {
     staleTime: 60_000,
   });
 
+  const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
+  const isDualBinding = useDataScopeStore(state => state.isDualBinding);
+  const isAdmin = useDataScopeStore(state => state.isAdmin);
+
   const { data: projectTenantsData, isLoading: projectTenantsLoading } = useQuery({
-    queryKey: ['project-tenants', queryScopeKey, id],
-    queryFn: () => projectService.getProjectTenants(id as string),
+    queryKey: ['project-tenants', queryScopeKey, id, currentViewMode],
+    queryFn: () => projectService.getProjectTenants(id as string, currentViewMode),
     enabled: canQuery,
     staleTime: 60_000,
   });
 
   const { data: projectAnalyticsData, isLoading: projectAnalyticsLoading } = useQuery({
-    queryKey: ['project-analytics', queryScopeKey, id],
-    queryFn: () => projectService.getProjectAnalytics(id as string),
+    queryKey: ['project-analytics', queryScopeKey, id, currentViewMode],
+    queryFn: () => projectService.getProjectAnalytics(id as string, currentViewMode),
     enabled: canQuery,
     staleTime: 60_000,
   });
@@ -855,6 +861,11 @@ const ProjectDetailPage: React.FC = () => {
           </Card>
 
           <Card className={styles.assetTableCard} title="租户/客户">
+            {isDualBinding && currentViewMode == null && (
+              <div className={styles.viewModeSegmentRow}>
+                <Tag color="gold">客户指标需选产权方或运营方视图</Tag>
+              </div>
+            )}
             {projectTenantsLoading ? (
               <Skeleton active paragraph={{ rows: 2 }} />
             ) : projectTenants.length > 0 ? (
@@ -910,6 +921,11 @@ const ProjectDetailPage: React.FC = () => {
           </Card>
 
           <Card className={styles.assetTableCard} title="项目分析">
+            {(isDualBinding || isAdmin) && (
+              <div className={styles.viewModeSegmentRow}>
+                <ViewModeSegment />
+              </div>
+            )}
             {projectAnalyticsLoading ? (
               <Skeleton active paragraph={{ rows: 2 }} />
             ) : projectAnalyticsData != null ? (

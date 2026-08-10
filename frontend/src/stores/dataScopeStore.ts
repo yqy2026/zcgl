@@ -99,7 +99,8 @@ const resolveDefaultViewMode = (
     return 'manager';
   }
 
-  return 'owner';
+  // PRD §5：双视角用户省略 view_mode 时不得从绑定顺序或展示偏好猜选，返回「未选择」态
+  return null;
 };
 
 export const useDataScopeStore = create<DataScopeState>((set, get) => ({

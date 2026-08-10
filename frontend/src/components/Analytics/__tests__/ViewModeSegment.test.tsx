@@ -77,4 +77,31 @@ describe('ViewModeSegment', () => {
 
     expect(useDataScopeStore.getState().currentViewMode).toBe('manager');
   });
+
+  it('shows unselected guidance for dual-binding users without an explicit choice', () => {
+    useDataScopeStore.setState({
+      bindingTypes: ['owner', 'manager'],
+      ownerPartyIds: ['owner-1'],
+      managerPartyIds: ['manager-1'],
+      isAdmin: false,
+      initialized: true,
+      isOwner: true,
+      isManager: true,
+      isDualBinding: true,
+      isSingleOwner: false,
+      isSingleManager: false,
+      currentViewMode: null,
+    });
+
+    const { container } = renderWithProviders(<ViewModeSegment />);
+
+    expect(screen.getByText('产权方口径')).toBeInTheDocument();
+    expect(screen.getByText('运营方口径')).toBeInTheDocument();
+    expect(screen.getByText(/请选择.*口径/)).toBeInTheDocument();
+    const radios = container.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+    expect(radios.length).toBeGreaterThan(0);
+    for (const radio of radios) {
+      expect(radio.checked).toBe(false);
+    }
+  });
 });

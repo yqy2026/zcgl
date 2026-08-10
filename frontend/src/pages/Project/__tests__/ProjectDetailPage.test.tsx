@@ -329,12 +329,14 @@ describe('ProjectDetailPage', () => {
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project-tenants', 'user:user-1|scope:owner,manager', 'project-1'],
+        // 视图模式作为租户/分析查询 key 尾部元素：选择视图后以单一视角重查（S6 契约）
+        queryKey: ['project-tenants', 'user:user-1|scope:owner,manager', 'project-1', null],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project-analytics', 'user:user-1|scope:owner,manager', 'project-1'],
+        // 视图模式作为分析 queryKey 尾部元素：选择视图后触发重查（S2 视图联动）
+        queryKey: ['project-analytics', 'user:user-1|scope:owner,manager', 'project-1', null],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(

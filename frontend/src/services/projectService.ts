@@ -184,7 +184,10 @@ export class ProjectService {
   /**
    * 获取项目租户客户摘要
    */
-  async getProjectTenants(projectId: string): Promise<ProjectTenantSummaryResponse> {
+  async getProjectTenants(
+    projectId: string,
+    viewMode?: 'owner' | 'manager' | null
+  ): Promise<ProjectTenantSummaryResponse> {
     try {
       const result = await apiClient.get<ProjectTenantSummaryResponse>(
         API_ENDPOINTS.PROJECT.TENANTS(projectId),
@@ -192,6 +195,7 @@ export class ProjectService {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
+          params: viewMode == null ? undefined : { view_mode: viewMode },
         }
       );
 
@@ -209,7 +213,10 @@ export class ProjectService {
   /**
    * 获取项目分析摘要
    */
-  async getProjectAnalytics(projectId: string): Promise<ProjectAnalyticsResponse> {
+  async getProjectAnalytics(
+    projectId: string,
+    viewMode?: 'owner' | 'manager' | null
+  ): Promise<ProjectAnalyticsResponse> {
     try {
       const result = await apiClient.get<ProjectAnalyticsResponse>(
         API_ENDPOINTS.PROJECT.ANALYTICS(projectId),
@@ -217,6 +224,7 @@ export class ProjectService {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
+          params: viewMode == null ? undefined : { view_mode: viewMode },
         }
       );
 

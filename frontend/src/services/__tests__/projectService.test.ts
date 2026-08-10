@@ -1041,6 +1041,20 @@ describe('ProjectService', () => {
         '获取项目租户客户摘要失败'
       );
     });
+
+    it('should pass explicit view mode to project tenants request', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        success: true,
+        data: { items: [], total: 0 },
+      });
+
+      await service.getProjectTenants('project-1', 'owner');
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/project-1/tenants'),
+        expect.objectContaining({ params: { view_mode: 'owner' } })
+      );
+    });
   });
 
   describe('getProjectAnalytics', () => {
@@ -1101,6 +1115,40 @@ describe('ProjectService', () => {
 
       await expect(service.getProjectAnalytics('project-1')).rejects.toThrow(
         '获取项目分析摘要失败'
+      );
+    });
+
+    it('should pass explicit view mode to project analytics request', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        success: true,
+        data: {
+          asset_summary: {
+            total_assets: 1,
+            total_rentable_area: 100,
+            total_rented_area: 70,
+            occupancy_rate: 70,
+          },
+          contract_relation_count: 1,
+          tenant_count: 1,
+          customer_contract_count: 1,
+          risk_count: 0,
+          high_risk_count: 0,
+          receivable_amount: '100.00',
+          payable_amount: '0.00',
+          received_amount: '0.00',
+          paid_amount: '0.00',
+          overdue_amount: '0.00',
+          service_fee_receivable: '0.00',
+          service_fee_received: '0.00',
+          mode_summaries: [],
+        },
+      });
+
+      await service.getProjectAnalytics('project-1', 'manager');
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/project-1/analytics'),
+        expect.objectContaining({ params: { view_mode: 'manager' } })
       );
     });
   });

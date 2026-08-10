@@ -328,3 +328,9 @@
   background: var(--color-bg-quaternary);
   color: var(--color-text-tertiary);
 }
+
+.viewModeGuide {
+  padding: 0 24px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}

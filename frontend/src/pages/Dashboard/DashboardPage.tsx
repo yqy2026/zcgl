@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Row, Col, Typography, Button, Space, Tooltip } from 'antd';
+import { Alert, Card, Row, Col, Typography, Button, Space, Tooltip } from 'antd';
 import {
   ReloadOutlined,
   DownloadOutlined,
@@ -21,7 +21,8 @@ const DashboardPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   // 使用统一的Analytics hook，避免重复请求
-  const { data: analyticsData, isLoading, error, refetch } = useAnalytics();
+  const { data: analyticsData, isLoading, error, refetch, needsViewModeSelection } =
+    useAnalytics();
 
   // 从综合分析数据中提取面积汇总信息
   const areaSummary = analyticsData?.data?.area_summary;
@@ -64,6 +65,32 @@ const DashboardPage: React.FC = () => {
     // 实现导出功能
     // Exporting dashboard data
   };
+
+  if (needsViewModeSelection) {
+    return (
+      <div className={styles.dashboardContainer}>
+        <div className={styles.dashboardHeader}>
+          <div className={styles.headerContent}>
+            <Title level={1} className={styles.dashboardTitle}>
+              资产管理看板
+            </Title>
+            <Text className={styles.dashboardSubtitle}>
+              实时监控资产运营状况，提供数据驱动的决策支持
+            </Text>
+            <ViewModeSegment />
+          </div>
+        </div>
+        <div className={styles.viewModeGuide}>
+          <Alert
+            type="info"
+            showIcon
+            message="请先选择产权方或运营方口径后查看看板数据"
+            description="您的账号同时拥有产权方与运营方数据范围，看板指标需要明确的单一视角口径。"
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

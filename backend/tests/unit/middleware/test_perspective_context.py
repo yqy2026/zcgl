@@ -40,9 +40,10 @@ class _UserStub:
         self.is_active = True
 
 
-async def test_require_data_scope_context_should_auto_fallback_dual_binding_analytics_to_owner() -> (
+async def test_require_data_scope_context_should_resolve_dual_binding_analytics_to_all() -> (
     None
 ):
+    """双视角用户省略 view_mode 时必须解析为 scope_mode=all（PRD §5：不得从绑定顺序或展示偏好猜选）。"""
     assert DataScopeContext is not None
     checker = require_data_scope_context()
     request = _build_request(
@@ -74,9 +75,9 @@ async def test_require_data_scope_context_should_auto_fallback_dual_binding_anal
         )
 
     assert result is not None
-    assert result.scope_mode == "owner"
+    assert result.scope_mode == "all"
     assert result.allowed_binding_types == ["owner", "manager"]
-    assert result.effective_party_ids == ["owner-1"]
+    assert result.effective_party_ids == ["manager-1", "owner-1"]
     assert result.source == "auto"
 
 

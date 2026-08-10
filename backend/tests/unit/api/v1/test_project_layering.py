@@ -559,6 +559,40 @@ async def test_get_project_tenants_should_delegate_project_service() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_project_tenants_should_narrow_filter_with_explicit_view_mode() -> None:
+    """显式 view_mode 时租户摘要以单一视角构建 party filter（S6：客户双指标单视图契约）。"""
+    from src.api.v1.assets.project import get_project_tenants
+    from src.middleware.auth import DataScopeContext
+    from src.schemas.project import ProjectTenantSummaryResponse
+
+    response_payload = ProjectTenantSummaryResponse(items=[], total=0)
+    mock_service = MagicMock()
+    mock_service.get_project_tenants = AsyncMock(return_value=response_payload)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr("src.api.v1.assets.project.project_service", mock_service)
+        response = await get_project_tenants(
+            project_id="project-1",
+            view_mode="manager",
+            db=MagicMock(),
+            current_user=MagicMock(id="user-1"),
+            _scope_ctx=DataScopeContext(
+                scope_mode="all",
+                allowed_binding_types=["owner", "manager"],
+                owner_party_ids=["owner-1"],
+                manager_party_ids=["manager-1"],
+                effective_party_ids=["owner-1", "manager-1"],
+                source="header",
+            ),
+        )
+
+    assert response.status_code == 200
+    call_kwargs = mock_service.get_project_tenants.call_args.kwargs
+    assert call_kwargs["party_filter"].filter_mode == "manager"
+    assert call_kwargs["party_filter"].party_ids == ["manager-1"]
+
+
+@pytest.mark.asyncio
 async def test_get_project_analytics_should_delegate_project_service() -> None:
     """项目分析接口应委托 project_service.get_project_analytics。"""
     from decimal import Decimal
@@ -691,6 +725,73 @@ async def test_get_project_analytics_should_suppress_customer_metrics_for_all_sc
         party_filter=ANY,
         suppress_customer_metrics=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_get_project_analytics_should_lift_suppression_with_explicit_view_mode() -> (
+    None
+):
+    """显式 view_mode 时项目分析解除客户双指标抑制，party filter 收窄为单视角（S2 视图联动契约）。"""
+    from decimal import Decimal
+
+    from src.api.v1.assets.project import get_project_analytics
+    from src.middleware.auth import DataScopeContext
+    from src.schemas.project import (
+        ProjectAnalyticsResponse,
+        ProjectAssetSummary,
+    )
+
+    response_payload = ProjectAnalyticsResponse(
+        asset_summary=ProjectAssetSummary(
+            total_assets=1,
+            total_rentable_area=100.0,
+            total_rented_area=70.0,
+            occupancy_rate=70.0,
+        ),
+        contract_relation_count=1,
+        tenant_count=2,
+        customer_contract_count=3,
+        customer_metrics_suppression_reason=None,
+        risk_count=0,
+        high_risk_count=0,
+        receivable_amount=Decimal("100.00"),
+        payable_amount=Decimal("0.00"),
+        received_amount=Decimal("20.00"),
+        paid_amount=Decimal("0.00"),
+        overdue_amount=Decimal("0.00"),
+        service_fee_receivable=Decimal("0.00"),
+        service_fee_received=Decimal("0.00"),
+        mode_summaries=[],
+    )
+    mock_service = MagicMock()
+    mock_service.get_project_analytics = AsyncMock(return_value=response_payload)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr("src.api.v1.assets.project.project_service", mock_service)
+        response = await get_project_analytics(
+            project_id="project-1",
+            view_mode="owner",
+            db=MagicMock(),
+            current_user=MagicMock(id="user-1"),
+            _scope_ctx=DataScopeContext(
+                scope_mode="all",
+                allowed_binding_types=["owner", "manager"],
+                owner_party_ids=["owner-1"],
+                manager_party_ids=["manager-1"],
+                effective_party_ids=["owner-1", "manager-1"],
+                source="header",
+            ),
+        )
+
+    payload = json.loads(response.body)
+    assert payload["data"]["tenant_count"] == 2
+    assert payload["data"]["customer_contract_count"] == 3
+    assert payload["data"]["customer_metrics_suppression_reason"] is None
+
+    call_kwargs = mock_service.get_project_analytics.call_args.kwargs
+    assert call_kwargs["suppress_customer_metrics"] is False
+    assert call_kwargs["party_filter"].filter_mode == "owner"
+    assert call_kwargs["party_filter"].party_ids == ["owner-1"]
 
 
 @pytest.mark.asyncio

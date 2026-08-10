@@ -206,6 +206,23 @@ describe('DashboardPage', () => {
     });
   });
 
+  describe('视图口径引导', () => {
+    it('双视角未选择视图时展示口径选择引导且不渲染数据', () => {
+      vi.mocked(useAnalytics).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+        needsViewModeSelection: true,
+      } as unknown as ReturnType<typeof useAnalytics>);
+
+      renderDashboardPage();
+
+      expect(screen.getByText(/请先选择产权方或运营方口径/)).toBeInTheDocument();
+      expect(screen.queryByText('资产管理看板')).toBeInTheDocument();
+    });
+  });
+
   describe('错误处理', () => {
     it('显示错误信息', () => {
       vi.mocked(useAnalytics).mockReturnValue({

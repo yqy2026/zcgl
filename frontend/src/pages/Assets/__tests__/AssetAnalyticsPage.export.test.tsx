@@ -9,10 +9,25 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
 }));
 
+const scopeState = {
+  initialized: true,
+  isDualBinding: false,
+  currentViewMode: 'owner' as 'owner' | 'manager' | null,
+};
+
 vi.mock('@/stores/dataScopeStore', () => ({
   useDataScopeStore: (
-    selector: (state: { initialized: boolean; getEffectiveViewMode: () => string }) => unknown
-  ) => selector({ initialized: true, getEffectiveViewMode: () => 'owner' }),
+    selector: (state: {
+      initialized: boolean;
+      isDualBinding: boolean;
+      getEffectiveViewMode: () => 'owner' | 'manager' | null;
+    }) => unknown
+  ) =>
+    selector({
+      initialized: scopeState.initialized,
+      isDualBinding: scopeState.isDualBinding,
+      getEffectiveViewMode: () => scopeState.currentViewMode,
+    }),
 }));
 
 vi.mock('@/hooks/useFullscreen', () => ({
@@ -128,6 +143,12 @@ const analyticsResponse = {
   },
 };
 
+beforeEach(() => {
+  scopeState.initialized = true;
+  scopeState.isDualBinding = false;
+  scopeState.currentViewMode = 'owner';
+});
+
 describe('AssetAnalyticsPage export flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -203,5 +224,16 @@ describe('AssetAnalyticsPage export flow', () => {
     });
     expect(global.URL.createObjectURL).not.toHaveBeenCalled();
     expect(global.URL.revokeObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('shows view mode selection guidance instead of data for unselected dual-binding users', () => {
+    scopeState.isDualBinding = true;
+    scopeState.currentViewMode = null;
+
+    renderWithProviders(<AssetAnalyticsPage />, { route: '/analytics' });
+
+    expect(screen.getByText(/请先选择产权方或运营方口径/)).toBeInTheDocument();
+    expect(screen.getByText(/请选择产权方或运营方口径后查看数据/)).toBeInTheDocument();
+    expect(analyticsService.getComprehensiveAnalytics).not.toHaveBeenCalled();
   });
 });

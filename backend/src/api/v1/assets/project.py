@@ -2,7 +2,7 @@
 项目管理API路由
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,7 +52,27 @@ ProjectActiveAssetsResponse.model_rebuild(
 
 def _build_project_party_filter(
     scope_context: DataScopeContext,
+    view_mode: str | None = None,
 ) -> PartyFilter | None:
+    """按 scope 上下文构建 party filter；显式 view_mode 时收窄为单视角过滤器（S2 视图联动契约）。"""
+    if view_mode == "owner":
+        effective_ids = _normalize_identifier_sequence(scope_context.owner_party_ids)
+        if len(effective_ids) > 0:
+            return PartyFilter(
+                party_ids=sorted(set(effective_ids)),
+                filter_mode="owner",
+                owner_party_ids=effective_ids,
+                manager_party_ids=[],
+            )
+    elif view_mode == "manager":
+        effective_ids = _normalize_identifier_sequence(scope_context.manager_party_ids)
+        if len(effective_ids) > 0:
+            return PartyFilter(
+                party_ids=sorted(set(effective_ids)),
+                filter_mode="manager",
+                owner_party_ids=[],
+                manager_party_ids=effective_ids,
+            )
     return build_party_filter_from_scope_context(scope_context)
 
 
@@ -600,6 +620,12 @@ async def get_project_tenants(
             deny_as_not_found=True,
         )
     ),
+    view_mode: Annotated[
+        Literal["owner", "manager"] | None,
+        Query(
+            description="显式经营视角（owner/manager）：双视角用户选择后以单一视角解析租户/客户摘要（REQ-ANA-001 客户双指标单视图约束）"
+        ),
+    ] = None,
 ) -> Any:
     """获取项目下终端租户、客户主体和合同数摘要。"""
     try:
@@ -607,7 +633,7 @@ async def get_project_tenants(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=_build_project_party_filter(_scope_ctx, view_mode=view_mode),
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),
@@ -639,15 +665,25 @@ async def get_project_analytics(
             deny_as_not_found=True,
         )
     ),
+    view_mode: Annotated[
+        Literal["owner", "manager"] | None,
+        Query(
+            description="显式经营视角（owner/manager）：双视角用户选择后以单一视角解析并解除客户双指标抑制"
+        ),
+    ] = None,
 ) -> Any:
     """获取项目维度指标，并按承租转租和代理运营分区。"""
     try:
+        party_filter = _build_project_party_filter(_scope_ctx, view_mode=view_mode)
+        should_suppress_customer_metrics = (
+            _scope_ctx.scope_mode == "all" and view_mode is None
+        )
         response_payload = await project_service.get_project_analytics(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
-            suppress_customer_metrics=_scope_ctx.scope_mode == "all",
+            party_filter=party_filter,
+            suppress_customer_metrics=should_suppress_customer_metrics,
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),

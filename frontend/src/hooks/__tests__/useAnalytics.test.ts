@@ -11,11 +11,16 @@ vi.mock('@/utils/queryScope', () => ({
 
 vi.mock('@/stores/dataScopeStore', () => ({
   useDataScopeStore: (
-    selector: (state: { initialized: boolean; getEffectiveViewMode: () => 'owner' }) => unknown
+    selector: (state: {
+      initialized: boolean;
+      isDualBinding: boolean;
+      getEffectiveViewMode: () => 'owner' | 'manager' | null;
+    }) => unknown
   ) =>
     selector({
-      initialized: true,
-      getEffectiveViewMode: () => 'owner',
+      initialized: scopeState.initialized,
+      isDualBinding: scopeState.isDualBinding,
+      getEffectiveViewMode: () => scopeState.currentViewMode,
     }),
 }));
 
@@ -25,9 +30,18 @@ vi.mock('@/services/analyticsService', () => ({
   },
 }));
 
+const scopeState = {
+  initialized: true,
+  isDualBinding: false,
+  currentViewMode: 'owner' as 'owner' | 'manager' | null,
+};
+
 describe('useAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    scopeState.initialized = true;
+    scopeState.isDualBinding = false;
+    scopeState.currentViewMode = 'owner';
   });
 
   it('应把综合分析 queryKey 绑定到当前数据范围作用域', async () => {
@@ -67,5 +81,18 @@ describe('useAnalytics', () => {
         'owner'
       );
     });
+  });
+
+  it('双视角未选择视图时不发起综合分析请求并暴露选择引导', async () => {
+    scopeState.isDualBinding = true;
+    scopeState.currentViewMode = null;
+    const queryClient = createTestQueryClient();
+
+    const { result } = renderHookWithProviders(() => useAnalytics(), { queryClient });
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    expect(result.current.needsViewModeSelection).toBe(true);
+    expect(analyticsService.getComprehensiveAnalytics).not.toHaveBeenCalled();
   });
 });

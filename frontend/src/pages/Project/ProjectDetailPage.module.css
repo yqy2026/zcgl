@@ -356,3 +356,7 @@
     flex-direction: column;
   }
 }
+
+.viewModeSegmentRow {
+  margin-bottom: 12px;
+}

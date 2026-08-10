@@ -24,7 +24,10 @@ const isAnalyticsData = (value: unknown): value is AnalyticsData => {
 
 export const useAssetAnalytics = () => {
   const initialized = useDataScopeStore(state => state.initialized);
+  const isDualBinding = useDataScopeStore(state => state.isDualBinding);
   const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
+  // PRD §5：双视角用户未显式选择前不静默携带 view_mode，不发请求，展示选择引导
+  const needsViewModeSelection = isDualBinding && currentViewMode == null;
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>('area');
   const queryScopeKey = buildQueryScopeKey();
@@ -44,7 +47,7 @@ export const useAssetAnalytics = () => {
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     refetchOnWindowFocus: false,
-    enabled: initialized,
+    enabled: initialized && !needsViewModeSelection,
   });
 
   // 解析数据
@@ -107,6 +110,7 @@ export const useAssetAnalytics = () => {
     filters,
     dimension,
     hasData,
+    needsViewModeSelection,
     handleFilterChange,
     handleFilterReset,
     handleDimensionChange,

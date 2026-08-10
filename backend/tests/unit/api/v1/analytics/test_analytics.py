@@ -136,7 +136,7 @@ class TestComprehensiveAnalytics:
             mock_get.return_value = sample_analytics_data
 
             # Act
-            response = client.get("/api/v1/analytics/comprehensive")
+            response = client.get("/api/v1/analytics/comprehensive?view_mode=manager")
 
             # Assert
             assert response.status_code == 200
@@ -164,7 +164,7 @@ class TestComprehensiveAnalytics:
             # Act
             response = client.get(
                 "/api/v1/analytics/comprehensive"
-                "?date_from=2024-01-01&date_to=2024-12-31&include_deleted=true"
+                "?view_mode=manager&date_from=2024-01-01&date_to=2024-12-31&include_deleted=true"
             )
 
             # Assert
@@ -191,7 +191,7 @@ class TestComprehensiveAnalytics:
 
             # Act
             response = client.get(
-                "/api/v1/analytics/comprehensive?should_use_cache=false"
+                "/api/v1/analytics/comprehensive?view_mode=manager&should_use_cache=false"
             )
 
             # Assert
@@ -389,7 +389,7 @@ class TestDataExport:
             mock_get.return_value = sample_analytics_data
 
             # Act
-            response = client.post("/api/v1/analytics/export?export_format=csv")
+            response = client.post("/api/v1/analytics/export?export_format=csv&view_mode=manager")
 
             # Assert
             # 导出功能应该返回 200 或 streaming response
@@ -437,7 +437,7 @@ class TestErrorHandling:
             mock_get.side_effect = Exception("Database connection failed")
 
             # Act
-            response = client.get("/api/v1/analytics/comprehensive")
+            response = client.get("/api/v1/analytics/comprehensive?view_mode=manager")
 
             # Assert
             assert response.status_code == 500
@@ -458,7 +458,7 @@ class TestErrorHandling:
 
             # Act
             response = client.get(
-                "/api/v1/analytics/comprehensive?date_from=invalid-date"
+                "/api/v1/analytics/comprehensive?view_mode=manager&date_from=invalid-date"
             )
 
             # Assert
@@ -491,9 +491,9 @@ class TestPerformance:
             mock_get.return_value = sample_analytics_data
 
             # Act - 第一次调用
-            response1 = client.get("/api/v1/analytics/comprehensive")
+            response1 = client.get("/api/v1/analytics/comprehensive?view_mode=manager")
             # Act - 第二次调用
-            response2 = client.get("/api/v1/analytics/comprehensive")
+            response2 = client.get("/api/v1/analytics/comprehensive?view_mode=manager")
 
             # Assert
             assert response1.status_code == 200

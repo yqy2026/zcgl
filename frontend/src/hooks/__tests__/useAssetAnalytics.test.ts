@@ -114,6 +114,29 @@ describe('useAssetAnalytics', () => {
     window.localStorage.removeItem('data-scope:view-mode');
   });
 
+  it('does not fire comprehensive request until dual-binding user selects a view mode', () => {
+    useDataScopeStore.setState({
+      bindingTypes: ['owner', 'manager'],
+      ownerPartyIds: ['owner-1'],
+      managerPartyIds: ['manager-1'],
+      isAdmin: false,
+      initialized: true,
+      isOwner: true,
+      isManager: true,
+      isDualBinding: true,
+      isSingleOwner: false,
+      isSingleManager: false,
+      currentViewMode: null,
+    });
+
+    const { result } = renderHook(() => useAssetAnalytics(), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.needsViewModeSelection).toBe(true);
+    expect(analyticsService.getComprehensiveAnalytics).not.toHaveBeenCalled();
+  });
+
   it('should initialize with default state', () => {
     const stdoutWriteSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 

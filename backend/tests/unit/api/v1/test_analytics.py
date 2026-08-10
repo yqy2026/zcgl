@@ -163,7 +163,7 @@ class TestComprehensiveAnalytics:
     def test_get_comprehensive_analytics_success(self, client, admin_user_headers):
         """测试成功获取综合分析数据"""
         response = client.get(
-            "/api/v1/analytics/comprehensive", headers=admin_user_headers
+            "/api/v1/analytics/comprehensive?view_mode=manager", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -177,7 +177,7 @@ class TestComprehensiveAnalytics:
     ):
         """测试带日期筛选的综合分析"""
         response = client.get(
-            "/api/v1/analytics/comprehensive?date_from=2024-01-01&date_to=2024-12-31",
+            "/api/v1/analytics/comprehensive?view_mode=manager&date_from=2024-01-01&date_to=2024-12-31",
             headers=admin_user_headers,
         )
 
@@ -190,7 +190,7 @@ class TestComprehensiveAnalytics:
     ):
         """测试不使用缓存获取分析数据"""
         response = client.get(
-            "/api/v1/analytics/comprehensive?should_use_cache=false",
+            "/api/v1/analytics/comprehensive?view_mode=manager&should_use_cache=false",
             headers=admin_user_headers,
         )
 
@@ -201,7 +201,7 @@ class TestComprehensiveAnalytics:
     ):
         """测试包含已删除数据的分析"""
         response = client.get(
-            "/api/v1/analytics/comprehensive?should_include_deleted=true",
+            "/api/v1/analytics/comprehensive?view_mode=manager&should_include_deleted=true",
             headers=admin_user_headers,
         )
 
@@ -213,14 +213,16 @@ class TestComprehensiveAnalytics:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_comprehensive_analytics_should_allow_missing_perspective_header(
+    def test_get_comprehensive_analytics_should_reject_missing_view_mode_for_dual_binding(
         self, client
     ):
+        """双视角用户省略 view_mode 时解析为 scope_mode=all，综合分析被硬拒绝（PRD §5）。"""
         response = client.get("/api/v1/analytics/comprehensive")
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         payload = response.json()
-        assert payload["success"] is True
+        assert payload["success"] is False
+        assert "客户双指标" in payload["message"]
 
     def test_get_comprehensive_analytics_should_honor_view_mode_query(self, client):
         response = client.get("/api/v1/analytics/comprehensive?view_mode=manager")
@@ -327,7 +329,7 @@ class TestAnalyticsDataValidation:
     def test_invalid_date_format(self, client, admin_user_headers):
         """测试无效的日期格式"""
         response = client.get(
-            "/api/v1/analytics/comprehensive?date_from=invalid-date",
+            "/api/v1/analytics/comprehensive?view_mode=manager&date_from=invalid-date",
             headers=admin_user_headers,
         )
 
@@ -336,7 +338,7 @@ class TestAnalyticsDataValidation:
     def test_date_from_after_date_to(self, client, admin_user_headers):
         """测试日期范围无效（起始日期晚于结束日期）"""
         response = client.get(
-            "/api/v1/analytics/comprehensive?date_from=2024-12-31&date_to=2024-01-01",
+            "/api/v1/analytics/comprehensive?view_mode=manager&date_from=2024-12-31&date_to=2024-01-01",
             headers=admin_user_headers,
         )
 
@@ -397,8 +399,10 @@ class TestAnalyticsResponseStructure:
         self, client, admin_user_headers
     ):
         """测试综合分析响应结构"""
+        # 双视角用户必须显式选择单一视角（PRD §5：省略 view_mode 解析为 scope_mode=all 并被硬拒绝）
         response = client.get(
-            "/api/v1/analytics/comprehensive", headers=admin_user_headers
+            "/api/v1/analytics/comprehensive?view_mode=manager",
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -422,8 +426,10 @@ class TestAnalyticsResponseStructure:
     def test_export_should_include_metrics_version_in_payload(
         self, client, admin_user_headers
     ):
+        # 双视角用户省略 view_mode 解析为 scope_mode=all，导出携带客户双指标会被硬拒绝；
+        # 显式单一视角（view_mode=manager）后正常导出（PRD §5 / REQ-ANA-001）
         response = client.post(
-            "/api/v1/analytics/export?export_format=csv",
+            "/api/v1/analytics/export?export_format=csv&view_mode=manager",
             headers=admin_user_headers,
         )
 
@@ -447,7 +453,7 @@ class TestAnalyticsResponseStructure:
         self, client, admin_user_headers
     ):
         response = client.post(
-            "/api/v1/analytics/export?export_format=pdf",
+            "/api/v1/analytics/export?export_format=pdf&view_mode=manager",
             headers=admin_user_headers,
         )
 
