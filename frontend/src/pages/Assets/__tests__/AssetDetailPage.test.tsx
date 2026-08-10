@@ -63,6 +63,12 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
+vi.mock('@/services/propertyCertificateService', () => ({
+  propertyCertificateService: {
+    listCertificates: vi.fn(),
+  },
+}));
+
 // Mock AssetDetailInfo component
 vi.mock('@/components/Asset/AssetDetailInfo', () => ({
   default: ({ asset }: { asset: { asset_name: string } }) => (
@@ -71,6 +77,7 @@ vi.mock('@/components/Asset/AssetDetailInfo', () => ({
 }));
 
 import { assetService } from '@/services/assetService';
+import { propertyCertificateService } from '@/services/propertyCertificateService';
 
 const buildLeaseSummary = (overrides: Record<string, unknown> = {}) => ({
   asset_id: 'asset_123',
@@ -159,6 +166,7 @@ describe('AssetDetailPage', () => {
     vi.clearAllMocks();
     vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(buildLeaseSummary());
     vi.mocked(assetService.getAssetReviewLogs).mockResolvedValue([]);
+    vi.mocked(propertyCertificateService.listCertificates).mockResolvedValue([]);
   });
 
   describe('加载状态', () => {
@@ -255,6 +263,43 @@ describe('AssetDetailPage', () => {
       expect(screen.getByTestId('asset-detail-info')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '返回' })).toBeInTheDocument();
       expect(screen.getByText('编辑资产')).toBeInTheDocument();
+    });
+
+    it('显示产权证摘要卡片并按资产过滤证书（#78）', async () => {
+      const mockAsset = {
+        id: 'asset_123',
+        asset_name: '测试资产A栋',
+      };
+      vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
+      vi.mocked(propertyCertificateService.listCertificates).mockResolvedValue([
+        {
+          id: 'cert-1',
+          certificate_number: '粤(2026)0001号',
+          certificate_type: 'real_estate',
+          asset_ids: ['asset_123'],
+          created_at: '2026-03-01',
+          updated_at: '2026-03-01',
+        },
+        {
+          id: 'cert-2',
+          certificate_number: '粤(2026)0002号',
+          certificate_type: 'land_use',
+          asset_ids: ['asset-other'],
+          created_at: '2026-03-01',
+          updated_at: '2026-03-01',
+        },
+      ] as never);
+
+      renderAssetDetailPage('asset_123');
+
+      await waitFor(() => {
+        expect(screen.getByText('粤(2026)0001号')).toBeInTheDocument();
+      });
+
+      // 仅显示属于该资产的证书（asset_ids 过滤）
+      expect(screen.queryByText('粤(2026)0002号')).not.toBeInTheDocument();
+      expect(screen.getByText('不动产权证')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '管理产权证' })).toBeInTheDocument();
     });
 
     it('显示租赁情况和客户摘要', async () => {

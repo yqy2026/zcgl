@@ -19,6 +19,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { assetService } from '@/services/assetService';
+import { propertyCertificateService } from '@/services/propertyCertificateService';
+import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
+import { CERTIFICATE_TYPE_LABELS } from '@/types/propertyCertificate';
+import type { PropertyCertificate } from '@/types/propertyCertificate';
 import type {
   AssetReviewLog,
   AssetLeaseGroupRelationType,
@@ -123,6 +127,20 @@ const AssetDetailPage: React.FC = () => {
   const { data: reviewLogs, isLoading: isReviewLogsLoading } = useQuery<AssetReviewLog[]>({
     queryKey: ['asset-review-logs', queryScopeKey, id],
     queryFn: () => assetService.getAssetReviewLogs(id as string),
+    enabled: canQuery,
+  });
+
+  // 资产产权证摘要：后端列表不支持 asset 过滤且默认 limit=100（#67 Q2-A 不要求后端扩展），
+  // 前端提高 limit 拉取后按 asset_ids 过滤（种子环境证书量小，够用；超限场景记录在案）。
+  // 注：证照风险 warning 数无数据源（证书模型无 risk 字段），摘要降级为证号 + 类型展示。
+  const { data: assetCertificates, isLoading: isCertificatesLoading } = useQuery<
+    PropertyCertificate[]
+  >({
+    queryKey: ['asset-certificates', queryScopeKey, id],
+    queryFn: async () => {
+      const all = await propertyCertificateService.listCertificates({ skip: 0, limit: 1000 });
+      return all.filter(cert => cert.asset_ids.includes(id as string));
+    },
     enabled: canQuery,
   });
 
@@ -531,6 +549,36 @@ const AssetDetailPage: React.FC = () => {
             }
           >
             {renderLeaseSummary()}
+          </Card>
+
+          <Card
+            title="产权证"
+            className={styles.leaseCard}
+            loading={isCertificatesLoading && assetCertificates == null}
+            extra={
+              <Button
+                type="link"
+                onClick={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
+                aria-label="管理产权证"
+              >
+                管理
+              </Button>
+            }
+          >
+            {assetCertificates != null && assetCertificates.length === 0 ? (
+              <Empty description="暂无产权证" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <Space direction="vertical" size="small" style={{ display: 'flex' }}>
+                {(assetCertificates ?? []).map(cert => (
+                  <div key={cert.id}>
+                    <Tag color="blue">
+                      {CERTIFICATE_TYPE_LABELS[cert.certificate_type] ?? cert.certificate_type}
+                    </Tag>
+                    <Text>{cert.certificate_number}</Text>
+                  </div>
+                ))}
+              </Space>
+            )}
           </Card>
         </div>
       )}

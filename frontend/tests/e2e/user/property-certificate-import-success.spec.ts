@@ -110,7 +110,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     await expect(page).toHaveURL(/\/property-certificates\/import/);
     await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
 
-    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.getByLabel('资产编号').fill('e2e-asset-1');
     await page.locator('input[type="file"]').first().setInputFiles({
       name: `property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
@@ -128,7 +128,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
 
     await expect(page.getByLabel('证书编号')).toBeVisible();
     // 权利人 ID 在解析后才可填（页面 disabled 逻辑）
-    await page.getByLabel('权利人 ID').fill('e2e-party-1');
+    await page.getByLabel('权利人编号').fill('e2e-party-1');
     const certificateNumberInput = page.getByLabel('证书编号');
     await expect(certificateNumberInput).toBeVisible();
     await page.getByText(`使用候选：${certificateNumber}`).click();
@@ -162,7 +162,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     });
 
     await page.goto('/property-certificates/import');
-    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.getByLabel('资产编号').fill('e2e-asset-1');
     await page.locator('input[type="file"]').first().setInputFiles({
       name: `property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
@@ -171,7 +171,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     await page.getByRole('button', { name: /开始解析/i }).click();
 
     await expect(page.getByLabel('证书编号')).toBeVisible();
-    await page.getByLabel('权利人 ID').fill('e2e-party-1');
+    await page.getByLabel('权利人编号').fill('e2e-party-1');
     await page.getByText(`使用候选：${certificateNumber}`).click();
     await page.getByText(`使用候选：${propertyAddress}`).click();
 
@@ -201,7 +201,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
       await route.fallback();
     });
 
-    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.getByLabel('资产编号').fill('e2e-asset-1');
     await page.locator('input[type="file"]').first().setInputFiles({
       name: `oversized-property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
@@ -217,7 +217,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
 
     await page.getByRole('button', { name: /开始解析/i }).click();
-    await expect(page.getByText('请输入资产 ID')).toBeVisible();
+    await expect(page.getByText('请输入资产编号')).toBeVisible();
     await expect(page).toHaveURL(/\/property-certificates\/import/);
   });
 
@@ -233,7 +233,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     });
 
     await page.goto('/property-certificates/import');
-    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.getByLabel('资产编号').fill('e2e-asset-1');
     await page.locator('input[type="file"]').first().setInputFiles({
       name: `property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
@@ -242,7 +242,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     await page.getByRole('button', { name: /开始解析/i }).click();
 
     await expect(page.getByLabel('证书编号')).toBeVisible();
-    await page.getByLabel('权利人 ID').fill('e2e-party-1');
+    await page.getByLabel('权利人编号').fill('e2e-party-1');
     const certificateNumberInput = page.getByLabel('证书编号');
     await expect(certificateNumberInput).toBeVisible();
     await certificateNumberInput.fill('');
@@ -271,7 +271,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     });
 
     await page.goto('/property-certificates/import');
-    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.getByLabel('资产编号').fill('e2e-asset-1');
     await page.locator('input[type="file"]').first().setInputFiles({
       name: `property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
@@ -280,7 +280,7 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     await page.getByRole('button', { name: /开始解析/i }).click();
 
     await expect(page.getByLabel('证书编号')).toBeVisible();
-    await page.getByLabel('权利人 ID').fill('e2e-party-1');
+    await page.getByLabel('权利人编号').fill('e2e-party-1');
     await page.getByText(`使用候选：${certificateNumber}`).click();
 
     await page.getByRole('button', { name: /保存产权证/i }).click();

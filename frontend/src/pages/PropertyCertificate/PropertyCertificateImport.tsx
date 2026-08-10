@@ -17,6 +17,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import PageContainer from '@/components/Common/PageContainer';
 import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
+import { ApiError } from '@/api/config';
+import { CERTIFICATE_TYPE_LABELS } from '@/types/propertyCertificate';
 import {
   propertyCertificateExtractionService,
   type ExtractionAction,
@@ -42,12 +44,26 @@ const OPTIONAL_FIELDS = new Set([
   'remarks',
 ]);
 
-const isApiConflict = (error: unknown): boolean => {
+/**
+ * 证号重复判定：后端对证号冲突返回 409 + detail="certificate_number_conflict"
+ * （property_certificate_extraction_workflow），其它 409（如会话状态机错误）
+ * 不应进入「维护既有产权证」引导。
+ */
+export const isCertificateNumberConflict = (error: unknown): boolean => {
+  if (error instanceof ApiError) {
+    return error.status === 409 && error.message.includes('certificate_number_conflict');
+  }
   if (typeof error !== 'object' || error == null || !('response' in error)) {
     return false;
   }
-  const response = (error as { response?: { status?: unknown } }).response;
-  return response?.status === 409;
+  const response = (error as {
+    response?: { status?: unknown; data?: { detail?: unknown } };
+  }).response;
+  return (
+    response?.status === 409 &&
+    typeof response.data?.detail === 'string' &&
+    response.data.detail.includes('certificate_number_conflict')
+  );
 };
 
 export const PropertyCertificateImport: React.FC = () => {
@@ -200,9 +216,9 @@ export const PropertyCertificateImport: React.FC = () => {
       message.success(`产权证已保存：${result.certificate_id}`);
       navigate(PROPERTY_CERTIFICATE_ROUTES.LIST);
     } catch (error) {
-      if (isApiConflict(error)) {
+      if (isCertificateNumberConflict(error)) {
         setConflict(true);
-        message.error('证书编号已存在，请明确选择已有产权证');
+        message.error('证书编号已存在：请维护既有产权证，显式确认后追加资产关联，不自动新建');
       } else if (error instanceof Error) {
         message.error(error.message);
       } else {
@@ -238,31 +254,29 @@ export const PropertyCertificateImport: React.FC = () => {
         <Card title={isExistingReference ? '复核已有附件' : '新建产权证'}>
           <Form form={form} layout="vertical" initialValues={{ certificateType: 'other' }}>
             <Form.Item
-              label="资产 ID"
+              label="资产编号"
               name="assetId"
-              rules={[{ required: true, message: '请输入资产 ID' }]}
+              rules={[{ required: true, message: '请输入资产编号' }]}
             >
               <Input disabled={session != null} />
             </Form.Item>
             <Form.Item
-              label="权利人 ID"
+              label="权利人编号"
               name="holderPartyIds"
-              rules={[{ required: session == null, message: '请输入权利人 ID' }]}
+              rules={[{ required: session == null, message: '请输入权利人编号' }]}
             >
               <Input
                 disabled={session == null || isExistingReference}
-                placeholder="多个 ID 用英文逗号分隔"
+                placeholder="多个编号用英文逗号分隔"
               />
             </Form.Item>
             <Form.Item label="证书类型" name="certificateType">
               <Select
                 disabled={session == null}
-                options={[
-                  { value: 'real_estate', label: '不动产权证' },
-                  { value: 'house_ownership', label: '房屋所有权证' },
-                  { value: 'land_use', label: '土地使用证' },
-                  { value: 'other', label: '其他' },
-                ]}
+                options={Object.entries(CERTIFICATE_TYPE_LABELS).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
               />
             </Form.Item>
           </Form>

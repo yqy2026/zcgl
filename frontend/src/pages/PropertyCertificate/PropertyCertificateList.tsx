@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { MessageManager } from '@/utils/messageManager';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
 import type { PropertyCertificate, CertificateType } from '@/types/propertyCertificate';
+import { CERTIFICATE_TYPE_LABELS } from '@/types/propertyCertificate';
 import dayjs from 'dayjs';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
@@ -27,10 +28,10 @@ interface TypeMeta {
 }
 
 const CERTIFICATE_TYPE_META: Record<CertificateType, TypeMeta> = {
-  real_estate: { label: 'Real estate', tone: 'primary' },
-  house_ownership: { label: 'House ownership', tone: 'success' },
-  land_use: { label: 'Land use', tone: 'warning' },
-  other: { label: 'Other', tone: 'error' },
+  real_estate: { label: CERTIFICATE_TYPE_LABELS.real_estate, tone: 'primary' },
+  house_ownership: { label: CERTIFICATE_TYPE_LABELS.house_ownership, tone: 'success' },
+  land_use: { label: CERTIFICATE_TYPE_LABELS.land_use, tone: 'warning' },
+  other: { label: CERTIFICATE_TYPE_LABELS.other, tone: 'error' },
 };
 
 export const PropertyCertificateList: React.FC = () => {
@@ -68,7 +69,7 @@ export const PropertyCertificateList: React.FC = () => {
         const data = await propertyCertificateService.listCertificates();
         setCertificateSource(data);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to load certificates';
+        const message = error instanceof Error ? error.message : '加载产权证列表失败';
         MessageManager.error(message);
       } finally {
         setIsFetching(false);
@@ -91,12 +92,12 @@ export const PropertyCertificateList: React.FC = () => {
 
   const columns = [
     {
-      title: 'Certificate number',
+      title: '证书编号',
       dataIndex: 'certificate_number',
       key: 'certificate_number',
     },
     {
-      title: 'Type',
+      title: '类型',
       dataIndex: 'certificate_type',
       key: 'certificate_type',
       render: (type: CertificateType) => {
@@ -112,25 +113,25 @@ export const PropertyCertificateList: React.FC = () => {
       },
     },
     {
-      title: 'Address',
+      title: '坐落地址',
       dataIndex: 'property_address',
       key: 'property_address',
       ellipsis: true,
     },
     {
-      title: 'Building area',
+      title: '建筑面积',
       dataIndex: 'building_area',
       key: 'building_area',
-      render: (area: string | null) => (area != null ? `${area} sqm` : '-'),
+      render: (area: string | null) => (area != null ? `${area} ㎡` : '-'),
     },
     {
-      title: 'Created at',
+      title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
     },
     {
-      title: 'Actions',
+      title: '操作',
       key: 'actions',
       render: (_: unknown, record: PropertyCertificate) => (
         <Space className={styles.actionGroup}>
@@ -139,9 +140,9 @@ export const PropertyCertificateList: React.FC = () => {
             icon={<EyeOutlined />}
             onClick={() => navigate(`/property-certificates/${record.id}`)}
             className={styles.actionButton}
-            aria-label={`View certificate ${record.certificate_number ?? record.id}`}
+            aria-label={`查看产权证 ${record.certificate_number ?? record.id}`}
           >
-            View
+            查看
           </Button>
         </Space>
       ),
@@ -151,14 +152,14 @@ export const PropertyCertificateList: React.FC = () => {
   return (
     <PageContainer
       className={styles.pageShell}
-      title="Property Certificates"
-      subTitle="Manage property certificate records and asset links"
+      title="产权证管理"
+      subTitle="管理产权证记录与资产关联"
     >
       <div className={styles.pageContent}>
         <Card className={styles.filterCard}>
           <Space size={12} wrap className={styles.filterActions}>
             <Input
-              placeholder="Search certificate number"
+              placeholder="搜索证书编号"
               prefix={<SearchOutlined />}
               className={styles.searchInput}
               value={filters.keyword}
@@ -171,7 +172,7 @@ export const PropertyCertificateList: React.FC = () => {
               onClick={() => navigate('/property-certificates/import')}
               className={styles.createButton}
             >
-              New Certificate
+              新建产权证
             </Button>
           </Space>
         </Card>
@@ -184,7 +185,7 @@ export const PropertyCertificateList: React.FC = () => {
           paginationState={pagination}
           onPageChange={updatePagination}
           paginationProps={{
-            showTotal: (total: number) => `Total ${total}`,
+            showTotal: (total: number) => `共 ${total} 条`,
           }}
         />
       </div>

@@ -7,6 +7,14 @@ export enum CertificateType {
   OTHER = 'other',
 }
 
+/** 证照类型中文标签（列表/详情/资产摘要共用） */
+export const CERTIFICATE_TYPE_LABELS: Record<CertificateType, string> = {
+  [CertificateType.REAL_ESTATE]: '不动产权证',
+  [CertificateType.HOUSE_OWNERSHIP]: '房屋所有权证',
+  [CertificateType.LAND_USE]: '土地使用权证',
+  [CertificateType.OTHER]: '其他',
+};
+
 export interface PropertyCertificate {
   id: string;
   certificate_number: string;

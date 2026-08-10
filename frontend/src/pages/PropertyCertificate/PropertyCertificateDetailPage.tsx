@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -21,20 +21,13 @@ import {
 import { FileTextOutlined, HomeOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
-import type { CertificateType } from '@/types/propertyCertificate';
+import { CERTIFICATE_TYPE_LABELS } from '@/types/propertyCertificate';
 import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
 import { assetService } from '@/services/assetService';
 import type { Asset } from '@/types/asset';
 import { PageContainer } from '@/components/Common';
 import { PropertyCertificateAttachmentsPanel } from '@/components/PropertyCertificate/PropertyCertificateAttachmentsPanel';
 import styles from './PropertyCertificateDetailPage.module.css';
-
-const typeLabelMap: Record<CertificateType, string> = {
-  real_estate: 'Real estate',
-  house_ownership: 'House ownership',
-  land_use: 'Land use',
-  other: 'Other',
-};
 
 const PropertyCertificateDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,13 +54,21 @@ const PropertyCertificateDetailPage: React.FC = () => {
     queryFn: () => assetService.getAssets({ page: 1, page_size: 200 }),
   });
 
+  const assetNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (assetResponse?.items ?? []).forEach((asset: Asset) => {
+      map.set(asset.id, asset.asset_name);
+    });
+    return map;
+  }, [assetResponse]);
+
   if (error) {
     return (
       <PageContainer
-        title="Property Certificate Detail"
+        title="产权证详情"
         onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
       >
-        <Alert type="error" title="Failed to load" />
+        <Alert type="error" title="加载失败" />
       </PageContainer>
     );
   }
@@ -75,10 +76,10 @@ const PropertyCertificateDetailPage: React.FC = () => {
   if (!isLoading && !certificate) {
     return (
       <PageContainer
-        title="Property Certificate Detail"
+        title="产权证详情"
         onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
       >
-        <Alert type="warning" title="Property certificate not found" />
+        <Alert type="warning" title="产权证不存在" />
       </PageContainer>
     );
   }
@@ -131,11 +132,11 @@ const PropertyCertificateDetailPage: React.FC = () => {
         restrictions: values.restrictions ?? null,
         remarks: values.remarks ?? null,
       });
-      message.success('Updated successfully');
+      message.success('更新成功');
       setEditVisible(false);
       await refetch();
     } catch {
-      message.error('Update failed');
+      message.error('更新失败');
     } finally {
       setSubmitting(false);
     }
@@ -146,10 +147,10 @@ const PropertyCertificateDetailPage: React.FC = () => {
     setSubmitting(true);
     try {
       await propertyCertificateService.deleteCertificate(id);
-      message.success('Deleted successfully');
+      message.success('删除成功');
       navigate(PROPERTY_CERTIFICATE_ROUTES.LIST);
     } catch {
-      message.error('Delete failed');
+      message.error('删除失败');
     } finally {
       setSubmitting(false);
     }
@@ -171,11 +172,11 @@ const PropertyCertificateDetailPage: React.FC = () => {
       await propertyCertificateService.updateCertificate(id, {
         asset_ids: values.asset_ids ?? [],
       });
-      message.success('Asset links updated');
+      message.success('资产关联已更新');
       setAssetVisible(false);
       await refetch();
     } catch {
-      message.error('Failed to update asset links');
+      message.error('资产关联更新失败');
     } finally {
       setSubmitting(false);
     }
@@ -185,11 +186,14 @@ const PropertyCertificateDetailPage: React.FC = () => {
     <PageContainer
       title={
         <Space>
-          <span>Property Certificate Detail</span>
+          <span>产权证详情</span>
           {certificate && (
             <>
               <Tag icon={<FileTextOutlined />}>{certificate.certificate_number}</Tag>
-              <Tag color="blue">{typeLabelMap[certificate.certificate_type]}</Tag>
+              <Tag color="blue">
+                {CERTIFICATE_TYPE_LABELS[certificate.certificate_type] ??
+                  certificate.certificate_type}
+              </Tag>
             </>
           )}
         </Space>
@@ -199,20 +203,20 @@ const PropertyCertificateDetailPage: React.FC = () => {
       extra={
         certificate && (
           <Space>
-            <Button onClick={openAssetModal}>Link Assets</Button>
+            <Button onClick={openAssetModal}>关联资产</Button>
             <Button icon={<EditOutlined />} onClick={openEdit}>
-              Edit
+              编辑
             </Button>
             <Popconfirm
-              title="Delete this property certificate?"
-              description="This action cannot be undone."
-              okText="Delete"
-              cancelText="Cancel"
+              title="删除该产权证？"
+              description="此操作不可撤销。"
+              okText="删除"
+              cancelText="取消"
               okButtonProps={{ danger: true }}
               onConfirm={handleDelete}
             >
               <Button danger loading={submitting}>
-                Delete
+                删除
               </Button>
             </Popconfirm>
           </Space>
@@ -223,51 +227,51 @@ const PropertyCertificateDetailPage: React.FC = () => {
         <Space orientation="vertical" size="large" className={styles.fullWidthStack}>
           <Row gutter={[24, 24]}>
             <Col span={24}>
-              <Card title="Basic Information">
+              <Card title="基本信息">
                 <Descriptions column={3} bordered>
-                  <Descriptions.Item label="Registration date">
+                  <Descriptions.Item label="登记日期">
                     {certificate.registration_date
                       ? dayjs(certificate.registration_date).format('YYYY-MM-DD')
                       : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Address">
+                  <Descriptions.Item label="坐落地址">
                     {certificate.property_address ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Property type">
+                  <Descriptions.Item label="物业性质">
                     {certificate.property_type ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Building area">
-                    {certificate.building_area != null ? `${certificate.building_area} sqm` : '-'}
+                  <Descriptions.Item label="建筑面积">
+                    {certificate.building_area != null ? `${certificate.building_area} ㎡` : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Land area">
-                    {certificate.land_area != null ? `${certificate.land_area} sqm` : '-'}
+                  <Descriptions.Item label="土地面积">
+                    {certificate.land_area != null ? `${certificate.land_area} ㎡` : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Floor info">
+                  <Descriptions.Item label="楼层信息">
                     {certificate.floor_info ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Land use type">
+                  <Descriptions.Item label="土地用途">
                     {certificate.land_use_type ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Land use term">
+                  <Descriptions.Item label="土地使用期限">
                     {certificate.land_use_term_start && certificate.land_use_term_end
                       ? `${certificate.land_use_term_start} ~ ${certificate.land_use_term_end}`
                       : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Co-ownership">
+                  <Descriptions.Item label="共有情况">
                     {certificate.co_ownership ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Restrictions">
+                  <Descriptions.Item label="权利限制">
                     {certificate.restrictions ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Remarks">
+                  <Descriptions.Item label="备注">
                     {certificate.remarks ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Created at">
+                  <Descriptions.Item label="创建时间">
                     {certificate.created_at
                       ? dayjs(certificate.created_at).format('YYYY-MM-DD')
                       : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Updated at">
+                  <Descriptions.Item label="更新时间">
                     {certificate.updated_at
                       ? dayjs(certificate.updated_at).format('YYYY-MM-DD')
                       : '-'}
@@ -277,7 +281,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
             </Col>
 
             <Col span={24}>
-              <Card title="Linked Assets">
+              <Card title="关联资产">
                 {certificate.asset_ids && certificate.asset_ids.length > 0 ? (
                   <Space wrap>
                     {certificate.asset_ids.map(aid => (
@@ -286,12 +290,12 @@ const PropertyCertificateDetailPage: React.FC = () => {
                         icon={<HomeOutlined />}
                         onClick={() => navigate(`/assets/${aid}`)}
                       >
-                        Asset {aid}
+                        {assetNameById.get(aid) ?? aid}
                       </Button>
                     ))}
                   </Space>
                 ) : (
-                  <Alert type="info" title="No linked assets" />
+                  <Alert type="info" title="暂无关联资产" />
                 )}
               </Card>
             </Col>
@@ -303,7 +307,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
       )}
 
       <Modal
-        title="Edit Property Certificate"
+        title="编辑产权证"
         open={editVisible}
         onCancel={() => setEditVisible(false)}
         onOk={handleSubmitEdit}
@@ -311,58 +315,58 @@ const PropertyCertificateDetailPage: React.FC = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            label="Certificate number"
+            label="证书编号"
             name="certificate_number"
-            rules={[{ required: true, message: 'Please enter certificate number' }]}
+            rules={[{ required: true, message: '请输入证书编号' }]}
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Registration date" name="registration_date">
+          <Form.Item label="登记日期" name="registration_date">
             <DatePicker className={styles.fullWidthDatePicker} />
           </Form.Item>
-          <Form.Item label="Address" name="property_address">
+          <Form.Item label="坐落地址" name="property_address">
             <Input />
           </Form.Item>
-          <Form.Item label="Building area" name="building_area">
+          <Form.Item label="建筑面积" name="building_area">
             <Input />
           </Form.Item>
-          <Form.Item label="Land area" name="land_area">
+          <Form.Item label="土地面积" name="land_area">
             <Input />
           </Form.Item>
-          <Form.Item label="Floor info" name="floor_info">
+          <Form.Item label="楼层信息" name="floor_info">
             <Input />
           </Form.Item>
-          <Form.Item label="Land use type" name="land_use_type">
+          <Form.Item label="土地用途" name="land_use_type">
             <Input />
           </Form.Item>
-          <Form.Item label="Land use term" name="land_use_term">
+          <Form.Item label="土地使用期限" name="land_use_term">
             <DatePicker.RangePicker className={styles.fullWidthRangePicker} />
           </Form.Item>
-          <Form.Item label="Co-ownership" name="co_ownership">
+          <Form.Item label="共有情况" name="co_ownership">
             <Input />
           </Form.Item>
-          <Form.Item label="Restrictions" name="restrictions">
+          <Form.Item label="权利限制" name="restrictions">
             <Input />
           </Form.Item>
-          <Form.Item label="Remarks" name="remarks">
+          <Form.Item label="备注" name="remarks">
             <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title="Link Assets"
+        title="关联资产"
         open={assetVisible}
         onCancel={() => setAssetVisible(false)}
         onOk={handleSubmitAssets}
         confirmLoading={submitting}
       >
         <Form form={assetForm} layout="vertical">
-          <Form.Item label="Linked assets" name="asset_ids">
+          <Form.Item label="关联资产" name="asset_ids">
             <Select
               mode="multiple"
               showSearch
-              placeholder="Select assets"
+              placeholder="选择资产"
               optionFilterProp="children"
               loading={loadingAssets}
               filterOption={(input, option) =>

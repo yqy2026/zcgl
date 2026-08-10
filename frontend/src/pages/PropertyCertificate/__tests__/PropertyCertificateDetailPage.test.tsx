@@ -86,7 +86,7 @@ describe('PropertyCertificateDetailPage', () => {
         route: '/property-certificates/cert-1',
       });
 
-      expect(await screen.findAllByText('Property Certificate Detail')).not.toHaveLength(0);
+      expect(await screen.findAllByText('产权证详情')).not.toHaveLength(0);
       expect(await screen.findByText('CERT-001')).toBeInTheDocument();
 
       expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain('[antd: Space]');
