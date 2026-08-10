@@ -81,11 +81,6 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'analytics', action: 'read' }],
   },
   {
-    path: ASSET_ROUTES.ANALYTICS_SIMPLE,
-    element: React.lazy(() => import('../pages/Assets/SimpleAnalyticsPage')),
-    permissions: [{ resource: 'analytics', action: 'read' }],
-  },
-  {
     path: ASSET_ROUTES.LIST,
     element: assetListPage,
     permissions: [{ resource: 'asset', action: 'read' }],

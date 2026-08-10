@@ -31,7 +31,6 @@ export const ASSET_ROUTES = {
   NEW: '/assets/new',
   IMPORT: '/assets/import',
   ANALYTICS: '/assets/analytics',
-  ANALYTICS_SIMPLE: '/assets/analytics-simple',
   DETAIL_PATH: '/assets/:id',
   EDIT_PATH: '/assets/:id/edit',
   HISTORY_PATH: '/assets/:id/history',
@@ -165,11 +164,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
         path: ASSET_ROUTES.IMPORT,
         title: '资产导入',
         permissions: [{ resource: 'asset', action: 'create' }],
-      },
-      {
-        path: ASSET_ROUTES.ANALYTICS_SIMPLE,
-        title: '简易分析',
-        permissions: [{ resource: 'analytics', action: 'read' }],
       },
       {
         path: ASSET_ROUTES.DETAIL_PATH,
