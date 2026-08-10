@@ -251,6 +251,11 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     adminOnly: true,
   },
   {
+    path: SYSTEM_ROUTES.TEMPLATES,
+    element: React.lazy(() => import('../pages/System/TemplateManagementPage')),
+    permissions: [{ resource: 'asset', action: 'read' }],
+  },
+  {
     path: SYSTEM_ROUTES.LOGS,
     element: React.lazy(() => import('../pages/System/OperationLog')),
     adminOnly: true,

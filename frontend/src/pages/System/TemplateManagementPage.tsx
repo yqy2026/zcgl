@@ -1,5 +1,5 @@
 import React, { useEffect, useState, type ReactNode } from 'react';
-import { Button, Card, Col, Modal, Row, Space, Statistic, Tag, Tooltip, Typography } from 'antd';
+import { Button, Card, Col, Modal, Row, Space, Tag, Tooltip, Typography } from 'antd';
 import {
   DownloadOutlined,
   EyeOutlined,
@@ -26,10 +26,7 @@ interface TemplateInfo {
   key: string;
   name: string;
   description: string;
-  type: 'asset' | 'rent-contract';
-  version: string;
-  updateDate: string;
-  fileSize: string;
+  type: 'asset';
   fields: string[];
   status: 'active' | 'draft' | 'deprecated';
 }
@@ -40,16 +37,13 @@ interface TemplateFilters {
 
 type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
 
-// 模板数据
+// 真实可下载模板（#79 mock 收敛：仅资产导入模板，版本/大小无后端元数据故不展示）
 const templates: TemplateInfo[] = [
   {
     key: 'asset-import',
     name: '资产导入模板',
     description: '用于批量导入资产数据的Excel模板，包含所有必要字段',
     type: 'asset',
-    version: 'v2.0',
-    updateDate: '2025-09-24',
-    fileSize: '25KB',
     fields: [
       '权属方',
       '权属类别',
@@ -75,27 +69,6 @@ const templates: TemplateInfo[] = [
     ],
     status: 'active',
   },
-  {
-    key: 'rent-contract-import',
-    name: '租赁合同导入模板',
-    description: '旧租赁合同导入模板已退休，前端正在迁移到新 contract/contract-group 体系',
-    type: 'rent-contract',
-    version: 'v1.0',
-    updateDate: '2025-09-20',
-    fileSize: '18KB',
-    fields: [
-      '合同编号',
-      '资产名称',
-      '承租方',
-      '合同开始日期',
-      '合同结束日期',
-      '月租金',
-      '押金',
-      '付款方式',
-      '合同状态',
-    ],
-    status: 'deprecated',
-  },
 ];
 
 const TYPE_META_MAP: Record<
@@ -106,7 +79,6 @@ const TYPE_META_MAP: Record<
   }
 > = {
   asset: { label: '资产导入', tone: 'primary' },
-  'rent-contract': { label: '租赁合同', tone: 'warning' },
 };
 
 const STATUS_META_MAP: Record<
@@ -152,29 +124,17 @@ const TemplateManagementPage: React.FC = () => {
   useEffect(() => {
     void loadList({ page: 1 });
   }, [loadList]);
-  const activeTemplateCount = templates.filter(template => template.status === 'active').length;
 
   const getToneClassName = (tone: Tone): string => {
     return toneClassMap[tone];
-  };
-
-  const normalizeVersion = (version: string): string => {
-    if (version.startsWith('v')) {
-      return version;
-    }
-    return `v${version}`;
   };
 
   // 下载模板
   const handleDownloadTemplate = async (template: TemplateInfo) => {
     setDownloadingTemplateKey(template.key);
     try {
-      if (template.type === 'asset') {
-        await assetService.downloadImportTemplate();
-        MessageManager.success('资产导入模板下载成功');
-      } else if (template.type === 'rent-contract') {
-        MessageManager.info('租赁合同导入模板已退休，请等待新 contract/contract-group 模板入口');
-      }
+      await assetService.downloadImportTemplate();
+      MessageManager.success('资产导入模板下载成功');
     } catch (error: unknown) {
       _pageLogger.error('下载模板失败:', error as Error);
       MessageManager.error(`下载模板失败: ${(error as Error).message || '网络错误'}`);
@@ -221,15 +181,10 @@ const TemplateManagementPage: React.FC = () => {
       title: '模板名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, record: TemplateInfo) => (
+      render: (text: string) => (
         <div className={styles.templateNameCell}>
           <FileExcelOutlined className={styles.templateIcon} />
-          <span>
-            <span className={styles.templateNameText}>{text}</span>
-            <Text type="secondary" className={styles.templateVersion}>
-              {normalizeVersion(record.version)}
-            </Text>
-          </span>
+          <span className={styles.templateNameText}>{text}</span>
         </div>
       ),
     },
@@ -250,16 +205,6 @@ const TemplateManagementPage: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => getStatusTag(status),
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updateDate',
-      key: 'updateDate',
-    },
-    {
-      title: '文件大小',
-      dataIndex: 'fileSize',
-      key: 'fileSize',
     },
     {
       title: '操作',
@@ -299,40 +244,8 @@ const TemplateManagementPage: React.FC = () => {
     <PageContainer
       className={styles.pageShell}
       title="数据模板管理"
-      subTitle="管理和下载各种数据导入模板，确保数据导入的准确性和一致性"
+      subTitle="下载数据导入模板，确保数据导入的准确性和一致性"
     >
-      {/* 统计信息 */}
-      <Row gutter={[16, 16]} className={styles.statsRow}>
-        <Col xs={24} sm={12} md={6}>
-          <Card className={`${styles.statsCard} ${styles.toneSuccess}`}>
-            <Statistic title="可用模板" value={activeTemplateCount} suffix="个" />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card className={`${styles.statsCard} ${styles.tonePrimary}`}>
-            <Statistic
-              title="资产模板"
-              value={templates.filter(t => t.type === 'asset').length}
-              suffix="个"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card className={`${styles.statsCard} ${styles.toneWarning}`}>
-            <Statistic
-              title="合同模板"
-              value={templates.filter(t => t.type === 'rent-contract').length}
-              suffix="个"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card className={`${styles.statsCard} ${styles.toneNeutral}`}>
-            <Statistic title="总下载量" value={0} suffix="次" />
-          </Card>
-        </Col>
-      </Row>
-
       {/* 使用说明 */}
       <Card
         title={
@@ -370,7 +283,6 @@ const TemplateManagementPage: React.FC = () => {
       <Card>
         <div className={styles.tableSummary} aria-live="polite">
           <Text type="secondary">共 {pagination.total} 个模板</Text>
-          <Text type="secondary">可用模板 {activeTemplateCount} 个</Text>
         </div>
         <TableWithPagination
           columns={columns}
@@ -403,14 +315,6 @@ const TemplateManagementPage: React.FC = () => {
                     模板名称：
                   </Text>
                   <Text>{previewTemplate.name}</Text>
-                </div>
-              </Col>
-              <Col span={12}>
-                <div className={styles.detailItem}>
-                  <Text strong className={styles.detailLabel}>
-                    版本：
-                  </Text>
-                  <Text>{previewTemplate.version}</Text>
                 </div>
               </Col>
               <Col span={12}>

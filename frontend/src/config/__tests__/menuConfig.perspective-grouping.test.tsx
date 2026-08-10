@@ -42,6 +42,7 @@ describe('menuConfig perspective grouping', () => {
       children: expect.arrayContaining([
         expect.objectContaining({ key: '/assets/list', label: '资产台账' }),
         expect.objectContaining({ key: '/property-certificates', label: '产权证管理' }),
+        expect.objectContaining({ key: '/system/templates', label: '数据模板' }),
       ]),
     });
 
@@ -83,6 +84,7 @@ describe('menuConfig perspective grouping', () => {
     expect(getOpenKeys('/contract-center/import')).toEqual([MENU_GROUP_KEYS.CONTRACT_CENTER]);
     expect(getOpenKeys('/contract-groups')).toEqual([MENU_GROUP_KEYS.CONTRACT_CENTER]);
     expect(getOpenKeys('/property-certificates')).toEqual(['/asset-files']);
+    expect(getOpenKeys('/system/templates')).toEqual(['/asset-files']);
     expect(getOpenKeys('/operations/ledger')).toEqual([]);
     expect(getOpenKeys('/project')).toEqual([MENU_GROUP_KEYS.PROJECT]);
     expect(getOpenKeys('/analytics')).toEqual([]);

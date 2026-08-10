@@ -28,7 +28,7 @@ vi.mock('@/utils/logger', () => ({
   }),
 }));
 
-describe('TemplateManagementPage legacy contract template retirement', () => {
+describe('TemplateManagementPage mock 收敛（#79）', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(assetService.downloadImportTemplate).mockResolvedValue(undefined);
@@ -46,16 +46,24 @@ describe('TemplateManagementPage legacy contract template retirement', () => {
     });
   });
 
-  it('shows a retirement notice instead of calling legacy rent contract template download', async () => {
+  it('does not render the retired rent-contract template entry', async () => {
     renderWithProviders(<TemplateManagementPage />);
 
-    expect(await screen.findByText('租赁合同导入模板')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '下载模板 租赁合同导入模板' }));
+    expect(await screen.findByText('资产导入模板')).toBeInTheDocument();
+    expect(screen.queryByText('租赁合同导入模板')).not.toBeInTheDocument();
+    expect(screen.queryByText('租赁合同')).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(MessageManager.info).toHaveBeenCalledWith(
-        '租赁合同导入模板已退休，请等待新 contract/contract-group 模板入口'
-      );
-    });
+  it('does not render fake statistics cards or fake version/size columns', async () => {
+    renderWithProviders(<TemplateManagementPage />);
+
+    expect(await screen.findByText('资产导入模板')).toBeInTheDocument();
+    expect(screen.getByText('共 1 个模板')).toBeInTheDocument();
+    expect(screen.queryByText('可用模板')).not.toBeInTheDocument();
+    expect(screen.queryByText('资产模板')).not.toBeInTheDocument();
+    expect(screen.queryByText('合同模板')).not.toBeInTheDocument();
+    expect(screen.queryByText('总下载量')).not.toBeInTheDocument();
+    expect(screen.queryByText('文件大小')).not.toBeInTheDocument();
+    expect(screen.queryByText('更新时间')).not.toBeInTheDocument();
   });
 });

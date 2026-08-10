@@ -81,6 +81,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
         icon: <FileProtectOutlined />,
         label: '产权证管理',
       },
+      {
+        key: '/system/templates',
+        icon: <FileAddOutlined />,
+        label: '数据模板',
+      },
     ],
   },
   {
@@ -146,11 +151,6 @@ export const MENU_ITEMS: MenuProps['items'] = [
         key: '/system/dictionaries',
         icon: <BookOutlined />,
         label: '字典管理',
-      },
-      {
-        key: '/system/templates',
-        icon: <FileAddOutlined />,
-        label: '数据模板',
       },
       {
         key: '/system/logs',
@@ -237,6 +237,10 @@ export function getOpenKeys(pathname: string): string[] {
   }
   if (pathname.startsWith('/finance')) {
     return [];
+  }
+  // 数据模板菜单已迁移至资产资源（#79），URL 仍为 /system/templates
+  if (pathname === '/system/templates' || pathname.startsWith('/system/templates/')) {
+    return ['/asset-files'];
   }
   if (pathname.startsWith('/system')) {
     return ['system'];

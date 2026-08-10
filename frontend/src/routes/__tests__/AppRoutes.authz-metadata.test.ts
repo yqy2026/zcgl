@@ -37,6 +37,7 @@ describe('AppRoutes authz metadata', () => {
       [PROPERTY_CERTIFICATE_ROUTES.LIST, 'property_certificate:read'],
       [PROPERTY_CERTIFICATE_ROUTES.IMPORT, 'property_certificate:create'],
       [PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH, 'property_certificate:read'],
+      [SYSTEM_ROUTES.TEMPLATES, 'asset:read'],
     ]);
 
     const protectedRouteMap = new Map(protectedRoutes.map(route => [route.path, route]));

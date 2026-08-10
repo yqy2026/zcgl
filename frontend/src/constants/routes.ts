@@ -71,6 +71,7 @@ export const SYSTEM_ROUTES = {
   ROLES: '/system/roles',
   ORGANIZATIONS: '/system/organizations',
   DICTIONARIES: '/system/dictionaries',
+  TEMPLATES: '/system/templates',
   LOGS: '/system/logs',
   SETTINGS: '/system/settings',
   DATA_POLICIES: '/system/data-policies',
