@@ -52,6 +52,7 @@ vi.mock('@/components/Analytics/AnalyticsStatsCard', () => ({
   AnalyticsStatsGrid: () => <div data-testid="analytics-stats-grid" />,
   FinancialStatsGrid: () => <div data-testid="financial-stats-grid" />,
   RevenueStatsGrid: () => <div data-testid="revenue-stats-grid" />,
+  OperationalGroupsGrid: () => <div data-testid="operational-groups-grid" />,
 }));
 
 vi.mock('@/components/Analytics/AnalyticsChart', () => ({
@@ -116,6 +117,34 @@ describe('AssetAnalyticsPage', () => {
             customer_contract_count: 2,
           },
         ],
+        operational_metric_groups: {
+          terminal_collection: {
+            label: '终端租户收缴',
+            amount_due: 10000,
+            paid_amount: 8500,
+            outstanding_amount: 1500,
+            collection_rate: 85,
+          },
+          operator_income: {
+            label: '运营方收入',
+            amount_due: 12000,
+            paid_amount: 10000,
+            outstanding_amount: 2000,
+            collection_rate: 83.33,
+          },
+          operator_cost: {
+            label: '运营方成本',
+            amount_due: 6000,
+            paid_amount: 4000,
+            outstanding_amount: 2000,
+            payment_rate: 66.67,
+          },
+          operating_result: {
+            label: '经营结果',
+            accrual_net_amount: 6000,
+            cash_net_amount: 6000,
+          },
+        },
         mode_breakdown: [
           {
             relation_kind: 'lease_sublease',
@@ -187,5 +216,12 @@ describe('AssetAnalyticsPage', () => {
     expect(screen.getAllByText('承租转租').length).toBeGreaterThan(0);
     expect(screen.getAllByText('代理运营').length).toBeGreaterThan(0);
     expect(screen.getByText('湖滨产业园')).toBeInTheDocument();
+  });
+
+  it('渲染经营口径分区（operational_metric_groups 四分组）', () => {
+    renderWithProviders(<AssetAnalyticsPage />, { route: '/analytics' });
+
+    expect(screen.getByText('经营口径分区')).toBeInTheDocument();
+    expect(screen.getByTestId('operational-groups-grid')).toBeInTheDocument();
   });
 });

@@ -12,8 +12,15 @@ import {
   DollarOutlined,
   TeamOutlined,
   FileTextOutlined,
+  PayCircleOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons';
 import { getTrendColor, getOccupancyRateColor, COLORS } from '@/styles/colorMap';
+import { formatCurrency } from '@/utils/format';
+import type {
+  OperationalMetricGroup,
+  OperationalMetricGroups,
+} from '@/types/analytics';
 import styles from './AnalyticsStatsCard.module.css';
 
 interface StatCardProps {
@@ -28,6 +35,8 @@ interface StatCardProps {
   icon?: React.ReactNode;
   color?: string;
   loading?: boolean;
+  statisticTitle?: string;
+  detail?: React.ReactNode;
 }
 
 interface StatsGridProps {
@@ -37,7 +46,6 @@ interface StatsGridProps {
     total_rentable_area: number;
     occupancy_rate: number;
     total_annual_income?: number;
-    total_net_income?: number;
     total_monthly_rent?: number;
   };
   loading?: boolean;
@@ -56,6 +64,8 @@ const StatCard: React.FC<StatCardProps> = ({
   icon,
   color = COLORS.primary,
   loading = false,
+  statisticTitle,
+  detail,
 }) => {
   const hasTrend = trend !== null && trend !== undefined;
   const trendIsPositive = hasTrend ? trend > 0 : false;
@@ -80,6 +90,7 @@ const StatCard: React.FC<StatCardProps> = ({
         <div className={styles.statMain}>
           <div className={styles.statTitle}>{title}</div>
           <Statistic
+            title={statisticTitle}
             value={value}
             precision={precision}
             suffix={suffix}
@@ -89,6 +100,7 @@ const StatCard: React.FC<StatCardProps> = ({
           />
         </div>
       </div>
+      {detail != null && <div className={styles.statDetail}>{detail}</div>}
       {hasTrend && (
         <div className={styles.trend} style={trendStyle}>
           <TrendIcon />
@@ -171,21 +183,6 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
         </Col>
       )}
 
-      {data.total_net_income !== undefined && (
-        <Col xs={24} sm={12} lg={6}>
-          <StatCard
-            title="净收益"
-            value={data.total_net_income}
-            precision={2}
-            suffix="元"
-            icon={<MoneyCollectOutlined />}
-            color={data.total_net_income >= 0 ? COLORS.success : COLORS.error}
-            trendType={data.total_net_income >= 0 ? 'up' : 'down'}
-            loading={loading}
-          />
-        </Col>
-      )}
-
       {data.total_monthly_rent !== undefined && (
         <Col xs={24} sm={12} lg={6}>
           <StatCard
@@ -208,7 +205,6 @@ interface FinancialStatsGridProps {
   data: {
     total_annual_income: number;
     total_annual_expense: number;
-    total_net_income: number;
     total_monthly_rent: number;
     total_deposit?: number;
   };
@@ -221,7 +217,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
 }) => {
   return (
     <Row gutter={[16, 16]} className={styles.financialGrid}>
-      <Col xs={24} sm={6}>
+      <Col xs={24} sm={8}>
         <Card loading={loading} size="small" className={styles.financialCard}>
           <Statistic
             title="年收入"
@@ -233,7 +229,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
         </Card>
       </Col>
 
-      <Col xs={24} sm={6}>
+      <Col xs={24} sm={8}>
         <Card loading={loading} size="small" className={styles.financialCard}>
           <Statistic
             title="年支出"
@@ -245,23 +241,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
         </Card>
       </Col>
 
-      <Col xs={24} sm={6}>
-        <Card loading={loading} size="small" className={styles.financialCard}>
-          <Statistic
-            title="净收益"
-            value={data.total_net_income}
-            precision={2}
-            suffix="元"
-            className={`${styles.financialMetric} ${
-              data.total_net_income >= 0
-                ? styles.financialNetIncomePositive
-                : styles.financialNetIncomeNegative
-            }`}
-          />
-        </Card>
-      </Col>
-
-      <Col xs={24} sm={6}>
+      <Col xs={24} sm={8}>
         <Card loading={loading} size="small" className={styles.financialCard}>
           <Statistic
             title="月租金"
@@ -326,7 +306,7 @@ export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loadin
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="自营租金收入"
+            title="承租转租租金收入"
             value={data.self_operated_rent_income}
             precision={2}
             suffix="元"
@@ -436,5 +416,102 @@ export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loadin
         </div>
       ) : null}
     </>
+  );
+};
+
+// 经营口径四分组网格组件（ANA-001：终端租户收缴/运营方收入/运营方成本/经营结果）
+interface OperationalGroupsGridProps {
+  groups?: OperationalMetricGroups;
+  loading?: boolean;
+}
+
+const GROUP_FALLBACK_LABELS: Record<keyof OperationalMetricGroups, string> = {
+  terminal_collection: '终端租户收缴',
+  operator_income: '运营方收入',
+  operator_cost: '运营方成本',
+  operating_result: '经营结果',
+};
+
+export const OperationalGroupsGrid: React.FC<OperationalGroupsGridProps> = ({
+  groups,
+  loading = false,
+}) => {
+  if (groups == null) {
+    return null;
+  }
+
+  const groupLabel = (
+    group: OperationalMetricGroup,
+    key: keyof OperationalMetricGroups
+  ): string =>
+    group.label != null && group.label.trim() !== '' ? group.label : GROUP_FALLBACK_LABELS[key];
+
+  const incomeDetail = (group: OperationalMetricGroup): string =>
+    `应收 ${formatCurrency(group.amount_due ?? 0)} / 未收 ${formatCurrency(
+      group.outstanding_amount ?? 0
+    )}`;
+
+  const costDetail = (group: OperationalMetricGroup): string =>
+    `应付 ${formatCurrency(group.amount_due ?? 0)} / 未付 ${formatCurrency(
+      group.outstanding_amount ?? 0
+    )}`;
+
+  return (
+    <Row gutter={[16, 16]} className={styles.statsGrid}>
+      <Col xs={24} sm={12} lg={6}>
+        <StatCard
+          title={groupLabel(groups.terminal_collection, 'terminal_collection')}
+          value={groups.terminal_collection.paid_amount ?? 0}
+          precision={2}
+          suffix="元"
+          icon={<MoneyCollectOutlined />}
+          color={COLORS.success}
+          detail={incomeDetail(groups.terminal_collection)}
+          loading={loading}
+        />
+      </Col>
+
+      <Col xs={24} sm={12} lg={6}>
+        <StatCard
+          title={groupLabel(groups.operator_income, 'operator_income')}
+          value={groups.operator_income.paid_amount ?? 0}
+          precision={2}
+          suffix="元"
+          icon={<DollarOutlined />}
+          color={COLORS.primary}
+          detail={incomeDetail(groups.operator_income)}
+          loading={loading}
+        />
+      </Col>
+
+      <Col xs={24} sm={12} lg={6}>
+        <StatCard
+          title={groupLabel(groups.operator_cost, 'operator_cost')}
+          value={groups.operator_cost.paid_amount ?? 0}
+          precision={2}
+          suffix="元"
+          icon={<PayCircleOutlined />}
+          color={COLORS.warning}
+          detail={costDetail(groups.operator_cost)}
+          loading={loading}
+        />
+      </Col>
+
+      <Col xs={24} sm={12} lg={6}>
+        <StatCard
+          title={groupLabel(groups.operating_result, 'operating_result')}
+          value={groups.operating_result.cash_net_amount ?? 0}
+          precision={2}
+          suffix="元"
+          icon={<LineChartOutlined />}
+          color={COLORS.primary}
+          statisticTitle="经营净流入（已登记实收实付）"
+          detail={`账面经营差额（应收应付）: ${formatCurrency(
+            groups.operating_result.accrual_net_amount ?? 0
+          )}`}
+          loading={loading}
+        />
+      </Col>
+    </Row>
   );
 };

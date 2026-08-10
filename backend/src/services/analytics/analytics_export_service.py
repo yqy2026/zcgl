@@ -20,7 +20,7 @@ class AnalyticsExportService:
         ("出租率", ("area_summary.occupancy_rate", "occupancy_rate.overall_rate"), "%"),
         ("年度收入", ("financial_summary.total_annual_income",), "元"),
         ("总收入（经营口径）", ("total_income",), "元"),
-        ("自营租金收入", ("self_operated_rent_income",), "元"),
+        ("承租转租租金收入", ("self_operated_rent_income",), "元"),
         ("代理服务费收入", ("agency_service_income",), "元"),
         ("客户主体数", ("customer_entity_count",), "个"),
         ("客户合同数", ("customer_contract_count",), "份"),

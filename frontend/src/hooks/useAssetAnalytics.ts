@@ -82,8 +82,8 @@ export const useAssetAnalytics = () => {
       await analyticsService.downloadAnalyticsReport(
         'excel',
         {
-          start_date: filters.start_date,
-          end_date: filters.end_date,
+          date_from: filters.date_from,
+          date_to: filters.date_to,
           include_deleted: filters.include_deleted,
         },
         currentViewMode

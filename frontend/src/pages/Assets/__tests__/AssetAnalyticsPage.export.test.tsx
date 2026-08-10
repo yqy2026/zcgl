@@ -59,6 +59,7 @@ vi.mock('@/components/Analytics/AnalyticsStatsCard', () => ({
   AnalyticsStatsGrid: () => <div data-testid="analytics-stats-grid" />,
   FinancialStatsGrid: () => <div data-testid="financial-stats-grid" />,
   RevenueStatsGrid: () => <div data-testid="revenue-stats-grid" />,
+  OperationalGroupsGrid: () => <div data-testid="operational-groups-grid" />,
 }));
 
 vi.mock('@/components/Analytics/AnalyticsChart', () => ({
@@ -82,8 +83,8 @@ vi.mock('@/components/Analytics/AnalyticsFilters', () => ({
         data-testid="set-export-filters"
         onClick={() =>
           onFiltersChange({
-            start_date: '2026-03-01',
-            end_date: '2026-03-31',
+            date_from: '2026-03-01',
+            date_to: '2026-03-31',
             include_deleted: true,
           })
         }
@@ -194,8 +195,8 @@ describe('AssetAnalyticsPage export flow', () => {
       expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith(
         'excel',
         {
-          start_date: '2026-03-01',
-          end_date: '2026-03-31',
+          date_from: '2026-03-01',
+          date_to: '2026-03-31',
           include_deleted: true,
         },
         'owner'

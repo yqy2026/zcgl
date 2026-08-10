@@ -148,18 +148,20 @@ describe('AnalyticsStatsGrid - 财务指标测试', () => {
     expect(screen.getByText('年收入')).toBeInTheDocument();
   });
 
-  it('应该显示净收益卡片（如果有数据）', async () => {
+  it('不应渲染「净收益」卡片（口径 M3：删除客户端派生）', async () => {
     const { AnalyticsStatsGrid } = await import('../AnalyticsStatsCard');
-    const dataWithNetIncome = {
-      total_assets: 100,
-      total_area: 5000,
-      total_rentable_area: 4000,
-      occupancy_rate: 85,
-      total_net_income: 50000,
-    };
-    renderWithProviders(<AnalyticsStatsGrid data={dataWithNetIncome} />);
+    renderWithProviders(
+      <AnalyticsStatsGrid
+        data={{
+          total_assets: 100,
+          total_area: 5000,
+          total_rentable_area: 4000,
+          occupancy_rate: 85,
+        }}
+      />
+    );
 
-    expect(screen.getByText('净收益')).toBeInTheDocument();
+    expect(screen.queryByText('净收益')).not.toBeInTheDocument();
   });
 
   it('应该显示月租金卡片（如果有数据）', async () => {
@@ -181,7 +183,6 @@ describe('FinancialStatsGrid - 渲染测试', () => {
   const mockFinancialData = {
     total_annual_income: 100000,
     total_annual_expense: 50000,
-    total_net_income: 50000,
     total_monthly_rent: 10000,
   };
 
@@ -211,11 +212,11 @@ describe('FinancialStatsGrid - 渲染测试', () => {
     expect(screen.getByText('年支出')).toBeInTheDocument();
   });
 
-  it('应该显示净收益', async () => {
+  it('不应渲染「净收益」指标（口径 M3：改由后端 operating_result 渲染）', async () => {
     const { FinancialStatsGrid } = await import('../AnalyticsStatsCard');
     renderWithProviders(<FinancialStatsGrid data={mockFinancialData} />);
 
-    expect(screen.getByText('净收益')).toBeInTheDocument();
+    expect(screen.queryByText('净收益')).not.toBeInTheDocument();
   });
 
   it('应该显示月租金', async () => {
@@ -230,7 +231,6 @@ describe('FinancialStatsGrid - loading状态测试', () => {
   const mockFinancialData = {
     total_annual_income: 100000,
     total_annual_expense: 50000,
-    total_net_income: 50000,
     total_monthly_rent: 10000,
   };
 
@@ -265,19 +265,5 @@ describe('AnalyticsStatsGrid - 边界情况测试', () => {
     renderWithProviders(<AnalyticsStatsGrid data={data} />);
 
     expect(screen.getByText('整体出租率')).toBeInTheDocument();
-  });
-
-  it('应该处理负净收益', async () => {
-    const { AnalyticsStatsGrid } = await import('../AnalyticsStatsCard');
-    const data = {
-      total_assets: 100,
-      total_area: 5000,
-      total_rentable_area: 4000,
-      occupancy_rate: 85,
-      total_net_income: -10000,
-    };
-    renderWithProviders(<AnalyticsStatsGrid data={data} />);
-
-    expect(screen.getByText('净收益')).toBeInTheDocument();
   });
 });

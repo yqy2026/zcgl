@@ -192,13 +192,6 @@ export const calculateDerivedFields = (asset: Record<string, unknown>): Record<s
     );
   }
 
-  // 计算净收益 = 年收益 - 年支出
-  const annualIncome = asset.annual_income;
-  const annualExpense = asset.annual_expense;
-  if (typeof annualIncome === 'number' && typeof annualExpense === 'number') {
-    derived.net_income = DecimalUtils.safeSubtract(annualIncome, annualExpense);
-  }
-
   return derived;
 };
 

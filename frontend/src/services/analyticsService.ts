@@ -502,7 +502,7 @@ export class AnalyticsService {
 
   async exportAnalyticsReport(
     format: 'excel' | 'pdf' | 'csv',
-    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>,
+    filters?: Pick<AssetSearchParams, 'date_from' | 'date_to' | 'include_deleted'>,
     viewMode?: BindingType | null
   ): Promise<Blob> {
     try {
@@ -510,11 +510,11 @@ export class AnalyticsService {
         export_format: format,
       };
 
-      if (filters?.start_date != null && filters.start_date !== '') {
-        params.date_from = filters.start_date;
+      if (filters?.date_from != null && filters.date_from !== '') {
+        params.date_from = filters.date_from;
       }
-      if (filters?.end_date != null && filters.end_date !== '') {
-        params.date_to = filters.end_date;
+      if (filters?.date_to != null && filters.date_to !== '') {
+        params.date_to = filters.date_to;
       }
       if (typeof filters?.include_deleted === 'boolean') {
         params.include_deleted = filters.include_deleted;
@@ -540,7 +540,7 @@ export class AnalyticsService {
 
   async downloadAnalyticsReport(
     format: 'excel' | 'pdf' | 'csv',
-    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>,
+    filters?: Pick<AssetSearchParams, 'date_from' | 'date_to' | 'include_deleted'>,
     viewMode?: BindingType | null
   ): Promise<void> {
     const blob = await this.exportAnalyticsReport(format, filters, viewMode);

@@ -480,8 +480,8 @@ describe('AnalyticsDashboard - 导出功能测试', () => {
     renderWithProviders(
       <AnalyticsDashboard
         initialFilters={{
-          start_date: '2026-03-01',
-          end_date: '2026-03-31',
+          date_from: '2026-03-01',
+          date_to: '2026-03-31',
           include_deleted: true,
         }}
       />
@@ -498,8 +498,8 @@ describe('AnalyticsDashboard - 导出功能测试', () => {
       expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith(
         'csv',
         {
-          start_date: '2026-03-01',
-          end_date: '2026-03-31',
+          date_from: '2026-03-01',
+          date_to: '2026-03-31',
           include_deleted: true,
         },
         null

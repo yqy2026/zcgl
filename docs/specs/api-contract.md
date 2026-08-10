@@ -224,8 +224,8 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回 `operational_metric_groups`（终端租户收缴、运营方收入、运营方成本、经营结果四组）、统计口径版本 `metrics_version`、账期归属字段 `period_attribution_basis/label`、客户双指标、按项目分区的 `project_breakdown` 和按经营模式分区的 `mode_breakdown`；承租转租统计下游租金收入和上游成本，代理运营统计代理直租收缴和服务费，代理直租租金不计入运营方收入；默认按租金账期归属，流水发生日期仅用于经营台账查询/导出；`customer_entity_breakdown` / `customer_contract_breakdown` 仅含终端客户桶 `downstream_sublease`、`direct_lease`，上游/委托等非客户对手方只通过 `counterparty_entity_breakdown` / `counterparty_contract_breakdown` 的 `upstream_lease`、`entrusted_operation` 返回；客户双指标分析拒绝 `view_mode=all` |
-| 分析导出 | `GET /api/v1/analytics/export` | 导出带统计口径版本的结果；客户双指标分析拒绝 `view_mode=all`；导出应标记账期归属口径和流水发生日期字段 |
+| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回 `operational_metric_groups`（终端租户收缴、运营方收入、运营方成本、经营结果四组）、统计口径版本 `metrics_version`、账期归属字段 `period_attribution_basis/label`、客户双指标、按项目分区的 `project_breakdown` 和按经营模式分区的 `mode_breakdown`；承租转租统计下游租金收入和上游成本，代理运营统计代理直租收缴和服务费，代理直租租金不计入运营方收入；默认按租金账期归属，流水发生日期仅用于经营台账查询/导出；`customer_entity_breakdown` / `customer_contract_breakdown` 仅含终端客户桶 `downstream_sublease`、`direct_lease`，上游/委托等非客户对手方只通过 `counterparty_entity_breakdown` / `counterparty_contract_breakdown` 的 `upstream_lease`、`entrusted_operation` 返回；客户双指标分析拒绝 `view_mode=all`；查询参数支持 `date_from/date_to`（账期范围，按租金账期归属，后端按 `%Y-%m` 截断归属账期；前端以月粒度选择器提交月边界日期） |
+| 分析导出 | `GET /api/v1/analytics/export` | 导出带统计口径版本的结果；客户双指标分析拒绝 `view_mode=all`；导出应标记账期归属口径和流水发生日期字段；查询参数支持 `date_from/date_to`（账期范围，与综合分析同口径） |
 | 统计报表 | `/api/v1/statistics/*` | 提供基础、面积、财务、出租率、分布、趋势等统计能力 |
 
 分析端点公开接收 `view_mode=owner|manager|all`。不传时，有效范围仅含一种视角则自动采用；双视角则解析为内部 `scope_mode=all`，不从绑定顺序或展示偏好猜选。常规客户列表可使用混合并集视图；综合分析和分析导出产出客户双指标，必须选定 owner 或 manager 单一视角。

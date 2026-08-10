@@ -23,7 +23,7 @@ describe('RevenueStatsGrid (ANA-001)', () => {
     render(<RevenueStatsGrid data={baseData} />);
 
     expect(screen.getByText('总收入（经营口径）')).toBeInTheDocument();
-    expect(screen.getByText('自营租金收入')).toBeInTheDocument();
+    expect(screen.getByText('承租转租租金收入')).toBeInTheDocument();
     expect(screen.getByText('代理服务费收入')).toBeInTheDocument();
     expect(screen.getByText('当期实收')).toBeInTheDocument();
     expect(screen.getByText('租金收缴率')).toBeInTheDocument();

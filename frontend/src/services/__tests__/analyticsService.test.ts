@@ -497,8 +497,8 @@ describe('AnalyticsService', () => {
       const result = await service.exportAnalyticsReport(
         'csv',
         {
-          start_date: '2026-03-01',
-          end_date: '2026-03-31',
+          date_from: '2026-03-01',
+          date_to: '2026-03-31',
           include_deleted: true,
         },
         'manager'
@@ -550,8 +550,8 @@ describe('AnalyticsService', () => {
       await service.downloadAnalyticsReport(
         'excel',
         {
-          start_date: '2026-03-01',
-          end_date: '2026-03-31',
+          date_from: '2026-03-01',
+          date_to: '2026-03-31',
         },
         'manager'
       );
@@ -559,8 +559,8 @@ describe('AnalyticsService', () => {
       expect(service.exportAnalyticsReport).toHaveBeenCalledWith(
         'excel',
         {
-          start_date: '2026-03-01',
-          end_date: '2026-03-31',
+          date_from: '2026-03-01',
+          date_to: '2026-03-31',
         },
         'manager'
       );
@@ -580,8 +580,8 @@ describe('AnalyticsService', () => {
 
       await expect(
         service.downloadAnalyticsReport('excel', {
-          start_date: '2026-03-01',
-          end_date: '2026-03-31',
+          date_from: '2026-03-01',
+          date_to: '2026-03-31',
         })
       ).rejects.toThrow('501 Not Implemented');
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import debounce from 'lodash/debounce';
+import dayjs from 'dayjs';
 import type { AssetSearchParams } from '@/types/asset';
 import type { FilterPreset } from '@/types/analytics';
 import { UsageStatus, PropertyNature, OwnershipStatus } from '@/types/asset';
@@ -163,11 +164,15 @@ export const AnalyticsFiltersProvider: React.FC<AnalyticsFiltersProviderProps> =
 
   const handleDateRangeChange = useCallback(
     (_dates: unknown, dateStrings: [string, string]) => {
-      const newFilters = {
-        ...localFilters,
-        start_date: dateStrings[0] || undefined,
-        end_date: dateStrings[1] || undefined,
-      };
+      // 账期范围：月粒度（S3），提交为月边界日期；后端按 %Y-%m 截断归属账期
+      const newFilters: AssetSearchParams = { ...localFilters };
+      delete newFilters.start_date;
+      delete newFilters.end_date;
+      newFilters.date_from = dateStrings[0] !== '' ? `${dateStrings[0]}-01` : undefined;
+      newFilters.date_to =
+        dateStrings[1] !== ''
+          ? dayjs(dateStrings[1]).endOf('month').format('YYYY-MM-DD')
+          : undefined;
       setLocalFilters(newFilters);
       debouncedFilterChangeRef.current(newFilters);
     },

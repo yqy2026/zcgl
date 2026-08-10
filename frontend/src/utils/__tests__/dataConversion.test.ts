@@ -221,12 +221,6 @@ describe('calculateDerivedFields', () => {
     expect(result.occupancy_rate).toBe(80);
   });
 
-  it('应该计算净收益', () => {
-    const asset = { annual_income: 100000, annual_expense: 30000 };
-    const result = calculateDerivedFields(asset);
-    expect(result.net_income).toBe(70000);
-  });
-
   it('当可出租面积为0时不应计算出租率', () => {
     const asset = { rentable_area: 0, rented_area: 0 };
     const result = calculateDerivedFields(asset);
@@ -238,7 +232,6 @@ describe('calculateDerivedFields', () => {
     const result = calculateDerivedFields(asset);
     expect(result.unrented_area).toBeUndefined();
     expect(result.occupancy_rate).toBeUndefined();
-    expect(result.net_income).toBeUndefined();
   });
 });
 

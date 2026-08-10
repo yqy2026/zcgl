@@ -336,6 +336,9 @@ export interface AssetSearchParams {
   // 日期范围筛选
   start_date?: string;
   end_date?: string;
+  // 账期范围筛选（月粒度，YYYY-MM-DD 边界日期，按租金账期归属）
+  date_from?: string;
+  date_to?: string;
   // 新增字段以匹配AnalyticsFilters的使用
   operation_status?: string;
   // V2: 关联筛选

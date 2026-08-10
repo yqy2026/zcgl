@@ -75,6 +75,13 @@
   line-height: 1.2;
 }
 
+.statDetail {
+  margin-top: var(--spacing-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
 .financialGrid {
   width: 100%;
 }
@@ -105,14 +112,6 @@
 }
 
 .financialExpense :global(.ant-statistic-content) {
-  color: var(--color-error);
-}
-
-.financialNetIncomePositive :global(.ant-statistic-content) {
-  color: var(--color-success);
-}
-
-.financialNetIncomeNegative :global(.ant-statistic-content) {
   color: var(--color-error);
 }
 

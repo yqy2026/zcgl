@@ -96,14 +96,16 @@ const BasicFiltersSection: React.FC = () => {
 
       <Col xs={24} md={6}>
         <Text strong className={styles.fieldLabel}>
-          时间范围:
+          账期范围:
         </Text>
         <RangePicker
+          picker="month"
           className={styles.fieldControl}
           onChange={handleDateRangeChange}
-          placeholder={['开始日期', '结束日期']}
+          placeholder={['开始月份', '结束月份']}
           disabled={loading}
         />
+        <div className={styles.fieldHint}>按租金账期归属</div>
       </Col>
     </Row>
   );

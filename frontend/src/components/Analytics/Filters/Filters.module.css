@@ -17,6 +17,12 @@
   color: var(--color-text-primary);
 }
 
+.fieldHint {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 .fieldControl {
   width: 100%;
 }

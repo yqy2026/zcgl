@@ -199,7 +199,7 @@ const ContractGroupDetailPage: React.FC = () => {
               type="info"
               showIcon
               title="代理口径，非自营出租"
-              description="该合同关系按代理模式管理，终端租金不直接计入运营方自营租金收入。"
+              description="该合同关系按代理模式管理，终端租金不直接计入运营方承租转租租金收入。"
             />
           ) : null}
 

@@ -11,6 +11,7 @@ import {
   AnalyticsStatsGrid,
   FinancialStatsGrid,
   RevenueStatsGrid,
+  OperationalGroupsGrid,
 } from '@/components/Analytics/AnalyticsStatsCard';
 import { AnalyticsLineChart, chartDataUtils } from '@/components/Analytics/AnalyticsChart';
 import AnalyticsFilters from '@/components/Analytics/AnalyticsFilters';
@@ -242,7 +243,6 @@ const AssetAnalyticsPage: React.FC = () => {
                 total_rentable_area: analyticsData.area_summary.total_rentable_area,
                 occupancy_rate: analyticsData.area_summary.occupancy_rate,
                 total_annual_income: analyticsData.financial_summary.total_annual_income,
-                total_net_income: analyticsData.financial_summary.total_net_income,
                 total_monthly_rent: analyticsData.financial_summary.total_monthly_rent,
               }}
               loading={loading}
@@ -279,6 +279,14 @@ const AssetAnalyticsPage: React.FC = () => {
                 metrics_version: analyticsData.metrics_version,
                 period_attribution_label: analyticsData.period_attribution_label,
               }}
+              loading={loading}
+            />
+          </Card>
+
+          {/* 经营口径分区（ANA-001 四分组：终端租户收缴/运营方收入/运营方成本/经营结果） */}
+          <Card title="经营口径分区" className={styles.sectionCard}>
+            <OperationalGroupsGrid
+              groups={analyticsData.operational_metric_groups}
               loading={loading}
             />
           </Card>

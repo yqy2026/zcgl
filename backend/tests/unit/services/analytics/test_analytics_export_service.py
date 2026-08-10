@@ -30,7 +30,7 @@ class TestAnalyticsExportService:
         metrics = [row["metric"] for row in rows]
         assert metrics[-7:] == [
             "总收入（经营口径）",
-            "自营租金收入",
+            "承租转租租金收入",
             "代理服务费收入",
             "客户主体数",
             "客户合同数",
