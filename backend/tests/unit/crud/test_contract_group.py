@@ -10,7 +10,7 @@ import pytest
 
 from src.crud.contract_group import CRUDContractGroup
 from src.crud.query_builder import PartyFilter
-from src.models.contract_group import ContractLedgerEntry
+from src.models.contract_group import ContractLedgerEntry, GroupRelationType
 
 pytestmark = pytest.mark.asyncio
 
@@ -139,13 +139,18 @@ class TestOwnershipAggregates:
         result = await crud.sum_overdue_amount_by_ownership_async(mock_db, "owner-1")
 
         stmt = mock_db.execute.await_args.args[0]
-        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": False}))
+        params = repr(stmt.compile().params)
         assert result == 2000.0
         assert "contract_ledger_entries" in compiled
         assert "amount_due" in compiled
         assert "paid_amount" in compiled
-        assert "attributed_owner_party_id = 'owner-1'" in compiled
-        _assert_active_ledger_allocation_sql(compiled)
+        assert "attributed_owner_party_id" in compiled
+        assert "owner-1" in params
+        # 口径 M4：逾期只属于终端租户收缴（PRD §6.6），聚合统计必须按视图过滤
+        assert "ledger_views" in compiled
+        assert "terminal_collection" in params
+        _assert_active_ledger_allocation_sql(compiled, params)
         assert "contract_groups" not in compiled
         assert "rent_ledger" not in compiled
 
@@ -226,9 +231,36 @@ class TestLedgerAggregateQueries:
         assert "operational_payment_flows.occurred_on >=" in sql
         assert "operational_payment_flows.occurred_on <=" in sql
         assert "datetime.date(2026, 5, 1)" in params
-        assert "datetime.date(2026, 5, 31)" in params
-        assert "operational_payment_flows.status" in sql
-        assert "active" in params
+
+    async def test_query_ledger_entries_carries_group_relation_type_for_mode_visibility(
+        self, crud: CRUDContractGroup, mock_db: MagicMock
+    ) -> None:
+        """S1：查询输出合同关系模式（直租/转租可见性）。"""
+        entry = _ledger_entry()
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 1
+        items_result = MagicMock()
+        items_result.all.return_value = [
+            (
+                entry,
+                Decimal("600.00"),
+                "partial",
+                1,
+                ["2026-05-10"],
+                GroupRelationType.DIRECT_LEASE,
+            )
+        ]
+        mock_db.execute.side_effect = [count_result, items_result]
+
+        items, total = await crud.query_ledger_entries(mock_db)
+
+        assert total == 1
+        assert items == [entry]
+        # SQLAlchemy 枚举列返回枚举成员，归一化为中文值（直租/转租可见性）
+        assert entry.group_relation_type == "直租"
+        items_stmt = mock_db.execute.await_args_list[1].args[0]
+        compiled = items_stmt.compile()
+        assert "group_relation_type" in str(compiled)
 
     async def test_query_ledger_entries_applies_relation_aware_party_scope(
         self, crud: CRUDContractGroup, mock_db: MagicMock

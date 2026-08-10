@@ -176,8 +176,8 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 | 收付流水凭证上传 | `POST /api/v1/ledger/payment-flows/{flow_id}/vouchers` | 仅允许为当前主体范围内的 `active` 流水上传单个 PDF/JPG/JPEG/PNG，最大 20MB；入口只做 `20MB + 1 byte` 有界读取，并校验 MIME、扩展名、固定文件头和可疑内容，伪装类型失败暴露；返回受限附件元数据，不返回存储路径 |
 | 收付流水凭证下载 | `GET /api/v1/ledger/payment-flows/{flow_id}/vouchers/{attachment_id}/download` | 使用独立 `ledger_voucher:read` 权限并再次校验流水冻结主体范围与附件归属；记录用户、流水、附件、时间及 `success` / `not_found` 结果 |
 | 凭证下载审计 | `GET /api/v1/ledger/payment-flows/{flow_id}/voucher-download-audits` | 仅向可读取该流水冻结主体范围的用户返回轻量下载证据；响应不暴露存储路径、客户端 IP 或设备信息 |
-| 经营台账查询 | `GET /api/v1/ledger/entries` | 支持项目上下文和全局上下文；按合同租金台账视图 `ledger_view=terminal_collection/operator_income/operator_cost`、`project_id`、资产、主体、合同/协议、账期、有效收付流水发生日期 `flow_occurred_on_start/end` 和派生支付状态查询，作为全局“经营台账”入口的数据源；响应包含 `ledger_views` 与 `flow_occurred_on_dates`。服务费结算由 `ServiceFeeLedger` 与服务费生成/分摊路径承载，不复用合同租金台账响应暗中混排 |
-| 经营台账导出 | `GET /api/v1/ledger/entries/export` | 按当前经营台账筛选条件导出查询结果；导出列包含 `ledger_views`、账期 `year_month` 和有效流水发生日期集合 `flow_occurred_on_dates` |
+| 经营台账查询 | `GET /api/v1/ledger/entries` | 支持项目上下文和全局上下文；按合同租金台账视图 `ledger_view=terminal_collection/operator_income/operator_cost`、`project_id`、资产、主体、合同/协议、账期、有效收付流水发生日期 `flow_occurred_on_start/end` 和派生支付状态查询，作为全局“经营台账”入口的数据源；响应包含 `ledger_views`、`flow_occurred_on_dates` 与 `group_relation_type`（合同关系模式，S1 直租/转租可见性，值 `DIRECT_LEASE`/`DOWNSTREAM` 等）。服务费结算由 `ServiceFeeLedger` 与服务费生成/分摊路径承载，不复用合同租金台账响应暗中混排 |
+| 经营台账导出 | `GET /api/v1/ledger/entries/export` | 按当前经营台账筛选条件导出查询结果；导出列包含 `ledger_views`、账期 `year_month`、有效流水发生日期集合 `flow_occurred_on_dates` 与口径版本 `metrics_version`（`req-rnt-006-v1`，S4 与经营分析导出对齐） |
 | 台账跟进状态 | `PATCH /api/v1/ledger/entries/{entry_id}/follow-up` | 仅维护终端租户收缴视图的轻量跟进字段：`follow_up_status`、`next_follow_up_date`、`follow_up_note`；不修改台账金额或派生支付状态 |
 | 服务费月度生成 | `POST /api/v1/ledger/service-fees/generate` | 按租金账期月份、项目、委托协议和产权方汇总代理直租实收，固化服务费比例、计算基数和来源账期生成服务费应收；不逐笔生成 |
 | 服务费台账查询 | `GET /api/v1/ledger/service-fees` | 按 `contract_group_id` 或 `project_id` 查询代理模式月度服务费台账，并按当前主体数据范围过滤；响应包含服务费台账 ID、服务费账期、应收/实收/派生状态、计算基数、服务费比例、固化归属字段和 `source_ledger_ids` 来源租金台账集合，用于服务费结算视图展示来源账期并登记服务费收款 |

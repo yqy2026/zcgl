@@ -482,6 +482,7 @@ class ContractLedgerEntryResponse(BaseModel):
     follow_up_status: LedgerFollowUpStatus | None = None
     next_follow_up_date: date | None = None
     follow_up_note: str | None = None
+    group_relation_type: str | None = None
     attributed_project_id: str | None = None
     attributed_owner_party_id: str | None = None
     attributed_operator_party_id: str | None = None

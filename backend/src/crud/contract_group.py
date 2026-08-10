@@ -126,6 +126,7 @@ class CRUDContractGroup:
         payment_status: Any,
         allocation_count: Any = 0,
         flow_occurred_on_dates: Any = None,
+        group_relation_type: Any = None,
     ) -> ContractLedgerEntry:
         set_committed_value(
             entry,
@@ -137,6 +138,15 @@ class CRUDContractGroup:
             entry,
             "active_allocation_count",
             int(allocation_count if allocation_count is not None else 0),
+        )
+        # S1：直租/转租模式可见性（来自合同 group_relation_type）。
+        # SQLAlchemy 枚举列返回枚举成员，归一化为中文值（与既有展示约定一致）
+        setattr(
+            entry,
+            "group_relation_type",
+            getattr(group_relation_type, "value", group_relation_type)
+            if group_relation_type is not None
+            else None,
         )
         if flow_occurred_on_dates is None:
             normalized_flow_dates: list[Any] = []
@@ -157,6 +167,7 @@ class CRUDContractGroup:
             payment_status=row[2],
             allocation_count=allocation_count,
             flow_occurred_on_dates=flow_occurred_on_dates,
+            group_relation_type=row[5] if len(row) > 5 else None,
         )
 
     @staticmethod
@@ -445,6 +456,8 @@ class CRUDContractGroup:
                 ContractLedgerEntry.attributed_owner_party_id == ownership_id,
                 Contract.data_status == "正常",
                 ContractLedgerEntry._payment_status != "voided",
+                # 口径 M4：逾期只属于终端租户租金收缴（PRD §6.6）
+                ContractLedgerEntry.ledger_views.contains(["terminal_collection"]),
                 ContractLedgerEntry.due_date < _today(),
                 allocated_paid_amount < ContractLedgerEntry.amount_due,
             )
@@ -726,6 +739,7 @@ class CRUDContractGroup:
                 allocation_payment_status,
                 allocation_totals.c.allocation_count,
                 allocation_totals.c.flow_occurred_on_dates,
+                Contract.group_relation_type.label("group_relation_type"),
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(

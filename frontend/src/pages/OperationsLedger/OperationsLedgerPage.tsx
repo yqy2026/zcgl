@@ -207,7 +207,8 @@ const getServiceFeeOutstandingAmount = (entry: ServiceFeeLedger): number =>
   Math.max(Number(entry.amount_due || 0) - Number(entry.paid_amount || 0), 0);
 
 const isDerivedOverdue = (entry: LedgerEntry, view: OperationsLedgerView): boolean => {
-  if (view === 'operator_cost' || entry.payment_status === 'voided') {
+  // 口径 M4：逾期只属于终端租户租金收缴（PRD §6.6），运营方收入/成本/服务费结算不派生逾期
+  if (view !== 'terminal_collection' || entry.payment_status === 'voided') {
     return false;
   }
   const dueDate = dayjs(entry.due_date);
@@ -899,6 +900,22 @@ const OperationsLedgerPage: React.FC = () => {
 
     if (activeView === 'terminal_collection') {
       columnsForView.push(
+        {
+          title: '模式',
+          dataIndex: 'group_relation_type',
+          key: 'group_relation_type',
+          width: 90,
+          render: (value?: string | null) => {
+            // S1：终端租户收缴视图区分直租/转租（后端返回中文值：直租=代理直租、下游=承租转租）
+            if (value === '直租') {
+              return <Tag color="green">直租</Tag>;
+            }
+            if (value === '下游') {
+              return <Tag color="blue">转租</Tag>;
+            }
+            return '-';
+          },
+        },
         {
           title: '跟进',
           dataIndex: 'follow_up_status',

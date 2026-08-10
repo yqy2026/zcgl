@@ -249,6 +249,143 @@ describe('OperationsLedgerPage', () => {
     expect(screen.getByText('待跟进')).toBeInTheDocument();
   });
 
+  it('does not mark operator_income entries as overdue even with an expired due date (M4)', async () => {
+    vi.mocked(ledgerService.getLedgerEntries).mockResolvedValue({
+      items: [
+        {
+          entry_id: 'ledger-income',
+          contract_id: 'contract-income',
+          year_month: '2020-05',
+          due_date: '2020-05-15',
+          amount_due: '12000.00',
+          ledger_views: ['operator_income'],
+          flow_occurred_on_dates: ['2020-05-10'],
+          currency_code: 'CNY',
+          is_tax_included: true,
+          payment_status: 'partial',
+          paid_amount: '2000.00',
+          follow_up_status: null,
+          attributed_project_id: 'project-1',
+        },
+      ],
+      total: 1,
+    } as never);
+
+    renderWithProviders(<OperationsLedgerPage />, {
+      route: '/operations/ledger?ledger_view=operator_income',
+    });
+
+    expect(await screen.findByText('contract-income')).toBeInTheDocument();
+    expect(screen.queryByText('逾期')).not.toBeInTheDocument();
+  });
+
+  it('does not mark operator_cost entries as overdue even with an expired due date (M4)', async () => {
+    vi.mocked(ledgerService.getLedgerEntries).mockResolvedValue({
+      items: [
+        {
+          entry_id: 'ledger-cost',
+          contract_id: 'contract-cost',
+          year_month: '2020-05',
+          due_date: '2020-05-15',
+          amount_due: '12000.00',
+          ledger_views: ['operator_cost'],
+          flow_occurred_on_dates: ['2020-05-10'],
+          currency_code: 'CNY',
+          is_tax_included: true,
+          payment_status: 'partial',
+          paid_amount: '2000.00',
+          follow_up_status: null,
+          attributed_project_id: 'project-1',
+        },
+      ],
+      total: 1,
+    } as never);
+
+    renderWithProviders(<OperationsLedgerPage />, {
+      route: '/operations/ledger?ledger_view=operator_cost',
+    });
+
+    expect(await screen.findByText('contract-cost')).toBeInTheDocument();
+    expect(screen.queryByText('逾期')).not.toBeInTheDocument();
+  });
+
+  it('does not show overdue on the service fee settlement view (M4)', async () => {
+    vi.mocked(ledgerService.listServiceFees).mockResolvedValue([
+      {
+        service_fee_entry_id: 'service-fee-overdue',
+        contract_group_id: 'group-1',
+        agency_contract_id: 'contract-direct-1',
+        agency_agreement_contract_id: 'contract-entrust-1',
+        source_ledger_ids: ['rent-ledger-1'],
+        year_month: '2020-05',
+        amount_due: '50.00',
+        paid_amount: '20.00',
+        payment_status: 'partial',
+        currency_code: 'CNY',
+        service_fee_ratio: '0.1000',
+        calculation_base_amount: '500.00',
+        attributed_owner_party_id: 'owner-party-1',
+      },
+    ]);
+
+    renderWithProviders(<OperationsLedgerPage />, {
+      route: '/operations/ledger?ledger_view=service_fee_settlement&project_id=project-1',
+    });
+
+    await waitFor(() => {
+      expect(ledgerService.listServiceFees).toHaveBeenCalled();
+    });
+    expect(screen.queryByText('逾期')).not.toBeInTheDocument();
+  });
+
+  it('shows 直租/转租 mode tags on terminal collection entries (S1)', async () => {
+    vi.mocked(ledgerService.getLedgerEntries).mockResolvedValue({
+      items: [
+        {
+          entry_id: 'ledger-direct',
+          contract_id: 'contract-direct',
+          year_month: '2026-05',
+          due_date: '2026-05-15',
+          amount_due: '12000.00',
+          ledger_views: ['terminal_collection'],
+          flow_occurred_on_dates: ['2026-05-10'],
+          currency_code: 'CNY',
+          is_tax_included: true,
+          payment_status: 'partial',
+          paid_amount: '2000.00',
+          follow_up_status: null,
+          group_relation_type: '直租',
+          attributed_project_id: 'project-1',
+        },
+        {
+          entry_id: 'ledger-downstream',
+          contract_id: 'contract-downstream',
+          year_month: '2026-05',
+          due_date: '2026-05-15',
+          amount_due: '8000.00',
+          ledger_views: ['terminal_collection'],
+          flow_occurred_on_dates: ['2026-05-10'],
+          currency_code: 'CNY',
+          is_tax_included: true,
+          payment_status: 'paid',
+          paid_amount: '8000.00',
+          follow_up_status: null,
+          group_relation_type: '下游',
+          attributed_project_id: 'project-1',
+        },
+      ],
+      total: 2,
+    } as never);
+
+    renderWithProviders(<OperationsLedgerPage />, {
+      route: '/operations/ledger?ledger_view=terminal_collection',
+    });
+
+    expect(await screen.findByText('contract-direct')).toBeInTheDocument();
+    expect(screen.getByText('直租')).toBeInTheDocument();
+    expect(screen.getByText('转租')).toBeInTheDocument();
+  });
+
   it('does not query or export when required ledger filters are cleared', async () => {
     renderWithProviders(<OperationsLedgerPage />);
 

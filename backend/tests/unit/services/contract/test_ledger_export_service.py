@@ -84,6 +84,9 @@ async def test_export_rows_should_follow_query_filters_and_column_order(
     assert "flow_occurred_on_dates" in csv_text
     assert "terminal_collection;operator_income" in csv_text
     assert "2026-05-10" in csv_text
+    # S4：导出口径版本列（与经营分析导出对齐）
+    assert "metrics_version" in csv_text
+    assert "req-rnt-006-v1" in csv_text
     mock_query.assert_awaited_once_with(
         mock_db,
         ledger_view="terminal_collection",

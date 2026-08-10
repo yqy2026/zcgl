@@ -31,6 +31,9 @@ class LedgerExportPayload:
 class LedgerExportService:
     """导出台账聚合查询结果。"""
 
+    # S4：台账导出口径版本（与经营分析导出对齐，REQ-RNT-006 台账口径）
+    LEDGER_METRICS_VERSION = "req-rnt-006-v1"
+
     EXPORT_COLUMNS = [
         "entry_id",
         "contract_id",
@@ -47,6 +50,7 @@ class LedgerExportService:
         "notes",
         "created_at",
         "updated_at",
+        "metrics_version",
     ]
 
     async def export_ledger_entries(
@@ -120,6 +124,8 @@ class LedgerExportService:
                 normalized[column] = ";".join(str(item) for item in value)
             else:
                 normalized[column] = str(value)
+        # S4：口径版本为合成列（与经营分析导出对齐），不依赖条目字段
+        normalized["metrics_version"] = self.LEDGER_METRICS_VERSION
         return normalized
 
     def _to_csv(self, rows: list[dict[str, str]]) -> bytes:

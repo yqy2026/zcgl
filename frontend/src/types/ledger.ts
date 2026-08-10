@@ -30,6 +30,8 @@ export interface LedgerEntry {
   follow_up_status?: LedgerFollowUpStatus | null;
   next_follow_up_date?: string | null;
   follow_up_note?: string | null;
+  /** 关系模式（S1：直租/转租可见性）——后端返回中文值（直租/下游/委托/上游），下游=承租转租 */
+  group_relation_type?: string | null;
   attributed_project_id?: string | null;
   attributed_owner_party_id?: string | null;
   attributed_operator_party_id?: string | null;
