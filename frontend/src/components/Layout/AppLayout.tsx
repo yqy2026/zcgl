@@ -69,7 +69,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* 页脚 */}
         <Footer className={styles.footer}>
           <Typography.Text type="secondary">
-            土地房产资产管理系统 ©2024 Created by Asset Management Team
+            土地物业资产运营管理系统 ©2024 Created by Asset Management Team
           </Typography.Text>
         </Footer>
       </Layout>

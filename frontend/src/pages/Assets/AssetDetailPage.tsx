@@ -6,6 +6,9 @@ import {
   Col,
   DatePicker,
   Empty,
+  Form,
+  Input,
+  Modal,
   Row,
   Space,
   Statistic,
@@ -109,6 +112,12 @@ const AssetDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
+  // 审核原因弹窗（驳回/反审核/撤回共用）：正式表单替代 window.prompt（D10）
+  const [reasonModalOpen, setReasonModalOpen] = useState(false);
+  const [reasonAction, setReasonAction] = useState<'reject' | 'reverse' | 'withdraw' | null>(
+    null
+  );
+  const [reasonForm] = Form.useForm();
   const hasAssetId = id != null && id !== '';
   const canQuery = hasAssetId;
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
@@ -396,20 +405,32 @@ const AssetDetailPage: React.FC = () => {
     );
   };
 
+  const REASON_ACTION_META: Record<
+    'reject' | 'reverse' | 'withdraw',
+    { title: string; mutation: { mutate: (reason: string) => void } }
+  > = {
+    reject: { title: '驳回审核', mutation: rejectReviewMutation },
+    reverse: { title: '反审核', mutation: reverseReviewMutation },
+    withdraw: { title: '撤回审核', mutation: withdrawReviewMutation },
+  };
+
   const handleReasonedAction = (action: 'reject' | 'reverse' | 'withdraw') => {
-    const reason = window.prompt('请输入原因');
-    if (reason == null || reason.trim() === '') {
-      return;
-    }
-    if (action === 'reject') {
-      rejectReviewMutation.mutate(reason);
-      return;
-    }
-    if (action === 'reverse') {
-      reverseReviewMutation.mutate(reason);
-      return;
-    }
-    withdrawReviewMutation.mutate(reason);
+    setReasonAction(action);
+    setReasonModalOpen(true);
+  };
+
+  const handleReasonModalOk = () => {
+    reasonForm
+      .validateFields()
+      .then(values => {
+        const reason = String(values.reason).trim();
+        if (reasonAction != null) {
+          REASON_ACTION_META[reasonAction].mutation.mutate(reason);
+        }
+        setReasonModalOpen(false);
+        reasonForm.resetFields();
+      })
+      .catch(() => undefined);
   };
 
   const reviewStatus = String(asset?.review_status ?? 'draft')
@@ -582,6 +603,37 @@ const AssetDetailPage: React.FC = () => {
           </Card>
         </div>
       )}
+
+      {/* 审核原因弹窗：驳回/反审核/撤回共用（D10，正式表单替代 window.prompt） */}
+      <Modal
+        title={reasonAction != null ? REASON_ACTION_META[reasonAction].title : '审核操作'}
+        open={reasonModalOpen}
+        onCancel={() => {
+          setReasonModalOpen(false);
+          reasonForm.resetFields();
+        }}
+        onOk={() => {
+          void handleReasonModalOk();
+        }}
+        okText="确认"
+        cancelText="取消"
+        confirmLoading={
+          rejectReviewMutation.isPending ||
+          reverseReviewMutation.isPending ||
+          withdrawReviewMutation.isPending
+        }
+        destroyOnHidden
+      >
+        <Form form={reasonForm} layout="vertical">
+          <Form.Item
+            label="原因"
+            name="reason"
+            rules={[{ required: true, whitespace: true, message: '请输入原因' }]}
+          >
+            <Input.TextArea aria-label="审核原因" rows={4} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </PageContainer>
   );
 };

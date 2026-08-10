@@ -32,6 +32,7 @@ import {
   SYSTEM_ROUTES,
 } from '@/constants/routes';
 import { useCapabilities } from '@/hooks/useCapabilities';
+import { contractGroupService } from '@/services/contractGroupService';
 import { ledgerService } from '@/services/ledgerService';
 import type {
   LedgerEntry,
@@ -351,6 +352,22 @@ const OperationsLedgerPage: React.FC = () => {
       }),
     enabled: isServiceFeeView && (normalizedServiceFeeGroupId !== '' || normalizedProjectId !== ''),
   });
+
+  // 服务费生成/查询的合同组选择器数据（D11：不复用手输合同组 ID）
+  const contractGroupsQuery = useQuery({
+    queryKey: ['contract-groups', 'service-fee-selector'],
+    queryFn: () => contractGroupService.getContractGroups({ limit: 200 }),
+    enabled: isServiceFeeView,
+  });
+
+  const serviceFeeGroupOptions = useMemo(
+    () =>
+      (contractGroupsQuery.data?.items ?? []).map(group => ({
+        label: `${group.group_code}${group.project_name != null && group.project_name !== '' ? `（${group.project_name}）` : ''}`,
+        value: group.contract_group_id,
+      })),
+    [contractGroupsQuery.data]
+  );
 
   const paymentFlowsQuery = useQuery({
     queryKey: [
@@ -1443,11 +1460,17 @@ const OperationsLedgerPage: React.FC = () => {
             <Card title="服务费生成与查询">
               <Form form={serviceFeeGenerateForm} layout="vertical">
                 <Form.Item
-                  label="合同组 ID"
+                  label="合同组"
                   name="contract_group_id"
-                  rules={[{ required: true, message: '请填写合同组 ID' }]}
+                  rules={[{ required: true, message: '请选择合同组' }]}
                 >
-                  <Input placeholder="contract_group_id" />
+                  <Select
+                    showSearch
+                    placeholder="请选择合同组"
+                    loading={contractGroupsQuery.isLoading}
+                    options={serviceFeeGroupOptions}
+                    optionFilterProp="label"
+                  />
                 </Form.Item>
                 <Space wrap>
                   <Button onClick={handleQueryServiceFees}>查询来源账期</Button>
@@ -1498,7 +1521,7 @@ const OperationsLedgerPage: React.FC = () => {
                     <Empty
                       description={
                         normalizedServiceFeeGroupId === ''
-                          ? '请输入合同组 ID 后查询服务费台账'
+                          ? '请选择合同组后查询服务费台账'
                           : '暂无服务费台账'
                       }
                       image={Empty.PRESENTED_IMAGE_SIMPLE}

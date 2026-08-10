@@ -153,6 +153,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
         label: '字典管理',
       },
       {
+        key: '/system/settings',
+        icon: <SettingOutlined />,
+        label: '系统设置',
+      },
+      {
         key: '/system/logs',
         icon: <AuditOutlined />,
         label: '操作日志',

@@ -1,7 +1,7 @@
-# 土地物业资产管理系统 - 文档中心
+# 土地物业资产运营管理系统 - 文档中心
 
 ## 📋 Purpose
-本文档中心作为土地物业管理系统的**单一可信来源（SSOT）**，确保团队所有成员、合作伙伴和AI助手都能基于一致、准确的信息进行协作和开发。
+本文档中心作为土地物业资产运营管理系统的**单一可信来源（SSOT）**，确保团队所有成员、合作伙伴和AI助手都能基于一致、准确的信息进行协作和开发。
 
 ## 🎯 Scope
 本文档中心涵盖：
@@ -82,7 +82,7 @@
 
 ## 🎯 系统概览
 
-**项目名称**: 土地物业资产管理系统 (Real Estate Asset Management & Operations System)
+**项目名称**: 土地物业资产运营管理系统 (Real Estate Asset Management & Operations System)
 
 **技术架构**: React 19 + TypeScript (Frontend) + FastAPI + Python 3.12 (Backend)
 

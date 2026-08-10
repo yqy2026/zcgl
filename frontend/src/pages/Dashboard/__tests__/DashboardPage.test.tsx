@@ -132,12 +132,12 @@ describe('DashboardPage', () => {
       expect(screen.getByText('实时监控资产运营状况，提供数据驱动的决策支持')).toBeInTheDocument();
     });
 
-    it('渲染操作按钮', () => {
+    it('渲染操作按钮（导出空按钮已移除）', () => {
       renderDashboardPage();
 
       expect(screen.getByText('刷新')).toBeInTheDocument();
-      expect(screen.getByText('导出')).toBeInTheDocument();
       expect(screen.getByText('全屏')).toBeInTheDocument();
+      expect(screen.queryByText('导出')).not.toBeInTheDocument();
     });
 
     it('渲染关键指标卡片', () => {

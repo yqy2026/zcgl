@@ -130,14 +130,18 @@ describe('LoginPage', () => {
       expect(screen.getByText('立即登录')).toBeInTheDocument();
     });
 
-    it('渲染帮助信息', () => {
+    it('不渲染假二维码与死链接（D1/D2）', () => {
       render(
         <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
 
-      expect(screen.getByText('遇到问题？联系 IT 管理员')).toBeInTheDocument();
+      // 假企业微信二维码入口已移除，只保留账号密码登录
+      expect(screen.queryByText('企业微信登录')).not.toBeInTheDocument();
+      expect(screen.queryByText('请打开企业微信扫一扫登录')).not.toBeInTheDocument();
+      expect(screen.queryByText('忘记密码?')).not.toBeInTheDocument();
+      expect(screen.queryByText('遇到问题？联系 IT 管理员')).not.toBeInTheDocument();
     });
   });
 

@@ -22,7 +22,7 @@
 
 ## Overview
 
-This document defines the testing standards and best practices for the Real Estate Asset Management & Operations System (土地物业资产管理系统). All team members must follow these guidelines when writing, organizing, and maintaining tests.
+This document defines the testing standards and best practices for the Real Estate Asset Management & Operations System (土地物业资产运营管理系统). All team members must follow these guidelines when writing, organizing, and maintaining tests.
 
 ### Goals
 

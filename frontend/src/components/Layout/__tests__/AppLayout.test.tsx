@@ -92,7 +92,7 @@ describe('AppLayout - 基础功能', () => {
       </AppLayout>
     );
 
-    expect(screen.getByText(/土地房产资产管理系统/)).toBeInTheDocument();
+    expect(screen.getByText(/土地物业资产运营管理系统/)).toBeInTheDocument();
     expect(screen.getByText(/©2024/)).toBeInTheDocument();
   });
 
@@ -159,7 +159,7 @@ describe('AppLayout - 布局结构', () => {
     expect(screen.getByTestId('app-sidebar')).toBeInTheDocument();
     expect(screen.getByTestId('app-header')).toBeInTheDocument();
     expect(screen.getByTestId('test-content')).toBeInTheDocument();
-    expect(screen.getByText(/土地房产资产管理系统/)).toBeInTheDocument();
+    expect(screen.getByText(/土地物业资产运营管理系统/)).toBeInTheDocument();
   });
 
   it('应该正确渲染多个子组件', () => {

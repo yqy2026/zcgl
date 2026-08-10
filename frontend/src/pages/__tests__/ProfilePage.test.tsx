@@ -69,6 +69,13 @@ describe('ProfilePage', () => {
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
   });
 
+  it('does not render the placeholder 登录历史 entry (D3)', () => {
+    renderWithProviders(<ProfilePage />);
+
+    expect(screen.queryByText('登录历史')).not.toBeInTheDocument();
+    expect(screen.queryByText('查看历史')).not.toBeInTheDocument();
+  });
+
   it('loads and renders the current user effective Party scope', async () => {
     renderWithProviders(<ProfilePage />);
 

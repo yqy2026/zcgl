@@ -21,7 +21,6 @@ import {
   UserOutlined,
   EditOutlined,
   LockOutlined,
-  HistoryOutlined,
   SafetyCertificateOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
@@ -327,27 +326,6 @@ const ProfilePage: React.FC = () => {
                   onClick={() => setPasswordModalVisible(true)}
                 >
                   修改密码
-                </Button>
-              </div>
-
-              <div className={styles.securityActionCard}>
-                <div className={styles.securityActionMeta}>
-                  <Text strong className={styles.securityActionTitle}>
-                    登录历史
-                  </Text>
-                  <br />
-                  <Text type="secondary" className={styles.securityActionHint}>
-                    查看最近的登录记录
-                  </Text>
-                </div>
-                <Button
-                  icon={<HistoryOutlined />}
-                  className={styles.securityActionButton}
-                  onClick={() => {
-                    void MessageManager.info('登录历史功能开发中');
-                  }}
-                >
-                  查看历史
                 </Button>
               </div>
             </Space>

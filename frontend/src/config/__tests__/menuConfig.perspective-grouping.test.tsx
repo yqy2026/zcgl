@@ -46,6 +46,15 @@ describe('menuConfig perspective grouping', () => {
       ]),
     });
 
+    const systemGroup = menuEntries.find(item => item.key === 'system');
+    expect(systemGroup).toMatchObject({
+      key: 'system',
+      label: '系统管理',
+      children: expect.arrayContaining([
+        expect.objectContaining({ key: '/system/settings', label: '系统设置' }),
+      ]),
+    });
+
     expect(menuEntries).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: MENU_GROUP_KEYS.CONTRACT_CENTER, label: '合同中心' }),

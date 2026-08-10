@@ -1,6 +1,5 @@
 import React from 'react';
 import { Layout, Button, Avatar, Dropdown, Modal, Space, Tooltip, Typography } from 'antd';
-import { MessageManager } from '@/utils/messageManager';
 import type { MenuProps } from 'antd';
 import {
   MenuFoldOutlined,
@@ -9,15 +8,13 @@ import {
   SearchOutlined,
   UserOutlined,
   SettingOutlined,
-  QuestionCircleOutlined,
   ExclamationCircleOutlined,
-  GlobalOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthService } from '@/services/authService';
 import { NotificationCenter } from '@/components/Notification';
-import { SEARCH_ROUTES } from '@/constants/routes';
+import { SEARCH_ROUTES, SYSTEM_ROUTES } from '@/constants/routes';
 
 import styles from './Layout.module.css';
 
@@ -74,11 +71,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       type: 'divider',
     },
     {
-      key: 'help',
-      icon: <QuestionCircleOutlined />,
-      label: '帮助中心',
-    },
-    {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: '退出登录',
@@ -94,23 +86,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
         navigate('/profile');
         break;
       case 'settings':
-        MessageManager.info('系统设置功能开发中');
-        break;
-      case 'help':
-        MessageManager.info('帮助中心功能开发中');
+        navigate(SYSTEM_ROUTES.SETTINGS);
         break;
       case 'logout':
         handleLogoutConfirm();
         break;
     }
-  };
-
-  const handleLanguageSwitch = () => {
-    MessageManager.info('多语言切换功能开发中');
-  };
-
-  const handleOpenHelpDocs = () => {
-    MessageManager.info('帮助文档功能开发中');
   };
 
   const handleOpenGlobalSearch = () => {
@@ -131,7 +112,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
 
         <div className={styles.headerTitleWrapper}>
           <Typography.Text strong className={styles.headerTitle}>
-            土地房产资产管理系统
+            土地物业资产运营管理系统
           </Typography.Text>
         </div>
       </div>
@@ -145,28 +126,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
             icon={<SearchOutlined className={styles.headerActionIcon} />}
             onClick={handleOpenGlobalSearch}
             aria-label="全局搜索"
-          />
-        </Tooltip>
-
-        {/* 语言切换 */}
-        <Tooltip title="语言切换">
-          <Button
-            type="text"
-            className={styles.headerIconButton}
-            icon={<GlobalOutlined className={styles.headerActionIcon} />}
-            onClick={handleLanguageSwitch}
-            aria-label="语言切换"
-          />
-        </Tooltip>
-
-        {/* 帮助 */}
-        <Tooltip title="帮助文档">
-          <Button
-            type="text"
-            className={styles.headerIconButton}
-            icon={<QuestionCircleOutlined className={styles.headerActionIcon} />}
-            onClick={handleOpenHelpDocs}
-            aria-label="帮助文档"
           />
         </Tooltip>
 

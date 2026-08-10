@@ -1,4 +1,4 @@
-# 土地物业资产管理系统 - 前端
+# 土地物业资产运营管理系统 - 前端
 
 基于 React + TypeScript + Vite 构建的现代化前端应用。
 
@@ -174,7 +174,7 @@ make scan-frontend-report  # 严格校验并导出 reports/frontend/*.json
 VITE_API_BASE_URL=http://localhost:8002/api
 
 # 应用标题
-VITE_APP_TITLE=土地物业资产管理系统
+VITE_APP_TITLE=土地物业资产运营管理系统
 ```
 
 ### 代理配置

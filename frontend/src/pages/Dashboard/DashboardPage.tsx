@@ -2,7 +2,6 @@ import React from 'react';
 import { Alert, Card, Row, Col, Typography, Button, Space, Tooltip } from 'antd';
 import {
   ReloadOutlined,
-  DownloadOutlined,
   FullscreenOutlined,
   HomeOutlined,
   AreaChartOutlined,
@@ -59,11 +58,6 @@ const DashboardPage: React.FC = () => {
         document.exitFullscreen();
       }
     }
-  };
-
-  const handleExport = () => {
-    // 实现导出功能
-    // Exporting dashboard data
   };
 
   if (needsViewModeSelection) {
@@ -141,15 +135,6 @@ const DashboardPage: React.FC = () => {
                 className={styles.actionButton}
               >
                 刷新
-              </Button>
-            </Tooltip>
-            <Tooltip title="导出数据">
-              <Button
-                icon={<DownloadOutlined />}
-                onClick={handleExport}
-                className={styles.actionButton}
-              >
-                导出
               </Button>
             </Tooltip>
             <Tooltip title={isFullscreen ? '退出全屏' : '全屏显示'}>

@@ -784,7 +784,7 @@ const PartyDetailPage: React.FC = () => {
           <Form.Item
             label="驳回原因"
             name="reason"
-            rules={[{ required: true, message: '请输入驳回原因' }]}
+            rules={[{ required: true, whitespace: true, message: '请输入驳回原因' }]}
           >
             <Input.TextArea aria-label="驳回原因" rows={4} />
           </Form.Item>

@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
   fireEvent,
+  within,
   renderWithProviders as renderWithAppProviders,
 } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -624,29 +625,69 @@ describe('AssetDetailPage', () => {
       expect(screen.getByText('alice')).toBeInTheDocument();
     });
 
-    it('驳回和反审核操作会收集原因后调用服务', async () => {
+    it('驳回操作通过正式弹窗表单收集原因后调用服务（D10）', async () => {
       vi.mocked(assetService.getAsset).mockResolvedValue({
         id: 'asset_review_3',
-        asset_name: '已审核资产',
-        review_status: 'approved',
+        asset_name: '待审核资产',
+        review_status: 'pending',
       });
-      vi.mocked(assetService.reverseAssetReview).mockResolvedValue({
+      vi.mocked(assetService.rejectAssetReview).mockResolvedValue({
         id: 'asset_review_3',
-        asset_name: '已审核资产',
-        review_status: 'reversed',
+        asset_name: '待审核资产',
+        review_status: 'draft',
       });
-      const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('原因说明');
 
       renderAssetDetailPage('asset_review_3');
 
-      const reverseButton = await screen.findByRole('button', { name: '反审核' });
-      fireEvent.click(reverseButton);
+      const rejectButton = await screen.findByRole('button', { name: '驳回审核' });
+      fireEvent.click(rejectButton);
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('驳回审核')).toBeInTheDocument();
+
+      // 未填原因时确认不触发请求
+      fireEvent.click(within(dialog).getByRole('button', { name: /确\s*认/ }));
+      expect(assetService.rejectAssetReview).not.toHaveBeenCalled();
+
+      fireEvent.change(within(dialog).getByLabelText('原因'), {
+        target: { value: '证照资料不全' },
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: /确\s*认/ }));
 
       await waitFor(() => {
-        expect(assetService.reverseAssetReview).toHaveBeenCalledWith('asset_review_3', '原因说明');
+        expect(assetService.rejectAssetReview).toHaveBeenCalledWith(
+          'asset_review_3',
+          '证照资料不全'
+        );
+      });
+    });
+
+    it('撤回操作通过正式弹窗表单收集原因后调用服务', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_review_3',
+        asset_name: '待审核资产',
+        review_status: 'pending',
+      });
+      vi.mocked(assetService.withdrawAssetReview).mockResolvedValue({
+        id: 'asset_review_3',
+        asset_name: '待审核资产',
+        review_status: 'draft',
       });
 
-      promptSpy.mockRestore();
+      renderAssetDetailPage('asset_review_3');
+
+      const withdrawButton = await screen.findByRole('button', { name: '撤回审核' });
+      fireEvent.click(withdrawButton);
+
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.change(within(dialog).getByLabelText('原因'), {
+        target: { value: '发起人撤回' },
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: /确\s*认/ }));
+
+      await waitFor(() => {
+        expect(assetService.withdrawAssetReview).toHaveBeenCalledWith('asset_review_3', '发起人撤回');
+      });
     });
   });
 });

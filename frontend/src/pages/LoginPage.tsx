@@ -76,7 +76,6 @@ const LoginPage: React.FC = () => {
     remember: false,
   });
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [isQrMode, setIsQrMode] = useState<boolean>(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({
     identifier: null,
     password: null,
@@ -127,14 +126,9 @@ const LoginPage: React.FC = () => {
     setShowPassword(prev => !prev);
   };
 
-  const toggleMode = () => {
-    setIsQrMode(prev => !prev);
-  };
-
   const hasError = error != null && error !== '';
   const hasIdentifierFieldError = fieldErrors.identifier != null && fieldErrors.identifier !== '';
   const hasPasswordFieldError = fieldErrors.password != null && fieldErrors.password !== '';
-  const currentModeIcon = isQrMode ? 'desktop_windows' : 'qr_code_2';
 
   return (
     <div className={styles['login-page']}>
@@ -175,25 +169,8 @@ const LoginPage: React.FC = () => {
 
         <section className={styles['card-shell']}>
           <div className={styles['login-card']}>
-            <button
-              type="button"
-              className={styles['mode-toggle-btn']}
-              onClick={toggleMode}
-              aria-label={isQrMode ? '切换到账号登录' : '切换到二维码登录'}
-            >
-              <span className={styles['mode-corner']} />
-              <span className={styles['mode-icon']}>
-                <MaterialSymbol name={currentModeIcon} />
-              </span>
-            </button>
-
             <div className={styles['view-stack']}>
-              <div
-                className={[
-                  styles['login-view'],
-                  isQrMode ? styles['view-hidden-left'] : styles['view-visible'],
-                ].join(' ')}
-              >
+              <div className={styles['login-view']}>
                 <header className={styles['login-header']}>
                   <h2 className={styles['login-title']}>欢迎回来</h2>
                   <p className={styles['login-subtitle']}>请输入您的账号密码以继续</p>
@@ -280,15 +257,6 @@ const LoginPage: React.FC = () => {
                       />
                       <span>记住登录状态</span>
                     </label>
-                    <a
-                      href="#"
-                      className={styles['forgot-link']}
-                      onClick={event => {
-                        event.preventDefault();
-                      }}
-                    >
-                      忘记密码?
-                    </a>
                   </div>
 
                   {hasError && (
@@ -306,57 +274,6 @@ const LoginPage: React.FC = () => {
                     {loading === true ? '登录中...' : '立即登录'}
                   </button>
                 </form>
-
-                <footer className={styles['login-footer']}>
-                  <a
-                    href="#"
-                    className={styles['support-link']}
-                    onClick={event => {
-                      event.preventDefault();
-                    }}
-                  >
-                    <MaterialSymbol name="support_agent" />
-                    <span>遇到问题？联系 IT 管理员</span>
-                  </a>
-                </footer>
-              </div>
-
-              <div
-                className={[
-                  styles['qr-view'],
-                  isQrMode ? styles['view-visible'] : styles['view-hidden-right'],
-                ].join(' ')}
-              >
-                <div className={styles['qr-header']}>
-                  <h2 className={styles['qr-title']}>企业微信登录</h2>
-                  <p className={styles['qr-subtitle']}>请打开企业微信扫一扫登录</p>
-                </div>
-
-                <div className={styles['qr-code-shell']}>
-                  <div className={styles['qr-code-box']}>
-                    <svg
-                      className={styles['qr-code-svg']}
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 13h6v6H3v-6zm2 2v2h2v-2H5zm13-2h3v2h-3v-2zm-3 0h2v3h-2v-3zm-3 3h3v5h-3v-5zm3 3h3v2h-3v-2zm-3-3h-2v5h3v-2h-1v-3zm-2-3h2v2h-2v-2zm-3 3h2v2h-2v-2zm0 3h-2v2h2v-2z" />
-                      <rect x="15" y="15" width="2" height="2" />
-                      <rect x="18" y="13" width="2" height="2" />
-                    </svg>
-                    <div className={styles['scan-line']} />
-                  </div>
-                </div>
-
-                <div className={styles['qr-footer']}>
-                  <p className={styles['qr-tip']}>
-                    请使用 <span>企业微信 APP</span> 扫码
-                  </p>
-                  <button type="button" className={styles['back-login-btn']} onClick={toggleMode}>
-                    <MaterialSymbol name="arrow_back" />
-                    <span>返回账号登录</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>

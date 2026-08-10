@@ -192,9 +192,7 @@ vi.mock('@ant-design/icons', () => ({
   SearchOutlined: () => <div data-testid="icon-search" />,
   UserOutlined: () => <div data-testid="icon-user" />,
   SettingOutlined: () => <div data-testid="icon-setting" />,
-  QuestionCircleOutlined: () => <div data-testid="icon-question" />,
   ExclamationCircleOutlined: () => <div data-testid="icon-exclamation" />,
-  GlobalOutlined: () => <div data-testid="icon-global" />,
 }));
 
 describe('AppHeader - 组件导入测试', () => {
@@ -218,10 +216,13 @@ describe('AppHeader - 渲染与交互测试', () => {
     const AppHeader = (await import('../AppHeader')).default;
     renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
 
-    expect(screen.getByText('土地房产资产管理系统')).toBeInTheDocument();
+    expect(screen.getByText('土地物业资产运营管理系统')).toBeInTheDocument();
     expect(screen.getByText('测试用户')).toBeInTheDocument();
     expect(screen.getByTestId('notification-center')).toBeInTheDocument();
     expect(screen.getByTestId('icon-search')).toBeInTheDocument();
+    // 占位入口（语言切换/帮助文档）已移除
+    expect(screen.queryByTestId('icon-global')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('icon-question')).not.toBeInTheDocument();
   });
 
   it('折叠按钮应显示正确图标并触发回调', async () => {
@@ -244,7 +245,7 @@ describe('AppHeader - 渲染与交互测试', () => {
     expect(screen.getByTestId('icon-menu-unfold')).toBeInTheDocument();
   });
 
-  it('用户菜单点击应触发导航与提示', async () => {
+  it('用户菜单点击应触发导航，且无占位入口', async () => {
     const AppHeader = (await import('../AppHeader')).default;
     renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
 
@@ -252,10 +253,10 @@ describe('AppHeader - 渲染与交互测试', () => {
     expect(navigateMock).toHaveBeenCalledWith('/profile');
 
     fireEvent.click(screen.getByTestId('menu-item-settings'));
-    expect(messageInfoSpy).toHaveBeenCalledWith('系统设置功能开发中');
+    expect(navigateMock).toHaveBeenCalledWith('/system/settings');
 
-    fireEvent.click(screen.getByTestId('menu-item-help'));
-    expect(messageInfoSpy).toHaveBeenCalledWith('帮助中心功能开发中');
+    // 占位入口（帮助中心）已移除
+    expect(screen.queryByTestId('menu-item-help')).not.toBeInTheDocument();
   });
 
   it('点击全局搜索按钮应跳转到统一搜索页', async () => {

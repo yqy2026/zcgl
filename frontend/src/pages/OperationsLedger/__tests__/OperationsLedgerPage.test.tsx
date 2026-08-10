@@ -29,6 +29,12 @@ vi.mock('@/services/ledgerService', () => ({
   },
 }));
 
+vi.mock('@/services/contractGroupService', () => ({
+  contractGroupService: {
+    getContractGroups: vi.fn(),
+  },
+}));
+
 vi.mock('antd', async () => {
   const actual = await vi.importActual<typeof import('antd')>('antd');
 
@@ -69,6 +75,7 @@ vi.mock('@/utils/queryScope', () => ({
 }));
 
 import { ledgerService } from '@/services/ledgerService';
+import { contractGroupService } from '@/services/contractGroupService';
 
 const selectFirstLedgerRow = () => {
   const rowSelectionRadios = screen.getAllByRole('radio').filter(radio => {
@@ -77,6 +84,18 @@ const selectFirstLedgerRow = () => {
   });
   expect(rowSelectionRadios).toHaveLength(1);
   fireEvent.click(rowSelectionRadios[0]);
+};
+
+// 服务费合同组选择器（D11）：打开下拉并选中 mock 中的 CG-001。
+// 注意：Select 虚拟列表的隐藏 listbox 会重复渲染选项，需按 .ant-select-item-option 定位可见项。
+const selectServiceFeeGroup = async () => {
+  fireEvent.mouseDown(screen.getByLabelText('合同组'));
+  const options = await screen.findAllByText('CG-001（示范项目）');
+  const visibleOption = options.find(el => el.closest('.ant-select-item-option') != null);
+  if (visibleOption == null) {
+    throw new Error('未找到合同组选项');
+  }
+  fireEvent.click(visibleOption);
 };
 
 describe('OperationsLedgerPage', () => {
@@ -178,6 +197,26 @@ describe('OperationsLedgerPage', () => {
       updated: 0,
       voided: 0,
       source_mismatches: 0,
+    });
+    vi.mocked(contractGroupService.getContractGroups).mockResolvedValue({
+      items: [
+        {
+          contract_group_id: 'group-1',
+          group_code: 'CG-001',
+          project_name: '示范项目',
+          revenue_mode: 'rent',
+          operator_party_id: 'operator-party-1',
+          owner_party_id: 'owner-party-1',
+          effective_from: '2026-01-01',
+          derived_status: 'active',
+          data_status: 'active',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+      offset: 0,
+      limit: 200,
     });
     vi.mocked(ledgerService.listServiceFees).mockResolvedValue([
       {
@@ -468,9 +507,7 @@ describe('OperationsLedgerPage', () => {
     renderWithProviders(<OperationsLedgerPage />);
 
     fireEvent.click(screen.getByText('服务费结算'));
-    fireEvent.change(screen.getByLabelText('合同组 ID'), {
-      target: { value: 'group-1' },
-    });
+    await selectServiceFeeGroup();
     fireEvent.click(screen.getByRole('button', { name: /生成服务费/ }));
 
     await waitFor(() => {
@@ -478,15 +515,15 @@ describe('OperationsLedgerPage', () => {
         contract_group_id: 'group-1',
       });
     });
+    // D11：手输合同组 ID 输入框已移除，只保留选择器
+    expect(screen.queryByLabelText('合同组 ID')).not.toBeInTheDocument();
   });
 
   it('queries service-fee source ledgers from the service-fee settlement view', async () => {
     renderWithProviders(<OperationsLedgerPage />);
 
     fireEvent.click(screen.getByText('服务费结算'));
-    fireEvent.change(screen.getByLabelText('合同组 ID'), {
-      target: { value: 'group-1' },
-    });
+    await selectServiceFeeGroup();
     fireEvent.click(screen.getByRole('button', { name: /查询来源账期/ }));
 
     await waitFor(() => {
@@ -501,9 +538,7 @@ describe('OperationsLedgerPage', () => {
     renderWithProviders(<OperationsLedgerPage />);
 
     fireEvent.click(screen.getByText('服务费结算'));
-    fireEvent.change(screen.getByLabelText('合同组 ID'), {
-      target: { value: 'group-1' },
-    });
+    await selectServiceFeeGroup();
     fireEvent.click(screen.getByRole('button', { name: /查询来源账期/ }));
 
     expect(await screen.findByText('service-fee-1')).toBeInTheDocument();
@@ -537,9 +572,7 @@ describe('OperationsLedgerPage', () => {
     renderWithProviders(<OperationsLedgerPage />);
 
     fireEvent.click(screen.getByText('服务费结算'));
-    fireEvent.change(screen.getByLabelText('合同组 ID'), {
-      target: { value: 'group-1' },
-    });
+    await selectServiceFeeGroup();
     fireEvent.click(screen.getByRole('button', { name: /查询来源账期/ }));
 
     const serviceFeeRow = (await screen.findByText('service-fee-1')).closest('tr');
