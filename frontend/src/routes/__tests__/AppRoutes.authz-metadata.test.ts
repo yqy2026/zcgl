@@ -7,6 +7,7 @@ import {
   OPERATIONS_ROUTES,
   PROJECT_ROUTES,
   SYSTEM_ROUTES,
+  PROPERTY_CERTIFICATE_ROUTES,
 } from '@/constants/routes';
 
 type RoutePermission = { action: string; resource: string };
@@ -33,6 +34,9 @@ describe('AppRoutes authz metadata', () => {
       [CONTRACT_GROUP_ROUTES.NEW_CONTRACT_PATH, 'contract_group:create'],
       [ANALYTICS_ROUTES.OVERVIEW, 'analytics:read'],
       [OPERATIONS_ROUTES.LEDGER, 'contract:read'],
+      [PROPERTY_CERTIFICATE_ROUTES.LIST, 'property_certificate:read'],
+      [PROPERTY_CERTIFICATE_ROUTES.IMPORT, 'property_certificate:create'],
+      [PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH, 'property_certificate:read'],
     ]);
 
     const protectedRouteMap = new Map(protectedRoutes.map(route => [route.path, route]));
@@ -45,7 +49,7 @@ describe('AppRoutes authz metadata', () => {
     }
   });
 
-  it('does not expose out-of-scope ownership or property certificate page routes', () => {
+  it('does not expose out-of-scope ownership page routes (property certificates opened by #77)', () => {
     const protectedRoutePaths = protectedRoutes.map(route => route.path);
 
     expect(protectedRoutePaths).not.toEqual(
@@ -53,9 +57,6 @@ describe('AppRoutes authz metadata', () => {
         '/ownership',
         '/ownership/:id',
         '/ownership/:id/edit',
-        '/property-certificates',
-        '/property-certificates/:id',
-        '/property-certificates/import',
       ])
     );
   });

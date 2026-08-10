@@ -89,6 +89,10 @@ export const PropertyCertificateImport: React.FC = () => {
       setFieldValues({});
       setConflict(false);
     } catch (error) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
+        // antd validateFields 拒绝：行内校验消息已展示，不弹全局错误
+        return;
+      }
       if (error instanceof Error) {
         message.error(error.message);
       } else {

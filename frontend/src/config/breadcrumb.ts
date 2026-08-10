@@ -14,6 +14,8 @@ export const staticBreadcrumbMap: Record<string, string> = {
   '/assets/new': '新增资产',
   '/assets/import': '数据导入',
   '/assets/analytics': '经营分析',
+  '/property-certificates': '产权证管理',
+  '/property-certificates/import': '产权证导入',
 
   // 经营台账
   '/operations': '经营台账',

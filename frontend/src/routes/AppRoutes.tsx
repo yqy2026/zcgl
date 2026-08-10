@@ -13,6 +13,7 @@ import {
   BASE_PATHS,
   ANALYTICS_ROUTES,
   OPERATIONS_ROUTES,
+  PROPERTY_CERTIFICATE_ROUTES,
 } from '@/constants/routes';
 
 export interface ProtectedRouteItem {
@@ -79,6 +80,21 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     path: ASSET_ROUTES.ANALYTICS,
     element: React.lazy(() => import('../pages/Assets/AssetAnalyticsPage')),
     permissions: [{ resource: 'analytics', action: 'read' }],
+  },
+  {
+    path: PROPERTY_CERTIFICATE_ROUTES.LIST,
+    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateList')),
+    permissions: [{ resource: 'property_certificate', action: 'read' }],
+  },
+  {
+    path: PROPERTY_CERTIFICATE_ROUTES.IMPORT,
+    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateImport')),
+    permissions: [{ resource: 'property_certificate', action: 'create' }],
+  },
+  {
+    path: PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH,
+    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateDetailPage')),
+    permissions: [{ resource: 'property_certificate', action: 'read' }],
   },
   {
     path: ASSET_ROUTES.LIST,

@@ -18,6 +18,7 @@ import {
   FileAddOutlined,
   BarChartOutlined,
   AccountBookOutlined,
+  FileProtectOutlined,
 } from '@ant-design/icons';
 
 export type MenuItemKey = string;
@@ -74,6 +75,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
         key: '/assets/list',
         icon: <HomeOutlined />,
         label: '资产台账',
+      },
+      {
+        key: '/property-certificates',
+        icon: <FileProtectOutlined />,
+        label: '产权证管理',
       },
     ],
   },
@@ -181,6 +187,9 @@ export function getSelectedKeys(pathname: string): string[] {
   if (pathname.startsWith('/assets/')) {
     return ['/assets/list'];
   }
+  if (pathname === '/property-certificates' || pathname.startsWith('/property-certificates/')) {
+    return ['/property-certificates'];
+  }
   if (pathname.startsWith('/contract-groups/')) {
     return [MENU_ACTION_KEYS.CONTRACT_CENTER_LIST];
   }
@@ -209,6 +218,9 @@ export function getOpenKeys(pathname: string): string[] {
     return [MENU_GROUP_KEYS.PROJECT];
   }
   if (pathname.startsWith('/assets')) {
+    return ['/asset-files'];
+  }
+  if (pathname.startsWith('/property-certificates')) {
     return ['/asset-files'];
   }
   if (pathname.startsWith('/contract-groups')) {

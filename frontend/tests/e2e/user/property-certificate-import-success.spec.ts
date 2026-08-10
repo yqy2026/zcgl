@@ -25,848 +25,266 @@ const expectMessageVisible = async (page: Page, messagePattern: RegExp): Promise
   await expect(messageNotice).toBeVisible();
 };
 
-test.describe.skip('@property-certificate-import-success 导入成功路径', () => {
+/**
+ * 产权证导入走统一 extraction-sessions 流程（上传 → 人工复核 → 确认）。
+ * mock 端点：POST /api/v1/extraction-sessions、POST /extraction-sessions/{id}/confirm、
+ * GET /property-certificates/。
+ */
+test.describe('@property-certificate-import-success 产权证导入成功路径', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
   });
 
-  test('property certificate import page should create certificate and show it in list', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-${Date.now()}`;
-    const propertyAddress = `E2E坐落地址-${Date.now()}`;
-    const certificateId = `mock-cert-${Date.now()}`;
+  const mockExtractionFlow = async (
+    page: Page,
+    options: { certificateNumber: string; propertyAddress: string }
+  ) => {
+    const certificateNumber = options.certificateNumber;
+    const propertyAddress = options.propertyAddress;
+    const sessionId = `session-${Date.now()}`;
 
-    await page.route('**/api/v1/property-certificates/upload', async route => {
+    await page.route('**/api/v1/extraction-sessions', async route => {
+      if (route.request().method() !== 'POST') {
+        await route.fallback();
+        return;
+      }
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: 'application/json',
         body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
+          session_id: sessionId,
+          target_type: 'property_certificate',
+          status: 'ready_for_review',
+          candidates: {
+            fields: {
+              certificate_number: {
+                conflict: false,
+                candidates: [
+                  { value: certificateNumber, value_type: 'string', confidence: 'high', evidence: [] },
+                ],
+              },
+              property_address: {
+                conflict: false,
+                candidates: [
+                  { value: propertyAddress, value_type: 'string', confidence: 'high', evidence: [] },
+                ],
+              },
+            },
           },
-          confidence_score: 0.93,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
+          errors: [],
         }),
       });
     });
 
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
+    await page.route('**/api/v1/extraction-sessions/*/confirm', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: certificateId,
-        }),
+        body: JSON.stringify({ certificate_id: `mock-cert-${Date.now()}` }),
       });
     });
 
-    await page.route('**/api/v1/property-certificates/', async route => {
+    await page.route('**/api/v1/property-certificates**', async route => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          {
-            id: certificateId,
-            certificate_number: certificateNumber,
-            property_address: propertyAddress,
-          },
+          { id: `mock-cert-${Date.now()}`, certificate_number: certificateNumber, property_address: propertyAddress },
         ]),
       });
     });
+
+    return sessionId;
+  };
+
+  test('导入成功：上传 → 复核 → 保存 → 列表可见证书号', async ({ page }) => {
+    const certificateNumber = `E2E-PC-${Date.now()}`;
+    const propertyAddress = `E2E坐落地址-${Date.now()}`;
+    const sessionId = await mockExtractionFlow(page, { certificateNumber, propertyAddress });
 
     await page.goto('/property-certificates/import');
     await expect(page).toHaveURL(/\/property-certificates\/import/);
     await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
 
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
+    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.locator('input[type="file"]').first().setInputFiles({
       name: `property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
       buffer: MINIMAL_PDF_BUFFER,
     });
 
+    const extractionResponse = page.waitForResponse(
+      response =>
+        response.request().method() === 'POST' &&
+        response.url().includes('/api/v1/extraction-sessions')
+    );
+    await page.getByRole('button', { name: /开始解析/i }).click();
+    const uploadResponse = await extractionResponse;
+    expect(uploadResponse.status()).toBe(201);
+
+    await expect(page.getByLabel('证书编号')).toBeVisible();
+    // 权利人 ID 在解析后才可填（页面 disabled 逻辑）
+    await page.getByLabel('权利人 ID').fill('e2e-party-1');
     const certificateNumberInput = page.getByLabel('证书编号');
     await expect(certificateNumberInput).toBeVisible();
-    await expect(certificateNumberInput).toHaveValue(certificateNumber);
+    await page.getByText(`使用候选：${certificateNumber}`).click();
 
-    const propertyAddressInput = page.getByLabel('坐落地址');
-    await expect(propertyAddressInput).toHaveValue(propertyAddress);
-
-    await page.getByRole('button', { name: /确认并创建产权证/i }).click();
+    const confirmResponse = page.waitForResponse(
+      response =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/extraction-sessions/${sessionId}/confirm`)
+    );
+    await page.getByRole('button', { name: /保存产权证/i }).click();
+    const confirmResp = await confirmResponse;
+    expect(confirmResp.status()).toBe(200);
 
     await expect(page).toHaveURL(/\/property-certificates$/);
-    await expect(page.getByRole('heading', { name: /产权证管理/i })).toBeVisible();
     await expect(page.getByText(certificateNumber)).toBeVisible();
   });
 
-  test('property certificate import should recover after oversized file rejection', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-RECOVER-${Date.now()}`;
-    const propertyAddress = `E2E恢复地址-${Date.now()}`;
+  test('确认请求携带候选动作与资产关联', async ({ page }) => {
+    const certificateNumber = `E2E-PC-PAYLOAD-${Date.now()}`;
+    const propertyAddress = `E2E载荷地址-${Date.now()}`;
+    await mockExtractionFlow(page, { certificateNumber, propertyAddress });
+
+    let confirmPayload: Record<string, unknown> | null = null;
+    await page.route('**/api/v1/extraction-sessions/*/confirm', async route => {
+      confirmPayload = (route.request().postDataJSON() ?? {}) as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ certificate_id: `mock-cert-${Date.now()}` }),
+      });
+    });
 
     await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
+    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.locator('input[type="file"]').first().setInputFiles({
+      name: `property-certificate-${Date.now()}.pdf`,
+      mimeType: PDF_MIME,
+      buffer: MINIMAL_PDF_BUFFER,
+    });
+    await page.getByRole('button', { name: /开始解析/i }).click();
+
+    await expect(page.getByLabel('证书编号')).toBeVisible();
+    await page.getByLabel('权利人 ID').fill('e2e-party-1');
+    await page.getByText(`使用候选：${certificateNumber}`).click();
+    await page.getByText(`使用候选：${propertyAddress}`).click();
+
+    await page.getByRole('button', { name: /保存产权证/i }).click();
+
+    await expect(page).toHaveURL(/\/property-certificates$/);
+    expect(confirmPayload).not.toBeNull();
+    const actions = (confirmPayload?.actions ?? []) as Array<Record<string, unknown>>;
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field_key: 'certificate_number', action: 'accept_candidate' }),
+        expect.objectContaining({ field_key: 'property_address', action: 'accept_candidate' }),
+      ])
+    );
+    expect(confirmPayload?.holder_party_ids).toEqual(['e2e-party-1']);
+  });
+
+  test('超大文件被拒绝且不发起解析请求', async ({ page }) => {
+    await page.goto('/property-certificates/import');
     await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
 
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
+    let extractionRequestCount = 0;
+    await page.route('**/api/v1/extraction-sessions', async route => {
+      if (route.request().method() === 'POST') {
+        extractionRequestCount += 1;
+      }
+      await route.fallback();
+    });
+
+    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.locator('input[type="file"]').first().setInputFiles({
       name: `oversized-property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
-      buffer: Buffer.alloc((10 * 1024 * 1024) + 1, 0),
+      buffer: Buffer.alloc(20 * 1024 * 1024 + 1, 0),
     });
-    await expectMessageVisible(page, /文件大小不能超过 10MB/);
-
-    let uploadRequestCount = 0;
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      uploadRequestCount += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.89,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    await uploadInput.setInputFiles({
-      name: `property-certificate-recover-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    const certificateNumberInput = page.getByLabel('证书编号');
-    await expect(certificateNumberInput).toBeVisible();
-    await expect(certificateNumberInput).toHaveValue(certificateNumber);
-    expect(uploadRequestCount).toBe(1);
+    await expectMessageVisible(page, /文件不能超过 20 MiB/);
+    await page.waitForTimeout(500);
+    expect(extractionRequestCount).toBe(0);
   });
 
-  test('property certificate import should send confirm request once on rapid double click', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-DOUBLE-${Date.now()}`;
-    const propertyAddress = `E2E双击地址-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.92,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
-      await page.waitForTimeout(700);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
-    });
-
-    await page.route('**/api/v1/property-certificates/', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
+  test('缺失资产 ID 时解析被拦截', async ({ page }) => {
     await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
     await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
 
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-double-click-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await expect(confirmButton).toBeVisible();
-
-    await confirmButton.click();
-    await confirmButton.click().catch(() => undefined);
-
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    expect(confirmRequestCount).toBe(1);
-  });
-
-  test('property certificate import should submit existing asset linkage when selecting a matched asset', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-LINK-${Date.now()}`;
-    const propertyAddress = `E2E关联地址-${Date.now()}`;
-    const matchedAssetId = `asset-match-${Date.now()}`;
-    const matchedAssetName = `E2E匹配资产-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.94,
-          asset_matches: [
-            {
-              asset_id: matchedAssetId,
-              name: matchedAssetName,
-              address: propertyAddress,
-              confidence: 0.86,
-              match_reasons: ['address'],
-            },
-          ],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    const confirmPayloads: Array<Record<string, unknown>> = [];
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
-      confirmPayloads.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
-    });
-
-    await page.route('**/api/v1/property-certificates/', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
-    await page.goto('/property-certificates/import');
+    await page.getByRole('button', { name: /开始解析/i }).click();
+    await expect(page.getByText('请输入资产 ID')).toBeVisible();
     await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-link-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    await page.getByText(matchedAssetName).first().click();
-
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
-
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    expect(confirmRequestCount).toBeGreaterThanOrEqual(1);
-
-    const confirmPayload = confirmPayloads[0];
-    expect(confirmPayload).toBeDefined();
-    expect(confirmPayload?.should_create_new_asset).toBe(false);
-    expect(confirmPayload?.asset_link_id).toBe(matchedAssetId);
-
-    const assetIds = confirmPayload?.asset_ids;
-    expect(Array.isArray(assetIds)).toBe(true);
-    expect(assetIds as unknown[]).toContain(matchedAssetId);
   });
 
-  test('property certificate import should submit last selected matched asset linkage', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-LINK-SWITCH-${Date.now()}`;
-    const propertyAddress = `E2E切换匹配地址-${Date.now()}`;
-    const firstMatchedAssetId = `asset-match-first-${Date.now()}`;
-    const secondMatchedAssetId = `asset-match-second-${Date.now()}`;
-    const firstMatchedAssetName = `E2E匹配资产A-${Date.now()}`;
-    const secondMatchedAssetName = `E2E匹配资产B-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.93,
-          asset_matches: [
-            {
-              asset_id: firstMatchedAssetId,
-              name: firstMatchedAssetName,
-              address: propertyAddress,
-              confidence: 0.85,
-              match_reasons: ['address'],
-            },
-            {
-              asset_id: secondMatchedAssetId,
-              name: secondMatchedAssetName,
-              address: propertyAddress,
-              confidence: 0.83,
-              match_reasons: ['address'],
-            },
-          ],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    const confirmPayloads: Array<Record<string, unknown>> = [];
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
-      confirmPayloads.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
-    });
-
-    await page.route('**/api/v1/property-certificates/', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
-    await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-link-switch-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    await page.getByText(firstMatchedAssetName).first().click();
-    await page.getByText(secondMatchedAssetName).first().click();
-
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
-
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    expect(confirmRequestCount).toBeGreaterThanOrEqual(1);
-
-    const confirmPayload = confirmPayloads[0];
-    expect(confirmPayload).toBeDefined();
-    expect(confirmPayload?.should_create_new_asset).toBe(false);
-    expect(confirmPayload?.asset_link_id).toBe(secondMatchedAssetId);
-
-    const assetIds = confirmPayload?.asset_ids;
-    expect(Array.isArray(assetIds)).toBe(true);
-    expect(assetIds as unknown[]).toContain(secondMatchedAssetId);
-    expect(assetIds as unknown[]).not.toContain(firstMatchedAssetId);
-  });
-
-  test('property certificate import should submit create-new-asset payload when no matched asset is selected', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-CREATE-NEW-${Date.now()}`;
-    const propertyAddress = `E2E新建资产地址-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.9,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    const confirmPayloads: Array<Record<string, unknown>> = [];
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
-      confirmPayloads.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
-    });
-
-    await page.route('**/api/v1/property-certificates/', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
-    await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-create-new-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
-
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    expect(confirmRequestCount).toBeGreaterThanOrEqual(1);
-
-    const confirmPayload = confirmPayloads[0];
-    expect(confirmPayload).toBeDefined();
-    expect(confirmPayload?.should_create_new_asset).toBe(true);
-    expect(confirmPayload?.asset_link_id).toBeNull();
-
-    const assetIds = confirmPayload?.asset_ids;
-    expect(Array.isArray(assetIds)).toBe(true);
-    expect((assetIds as unknown[]).length).toBe(0);
-  });
-
-  test('property certificate import should keep create-new-asset payload when matches exist but user does not select', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-MATCH-NO-SELECT-${Date.now()}`;
-    const propertyAddress = `E2E匹配未选择地址-${Date.now()}`;
-    const matchedAssetId = `asset-match-no-select-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.91,
-          asset_matches: [
-            {
-              asset_id: matchedAssetId,
-              name: `E2E匹配资产未选择-${Date.now()}`,
-              address: propertyAddress,
-              confidence: 0.82,
-              match_reasons: ['address'],
-            },
-          ],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    const confirmPayloads: Array<Record<string, unknown>> = [];
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
-      confirmPayloads.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
-    });
-
-    await page.route('**/api/v1/property-certificates/', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
-    await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-match-no-select-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
-
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    expect(confirmRequestCount).toBeGreaterThanOrEqual(1);
-
-    const confirmPayload = confirmPayloads[0];
-    expect(confirmPayload).toBeDefined();
-    expect(confirmPayload?.should_create_new_asset).toBe(true);
-    expect(confirmPayload?.asset_link_id).toBeNull();
-
-    const assetIds = confirmPayload?.asset_ids;
-    expect(Array.isArray(assetIds)).toBe(true);
-    expect((assetIds as unknown[]).length).toBe(0);
-  });
-
-  test('property certificate import should normalize mixed date formats before confirm submit', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-DATE-NORMALIZE-${Date.now()}`;
-    const propertyAddress = `E2E日期标准化地址-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-            registration_date: '2026/03/04',
-            land_use_term_start: '2026年01月01日',
-            land_use_term_end: '2026/12/31',
-          },
-          confidence_score: 0.92,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    const confirmPayloads: Array<Record<string, unknown>> = [];
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
-      confirmPayloads.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
-    });
-
-    await page.route('**/api/v1/property-certificates/', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
-    await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-date-normalize-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
-
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    expect(confirmRequestCount).toBeGreaterThanOrEqual(1);
-
-    const confirmPayload = confirmPayloads[0];
-    expect(confirmPayload).toBeDefined();
-
-    const extractedData = (confirmPayload?.extracted_data ?? {}) as Record<string, unknown>;
-    expect(extractedData.registration_date).toBe('2026-03-04');
-    expect(extractedData.land_use_term_start).toBe('2026-01-01');
-    expect(extractedData.land_use_term_end).toBe('2026-12-31');
-  });
-
-  test('property certificate import should null invalid date strings before confirm submit', async ({
-    page,
-  }) => {
-    const certificateNumber = `E2E-PC-DATE-INVALID-${Date.now()}`;
-    const propertyAddress = `E2E日期非法地址-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-            registration_date: '2026-13-01',
-            land_use_term_start: '无效日期',
-            land_use_term_end: '2026/99/40',
-          },
-          confidence_score: 0.9,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    const confirmPayloads: Array<Record<string, unknown>> = [];
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
-      confirmPayloads.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
-    });
-
-    await page.route('**/api/v1/property-certificates/', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    });
-
-    await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-date-invalid-${Date.now()}.pdf`,
-      mimeType: PDF_MIME,
-      buffer: MINIMAL_PDF_BUFFER,
-    });
-
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
-
-    await expect(page).toHaveURL(/\/property-certificates$/);
-    expect(confirmRequestCount).toBeGreaterThanOrEqual(1);
-
-    const confirmPayload = confirmPayloads[0];
-    expect(confirmPayload).toBeDefined();
-    const extractedData = (confirmPayload?.extracted_data ?? {}) as Record<string, unknown>;
-    expect(extractedData.registration_date).toBeNull();
-    expect(extractedData.land_use_term_start).toBeNull();
-    expect(extractedData.land_use_term_end).toBeNull();
-  });
-
-  test('property certificate import should block confirm request when certificate number is empty', async ({
-    page,
-  }) => {
+  test('证书编号为空时保存被拦截，confirm 不发起', async ({ page }) => {
     const certificateNumber = `E2E-PC-REQUIRED-${Date.now()}`;
     const propertyAddress = `E2E必填地址-${Date.now()}`;
-
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.9,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
+    await mockExtractionFlow(page, { certificateNumber, propertyAddress });
 
     let confirmRequestCount = 0;
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
+    await page.route('**/api/v1/extraction-sessions/*/confirm', async route => {
       confirmRequestCount += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'success',
-          certificate_id: `mock-cert-${Date.now()}`,
-        }),
-      });
+      await route.fallback();
     });
 
     await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-required-${Date.now()}.pdf`,
+    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.locator('input[type="file"]').first().setInputFiles({
+      name: `property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
       buffer: MINIMAL_PDF_BUFFER,
     });
+    await page.getByRole('button', { name: /开始解析/i }).click();
 
+    await expect(page.getByLabel('证书编号')).toBeVisible();
+    await page.getByLabel('权利人 ID').fill('e2e-party-1');
     const certificateNumberInput = page.getByLabel('证书编号');
+    await expect(certificateNumberInput).toBeVisible();
     await certificateNumberInput.fill('');
 
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
-
-    await expect(page.getByText('请输入证书编号')).toBeVisible();
+    await page.getByRole('button', { name: /保存产权证/i }).click();
+    // 证书编号候选未采纳且为空 → 人工复核拦截（不发 confirm 请求）
+    await expect(page.getByText(/证书编号需要人工确认/)).toBeVisible();
     await expect(page).toHaveURL(/\/property-certificates\/import/);
     expect(confirmRequestCount).toBe(0);
   });
 
-  test('property certificate import should stay on review when confirm returns validation error', async ({
-    page,
-  }) => {
+  test('confirm 返回校验错误时停留在复核页', async ({ page }) => {
     const certificateNumber = `E2E-PC-API-VALIDATION-${Date.now()}`;
     const propertyAddress = `E2E后端校验地址-${Date.now()}`;
+    await mockExtractionFlow(page, { certificateNumber, propertyAddress });
 
-    await page.route('**/api/v1/property-certificates/upload', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session_id: `session-${Date.now()}`,
-          certificate_type: 'property_cert',
-          extracted_data: {
-            certificate_number: certificateNumber,
-            certificate_type: 'other',
-            property_address: propertyAddress,
-            property_type: '商业',
-          },
-          confidence_score: 0.91,
-          asset_matches: [],
-          validation_errors: [],
-          warnings: [],
-        }),
-      });
-    });
-
-    let confirmRequestCount = 0;
-    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
-      confirmRequestCount += 1;
+    await page.route('**/api/v1/extraction-sessions/*/confirm', async route => {
       await route.fulfill({
         status: 422,
         contentType: 'application/json',
         body: JSON.stringify({
           success: false,
           message: '缺少证书编号',
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: '缺少证书编号',
-            details: {
-              field_errors: {
-                certificate_number: ['缺少证书编号'],
-              },
-            },
-          },
         }),
       });
     });
 
     await page.goto('/property-certificates/import');
-    await expect(page).toHaveURL(/\/property-certificates\/import/);
-    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-    const uploadInput = page.locator('input[type="file"]').first();
-    await uploadInput.setInputFiles({
-      name: `property-certificate-api-validation-${Date.now()}.pdf`,
+    await page.getByLabel('资产 ID').fill('e2e-asset-1');
+    await page.locator('input[type="file"]').first().setInputFiles({
+      name: `property-certificate-${Date.now()}.pdf`,
       mimeType: PDF_MIME,
       buffer: MINIMAL_PDF_BUFFER,
     });
+    await page.getByRole('button', { name: /开始解析/i }).click();
 
-    const confirmButton = page.getByRole('button', { name: /确认并创建产权证/i });
-    await confirmButton.click();
+    await expect(page.getByLabel('证书编号')).toBeVisible();
+    await page.getByLabel('权利人 ID').fill('e2e-party-1');
+    await page.getByText(`使用候选：${certificateNumber}`).click();
 
-    await expectMessageVisible(page, /创建失败，请重试/);
+    await page.getByRole('button', { name: /保存产权证/i }).click();
+    await expectMessageVisible(page, /产权证保存失败，请重试/);
     await expect(page).toHaveURL(/\/property-certificates\/import/);
-    expect(confirmRequestCount).toBeGreaterThanOrEqual(1);
   });
 });

@@ -83,21 +83,21 @@ describe('legacy rental navigation removal', () => {
     expect(getSelectedKeys('/system/parties/party-1')).toEqual(['/system/parties']);
   });
 
-  it('does not expose out-of-scope ownership or property certificate navigation', () => {
+  it('does not expose out-of-scope ownership navigation (property certificates opened by #77)', () => {
     const assetSection = (MENU_ITEMS ?? []).find(item => item?.key === '/asset-files');
     const assetChildren = 'children' in (assetSection ?? {}) ? (assetSection?.children ?? []) : [];
     const customerSection = (MENU_ITEMS ?? []).find(item => item?.key === '/customer-center');
     const customerChildren =
       'children' in (customerSection ?? {}) ? (customerSection?.children ?? []) : [];
 
-    expect(assetChildren).not.toEqual(
+    expect(assetChildren).toEqual(
       expect.arrayContaining([expect.objectContaining({ key: '/property-certificates' })])
     );
     expect(customerChildren).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ key: '/ownership' })])
     );
-    expect(staticBreadcrumbMap['/property-certificates']).toBeUndefined();
-    expect(staticBreadcrumbMap['/property-certificates/import']).toBeUndefined();
+    expect(staticBreadcrumbMap['/property-certificates']).toBe('产权证管理');
+    expect(staticBreadcrumbMap['/property-certificates/import']).toBe('产权证导入');
     expect(staticBreadcrumbMap['/ownership']).toBeUndefined();
     expect(dynamicBreadcrumbMap['/property-certificates/:id']).toBeUndefined();
     expect(dynamicBreadcrumbMap['/ownership/:id']).toBeUndefined();

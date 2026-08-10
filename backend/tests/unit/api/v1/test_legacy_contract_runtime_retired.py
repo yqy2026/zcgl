@@ -43,20 +43,28 @@ def test_api_router_should_not_expose_legacy_rental_contract_paths() -> None:
 
 
 def test_api_router_should_not_expose_out_of_scope_runtime_paths() -> None:
-    """MVP 外产权证和权属方运行时路由应冻结。"""
-    paths = {
-        route.path
-        for route in api_router.routes  # type: ignore[attr-defined]
+    """MVP 外权属方运行时路由应冻结（产权证已开放，见 #77）。"""
+    from src.core.router_registry import route_registry
+
+    registered_prefixes = {
+        info["prefix"] for info in route_registry.get_router_info(version="v1")
     }
 
-    frozen_prefixes = ("/ownerships", "/property-certificates")
-    exposed_paths = {
-        path
-        for path in paths
-        if any(path.startswith(prefix) for prefix in frozen_prefixes)
+    exposed_ownership = {
+        prefix for prefix in registered_prefixes if prefix.startswith("/api/v1/ownership")
     }
-
-    assert exposed_paths == set(), f"Out of Scope 路径仍被注册: {sorted(exposed_paths)}"
+    assert exposed_ownership == set(), f"Out of Scope 路径仍被注册: {sorted(exposed_ownership)}"
+    assert any(
+        prefix.startswith("/api/v1/property-certificates") for prefix in registered_prefixes
+    ), "产权证运行时路由应已开放（#77）"
+    cert_router_info = [
+        info
+        for info in route_registry.get_router_info(version="v1")
+        if info["prefix"].startswith("/api/v1/property-certificates")
+    ]
+    assert sum(info["route_count"] for info in cert_router_info) == 6, (
+        "产权证 CRUD 应完整挂载（列表双注册 + 详情 + 创建 + 更新 + 删除）"
+    )
 
 
 def test_api_router_should_not_expose_retired_approval_paths() -> None:

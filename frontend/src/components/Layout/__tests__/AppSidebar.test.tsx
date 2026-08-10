@@ -109,6 +109,7 @@ vi.mock('@ant-design/icons', () => ({
   FileTextOutlined: () => <div data-testid="icon-file-text" />,
   AppstoreOutlined: () => <div data-testid="icon-appstore" />,
   FileAddOutlined: () => <div data-testid="icon-file-add" />,
+  FileProtectOutlined: () => <div data-testid="icon-file-protect" />,
 }));
 
 describe('AppSidebar - 组件导入测试', () => {
@@ -141,7 +142,7 @@ describe('AppSidebar - 渲染与交互测试', () => {
     expect(screen.getByText('经营分析')).toBeInTheDocument();
     expect(screen.queryByText('合同关系管理')).not.toBeInTheDocument();
     expect(screen.queryByText('权属方管理')).not.toBeInTheDocument();
-    expect(screen.queryByText('产权证管理')).not.toBeInTheDocument();
+    expect(screen.getByText('产权证管理')).toBeInTheDocument();
     expect(screen.queryByText('旧租赁前端已退休')).not.toBeInTheDocument();
     expect(screen.getByText('系统管理')).toBeInTheDocument();
     expect(screen.getByText('主体管理')).toBeInTheDocument();

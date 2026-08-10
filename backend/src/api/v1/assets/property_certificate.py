@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import forbidden
+from ....core.router_registry import route_registry
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
@@ -131,6 +132,7 @@ async def _require_property_certificate_create_authz(
     )
 
 
+@router.get("", response_model=list[PropertyCertificateResponse])
 @router.get("/", response_model=list[PropertyCertificateResponse])
 async def list_certificates(
     skip: int = 0,
@@ -389,3 +391,8 @@ async def delete_certificate(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除产权证失败: {str(e)}",
         )
+
+
+route_registry.register_router(
+    router, prefix="/api/v1/property-certificates", tags=["产权证管理"], version="v1"
+)

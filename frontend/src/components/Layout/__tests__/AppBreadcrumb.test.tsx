@@ -133,10 +133,11 @@ describe('AppBreadcrumb', () => {
     );
   });
 
-  it('does not expose frozen property certificate breadcrumbs', () => {
+  it('shows property certificate breadcrumbs after #77 opening', () => {
     renderBreadcrumb('/property-certificates/cert-1');
 
-    expect(screen.queryByText('产权证管理')).not.toBeInTheDocument();
+    expect(screen.getByText('产权证管理')).toBeInTheDocument();
+    // 详情路径未注册静态条目，不显示「产权证详情」
     expect(screen.queryByText('产权证详情')).not.toBeInTheDocument();
   });
 
