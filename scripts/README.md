@@ -24,6 +24,29 @@ make check
 make docs-lint
 ```
 
+补充：前端 `*Params`、实际请求字段与后端 FastAPI Query 契约漂移可单独阻断：
+```bash
+make check-query-param-drift
+```
+
+首批仅覆盖显式登记的主体、合同组、经营台账和项目列表契约。新增稳定端点时，在 `scripts/check_query_param_drift.py` 的 `CONTRACT_MAPPINGS` 中登记后才会纳入门禁；解析失败、后端/前端字段单侧新增，以及显式 request whitelist 漏传都会以非零退出。
+
+---
+
+## 0. check_query_param_drift.py
+
+**前后端 Query 参数漂移门禁** - 对每条显式映射契约同时比对 FastAPI Query 参数、前端 `*Params` interface 与服务层实际发送字段，阻断类型看似完整但 HTTP 请求白名单漏传的情况。
+
+### 使用方法
+
+```bash
+python scripts/check_query_param_drift.py
+# 或
+make check-query-param-drift
+```
+
+该门禁已接入 `make check`、`make ci-gate` 与 CI 的 API Consistency job。每条映射同时验证后端 handler 的 HTTP method/本地路由路径和前端 `apiClient` 的 HTTP method/最终请求路径；前端 URL 仅支持字符串字面量、顶层常量、可静态解析的 `this.<field>` 与 `API_ENDPOINTS.<GROUP>.<KEY>`。每个受检 service 源必须且只能包含一个未重绑定的 `import { apiClient } from '@/api/client'`，映射方法参数不可遮蔽该名称，且 `params` 参数必须显式标注为映射登记的 `*Params` interface，并由该 mapping 的 type 文件以未遮蔽 type-only import 引入，避免同名局部 client 或其他结构化参数伪造已验证请求。对于使用 `Depends` 的 Query 参数聚合函数，映射还会验证公共 handler 精确声明 `Depends(<mapped function>)`，且 route decorator 的 receiver 是唯一、直接由 `from fastapi import APIRouter` 导入且未重绑定的顶层 `APIRouter(...)` 绑定。资产查询存在已知兼容字段/别名，暂不在首批阻塞范围；仅当 `params: params` 引用未重绑定、未突变、未经本地别名、对象/数组容器间接引用或未知 helper 调用，且映射方法不含解构绑定或正则字面量的映射方法 `params` 入参时，直接全量转发可通过。映射 `apiClient` 请求仅允许位于 service 方法的直接语句层，或该层直接 `try` 块内；函数、箭头函数（包括无花括号的表达式体）、回调、对象方法、`catch` 或其他嵌套 block 中的请求一律无法证明而阻断。动态转发仅接受顶层、完整匹配且可证明会保留每个非空输入字段的 `Object.entries(params)` 归一化形式；白名单属性必须直接来自同名 `params.<field>`，条件展开仅接受该字段的已验证非空判断。`Annotated[..., Query()]` 视为查询字段，显式 FastAPI Header/Body/Cookie/Path/Form/File 参数排除；FastAPI 参数 marker 必须由 `fastapi` 或 `fastapi.params` 直接导入且未被赋值、循环、`with as` 或异常处理器绑定重绑定；marker import alias、`Query(alias=...)`、无标记必填参数、无法证明为标量查询参数的可选参数、interface 继承或合并都会阻断，直至扩展解析器。注释/字符串中的伪请求、嵌套 config、同名对象/helper 绑定不唯一、任何嵌套作用域中的映射请求、映射方法内的解构绑定或正则字面量、引用受保护输入/白名单对象的模板插值、任何以方法 `params` 输入为首参的点、可选链或计算成员形式的 `Object`/`Reflect` 调用、输入或白名单对象的直接或延迟别名、输入或白名单对象存入本地对象/数组容器、输入或白名单对象传给未知调用（包括 bare/member/optional/computed、括号包装、`bind` 链和泛型调用）、输入或白名单对象突变、可变白名单、请求对象 spread/computed/shorthand 属性及其他请求形状都会阻断并要求显式白名单或新增解析支持。每个映射源必须可按 UTF-8 解码；解码失败也会作为带 source 路径的 parse error 阻断。漂移诊断输出双方源文件，存在字段时同时输出对应行号。
+
 ---
 
 ## 0. check_requirements_authority.py

@@ -4,7 +4,7 @@
 	test test-backend test-frontend test-frontend-ci test-e2e test-e2e-backend test-e2e-frontend \
 	test-integration test-coverage \
 	build-frontend backend-import check ci-gate \
-	backend-org-cov secrets migrate preflight-organization-party-scope check-migration-naming check-document-runtime docs-lint check-field-drift
+	backend-org-cov secrets migrate preflight-organization-party-scope check-migration-naming check-document-runtime docs-lint check-field-drift check-query-param-drift
 
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
@@ -44,6 +44,7 @@ help:
 	@echo "  ci-gate           Run CI gate (ruff + tsgo + unit tests)"
 	@echo "  docs-lint         Run all docs checks (authority + code-evidence + plans + field drift)"
 	@echo "  check-field-drift Run field spec vs ORM drift report"
+	@echo "  check-query-param-drift Block mapped frontend Params/backend Query drift"
 	@echo "  backend-org-cov   Run org CRUD coverage test"
 	@echo "  secrets           Generate SECRET_KEY and DATA_ENCRYPTION_KEY"
 	@echo "  migrate           Run alembic upgrade head"
@@ -143,9 +144,9 @@ backend-import:
 		fi; \
 		SECRET_KEY="$$RESOLVED_SECRET_KEY" DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
-check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend check-document-runtime backend-import docs-lint
+check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend check-document-runtime backend-import check-query-param-drift docs-lint
 
-ci-gate: lint-backend type-check test-backend test-frontend-ci check-document-runtime
+ci-gate: lint-backend type-check test-backend test-frontend-ci check-document-runtime check-query-param-drift
 
 check-document-runtime:
 	cd backend && uv run --frozen --extra dev --extra document-processing python -c "from src.core.document_processing_runtime import validate_document_processing_runtime; validate_document_processing_runtime(); print('document runtime ok')"
@@ -176,6 +177,9 @@ docs-lint:
 
 check-field-drift:
 	$(PYTHON) scripts/check_field_drift.py
+
+check-query-param-drift:
+	$(PYTHON) scripts/check_query_param_drift.py
 
 # 运行集成测试
 test-integration:
