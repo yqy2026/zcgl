@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Descriptions, Form, Input, Modal, Select, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import PartySelector from '@/components/Common/PartySelector';
+import PartySelector, { type PartySelectorFilterMode } from '@/components/Common/PartySelector';
 import { partyService } from '@/services/partyService';
 import { organizationService } from '@/services/organizationService';
 import type {
@@ -11,6 +11,7 @@ import type {
   OrganizationPartyScopeBatchPreviewItem,
   OrganizationPartyScopeState,
 } from '@/types/organization';
+import type { Party } from '@/types/party';
 import { MessageManager } from '@/utils/messageManager';
 
 interface OrganizationPartyScopeBatchModalProps {
@@ -43,6 +44,24 @@ const formatScopeValue = (scope: OrganizationPartyScopeState): string => {
   return `${partyId} / ${perspective}`;
 };
 
+/**
+ * 代表法人主体选择器：只允许选择 review_status=approved 的法人主体。
+ * 过滤由服务端完成（GET /api/v1/parties?review_status=approved，#82 契约对齐），
+ * 客户端不再二次过滤。
+ */
+export const fetchEligibleRepresentedParties = async (
+  query: string,
+  _filterMode: PartySelectorFilterMode
+): Promise<Party[]> => {
+  const result = await partyService.searchParties(query, {
+    party_type: 'legal_entity',
+    status: 'active',
+    review_status: 'approved',
+    limit: 20,
+  });
+  return result.items;
+};
+
 const OrganizationPartyScopeBatchModal: React.FC<OrganizationPartyScopeBatchModalProps> = ({
   open,
   organizations,
@@ -66,15 +85,6 @@ const OrganizationPartyScopeBatchModal: React.FC<OrganizationPartyScopeBatchModa
       setReason('');
     }
   }, [form, open, organizationIds]);
-
-  const fetchEligibleRepresentedParties = useCallback(async (query: string) => {
-    const result = await partyService.searchParties(query, {
-      party_type: 'legal_entity',
-      status: 'active',
-      limit: 20,
-    });
-    return result.items.filter(party => party.review_status === 'approved');
-  }, []);
 
   const previewColumns = useMemo<ColumnsType<OrganizationPartyScopeBatchPreviewItem>>(
     () => [

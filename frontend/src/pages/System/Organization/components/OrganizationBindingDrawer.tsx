@@ -21,10 +21,11 @@ import type {
   OrganizationPartyScopePreview,
   OrganizationPartyScopeState,
 } from '@/types/organization';
+import type { Party } from '@/types/party';
 import { type User, userService } from '@/services/systemService';
 import { organizationService } from '@/services/organizationService';
 import { partyService } from '@/services/partyService';
-import PartySelector from '@/components/Common/PartySelector';
+import PartySelector, { type PartySelectorFilterMode } from '@/components/Common/PartySelector';
 import UserPartyBindingModal from '@/pages/System/UserManagement/components/UserPartyBindingModal';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -57,6 +58,24 @@ const createIdempotencyKey = (): string => {
   return `organization-party-scope-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
+/**
+ * 代表法人主体选择器：只允许选择 review_status=approved 的法人主体。
+ * 过滤由服务端完成（GET /api/v1/parties?review_status=approved，#82 契约对齐），
+ * 客户端不再二次过滤。
+ */
+export const fetchEligibleRepresentedParties = async (
+  query: string,
+  _filterMode: PartySelectorFilterMode
+): Promise<Party[]> => {
+  const result = await partyService.searchParties(query, {
+    party_type: 'legal_entity',
+    status: 'active',
+    review_status: 'approved',
+    limit: 20,
+  });
+  return result.items;
+};
+
 const OrganizationBindingDrawer: React.FC<OrganizationBindingDrawerProps> = ({
   open,
   organization,
@@ -79,15 +98,6 @@ const OrganizationBindingDrawer: React.FC<OrganizationBindingDrawerProps> = ({
       represented_party_perspective: organization.represented_party_perspective ?? 'owner',
     });
   }, [open, organization, representedPartyForm]);
-
-  const fetchEligibleRepresentedParties = useCallback(async (query: string) => {
-    const result = await partyService.searchParties(query, {
-      party_type: 'legal_entity',
-      status: 'active',
-      limit: 20,
-    });
-    return result.items.filter(party => party.review_status === 'approved');
-  }, []);
 
   const handleSaveRepresentedParty = useCallback(
     async (values: RepresentedPartyFormValues) => {

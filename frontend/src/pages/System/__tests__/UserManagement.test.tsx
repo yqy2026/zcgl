@@ -203,7 +203,11 @@ describe('UserManagementPage', () => {
       expect(userService.getUserPartyBindings).toHaveBeenCalledWith('user-1', {
         active_only: true,
       });
-      expect(partyService.getParties).toHaveBeenCalledWith({ limit: 500, status: 'active' });
+      expect(partyService.getParties).toHaveBeenCalledWith({
+        limit: 500,
+        status: 'active',
+        review_status: 'approved',
+      });
     });
   }, 20_000);
 
@@ -294,8 +298,16 @@ describe('UserManagementPage', () => {
     const scopeDialog = screen.getByRole('dialog');
     const [partySelect] = within(scopeDialog).getAllByRole('combobox');
     fireEvent.mouseDown(partySelect);
-    fireEvent.click(await screen.findByText('Approved Party'));
-    expect(screen.queryByText('Draft Party')).not.toBeInTheDocument();
+    // 服务端负责过滤（#82）：请求携带 review_status=approved，客户端透传不再 .filter
+    await waitFor(() => {
+      expect(partyService.getParties).toHaveBeenCalledWith({
+        limit: 500,
+        status: 'active',
+        review_status: 'approved',
+      });
+    });
+    expect(await screen.findByText('Draft Party')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Approved Party'));
 
     fireEvent.click(screen.getByRole('button', { name: '新增绑定' }));
     await waitFor(() => {

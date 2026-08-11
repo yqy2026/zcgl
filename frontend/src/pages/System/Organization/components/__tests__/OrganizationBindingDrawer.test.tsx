@@ -18,6 +18,12 @@ vi.mock('@/services/organizationService', () => ({
   },
 }));
 
+vi.mock('@/services/partyService', () => ({
+  partyService: {
+    searchParties: vi.fn(),
+  },
+}));
+
 vi.mock('@/components/Common/PartySelector', () => ({
   default: ({ onChange }: { onChange?: (value?: string) => void }) => (
     <button type="button" onClick={() => onChange?.('party-1')}>
@@ -186,5 +192,53 @@ describe('OrganizationBindingDrawer', () => {
         idempotency_key: expect.any(String),
       });
     });
+  });
+});
+
+describe('fetchEligibleRepresentedParties（#82 服务端过滤）', () => {
+  it('请求携带 review_status=approved 且结果透传不再客户端过滤', async () => {
+    const { fetchEligibleRepresentedParties } = await import('../OrganizationBindingDrawer');
+    const { partyService } = await import('@/services/partyService');
+    vi.mocked(partyService.searchParties).mockResolvedValue({
+      items: [
+        {
+          id: 'party-approved',
+          name: '已审核主体',
+          code: 'LE-000001',
+          party_type: 'legal_entity',
+          business_roles: ['owner'],
+          status: 'active',
+          review_status: 'approved',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'party-draft',
+          name: '草稿主体',
+          code: 'LE-000002',
+          party_type: 'legal_entity',
+          business_roles: ['owner'],
+          status: 'active',
+          review_status: 'draft',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      skip: 0,
+      limit: 20,
+      isTruncated: false,
+    });
+
+    const result = await fetchEligibleRepresentedParties('acme');
+
+    expect(partyService.searchParties).toHaveBeenCalledWith('acme', {
+      party_type: 'legal_entity',
+      status: 'active',
+      review_status: 'approved',
+      limit: 20,
+    });
+    // 服务端负责过滤：客户端透传结果，不再 .filter(review_status === 'approved')
+    expect(result).toHaveLength(2);
+    expect(result.some(party => party.review_status === 'draft')).toBe(true);
   });
 });

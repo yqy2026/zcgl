@@ -100,13 +100,16 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
   const partiesQuery = useQuery<PartyOption[]>({
     queryKey: ['user-party-binding-parties'],
     queryFn: async () => {
-      const partyResult = await partyService.getParties({ limit: 500, status: 'active' });
-      return (partyResult.items ?? [])
-        .filter(item => item.review_status === 'approved')
-        .map(item => ({
-          id: item.id,
-          name: item.name,
-        }));
+      // 已审核过滤由服务端完成（#82 契约对齐）：GET /api/v1/parties?review_status=approved
+      const partyResult = await partyService.getParties({
+        limit: 500,
+        status: 'active',
+        review_status: 'approved',
+      });
+      return (partyResult.items ?? []).map(item => ({
+        id: item.id,
+        name: item.name,
+      }));
     },
     enabled: queriesEnabled,
     staleTime: 5 * 60 * 1000,
