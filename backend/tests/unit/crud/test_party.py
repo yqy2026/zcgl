@@ -61,6 +61,22 @@ async def test_get_parties_applies_scoped_party_ids_filter(mock_db) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_parties_applies_review_status_filter(mock_db) -> None:
+    """`get_parties(review_status=...)` 应生成审核状态过滤分支（#81 契约对齐）。"""
+    crud = CRUDParty()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=execute_result)
+
+    await crud.get_parties(mock_db, review_status="approved")
+
+    stmt = mock_db.execute.await_args.args[0]
+    sql = str(stmt)
+    assert "parties.review_status" in sql
+    assert "approved" in stmt.compile().params.values()
+
+
+@pytest.mark.asyncio
 async def test_get_parties_returns_empty_when_scoped_party_ids_is_empty(
     mock_db,
 ) -> None:

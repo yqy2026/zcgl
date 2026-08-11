@@ -125,6 +125,7 @@ export interface PartyListParams {
   business_role?: PartyBusinessRole;
   party_type?: PartyType;
   status?: string;
+  review_status?: PartyReviewStatus | null;
   search?: string;
   skip?: number;
   limit?: number;

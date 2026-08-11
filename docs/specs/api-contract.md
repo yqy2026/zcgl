@@ -200,7 +200,7 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 客户详情 | `GET /api/v1/customers/{party_id}` | 返回客户基础信息、风险标签、历史签约和统计 |
-| 主体列表 | `GET /api/v1/parties` | 查询主体主档 |
+| 主体列表 | `GET /api/v1/parties` | 查询主体主档；支持 `party_type`、`status`、`review_status`（`draft|pending|approved|rejected`）、`search`（名称/编码模糊）、`business_role`、`skip/limit` 过滤参数，`review_status` 由服务端过滤（#81 契约对齐） |
 | 主体业务角色切片 | `GET /api/v1/parties?business_role=owner|operator|terminal_tenant` | 在既有主体列表分页、搜索和数据范围契约上增加服务端当前角色筛选；响应返回 `business_roles`。省略参数为“全部”，同一 Party 在全部列表仅一行；角色只按当前有效资产、项目和合同/协议关系派生，不将 `customer_type`、用户主体绑定或历史合同角色用于筛选。 |
 | 主体创建 | `POST /api/v1/parties` | 只接受 `legal_entity` / `individual`、名称、正式统一标识和外部引用等业务字段；法人标识类型限 `unified_social_credit_code|legal_registration_number|foreign_registration_number`，自然人限 `national_id|passport`；`code` 由服务端生成且拒绝客户端写入 |
 | 主体更新 | `PUT /api/v1/parties/{party_id}` | 更新草稿或已驳回 Party 的主档业务字段；拒绝 status，已审核 Party 的启停只能走专用动作 |

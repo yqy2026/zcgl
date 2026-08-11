@@ -59,6 +59,25 @@ describe('PartyService', () => {
       })
     );
   });
+
+  it('passes the review_status filter to the Party list endpoint (#81)', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: [],
+    });
+
+    await service.searchParties('acme', { review_status: 'approved' });
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/parties',
+      expect.objectContaining({
+        params: expect.objectContaining({
+          search: 'acme',
+          review_status: 'approved',
+        }),
+      })
+    );
+  });
   it('normalizes list response when backend returns paged envelope', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       success: true,

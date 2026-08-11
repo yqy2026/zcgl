@@ -37,6 +37,7 @@ from ...schemas.party import (
     PartyResponse,
     PartyReviewLogResponse,
     PartyReviewRejectRequest,
+    PartyReviewStatus,
     PartyUpdate,
     UserPartyBindingResponse,
 )
@@ -94,6 +95,7 @@ async def list_parties(
     limit: int = Query(100, ge=1, le=1000, description="返回条数"),
     party_type: str | None = Query(None, description="主体类型过滤"),
     status: str | None = Query(None, description="状态过滤"),
+    review_status: PartyReviewStatus | None = Query(None, description="审核状态过滤"),
     search: str | None = Query(None, description="名称/编码模糊搜索"),
     business_role: PartyBusinessRole | None = Query(None),
     db: AsyncSession = Depends(get_async_db),
@@ -115,6 +117,7 @@ async def list_parties(
         limit=limit,
         party_type=party_type,
         status=status,
+        review_status=review_status,
         search=search,
         business_role=business_role,
         current_user_id=current_user_id if current_user_id != "" else None,

@@ -108,16 +108,19 @@ const APPROVED_PARTY_SEARCH_LIMIT = 20;
 
 /**
  * 已审核主体选择器：只允许选择 review_status=approved 的法人主体。
+ * 过滤由服务端完成（GET /api/v1/parties?review_status=approved，#81 契约对齐），
+ * 客户端不再二次过滤。
  */
-const approvedPartyFetcher = async (
+export const approvedPartyFetcher = async (
   query: string,
   _filterMode: PartySelectorFilterMode
 ): Promise<Party[]> => {
   const result = await partyService.searchParties(query, {
     limit: APPROVED_PARTY_SEARCH_LIMIT,
     party_type: 'legal_entity',
+    review_status: 'approved',
   });
-  return result.items.filter(party => party.review_status === 'approved');
+  return result.items;
 };
 
 const PDFImportPage: React.FC = () => {

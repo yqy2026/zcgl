@@ -142,6 +142,7 @@ export class PartyService {
       const requestParams = {
         party_type: params.party_type,
         status: params.status,
+        review_status: params.review_status,
         business_role: params.business_role,
         search: params.search,
         skip: params.skip ?? 0,

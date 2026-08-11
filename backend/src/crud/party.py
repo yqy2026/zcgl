@@ -332,6 +332,7 @@ class CRUDParty:
         limit: int = 100,
         party_type: str | None = None,
         status: str | None = None,
+        review_status: str | None = None,
         search: str | None = None,
         business_role: str | None = None,
         scoped_party_ids: list[str] | None = None,
@@ -351,6 +352,8 @@ class CRUDParty:
             stmt = stmt.where(Party.party_type == party_type)
         if status is not None:
             stmt = stmt.where(Party.status == status)
+        if review_status is not None:
+            stmt = stmt.where(Party.review_status == review_status)
         if search is not None and search.strip() != "":
             keyword = f"%{search.strip()}%"
             stmt = stmt.where(

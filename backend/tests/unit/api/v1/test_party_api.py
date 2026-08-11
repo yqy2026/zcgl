@@ -121,6 +121,56 @@ def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
     assert payload[0]["code"] == "LE-000001"
 
 
+def test_list_parties_should_filter_by_review_status(client, db_session) -> None:
+    """`/parties?review_status=approved` 应只返回已审核主体（#81 契约对齐）。"""
+    from src.models.party import Party, PartyType
+    from src.models.user_party_binding import RelationType, UserPartyBinding
+
+    _create_user(db_session, user_id="test_user_001")
+
+    approved_party = Party(
+        party_type=PartyType.LEGAL_ENTITY,
+        name="Approved Party",
+        code="LE-000003",
+        status="active",
+        review_status="approved",
+    )
+    draft_party = Party(
+        party_type=PartyType.LEGAL_ENTITY,
+        name="Draft Party",
+        code="LE-000004",
+        status="active",
+        review_status="draft",
+    )
+    db_session.add_all([approved_party, draft_party])
+    db_session.flush()
+    db_session.add_all(
+        [
+            UserPartyBinding(
+                user_id="test_user_001",
+                party_id=approved_party.id,
+                relation_type=RelationType.OWNER,
+            ),
+            UserPartyBinding(
+                user_id="test_user_001",
+                party_id=draft_party.id,
+                relation_type=RelationType.OWNER,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    response = client.get(
+        "/api/v1/parties?review_status=approved&party_type=legal_entity"
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert isinstance(payload, list)
+    assert len(payload) == 1
+    assert payload[0]["code"] == "LE-000003"
+
+
 def test_list_parties_should_return_stable_403_when_user_has_no_bindings(
     client, db_session
 ) -> None:
