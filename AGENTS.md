@@ -67,8 +67,9 @@ make type-check     # TypeScript 类型检查
 make test           # 前后端测试
 make migrate        # alembic upgrade head
 make secrets        # 生成 SECRET_KEY / DATA_ENCRYPTION_KEY
-make check          # lint + UI guard + type-check + test + build + backend-import + docs-lint 全量门禁
+make check          # lint + UI guard + type-check + test + build + backend-import + query-param-drift + docs-lint 全量门禁
 make docs-lint      # 仅跑 SSOT 完整性检查
+make check-query-param-drift # 阻断已映射前端 Params/后端 Query/API 请求字段漂移
 ```
 
 > ⚠️ 优先使用上方 `make` 目标；手工执行后端命令时用 `uv run --frozen --extra dev <cmd>`，禁止直接使用系统 `python/pip` 或 Anaconda。虚拟环境：`backend/.venv`（`uv sync --frozen` 安装依赖）。
@@ -237,7 +238,7 @@ docs/traceability/requirements-trace.md  ← 实现状态、代码证据、测�
 
 ### make check 门禁
 
-lint + UI guard + type-check + test + build + backend-import + **docs-lint**（`check_requirements_authority.py` + `check_field_drift.py`）
+lint + UI guard + type-check + test + build + backend-import + **query-param-drift** + **docs-lint**（`check_query_param_drift.py`、`check_requirements_authority.py` + `check_field_drift.py`）
 
 docs-lint 覆盖：①旧文档引用守卫 ②代码证据死链检测 ③`plans/` 完成态残留检测 ④PRD/spec 实现证据守卫 ⑤traceability 路径存在性守卫 ⑥旧需求入口跳转页守卫。
 

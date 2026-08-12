@@ -1022,6 +1022,9 @@ jobs:
         cd ../frontend
         pnpm install --frozen-lockfile
 
+    - name: Check mapped frontend query parameters against FastAPI contracts
+      run: make check-query-param-drift
+
     - name: Run Backend API Consistency Check
       run: |
         cd backend
