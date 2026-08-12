@@ -170,7 +170,7 @@ class TestCreateProject:
         }
 
         response = client.post(
-            "/api/v1/projects/", json=project_data, headers=admin_user_headers
+            "/api/v1/projects", json=project_data, headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -182,7 +182,7 @@ class TestCreateProject:
         """测试未授权创建项目"""
         project_data = {"project_name": "Unauthorized Project"}
 
-        response = unauthenticated_client.post("/api/v1/projects/", json=project_data)
+        response = unauthenticated_client.post("/api/v1/projects", json=project_data)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -207,7 +207,7 @@ class TestCreateProject:
         }
 
         response = client.post(
-            "/api/v1/projects/", json=duplicate_data, headers=admin_user_headers
+            "/api/v1/projects", json=duplicate_data, headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_409_CONFLICT
@@ -219,7 +219,7 @@ class TestCreateProject:
         }
 
         response = client.post(
-            "/api/v1/projects/", json=invalid_data, headers=admin_user_headers
+            "/api/v1/projects", json=invalid_data, headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -235,7 +235,7 @@ class TestListProjects:
 
     def test_list_projects_default(self, client, admin_user_headers, project_data):
         """测试获取项目列表（默认参数）"""
-        response = client.get("/api/v1/projects/", headers=admin_user_headers)
+        response = client.get("/api/v1/projects", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -246,7 +246,7 @@ class TestListProjects:
     def test_list_projects_with_pagination(self, client, admin_user_headers):
         """测试分页功能"""
         response = client.get(
-            "/api/v1/projects/?page=1&page_size=10", headers=admin_user_headers
+            "/api/v1/projects?page=1&page_size=10", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -260,7 +260,7 @@ class TestListProjects:
     ):
         """测试关键词搜索"""
         response = client.get(
-            f"/api/v1/projects/?keyword={project_data.project_name}",
+            f"/api/v1/projects?keyword={project_data.project_name}",
             headers=admin_user_headers,
         )
 
@@ -272,14 +272,14 @@ class TestListProjects:
 
     def test_list_projects_unauthorized(self, unauthenticated_client):
         """测试未授权访问"""
-        response = unauthenticated_client.get("/api/v1/projects/")
+        response = unauthenticated_client.get("/api/v1/projects")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_list_projects_should_allow_admin_without_view_mode_query(
         self, client, admin_user_headers
     ):
         response = client.get(
-            "/api/v1/projects/",
+            "/api/v1/projects",
             headers=admin_user_headers,
         )
 
@@ -289,7 +289,7 @@ class TestListProjects:
         self, client, admin_user_headers
     ):
         response = client.get(
-            "/api/v1/projects/?view_mode=tenant",
+            "/api/v1/projects?view_mode=tenant",
             headers=admin_user_headers,
         )
 
@@ -332,7 +332,7 @@ class TestListProjects:
         )
 
         response = client.get(
-            "/api/v1/projects/?owner_party_id=party-filter-001",
+            "/api/v1/projects?owner_party_id=party-filter-001",
             headers=admin_user_headers,
         )
 
@@ -493,7 +493,7 @@ class TestSearchProjects:
     ):
         """测试按状态筛选（原城市筛选测试 - city 字段已删除）"""
         response = client.get(
-            "/api/v1/projects/?status=planning", headers=admin_user_headers
+            "/api/v1/projects?status=planning", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -504,7 +504,7 @@ class TestSearchProjects:
         self, client, admin_user_headers, project_data
     ):
         """测试按关键词筛选（原类型筛选测试 - project_type 字段已删除）"""
-        response = client.get("/api/v1/projects/", headers=admin_user_headers)
+        response = client.get("/api/v1/projects", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         items = response.json()["data"]["items"]
@@ -513,7 +513,7 @@ class TestSearchProjects:
     def test_list_projects_with_status_filter(self, client, admin_user_headers):
         """测试按项目状态筛选"""
         response = client.get(
-            "/api/v1/projects/?status=planning", headers=admin_user_headers
+            "/api/v1/projects?status=planning", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -524,7 +524,7 @@ class TestSearchProjects:
     def test_list_projects_sort_by_area(self, client, admin_user_headers):
         """测试按面积排序"""
         response = client.get(
-            "/api/v1/projects/?sort_by=total_area&sort_order=desc",
+            "/api/v1/projects?sort_by=total_area&sort_order=desc",
             headers=admin_user_headers,
         )
 
@@ -539,7 +539,7 @@ class TestSearchProjects:
         }
 
         response = client.post(
-            "/api/v1/projects/", json=minimal_data, headers=admin_user_headers
+            "/api/v1/projects", json=minimal_data, headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -564,7 +564,7 @@ class TestSearchProjects:
         """测试分页边界情况"""
         # 测试过大的页码
         response = client.get(
-            "/api/v1/projects/?page=9999&page_size=10", headers=admin_user_headers
+            "/api/v1/projects?page=9999&page_size=10", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -579,7 +579,7 @@ class TestSearchProjects:
         }
 
         response = client.post(
-            "/api/v1/projects/", json=unicode_data, headers=admin_user_headers
+            "/api/v1/projects", json=unicode_data, headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK

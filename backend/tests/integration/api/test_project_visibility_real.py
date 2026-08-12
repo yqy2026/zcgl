@@ -195,11 +195,11 @@ def test_non_admin_project_visibility_isolation(
     db_session.commit()
 
     _login(client, user_a.username, password)
-    missing_header_response_a = client.get("/api/v1/projects/")
+    missing_header_response_a = client.get("/api/v1/projects")
     assert missing_header_response_a.status_code == 200
 
     response_a = client.get(
-        "/api/v1/projects/", headers=_perspective_headers("manager")
+        "/api/v1/projects", headers=_perspective_headers("manager")
     )
     assert response_a.status_code == 200
     items_a = response_a.json()["data"]["items"]
@@ -209,11 +209,11 @@ def test_non_admin_project_visibility_isolation(
 
     client.cookies.clear()
     _login(client, user_b.username, password)
-    missing_header_response_b = client.get("/api/v1/projects/")
+    missing_header_response_b = client.get("/api/v1/projects")
     assert missing_header_response_b.status_code == 200
 
     response_b = client.get(
-        "/api/v1/projects/", headers=_perspective_headers("manager")
+        "/api/v1/projects", headers=_perspective_headers("manager")
     )
     assert response_b.status_code == 200
     items_b = response_b.json()["data"]["items"]
@@ -319,7 +319,7 @@ def test_owner_user_sees_projects_via_asset_relation(
     db_session.commit()
 
     _login(client, user.username, password)
-    response = client.get("/api/v1/projects/")
+    response = client.get("/api/v1/projects")
     assert response.status_code == 200
     items = response.json()["data"]["items"]
     ids = {item["id"] for item in items}

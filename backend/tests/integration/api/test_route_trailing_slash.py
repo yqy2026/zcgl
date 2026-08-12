@@ -1,9 +1,12 @@
 """
-测试API路由末尾斜杠修复
+测试API路由末尾斜杠收敛契约
 
-验证修复后的API路由同时支持带/不带末尾斜杠的路径，
-不再产生307重定向问题。
+列表/创建端点统一为无末尾斜杠的 canonical 路径（`"/"` 与 `""`），
+不再双注册 `"/"` 变体；带斜杠请求由 FastAPI 默认 `redirect_slashes=True`
+返回 307 重定向到 canonical 路径（0→1 阶段不做兼容操作）。
 """
+
+from urllib.parse import urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,8 +22,8 @@ def client():
 
 
 @pytest.mark.integration
-class TestRouteTrailingSlashFix:
-    """验证路由同时支持带/不带斜杠的路径"""
+class TestRouteTrailingSlashContract:
+    """验证收敛后的路由契约：canonical 路径直达，带斜杠变体 307"""
 
     @pytest.mark.parametrize(
         ("route_path", "expected_status"),
@@ -34,31 +37,58 @@ class TestRouteTrailingSlashFix:
             ("/api/v1/defects", 404),
         ],
     )
-    @pytest.mark.parametrize("use_slash", [True, False])
-    def test_no_redirect_on_different_formats(
+    def test_canonical_path_returns_expected_status(
         self,
         client: TestClient,
         route_path: str,
         expected_status: int,
-        use_slash: bool,
     ):
-        """测试不同路径格式都不产生307重定向"""
-        # 测试路由
-        test_path = f"{route_path}/" if use_slash else route_path
-        response = client.get(test_path, follow_redirects=False)
+        """canonical（无末尾斜杠）路径直接命中路由，不产生 307 重定向"""
+        response = client.get(route_path, follow_redirects=False)
 
-        # 验证没有307/308重定向
-        assert response.status_code not in [
-            307,
-            308,
-        ], f"路由 {test_path} 返回了 {response.status_code} 重定向"
         assert response.status_code == expected_status
 
-    def test_notifications_both_formats_consistent(self, client: TestClient):
-        """验证通知列表两种格式返回相同状态码"""
-        # 测试无斜杠和有斜杠格式
-        r1 = client.get("/api/v1/notifications?limit=5")
-        r2 = client.get("/api/v1/notifications/?limit=5")
+    @pytest.mark.parametrize(
+        "route_path",
+        [
+            "/api/v1/notifications",
+            "/api/v1/organizations",
+            "/api/v1/projects",
+            "/api/v1/tasks",
+            "/api/v1/property-certificates",
+        ],
+    )
+    def test_trailing_slash_redirects_to_canonical(
+        self,
+        client: TestClient,
+        route_path: str,
+    ):
+        """带末尾斜杠的请求 307 重定向到 canonical 路径（不再双注册兼容）"""
+        response = client.get(f"{route_path}/", follow_redirects=False)
 
-        # 验证状态码一致
-        assert r1.status_code == r2.status_code
+        assert response.status_code == 307, (
+            f"路由 {route_path}/ 应 307 重定向到 canonical 路径 {route_path}"
+        )
+        assert urlsplit(response.headers.get("location", "")).path == route_path
+
+    @pytest.mark.parametrize(
+        "route_path",
+        [
+            "/api/v1/projects",
+            "/api/v1/organizations",
+            "/api/v1/property-certificates",
+            "/api/v1/tasks",
+        ],
+    )
+    def test_trailing_slash_post_redirects_to_canonical(
+        self,
+        client: TestClient,
+        route_path: str,
+    ):
+        """POST 创建端点的带斜杠请求同样 307 到 canonical（不再双注册兼容）"""
+        response = client.post(f"{route_path}/", follow_redirects=False)
+
+        assert response.status_code == 307, (
+            f"路由 {route_path}/ POST 应 307 重定向到 canonical 路径 {route_path}"
+        )
+        assert urlsplit(response.headers.get("location", "")).path == route_path

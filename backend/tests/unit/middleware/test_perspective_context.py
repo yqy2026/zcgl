@@ -179,7 +179,7 @@ async def test_require_data_scope_context_should_allow_admin_without_header() ->
     checker = require_data_scope_context(resource_type="project")
     request = _build_request(
         method="GET",
-        path="/api/v1/projects/",
+        path="/api/v1/projects",
     )
 
     with (
@@ -218,7 +218,7 @@ async def test_require_data_scope_context_should_ignore_legacy_header_and_keep_a
     checker = require_data_scope_context()
     request = _build_request(
         method="GET",
-        path="/api/v1/projects/",
+        path="/api/v1/projects",
         headers=[(b"x-perspective", b"all")],
     )
 
@@ -257,7 +257,7 @@ async def test_require_data_scope_context_should_ignore_view_mode_query_for_proj
     checker = require_data_scope_context()
     request = _build_request(
         method="GET",
-        path="/api/v1/projects/",
+        path="/api/v1/projects",
         query_string=b"view_mode=owner",
     )
 
@@ -296,7 +296,7 @@ async def test_require_data_scope_context_should_build_single_scope_when_single_
     checker = require_data_scope_context()
     request = _build_request(
         method="GET",
-        path="/api/v1/projects/",
+        path="/api/v1/projects",
     )
 
     with (

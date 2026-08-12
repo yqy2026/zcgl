@@ -92,7 +92,6 @@ def get_notification_service() -> NotificationService:
 
 
 @router.get("", response_model=APIResponse[PaginatedData[NotificationResponse]])
-@router.get("/", response_model=APIResponse[PaginatedData[NotificationResponse]])
 async def get_notifications(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),

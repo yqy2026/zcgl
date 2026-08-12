@@ -172,10 +172,6 @@ async def _require_organization_party_scope_batch_authz(
     "",
     response_model=APIResponse[PaginatedData[OrganizationResponse]],
 )
-@router.get(
-    "/",
-    response_model=APIResponse[PaginatedData[OrganizationResponse]],
-)
 async def get_organizations(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
@@ -401,7 +397,6 @@ async def get_organization_history(
 
 
 @router.post("", response_model=OrganizationResponse)
-@router.post("/", response_model=OrganizationResponse)
 async def create_organization(
     organization: OrganizationCreate,
     db: AsyncSession = Depends(get_async_db),

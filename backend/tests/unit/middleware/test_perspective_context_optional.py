@@ -47,7 +47,7 @@ async def test_no_perspective_header_returns_all_binding_context() -> None:
 
 async def test_no_perspective_header_admin_bypass() -> None:
     checker = require_data_scope_context(resource_type="project")
-    request = _build_request(method="GET", path="/api/v1/projects/")
+    request = _build_request(method="GET", path="/api/v1/projects")
 
     with (
         patch(

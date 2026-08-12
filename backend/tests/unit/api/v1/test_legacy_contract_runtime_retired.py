@@ -62,8 +62,8 @@ def test_api_router_should_not_expose_out_of_scope_runtime_paths() -> None:
         for info in route_registry.get_router_info(version="v1")
         if info["prefix"].startswith("/api/v1/property-certificates")
     ]
-    assert sum(info["route_count"] for info in cert_router_info) == 6, (
-        "产权证 CRUD 应完整挂载（列表双注册 + 详情 + 创建 + 更新 + 删除）"
+    assert sum(info["route_count"] for info in cert_router_info) == 5, (
+        "产权证 CRUD 应完整挂载（列表 + 详情 + 创建 + 更新 + 删除）"
     )
 
 

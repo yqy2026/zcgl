@@ -205,7 +205,7 @@ describe('PDFImportPage - 确认页（中文 + 选择器 + 付款周期）', () 
 });
 
 describe('approvedPartyFetcher（#81 契约对齐）', () => {
-  it('请求携带 review_status=approved 且不再客户端过滤', async () => {
+  it('请求携带 review_status=approved + status=active 且不再客户端过滤', async () => {
     const { approvedPartyFetcher } = await import('../PDFImportPage');
     const { partyService } = await import('@/services/partyService');
     vi.mocked(partyService.searchParties).mockResolvedValue({
@@ -243,6 +243,7 @@ describe('approvedPartyFetcher（#81 契约对齐）', () => {
     expect(partyService.searchParties).toHaveBeenCalledWith('acme', {
       limit: 20,
       party_type: 'legal_entity',
+      status: 'active',
       review_status: 'approved',
     });
     // 服务端负责过滤：客户端透传结果，不再 .filter(review_status === 'approved')

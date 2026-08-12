@@ -151,7 +151,6 @@ async def get_ownership_dropdown_options(
 
 
 @router.post("", response_model=OwnershipResponse, summary="创建权属方")
-@router.post("/", response_model=OwnershipResponse, summary="创建权属方")
 async def create_ownership(
     *,
     db: Annotated[AsyncSession, Depends(get_async_db)],

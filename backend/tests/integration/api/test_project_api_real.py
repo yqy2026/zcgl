@@ -65,7 +65,7 @@ def test_project_crud_real_flow(
     }
 
     create_response = client.post(
-        "/api/v1/projects/",
+        "/api/v1/projects",
         json=create_payload,
         headers=headers,
     )
@@ -74,7 +74,7 @@ def test_project_crud_real_flow(
     project_id = created["id"]
 
     list_response = client.get(
-        f"/api/v1/projects/?keyword={project_name}",
+        f"/api/v1/projects?keyword={project_name}",
         headers=headers,
     )
     assert list_response.status_code == 200
@@ -154,7 +154,7 @@ def test_project_list_and_detail_should_tolerate_legacy_project_code(
     list_response = _request_with_reauth(
         client,
         method="GET",
-        url=f"/api/v1/projects/?keyword={suffix}",
+        url=f"/api/v1/projects?keyword={suffix}",
         admin_user=admin_user,
         headers=headers,
     )

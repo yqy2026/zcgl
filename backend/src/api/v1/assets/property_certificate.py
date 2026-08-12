@@ -133,7 +133,6 @@ async def _require_property_certificate_create_authz(
 
 
 @router.get("", response_model=list[PropertyCertificateResponse])
-@router.get("/", response_model=list[PropertyCertificateResponse])
 async def list_certificates(
     skip: int = 0,
     limit: int = 100,
@@ -233,7 +232,7 @@ async def get_certificate(
         )
 
 
-@router.post("/", response_model=PropertyCertificateResponse)
+@router.post("", response_model=PropertyCertificateResponse)
 async def create_certificate(
     certificate: PropertyCertificateCreate,
     db: AsyncSession = Depends(get_async_db),

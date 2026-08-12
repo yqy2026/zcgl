@@ -67,7 +67,7 @@ _EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
 _SYSTEM_ADMIN_ROLE_CODES = ["admin", "system_admin"]
 
 
-@router.post("/", response_model=TaskResponse, summary="创建新任务")
+@router.post("", response_model=TaskResponse, summary="创建新任务")
 async def create_task(
     task_in: TaskCreate,
     db: AsyncSession = Depends(get_async_db),
@@ -99,11 +99,6 @@ async def create_task(
 
 @router.get(
     "",
-    response_model=APIResponse[PaginatedData[TaskResponse]],
-    summary="获取任务列表",
-)
-@router.get(
-    "/",
     response_model=APIResponse[PaginatedData[TaskResponse]],
     summary="获取任务列表",
 )

@@ -245,7 +245,6 @@ async def _require_project_create_authz(
 
 
 @router.post("", response_model=ProjectResponse, summary="创建项目")
-@router.post("/", response_model=ProjectResponse, summary="创建项目")
 async def create_project(
     project_in: ProjectCreate,
     db: Annotated[AsyncSession, Depends(get_async_db)],
@@ -296,11 +295,6 @@ async def create_project(
 
 @router.get(
     "",
-    response_model=APIResponse[PaginatedData[ProjectResponse]],
-    summary="获取项目列表",
-)
-@router.get(
-    "/",
     response_model=APIResponse[PaginatedData[ProjectResponse]],
     summary="获取项目列表",
 )

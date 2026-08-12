@@ -247,7 +247,7 @@ class TestGetNotifications:
         self, client, admin_user_headers, multiple_notifications
     ):
         """测试获取通知列表（默认参数）"""
-        response = client.get("/api/v1/notifications/", headers=admin_user_headers)
+        response = client.get("/api/v1/notifications", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -262,7 +262,7 @@ class TestGetNotifications:
     ):
         """测试分页功能"""
         response = client.get(
-            "/api/v1/notifications/?page=1&page_size=2", headers=admin_user_headers
+            "/api/v1/notifications?page=1&page_size=2", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -274,7 +274,7 @@ class TestGetNotifications:
     ):
         """测试筛选未读通知"""
         response = client.get(
-            "/api/v1/notifications/?is_read=false", headers=admin_user_headers
+            "/api/v1/notifications?is_read=false", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -288,7 +288,7 @@ class TestGetNotifications:
     ):
         """测试筛选已读通知"""
         response = client.get(
-            "/api/v1/notifications/?is_read=true", headers=admin_user_headers
+            "/api/v1/notifications?is_read=true", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -302,7 +302,7 @@ class TestGetNotifications:
     ):
         """测试按类型筛选"""
         response = client.get(
-            "/api/v1/notifications/?type=alert", headers=admin_user_headers
+            "/api/v1/notifications?type=alert", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -313,7 +313,7 @@ class TestGetNotifications:
 
     def test_get_notifications_unauthorized(self, unauthenticated_client):
         """测试未授权获取通知"""
-        response = unauthenticated_client.get("/api/v1/notifications/")
+        response = unauthenticated_client.get("/api/v1/notifications")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
         assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
@@ -324,7 +324,7 @@ class TestGetNotifications:
         normal_user_notification,
     ):
         """普通已登录用户应能读取自己的通知列表。"""
-        response = client_normal_user.get("/api/v1/notifications/")
+        response = client_normal_user.get("/api/v1/notifications")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -610,7 +610,7 @@ class TestNotificationsEdgeCases:
         ).delete()
         db_session.commit()
 
-        response = client.get("/api/v1/notifications/", headers=admin_user_headers)
+        response = client.get("/api/v1/notifications", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -621,7 +621,7 @@ class TestNotificationsEdgeCases:
     def test_large_page_size(self, client, admin_user_headers):
         """测试大分页大小"""
         response = client.get(
-            "/api/v1/notifications/?page_size=100", headers=admin_user_headers
+            "/api/v1/notifications?page_size=100", headers=admin_user_headers
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -629,7 +629,7 @@ class TestNotificationsEdgeCases:
     def test_invalid_page_size(self, client, admin_user_headers):
         """测试无效的分页大小（超过最大值）"""
         response = client.get(
-            "/api/v1/notifications/?page_size=200",  # 超过最大值100
+            "/api/v1/notifications?page_size=200",  # 超过最大值100
             headers=admin_user_headers,
         )
 
@@ -657,7 +657,7 @@ class TestNotificationsEdgeCases:
         self, client, admin_user_headers, multiple_notifications
     ):
         """测试通知排序（按创建时间倒序）"""
-        response = client.get("/api/v1/notifications/", headers=admin_user_headers)
+        response = client.get("/api/v1/notifications", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

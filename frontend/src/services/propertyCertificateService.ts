@@ -18,7 +18,7 @@ export const propertyCertificateService = {
     skip?: number;
     limit?: number;
   }): Promise<PropertyCertificate[]> {
-    const result = await apiClient.get<PropertyCertificate[]>('/property-certificates/', {
+    const result = await apiClient.get<PropertyCertificate[]>('/property-certificates', {
       params,
     });
     return result.data ?? [];
@@ -40,7 +40,7 @@ export const propertyCertificateService = {
    */
   async createCertificate(certificate: PropertyCertificateCreate): Promise<PropertyCertificate> {
     const result = await apiClient.post<PropertyCertificate>(
-      '/property-certificates/',
+      '/property-certificates',
       certificate
     );
     if (result.data == null) {
