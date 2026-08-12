@@ -1256,7 +1256,6 @@ class ContractGroupService:
             "status": ContractLifecycleStatus.ACTIVE.name,
             "contract_notes": obj_in.contract_notes,
             "source_session_id": obj_in.source_session_id,
-            "payment_cycle": obj_in.payment_cycle or "月付",
             "data_status": "正常",
             "created_at": now,
             "updated_at": now,
@@ -1267,6 +1266,10 @@ class ContractGroupService:
         lease_detail_data = (
             obj_in.lease_detail.model_dump() if obj_in.lease_detail else None
         )
+        if lease_detail_data is not None and obj_in.payment_cycle is not None:
+            # payment_cycle 属于 LeaseContractDetail；Contract 主表没有该列，
+            # 写入主表构造 dict 会让真实 ORM 构造 TypeError 崩溃。
+            lease_detail_data["payment_cycle"] = obj_in.payment_cycle
         lease_detail_data = self._sync_lease_detail_with_lessee_snapshot(
             lease_detail_data,
             lessee_name_snapshot=party_name_snapshots["lessee_name_snapshot"],

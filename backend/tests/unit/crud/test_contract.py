@@ -46,3 +46,47 @@ class TestContractNumberQueries:
         assert "contracts.group_relation_type = 'ENTRUSTED'" in compiled
         assert "contract_groups.revenue_mode = 'AGENCY'" in compiled
         assert "contract_groups.data_status = '正常'" in compiled
+
+
+@pytest.mark.asyncio
+async def test_contract_main_table_rejects_payment_cycle_kwarg(
+    crud: CRUDContract,
+) -> None:
+    """Contract 主表不接受 payment_cycle；它属于 LeaseContractDetail。
+
+    service 必须把 payment_cycle 合并进 lease_detail 数据，而不是放进
+    Contract 构造 dict——否则真实 ORM 构造直接 TypeError 崩溃。
+    """
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+
+    with pytest.raises(TypeError, match="payment_cycle"):
+        await crud.create(
+            db,
+            data={
+                "contract_id": "contract-1",
+                "payment_cycle": "月付",
+            },
+        )
+
+
+@pytest.mark.asyncio
+async def test_contract_create_builds_real_orm_object_without_crash(
+    crud: CRUDContract,
+) -> None:
+    """合法 Contract 字段能真实构造 ORM 对象（回归：payment_cycle 曾导致 TypeError）。"""
+    from src.models.contract_group import Contract
+
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+
+    result = await crud.create(
+        db,
+        data={"contract_id": "contract-2", "contract_number": "HT-REAL-001"},
+        commit=False,
+    )
+
+    assert isinstance(result, Contract)
+    assert result.contract_id == "contract-2"

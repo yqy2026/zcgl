@@ -78,7 +78,7 @@
 
 ### 复核排除的原报告误报
 
-- **`payment_cycle` 未透传：误报。** 合同确认通过通用 `actions[]` 传输字段；后端 candidate-review 白名单接受 `payment_cycle`，workflow 将其映射到 `ContractCreate`，并有手工填写、清空和映射测试。它不需要成为 `ExtractionConfirmPayload` 的顶层字段。
+- **`payment_cycle` 未透传：部分误报。** 合同确认通过通用 `actions[]` 传输字段，后端 candidate-review 白名单接受 `payment_cycle`，workflow 将其映射到 `ContractCreate`——「未透传」这一原始诊断确属误报。但复核只追到传输层，未验证 service 落库：`contract_group_service.add_contract_to_group` 曾把 `payment_cycle` 写进 `Contract` 主表构造 dict（该列属于 `LeaseContractDetail`），真实 ORM 构造 `Contract(**data)` 直接 `TypeError` 崩溃（PDF 确认创建与直接创建均为生产崩溃路径；单元测试因 mock `contract_crud.create` 而未暴露）。该崩溃缺陷已修复（见整改状态「最终双轴复核后的追加修复」）。
 - **seed 属 scope creep：误报。** `docs/issues/2026-08-09-mvp-g1-acceptance-dryrun.md` §3.2 明确记录 G1 验收环境缺少项目实体的阻断、补数方案和幂等验证。seed 有真实任务来源；只需做低优先级运维加固。
 
 ### 已核验一致
@@ -98,7 +98,7 @@
 
 ## 整改状态
 
-> 本分支 `fix/code-review-remediation-20260812`（固定点 `b9a09230`）于 2026-08-12 完成整改，全部发现已修复并经双轴复核。以下先列整改事实，再列验证证据，最后列已知基线阻塞。
+> 本分支 `fix/code-review-remediation-20260812`（固定点 `b9a09230`）于 2026-08-12 完成整改。10 项评审发现大部分已修复；最终双轴复核后又发现并修复一处合同创建崩溃（`payment_cycle` 写入错误 ORM 实体）。以下先列整改事实，再列验证证据，最后列未通过门禁与合并准备度。
 
 ### 逐项整改结果
 
@@ -122,7 +122,7 @@
 | 3 | 资产选择器 `project_id` 被静默忽略 | `GET /api/v1/assets` 显式声明 `project_id`（非空校验），API → service → CRUD 显式传递，CRUD 用当前 `ProjectAsset.valid_to IS NULL` 的关联 `EXISTS` 在分页/count 前过滤；前端远程搜索发送真实 `page_size:20`；`test_asset.py`/`test_query_builder.py`/`test_asset_service.py` 覆盖未知/不可见关联返回空集 |
 | 4 | project tenants/analytics `view_mode` 未由统一 dependency 消费 | `require_data_scope_context` 支持 `accepts_view_mode/query_modes/require_single_perspective` 声明；项目端点不再二次解释 query；`证照信息不完整` 保持独立未完成项，未虚报 |
 
-**排除误报**：`payment_cycle` 未透传（通用 `actions[]` 已承载）、seed scope creep（G1 验收 dry-run 有真实任务来源）按上文记录排除。
+**排除误报**：`payment_cycle` 为**部分误报**（传输层未透传是误报，但 service 落库层存在真实崩溃缺陷，已修复，见下）；seed scope creep（G1 验收 dry-run 有真实任务来源）按上文记录排除。
 
 ### 测试证据
 
@@ -141,14 +141,22 @@
 - **Spec 轴**：计划 7 节全部符合，无 scope creep；1 个 LOW 收敛——drift gate 的 `_has_mapped_params_type_binding` 不再对 service/type 同文件无条件放行，`PropertyCertificateListParams` 移入 `frontend/src/types/propertyCertificate.ts` 并由 service `import type` 绑定，仓库契约映射同步指向类型文件（此前 2 次 Spec reviewer 因 provider 过载失败，未计为通过；最终窄化复核完成）。
 - 复核期间 3 次 sub-agent 因 provider 过载失败，未作为通过结论计入；上述结论来自成功完成的复核。
 
-### 已知基线阻塞（本次未改动，整改前即存在）
+### 最终双轴复核后的追加修复（payment_cycle 落库崩溃）
+
+- 复核结论发布后，人工复核指出 `payment_cycle` 的「未透传」误报判定只追到了 `actions[]` 传输层：`contract_group_service.py` 原第 1259 行把 `payment_cycle` 写进 `Contract` 主表构造 dict，而该列属于 `LeaseContractDetail`；`crud/contract.py::Contract(**data)` 真实构造必然 `TypeError`。PDF 确认创建（`contract_extraction_workflow.py` 提取 `payment_cycle` → `ContractCreate`）与直接创建（`ContractCreate` 带顶层 `payment_cycle`）都走此路径，均为生产崩溃；单元测试因成功路径 mock `contract_crud.create` 而全部通过，未暴露真实构造。
+- **修复（TDD）**：red 测试锁定「`data` 不含 `payment_cycle`、`lease_detail_data["payment_cycle"]` 等于传入值」；CRUD 层新增真实构造防御测试（`Contract(**data)` 含 `payment_cycle` 必抛 `TypeError`）与合法字段真实构造回归测试。实现：service 从主表 dict 移除该键，并在 `lease_detail_data` 存在时把顶层 `payment_cycle` 合并进租约明细（无明细时无处承载，忽略不崩溃）。验证：合同 service/CRUD/文档 workflow 213 项通过；全量后端 unit 重跑通过；ruff/mypy 通过。
+- **遗留语义**：无 `lease_detail` 的合同（非 LEASE 或 LEASE 无月租金）不承载付款周期；账务层（`ledger_service_v2`）本就只从 `lease_detail.payment_cycle` 读取，行为一致。
+
+### 已知未通过门禁（未涉及本次改动，但属于当前分支合并阻塞）
+
+以下问题早于固定点 `b9a09230`，且本次整改未改动相关文件；但它们多数位于原始 `main...develop` 差异内，**不能作为 `develop` 合并 `main` 的放行依据**：
 
 - `make check` 的两个 Ruff `I001`：`backend/src/api/v1/__init__.py`、`backend/tests/unit/services/document/test_contract_extraction_workflow.py`。
 - UI guard 4 处模块化 px：`DashboardPage.module.css` ×3、`ProjectDetailPage.module.css` ×1。
-- E2E TypeScript 6 处：`tests/e2e/user/import-guardrails.spec.ts`、`tests/e2e/user/property-certificate-import-success.spec.ts`（本次未改动文件）。
+- E2E TypeScript 6 处：`tests/e2e/user/import-guardrails.spec.ts`、`tests/e2e/user/property-certificate-import-success.spec.ts`。
 - 前端 lint 1 警告：`ProjectList.tsx:49` 未使用 `isRelationActive`。
-- 环境：本地 Redis 不可用（门禁以 `REDIS_ENABLED=false` 验证）、Docker Desktop API 不可用、后端与测试种子环境缺失 → 浏览器黑盒与受影响 E2E 验证被阻塞，未伪造通过。
+- 环境：本地 Redis 不可用（门禁以 `REDIS_ENABLED=false` 验证）、Docker Desktop API 不可用、后端与测试种子环境缺失 → 浏览器黑盒与受影响 E2E 验证未完成。
 
 ### 结论
 
-评审发现的 10 项有效问题（Standards 6 + Spec 4）全部修复并有测试证据；2 项误报已排除；双轴复核无遗留可采纳意见；门禁全部通过（基线阻塞除外，均未涉及本次改动）。REQ-AST-005 保持 `部分实现`（`证照信息不完整` 未实现，见 `docs/traceability/requirements-trace.md`）。
+评审发现的 10 项有效问题中，**大部分已完成整改并有测试证据**；`payment_cycle` 的「未透传」诊断属误报，但复核后追加发现其落库崩溃缺陷并已修复（修复后全量后端重跑通过）。REQ-AST-005 仍为 `部分实现`：「证照信息不完整」warning 未实现，已由开放 issue **#85**（`ready-for-agent`）承接，明确判定规则、展示范围与验收测试待收口。定向测试与多数质量检查通过，但**全量 `make check`、E2E TypeScript 与浏览器黑盒验证尚未通过**（上述未通过门禁不属于本次改动引入，但属于当前分支的合并阻塞），因此本报告**不构成 `develop` 可合并 `main` 的放行依据**。

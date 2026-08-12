@@ -1107,6 +1107,63 @@ class TestAddContractToGroup:
         )
         assert mock_create.await_args.kwargs["data"]["project_id"] == "project-2"
 
+    async def test_add_contract_should_not_write_payment_cycle_into_main_table(
+        self, mock_db: MagicMock
+    ) -> None:
+        """C17: payment_cycle 属于 LeaseContractDetail；写入 Contract 主表会让真实 ORM 构造崩溃。"""
+        service = ContractGroupService()
+        mock_group = MagicMock(spec=ContractGroup)
+        mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-2"
+        mock_group.operator_party_id = "party-operator"
+        mock_group.owner_party_id = "party-owner"
+        created_contract = MagicMock(spec=Contract)
+        created_contract.contract_id = "contract-003"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=mock_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.create",
+                new_callable=AsyncMock,
+                return_value=created_contract,
+            ) as mock_create,
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
+            result = await service.add_contract_to_group(
+                mock_db,
+                obj_in=_valid_contract_create(
+                    contract_number="HT-PCYCLE-001", payment_cycle="季付"
+                ),
+            )
+
+        assert result is created_contract
+        data = mock_create.await_args.kwargs["data"]
+        assert "payment_cycle" not in data
+        lease_detail_data = mock_create.await_args.kwargs["lease_detail_data"]
+        assert lease_detail_data["payment_cycle"] == "季付"
+
     async def test_add_contract_should_reject_assets_outside_group_scope(
         self, mock_db: MagicMock
     ) -> None:
