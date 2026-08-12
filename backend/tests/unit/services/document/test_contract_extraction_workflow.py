@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.services.document.contract_extraction_workflow import ContractExtractionWorkflow
+from src.services.document.contract_extraction_workflow import (
+    ContractExtractionWorkflow,
+)
 
 
 def _build_workflow() -> ContractExtractionWorkflow:

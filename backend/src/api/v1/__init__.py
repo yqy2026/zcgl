@@ -9,11 +9,11 @@ from . import (
     party,  # noqa: F401
     property_certificate_attachments,  # noqa: F401
 )
-from .assets import property_certificate  # noqa: F401
 
 # 导入各个模块的路由 - Analytics
 from .analytics.analytics import router as analytics_router
 from .analytics.statistics import router as statistics_router
+from .assets import property_certificate  # noqa: F401
 
 # 导入各个模块的路由 - Assets
 from .assets.assets import router as assets_router

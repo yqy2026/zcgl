@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
 
 type FileInputScope = Page | { locator: Page['locator'] };

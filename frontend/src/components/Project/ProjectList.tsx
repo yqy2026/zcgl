@@ -46,9 +46,6 @@ import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './ProjectList.module.css';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
-const isRelationActive = (relation: { is_active?: boolean }): boolean =>
-  relation.is_active === true;
-
 const getProjectAssetCount = (project: Project): number => {
   if (typeof project.asset_count === 'number' && Number.isFinite(project.asset_count)) {
     return project.asset_count;

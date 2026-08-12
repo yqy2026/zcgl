@@ -151,7 +151,8 @@ test.describe('@property-certificate-import-success 产权证导入成功路径'
     const propertyAddress = `E2E载荷地址-${Date.now()}`;
     await mockExtractionFlow(page, { certificateNumber, propertyAddress });
 
-    let confirmPayload: Record<string, unknown> | null = null;
+    let confirmPayload: Record<string, unknown> | null =
+      null as Record<string, unknown> | null;
     await page.route('**/api/v1/extraction-sessions/*/confirm', async route => {
       confirmPayload = (route.request().postDataJSON() ?? {}) as Record<string, unknown>;
       await route.fulfill({

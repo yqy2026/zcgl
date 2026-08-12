@@ -358,5 +358,5 @@
 }
 
 .viewModeSegmentRow {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }

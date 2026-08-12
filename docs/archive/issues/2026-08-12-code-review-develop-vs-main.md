@@ -149,14 +149,16 @@
 
 ### 已知未通过门禁（未涉及本次改动，但属于当前分支合并阻塞）
 
-以下问题早于固定点 `b9a09230`，且本次整改未改动相关文件；但它们多数位于原始 `main...develop` 差异内，**不能作为 `develop` 合并 `main` 的放行依据**：
+以下问题早于固定点 `b9a09230`，且本次整改未改动相关文件；但它们多数位于原始 `main...develop` 差异内，**不能作为 `develop` 合并 `main` 的放行依据**。**2026-08-12 更新：13 项代码类阻塞已由 `fix/gate-blockers-20260812`（#87）逐项修复**：
 
-- `make check` 的两个 Ruff `I001`：`backend/src/api/v1/__init__.py`、`backend/tests/unit/services/document/test_contract_extraction_workflow.py`。
-- UI guard 4 处模块化 px：`DashboardPage.module.css` ×3、`ProjectDetailPage.module.css` ×1。
-- E2E TypeScript 6 处：`tests/e2e/user/import-guardrails.spec.ts`、`tests/e2e/user/property-certificate-import-success.spec.ts`。
-- 前端 lint 1 警告：`ProjectList.tsx:49` 未使用 `isRelationActive`。
-- 环境：本地 Redis 不可用（门禁以 `REDIS_ENABLED=false` 验证）、Docker Desktop API 不可用、后端与测试种子环境缺失 → 浏览器黑盒与受影响 E2E 验证未完成。
+- `make check` 的两个 Ruff `I001`：`backend/src/api/v1/__init__.py`、`backend/tests/unit/services/document/test_contract_extraction_workflow.py` — ✅ `ruff --fix` 收敛 import 排序，`ruff check` 通过。
+- UI guard 4 处模块化 px：`DashboardPage.module.css` ×3、`ProjectDetailPage.module.css` ×1 — ✅ 替换为等价 token/rem（`12px`→`var(--spacing-md)`、`24px`→`var(--spacing-xl)`、`1200px`→`75rem`），`scan-style-px --fail-on-module` EXIT 0。
+- E2E TypeScript 6 处：`tests/e2e/user/import-guardrails.spec.ts`、`tests/e2e/user/property-certificate-import-success.spec.ts` — ✅ 根因修复：`Request` 未导入解析到全局 fetch `Request`（`method`/`url` 是属性非方法，且连带 `page.on/off` 重载解析到 `'worker'` 事件），改显式 `import type { Request } from '@playwright/test'`；`confirmPayload` 初始化 `= null` 且仅在 `page.route` 闭包内赋值导致流收窄为 `null`，`?.actions` 报 `never`，用显式 `as` 初始值拓宽；`tsc -p tsconfig.e2e.json` 通过。均为类型层修复，运行行为不变。
+- 前端 lint 1 警告：`ProjectList.tsx:49` 未使用 `isRelationActive` — ✅ 删除死代码。
+- 环境（非代码，遗留）：本地 Redis 不可用（门禁以 `REDIS_ENABLED=false` 验证）、Docker Desktop API 不可用、后端与测试种子环境缺失 → 浏览器黑盒与受影响 E2E 运行验证未完成。
 
 ### 结论
 
-评审发现的 10 项有效问题中，**大部分已完成整改并有测试证据**；`payment_cycle` 的「未透传」诊断属误报，但复核后追加发现其落库崩溃缺陷并已修复（修复后全量后端重跑通过）。REQ-AST-005 仍为 `部分实现`：「证照信息不完整」warning 未实现，已由开放 issue **#85**（`ready-for-agent`）承接，明确判定规则、展示范围与验收测试待收口。定向测试与多数质量检查通过，但**全量 `make check`、E2E TypeScript 与浏览器黑盒验证尚未通过**（上述未通过门禁不属于本次改动引入，但属于当前分支的合并阻塞），因此本报告**不构成 `develop` 可合并 `main` 的放行依据**。
+评审发现的 10 项有效问题中，**大部分已完成整改并有测试证据**；`payment_cycle` 的「未透传」诊断属误报，但复核后追加发现其落库崩溃缺陷并已修复（修复后全量后端重跑通过）。REQ-AST-005 仍为 `部分实现`：「证照信息不完整」warning 未实现，已由开放 issue **#85**（`ready-for-agent`）承接，明确判定规则、展示范围与验收测试待收口。
+
+**2026-08-12 二次更新（#87 收口）**：上节 13 项代码类门禁阻塞已全部修复，`make check` 链上 lint ×2 / UI guard / type-check（含 E2E TS）/ 后端测试 / 前端测试 / 生产构建 / document-runtime 全部通过，`backend-import`（`REDIS_ENABLED=false` 文档化本地验证模式）、`check-query-param-drift`（7 contracts zero drift）、`docs-lint`（10 PASS）通过。剩余阻塞仅为环境类：本地 Redis 未运行、Docker Desktop API 不可用、后端与测试种子环境缺失 → 浏览器黑盒与 E2E 运行验证未完成，需环境就绪后补跑。代码与门禁层面本报告不再构成 `develop` 合并 `main` 的障碍；环境类验证完成前仍建议保留该结论的谨慎性。

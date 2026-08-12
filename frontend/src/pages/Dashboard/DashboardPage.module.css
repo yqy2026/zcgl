@@ -330,7 +330,7 @@
 }
 
 .viewModeGuide {
-  padding: 0 24px 24px;
-  max-width: 1200px;
+  padding: 0 var(--spacing-xl) var(--spacing-xl);
+  max-width: 75rem;
   margin: 0 auto;
 }
