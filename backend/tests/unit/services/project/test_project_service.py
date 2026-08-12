@@ -2360,6 +2360,12 @@ class TestGetProjectRisks:
         certificate = SimpleNamespace(
             id="cert-1",
             certificate_number="CERT-001",
+            certificate_type="real_estate",
+            building_area="120.5",
+            land_area="500",
+            land_use_term_start="2020-01-01",
+            land_use_term_end="2070-01-01",
+            restrictions="无",
             party_relations=[
                 SimpleNamespace(
                     party_id="holder-1",
@@ -2442,6 +2448,12 @@ class TestGetProjectRisks:
         certificate = SimpleNamespace(
             id="cert-1",
             certificate_number="CERT-001",
+            certificate_type="real_estate",
+            building_area="120.5",
+            land_area="500",
+            land_use_term_start="2020-01-01",
+            land_use_term_end="2070-01-01",
+            restrictions="无",
             party_relations=[
                 SimpleNamespace(
                     party_id="party-1",
@@ -2482,6 +2494,77 @@ class TestGetProjectRisks:
             )
 
         assert response.items == []
+
+    async def test_get_project_risks_emits_incomplete_certificate_info(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        """Missing certificate fields surface as an incomplete-info data-quality risk."""
+        from src.schemas.project import ProjectContractRelationsResponse
+
+        project_asset = SimpleNamespace(
+            id="asset-1",
+            asset_name="Matched Asset",
+            owner_party_id="party-1",
+            rentable_area=Decimal(0),
+            rented_area=Decimal(0),
+        )
+        certificate = SimpleNamespace(
+            id="cert-1",
+            certificate_number="CERT-001",
+            certificate_type="house_ownership",
+            building_area=None,
+            restrictions=None,
+            party_relations=[
+                SimpleNamespace(
+                    party_id="party-1",
+                    relation_role="owner",
+                    valid_from=datetime(2026, 1, 1),
+                    valid_to=None,
+                )
+            ],
+            assets=[project_asset],
+        )
+
+        with (
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(
+                    return_value=ProjectContractRelationsResponse(items=[], total=0)
+                ),
+            ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([project_asset], None)),
+            ),
+            patch(
+                "src.services.project.service.property_certificate_crud.list_by_asset_ids",
+                new=AsyncMock(return_value=[certificate]),
+            ),
+            patch(
+                "src.services.project.service.ProjectService._utcnow_naive",
+                return_value=datetime(2026, 8, 12),
+            ),
+        ):
+            response = await project_service.get_project_risks(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        certificate_risks = [
+            item
+            for item in response.items
+            if item.risk_type == "property_certificate_data_quality"
+        ]
+        assert len(certificate_risks) == 1
+        assert certificate_risks[0].warning_code == "incomplete_certificate_info"
+        assert certificate_risks[0].risk_id == (
+            "property-certificate:cert-1:asset:asset-1:incomplete_certificate_info"
+        )
+        assert "证载建筑面积" in certificate_risks[0].message
+        assert "限制信息" in certificate_risks[0].message
 
     async def test_get_project_risks_skips_certificate_query_without_active_assets(
         self, project_service: ProjectService, mock_db: MagicMock

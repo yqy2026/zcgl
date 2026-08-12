@@ -25,6 +25,7 @@ from .risks import (
     AssetOwnerSnapshot,
     HolderRelationSnapshot,
     calculate_holder_owner_mismatch,
+    calculate_incomplete_certificate_info,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,24 @@ def map_property_certificate_response(
             for asset in certificate.assets
         ),
         as_of=effective_as_of,
+    )
+    incomplete_result = calculate_incomplete_certificate_info(
+        certificate_id=str(certificate.id),
+        certificate_number=str(certificate.certificate_number),
+        certificate_type=certificate.certificate_type,
+        building_area=certificate.building_area,
+        land_area=certificate.land_area,
+        land_use_term_start=certificate.land_use_term_start,
+        land_use_term_end=certificate.land_use_term_end,
+        restrictions=certificate.restrictions,
+        assets=(
+            AssetOwnerSnapshot(
+                asset_id=str(asset.id),
+                owner_party_id=asset.owner_party_id,
+                asset_name=asset.asset_name,
+            )
+            for asset in certificate.assets
+        ),
     )
     if risk_result.missing_current_holders:
         logger.warning(
@@ -101,7 +120,7 @@ def map_property_certificate_response(
                 certificate_id=warning.certificate_id,
                 asset_id=warning.asset_id,
             )
-            for warning in risk_result.warnings
+            for warning in (*risk_result.warnings, *incomplete_result.warnings)
         ],
         created_at=certificate.created_at,
         updated_at=certificate.updated_at,

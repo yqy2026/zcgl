@@ -14,14 +14,14 @@ def _certificate(*, holder_relations: list[object], assets: list[object]) -> obj
         registration_date=None,
         property_address="Test address",
         property_type=None,
-        building_area=None,
+        building_area="120.5",
         floor_info=None,
-        land_area=None,
+        land_area="500",
         land_use_type=None,
-        land_use_term_start=None,
-        land_use_term_end=None,
+        land_use_term_start="2020-01-01",
+        land_use_term_end="2070-01-01",
         co_ownership=None,
-        restrictions=None,
+        restrictions="无",
         remarks=None,
         created_at=datetime(2026, 1, 1),
         updated_at=datetime(2026, 1, 2),
@@ -64,6 +64,56 @@ def test_mapper_explicitly_projects_current_holders_assets_and_warnings() -> Non
     assert len(response.data_quality_warnings) == 1
     assert response.data_quality_warnings[0].asset_id == "asset-1"
     assert response.data_quality_warnings[0].risk_type == "holder_owner_mismatch"
+
+
+def test_mapper_emits_incomplete_certificate_info_warning() -> None:
+    # 字段缺失证书 + 匹配 holder：只验证 incomplete 派生
+    certificate = SimpleNamespace(
+        id="cert-1",
+        certificate_number="CERT-001",
+        certificate_type="real_estate",
+        registration_date=None,
+        property_address="Test address",
+        property_type=None,
+        building_area=None,
+        floor_info=None,
+        land_area=None,
+        land_use_type=None,
+        land_use_term_start=None,
+        land_use_term_end=None,
+        co_ownership=None,
+        restrictions=None,
+        remarks=None,
+        created_at=datetime(2026, 1, 1),
+        updated_at=datetime(2026, 1, 2),
+        created_by="user-1",
+        party_relations=[],
+        assets=[
+            SimpleNamespace(
+                id="asset-1",
+                asset_name="Asset One",
+                owner_party_id="party-holder",
+            )
+        ],
+    )
+    incomplete = map_property_certificate_response(
+        certificate,
+        as_of=datetime(2026, 8, 12),
+    )
+    codes = {w.risk_type for w in incomplete.data_quality_warnings}
+    assert "incomplete_certificate_info" in codes
+    incomplete_warning = next(
+        w
+        for w in incomplete.data_quality_warnings
+        if w.risk_type == "incomplete_certificate_info"
+    )
+    assert (
+        incomplete_warning.risk_id
+        == "property-certificate:cert-1:asset:asset-1:incomplete_certificate_info"
+    )
+    assert "证载建筑面积" in incomplete_warning.message
+    # 同一证书两类 warning 并存
+    assert codes == {"incomplete_certificate_info"}
 
 
 def test_mapper_logs_missing_comparison_inputs_without_warning(

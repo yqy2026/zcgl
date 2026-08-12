@@ -180,7 +180,7 @@
 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
-| `risk_id` | string | 是 | 稳定风险标识；合同/协议和空置风险按既有来源规则派生，产权证 mismatch 固定为 `property-certificate:{certificate_id}:asset:{asset_id}:holder_owner_mismatch`，不依赖展示文案 |
+| `risk_id` | string | 是 | 稳定风险标识；合同/协议和空置风险按既有来源规则派生，产权证数据质量风险固定为 `property-certificate:{certificate_id}:asset:{asset_id}:<warning_code>`（`holder_owner_mismatch` / `incomplete_certificate_info`），不依赖展示文案 |
 | `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`、`ledger_stale_after_correction`（已收/部分已收台账与当前合同条款不一致，合同更正重算时派生，人工对账后消除，见 ADR-0008）、`service_fee_source_mismatch`（已生成服务费台账与当前来源租金集合、计算基数、比例、金额或归属不一致，或冻结来源租金条目已与当前合同条款不一致，人工处理后消除）；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
 | `severity` | enum | 是 | `info`、`warning`、`high`、`critical`、`error` |
 | `message` | string | 是 | 面向业务用户的风险说明 |
@@ -188,11 +188,11 @@
 | `display_name` | string/null | 否 | 合同/协议经营事项名称或资产名称 |
 | `asset_id` | string/null | 否 | 资产空置和产权证数据质量风险填写；合同/协议风险为空 |
 | `property_certificate_id` | string/null | 否 | 产权证数据质量风险填写，其他风险为空 |
-| `warning_code` | string/null | 否 | 产权证数据质量风险的稳定细分类；当前已实现 `holder_owner_mismatch` |
+| `warning_code` | string/null | 否 | 产权证数据质量风险的稳定细分类；已实现 `holder_owner_mismatch` 与 `incomplete_certificate_info` |
 
 空置风险口径：项目当前有效资产的 `rentable_area - rented_area > 0` 时生成 `vacancy` 风险，消息展示资产名称和空置面积；删除、异常或已失效项目资产关系不参与计算。
 
-产权证数据质量风险口径：项目当前有效资产关联的产权证存在证照信息不完整，或产权证当前有效权利人与关联资产当前主产权主体不一致时，可生成 `property_certificate_data_quality` 风险，严重级别固定为 `warning`。权利人不一致按每个产权证/资产对独立比较；当前权利人只取 `OWNER|CO_OWNER` 且满足 `valid_from <= as_of < valid_to`（`valid_to` 为空表示无上界），任一当前权利人命中资产 `owner_party_id` 即匹配。资产 owner 或当前权利人为空时记录诊断但不伪造 mismatch。MVP 已删除 `is_verified` 核验状态与“未核验”风险；风险只能通过补齐证照信息或修正权利人/资产关联自然消除，不生成待办、任务或审批。实现状态以 requirements-trace 为准。
+产权证数据质量风险口径：项目当前有效资产关联的产权证存在证照信息不完整，或产权证当前有效权利人与关联资产当前主产权主体不一致时，可生成 `property_certificate_data_quality` 风险，严重级别固定为 `warning`。权利人不一致按每个产权证/资产对独立比较；当前权利人只取 `OWNER|CO_OWNER` 且满足 `valid_from <= as_of < valid_to`（`valid_to` 为空表示无上界），任一当前权利人命中资产 `owner_party_id` 即匹配。资产 owner 或当前权利人为空时记录诊断但不伪造 mismatch。**证照信息不完整按证照类型条件化检查**（字段缺失即 NULL 或 trim 后空串）：`REAL_ESTATE` 检查 building_area/land_area/land_use_term_start/land_use_term_end/restrictions，`HOUSE_OWNERSHIP` 检查 building_area/restrictions，`LAND_USE` 检查 land_area/land_use_term_start/land_use_term_end/restrictions，`OTHER`（及未知类型保守处理）仅检查 restrictions；按每个产权证/资产对展开，与 mismatch 独立并存（同一证书可同时命中两类）。MVP 已删除 `is_verified` 核验状态与“未核验”风险；风险只能通过补齐证照信息或修正权利人/资产关联自然消除，不生成待办、任务或审批。实现状态以 requirements-trace 为准。
 
 ### 4.6 GlobalAnalytics
 

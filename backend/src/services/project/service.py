@@ -66,6 +66,7 @@ from ...services.property_certificate.risks import (
     AssetOwnerSnapshot,
     HolderRelationSnapshot,
     calculate_holder_owner_mismatch,
+    calculate_incomplete_certificate_info,
 )
 
 logger = logging.getLogger(__name__)
@@ -1223,6 +1224,34 @@ class ProjectService:
                     ),
                     as_of=as_of,
                 )
+                incomplete_result = calculate_incomplete_certificate_info(
+                    certificate_id=str(certificate.id),
+                    certificate_number=str(certificate.certificate_number),
+                    certificate_type=certificate.certificate_type,
+                    building_area=getattr(certificate, "building_area", None),
+                    land_area=getattr(certificate, "land_area", None),
+                    land_use_term_start=getattr(
+                        certificate, "land_use_term_start", None
+                    ),
+                    land_use_term_end=getattr(certificate, "land_use_term_end", None),
+                    restrictions=getattr(certificate, "restrictions", None),
+                    assets=(
+                        AssetOwnerSnapshot(
+                            asset_id=asset_id,
+                            owner_party_id=getattr(asset, "owner_party_id", None),
+                            asset_name=(
+                                getattr(asset, "asset_name", None)
+                                or getattr(asset, "name", None)
+                            ),
+                        )
+                        for asset_id, asset in active_asset_by_id.items()
+                        if any(
+                            str(getattr(linked_asset, "id", "") or "").strip()
+                            == asset_id
+                            for linked_asset in certificate.assets
+                        )
+                    ),
+                )
                 if risk_result.missing_current_holders:
                     logger.warning(
                         "Project certificate risk skipped holder-owner comparison "
@@ -1240,7 +1269,10 @@ class ProjectService:
                         certificate.id,
                         asset_id,
                     )
-                for warning in risk_result.warnings:
+                for warning in (
+                    *risk_result.warnings,
+                    *incomplete_result.warnings,
+                ):
                     if warning.risk_id in seen:
                         continue
                     seen.add(warning.risk_id)
