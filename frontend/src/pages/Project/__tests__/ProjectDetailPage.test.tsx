@@ -1,6 +1,7 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, renderWithProviders, screen } from '@/test/utils/test-helpers';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { useQuery } from '@tanstack/react-query';
 
 import ProjectDetailPage from '../ProjectDetailPage';
@@ -38,6 +39,19 @@ vi.mock('@/hooks/useArrayListData', () => ({
 describe('ProjectDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useDataScopeStore.setState({
+      bindingTypes: ['owner', 'manager'],
+      ownerPartyIds: ['owner-1'],
+      managerPartyIds: ['manager-1'],
+      isAdmin: false,
+      initialized: true,
+      isOwner: true,
+      isManager: true,
+      isDualBinding: true,
+      isSingleOwner: false,
+      isSingleManager: false,
+      currentViewMode: null,
+    });
     vi.mocked(useQuery).mockImplementation(options => {
       const [scope] = options.queryKey as [string, ...unknown[]];
       if (scope === 'project') {
@@ -329,14 +343,14 @@ describe('ProjectDetailPage', () => {
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        // 视图模式作为租户/分析查询 key 尾部元素：选择视图后以单一视角重查（S6 契约）
         queryKey: ['project-tenants', 'user:user-1|scope:owner,manager', 'project-1', null],
+        enabled: false,
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        // 视图模式作为分析 queryKey 尾部元素：选择视图后触发重查（S2 视图联动）
         queryKey: ['project-analytics', 'user:user-1|scope:owner,manager', 'project-1', null],
+        enabled: true,
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
@@ -452,7 +466,7 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('3 份合同')).toBeInTheDocument();
     expect(screen.getByText('项目分析')).toBeInTheDocument();
     expect(screen.getByText('经营风险')).toBeInTheDocument();
-    expect(screen.getByText('客户指标需选产权方或运营方视图')).toBeInTheDocument();
+    expect(screen.getAllByText('客户指标需选产权方或运营方视图')).toHaveLength(2);
     expect(screen.getAllByText('需选视图').length).toBeGreaterThan(0);
     expect(screen.getByText('项目分析趋势')).toBeInTheDocument();
     expect(screen.getByText('应收环比 +32.5%')).toBeInTheDocument();

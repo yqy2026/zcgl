@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,12 +15,98 @@ from ...crud.query_builder import PartyFilter
 from ...models.property_certificate import CertificateType, PropertyCertificate
 from ...schemas.property_certificate import (
     PropertyCertificateCreate,
+    PropertyCertificateDataQualityWarning,
+    PropertyCertificateResponse,
     PropertyCertificateUpdate,
 )
 from ...services.party.service import party_service
 from ...services.party_scope import resolve_user_party_filter
+from .risks import (
+    AssetOwnerSnapshot,
+    HolderRelationSnapshot,
+    calculate_holder_owner_mismatch,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def map_property_certificate_response(
+    certificate: Any,
+    *,
+    as_of: datetime | None = None,
+) -> PropertyCertificateResponse:
+    """Map an eager-loaded certificate graph to its public response contract."""
+    effective_as_of = as_of or datetime.now(UTC).replace(tzinfo=None)
+    risk_result = calculate_holder_owner_mismatch(
+        certificate_id=str(certificate.id),
+        certificate_number=str(certificate.certificate_number),
+        holder_relations=(
+            HolderRelationSnapshot(
+                party_id=str(relation.party_id),
+                relation_role=relation.relation_role,
+                valid_from=relation.valid_from,
+                valid_to=relation.valid_to,
+            )
+            for relation in certificate.party_relations
+        ),
+        assets=(
+            AssetOwnerSnapshot(
+                asset_id=str(asset.id),
+                owner_party_id=asset.owner_party_id,
+                asset_name=asset.asset_name,
+            )
+            for asset in certificate.assets
+        ),
+        as_of=effective_as_of,
+    )
+    if risk_result.missing_current_holders:
+        logger.warning(
+            "Property certificate has no current OWNER/CO_OWNER holder; "
+            "holder-owner mismatch was not derived (certificate_id=%s)",
+            certificate.id,
+        )
+    for asset_id in risk_result.asset_ids_missing_owner:
+        logger.warning(
+            "Property certificate asset has no owner_party_id; "
+            "holder-owner mismatch was not derived "
+            "(certificate_id=%s, asset_id=%s)",
+            certificate.id,
+            asset_id,
+        )
+
+    return PropertyCertificateResponse(
+        id=str(certificate.id),
+        certificate_number=certificate.certificate_number,
+        certificate_type=certificate.certificate_type,
+        registration_date=certificate.registration_date,
+        property_address=certificate.property_address,
+        property_type=certificate.property_type,
+        building_area=certificate.building_area,
+        floor_info=certificate.floor_info,
+        land_area=certificate.land_area,
+        land_use_type=certificate.land_use_type,
+        land_use_term_start=certificate.land_use_term_start,
+        land_use_term_end=certificate.land_use_term_end,
+        co_ownership=certificate.co_ownership,
+        restrictions=certificate.restrictions,
+        remarks=certificate.remarks,
+        asset_ids=sorted(str(asset.id) for asset in certificate.assets),
+        holder_party_ids=list(risk_result.current_holder_party_ids),
+        data_quality_warnings=[
+            PropertyCertificateDataQualityWarning(
+                risk_id=warning.risk_id,
+                risk_type=warning.risk_type,
+                severity=warning.severity,
+                message=warning.message,
+                certificate_id=warning.certificate_id,
+                asset_id=warning.asset_id,
+            )
+            for warning in risk_result.warnings
+        ],
+        created_at=certificate.created_at,
+        updated_at=certificate.updated_at,
+        created_by=certificate.created_by,
+    )
 
 
 class PropertyCertificateService:
@@ -30,6 +118,7 @@ class PropertyCertificateService:
         *,
         skip: int = 0,
         limit: int = 100,
+        asset_id: str | None = None,
         party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> list[PropertyCertificate]:
@@ -41,7 +130,11 @@ class PropertyCertificateService:
         ):
             return []
         return await property_certificate_crud.get_multi(
-            self.db, skip=skip, limit=limit, party_filter=resolved
+            self.db,
+            skip=skip,
+            limit=limit,
+            asset_id=asset_id,
+            party_filter=resolved,
         )
 
     async def get_certificate(

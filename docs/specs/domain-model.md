@@ -180,16 +180,19 @@
 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
-| `risk_id` | string | 是 | 稳定风险标识，按来源对象、风险类型和消息派生 |
+| `risk_id` | string | 是 | 稳定风险标识；合同/协议和空置风险按既有来源规则派生，产权证 mismatch 固定为 `property-certificate:{certificate_id}:asset:{asset_id}:holder_owner_mismatch`，不依赖展示文案 |
 | `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`、`ledger_stale_after_correction`（已收/部分已收台账与当前合同条款不一致，合同更正重算时派生，人工对账后消除，见 ADR-0008）、`service_fee_source_mismatch`（已生成服务费台账与当前来源租金集合、计算基数、比例、金额或归属不一致，或冻结来源租金条目已与当前合同条款不一致，人工处理后消除）；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
 | `severity` | enum | 是 | `info`、`warning`、`high`、`critical`、`error` |
 | `message` | string | 是 | 面向业务用户的风险说明 |
 | `contract_relation_id` | string/null | 否 | 合同/协议经营事项风险必须填写；产权证数据质量风险和资产空置风险为空 |
 | `display_name` | string/null | 否 | 合同/协议经营事项名称或资产名称 |
+| `asset_id` | string/null | 否 | 资产空置和产权证数据质量风险填写；合同/协议风险为空 |
+| `property_certificate_id` | string/null | 否 | 产权证数据质量风险填写，其他风险为空 |
+| `warning_code` | string/null | 否 | 产权证数据质量风险的稳定细分类；当前已实现 `holder_owner_mismatch` |
 
 空置风险口径：项目当前有效资产的 `rentable_area - rented_area > 0` 时生成 `vacancy` 风险，消息展示资产名称和空置面积；删除、异常或已失效项目资产关系不参与计算。
 
-产权证数据质量风险口径：项目当前有效资产关联的产权证存在证照信息不完整，或产权证权利人与关联资产当前主产权主体不一致时，可生成 `property_certificate_data_quality` 风险，严重级别固定为 `warning`。MVP 已删除 `is_verified` 核验状态与“未核验”风险；风险只能通过补齐证照信息或修正权利人/资产关联自然消除，不生成待办、任务或审批。
+产权证数据质量风险口径：项目当前有效资产关联的产权证存在证照信息不完整，或产权证当前有效权利人与关联资产当前主产权主体不一致时，可生成 `property_certificate_data_quality` 风险，严重级别固定为 `warning`。权利人不一致按每个产权证/资产对独立比较；当前权利人只取 `OWNER|CO_OWNER` 且满足 `valid_from <= as_of < valid_to`（`valid_to` 为空表示无上界），任一当前权利人命中资产 `owner_party_id` 即匹配。资产 owner 或当前权利人为空时记录诊断但不伪造 mismatch。MVP 已删除 `is_verified` 核验状态与“未核验”风险；风险只能通过补齐证照信息或修正权利人/资产关联自然消除，不生成待办、任务或审批。实现状态以 requirements-trace 为准。
 
 ### 4.6 GlobalAnalytics
 
@@ -714,7 +717,10 @@ Concurrency and scope constraints: replacing allocations locks the payment flow 
 | `id` | string | 是 | 关系主键 |
 | `certificate_id` | string | 是 | 所属产权证 ID |
 | `party_id` | string | 是 | 权利人主体 ID，必须引用已审核 Party（背 REQ-PTY-002）|
-| `relation_type` | enum | 是 | 权利人 |
+| `relation_role` | enum | 是 | `owner`、`co_owner`、`issuer`、`custodian`；holder/owner mismatch 仅把 `owner`、`co_owner` 视为权利人 |
+| `is_primary` | boolean | 是 | 是否主权利人；不改变 mismatch 的“任一当前权利人命中即匹配”规则 |
+| `valid_from` | datetime | 是 | 生效时间；当前关系使用 `valid_from <= as_of` |
+| `valid_to` | datetime/null | 否 | 失效边界；采用半开区间 `as_of < valid_to`，为空表示无上界 |
 
 ### 4.22 Attachment
 

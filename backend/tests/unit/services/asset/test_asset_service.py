@@ -143,6 +143,20 @@ class TestGetAssets:
                 include_relations=False,
             )
 
+    async def test_get_assets_with_project_id(self, service, mock_db):
+        """项目筛选必须原样透传到 CRUD，确保分页前按当前项目绑定过滤。"""
+        mock_assets = [MagicMock(spec=Asset)]
+
+        with patch(
+            "src.crud.asset.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+            return_value=(mock_assets, 1),
+        ) as mock_get:
+            result = await service.get_assets(project_id="project-1")
+
+        assert result == (mock_assets, 1)
+        assert mock_get.call_args.kwargs["project_id"] == "project-1"
+
     async def test_get_assets_with_search(self, service, mock_db):
         """测试带搜索的资产列表查询"""
         mock_assets = [MagicMock(spec=Asset)]

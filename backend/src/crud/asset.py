@@ -312,6 +312,23 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return stmt.where(Asset.id.in_(active_project_asset_ids))
 
     @staticmethod
+    def _apply_project_filter(
+        stmt: Select[TSelectRow],
+        project_id: str | None,
+    ) -> Select[TSelectRow]:
+        if project_id is None:
+            return stmt
+
+        current_project_binding = (
+            select(ProjectAsset.id)
+            .where(ProjectAsset.asset_id == Asset.id)
+            .where(ProjectAsset.project_id == project_id)
+            .where(ProjectAsset.valid_to.is_(None))
+            .exists()
+        )
+        return stmt.where(current_project_binding)
+
+    @staticmethod
     def _normalized_org_ids(party_filter: PartyFilter) -> list[str]:
         return [
             str(org_id).strip()
@@ -573,6 +590,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         skip: int = 0,
         limit: int = 100,
         search: str | None = None,
+        project_id: str | None = None,
         filters: AssetFilterData | None = None,
         sort_field: str = DateTimeFields.CREATED_AT,
         sort_order: str = "desc",
@@ -644,6 +662,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             base_query,
             project_manager_filter,
         )
+        base_query = self._apply_project_filter(base_query, project_id)
         if party_filter is not None:
             base_query = await self._apply_asset_party_filter(
                 db,
@@ -671,6 +690,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             count_base_query,
             project_manager_filter,
         )
+        count_base_query = self._apply_project_filter(count_base_query, project_id)
         if party_filter is not None:
             count_base_query = await self._apply_asset_party_filter(
                 db,

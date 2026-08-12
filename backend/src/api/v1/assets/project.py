@@ -14,7 +14,6 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.query_builder import PartyFilter
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
@@ -48,32 +47,6 @@ _PROJECT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:project:create"
 ProjectActiveAssetsResponse.model_rebuild(
     _types_namespace={"AssetListItemResponse": AssetListItemResponse}
 )
-
-
-def _build_project_party_filter(
-    scope_context: DataScopeContext,
-    view_mode: str | None = None,
-) -> PartyFilter | None:
-    """按 scope 上下文构建 party filter；显式 view_mode 时收窄为单视角过滤器（S2 视图联动契约）。"""
-    if view_mode == "owner":
-        effective_ids = _normalize_identifier_sequence(scope_context.owner_party_ids)
-        if len(effective_ids) > 0:
-            return PartyFilter(
-                party_ids=sorted(set(effective_ids)),
-                filter_mode="owner",
-                owner_party_ids=effective_ids,
-                manager_party_ids=[],
-            )
-    elif view_mode == "manager":
-        effective_ids = _normalize_identifier_sequence(scope_context.manager_party_ids)
-        if len(effective_ids) > 0:
-            return PartyFilter(
-                party_ids=sorted(set(effective_ids)),
-                filter_mode="manager",
-                owner_party_ids=[],
-                manager_party_ids=effective_ids,
-            )
-    return build_party_filter_from_scope_context(scope_context)
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -328,7 +301,7 @@ async def list_projects(
             db=db,
             search_params=search_params,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         items = [
             project_service.project_to_response(item)
@@ -369,7 +342,7 @@ async def search_projects(
             db=db,
             search_params=search_params,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         items = [
             project_service.project_to_response(item)
@@ -403,7 +376,7 @@ async def get_project_options(
         db,
         status=status,
         current_user_id=str(current_user.id),
-        party_filter=_build_project_party_filter(_scope_ctx),
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
 
 
@@ -428,7 +401,7 @@ async def get_project_statistics(
     return await project_service.get_project_statistics(
         db=db,
         current_user_id=str(current_user.id),
-        party_filter=_build_project_party_filter(_scope_ctx),
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
 
 
@@ -459,7 +432,7 @@ async def get_project_active_assets(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         items = [AssetListItemResponse.model_validate(asset) for asset in assets]
         response_payload = ProjectActiveAssetsResponse(
@@ -504,7 +477,7 @@ async def get_project_contract_relations(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),
@@ -543,7 +516,7 @@ async def get_project_ledger_summary(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),
@@ -582,7 +555,7 @@ async def get_project_risks(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),
@@ -604,7 +577,12 @@ async def get_project_tenants(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     _scope_ctx: DataScopeContext = Depends(
-        require_data_scope_context(resource_type="project")
+        require_data_scope_context(
+            resource_type="project",
+            accepts_view_mode=True,
+            query_modes=("owner", "manager"),
+            require_single_perspective=True,
+        )
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -621,13 +599,16 @@ async def get_project_tenants(
         ),
     ] = None,
 ) -> Any:
-    """获取项目下终端租户、客户主体和合同数摘要。"""
+    """获取项目下终端租户、客户主体和合同数摘要。
+
+    ``view_mode`` 由 ``require_data_scope_context`` 依赖统一消费；此处仅声明 OpenAPI 契约。
+    """
     try:
         response_payload = await project_service.get_project_tenants(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx, view_mode=view_mode),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),
@@ -649,7 +630,12 @@ async def get_project_analytics(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     _scope_ctx: DataScopeContext = Depends(
-        require_data_scope_context(resource_type="project")
+        require_data_scope_context(
+            resource_type="project",
+            accepts_view_mode=True,
+            query_modes=("owner", "manager"),
+            require_single_perspective=False,
+        )
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -666,18 +652,18 @@ async def get_project_analytics(
         ),
     ] = None,
 ) -> Any:
-    """获取项目维度指标，并按承租转租和代理运营分区。"""
+    """获取项目维度指标，并按承租转租和代理运营分区。
+
+    ``view_mode`` 由 ``require_data_scope_context`` 依赖统一消费；此处仅声明 OpenAPI 契约。
+    客户指标抑制规则由 service 依据解析后的 party filter 单点推导（REQ-ANA-001）。
+    """
     try:
-        party_filter = _build_project_party_filter(_scope_ctx, view_mode=view_mode)
-        should_suppress_customer_metrics = (
-            _scope_ctx.scope_mode == "all" and view_mode is None
-        )
+        party_filter = build_party_filter_from_scope_context(_scope_ctx)
         response_payload = await project_service.get_project_analytics(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
             party_filter=party_filter,
-            suppress_customer_metrics=should_suppress_customer_metrics,
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),
@@ -713,7 +699,7 @@ async def get_project(
         db=db,
         project_id=project_id,
         current_user_id=str(current_user.id),
-        party_filter=_build_project_party_filter(_scope_ctx),
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
     if not project:
         raise not_found("项目不存在", resource_type="project", resource_id=project_id)
@@ -747,7 +733,7 @@ async def update_project(
             obj_in=project_in,
             updated_by=current_user.id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return project_service.project_to_response(project)
     except Exception as e:
@@ -780,7 +766,7 @@ async def delete_project(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return {"message": "项目删除成功"}
     except Exception as e:
@@ -814,7 +800,7 @@ async def toggle_project_status(
             project_id=project_id,
             updated_by=current_user.id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_scope_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         return project_service.project_to_response(project)
     except Exception as e:

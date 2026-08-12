@@ -139,17 +139,11 @@ const AssetDetailPage: React.FC = () => {
     enabled: canQuery,
   });
 
-  // 资产产权证摘要：后端列表不支持 asset 过滤且默认 limit=100（#67 Q2-A 不要求后端扩展），
-  // 前端提高 limit 拉取后按 asset_ids 过滤（种子环境证书量小，够用；超限场景记录在案）。
-  // 注：证照风险 warning 数无数据源（证书模型无 risk 字段），摘要降级为证号 + 类型展示。
   const { data: assetCertificates, isLoading: isCertificatesLoading } = useQuery<
     PropertyCertificate[]
   >({
     queryKey: ['asset-certificates', queryScopeKey, id],
-    queryFn: async () => {
-      const all = await propertyCertificateService.listCertificates({ skip: 0, limit: 1000 });
-      return all.filter(cert => cert.asset_ids.includes(id as string));
-    },
+    queryFn: () => propertyCertificateService.listCertificates({ asset_id: id as string }),
     enabled: canQuery,
   });
 
@@ -589,13 +583,27 @@ const AssetDetailPage: React.FC = () => {
             {assetCertificates != null && assetCertificates.length === 0 ? (
               <Empty description="暂无产权证" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Space direction="vertical" size="small" style={{ display: 'flex' }}>
+              <Space orientation="vertical" size="small" style={{ display: 'flex' }}>
                 {(assetCertificates ?? []).map(cert => (
                   <div key={cert.id}>
-                    <Tag color="blue">
-                      {CERTIFICATE_TYPE_LABELS[cert.certificate_type] ?? cert.certificate_type}
-                    </Tag>
-                    <Text>{cert.certificate_number}</Text>
+                    <Space orientation="vertical" size="small" style={{ display: 'flex' }}>
+                      <div>
+                        <Tag color="blue">
+                          {CERTIFICATE_TYPE_LABELS[cert.certificate_type] ?? cert.certificate_type}
+                        </Tag>
+                        <Text>{cert.certificate_number}</Text>
+                      </div>
+                      {cert.data_quality_warnings
+                        .filter(warning => warning.asset_id === id)
+                        .map(warning => (
+                          <Alert
+                            key={warning.risk_id}
+                            type="warning"
+                            showIcon
+                            title={warning.message}
+                          />
+                        ))}
+                    </Space>
                   </div>
                 ))}
               </Space>

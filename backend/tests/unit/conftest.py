@@ -337,6 +337,7 @@ def client(monkeypatch, db_session):
                 manager_party_ids=[],
                 effective_party_ids=[],
                 source="auto",
+                is_unrestricted=True,
             )
 
         return dependency
@@ -396,6 +397,7 @@ def client(monkeypatch, db_session):
             manager_party_ids=[],
             effective_party_ids=[],
             source="auto",
+            is_unrestricted=True,
         )
 
     def apply_rbac_overrides(dependant):

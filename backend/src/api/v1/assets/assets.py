@@ -299,6 +299,12 @@ async def get_assets(
         description="每页记录数",
     ),
     search: str | None = Query(None, description="搜索关键词"),
+    project_id: str | None = Query(
+        None,
+        min_length=1,
+        pattern=r".*\S.*",
+        description="项目ID筛选",
+    ),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),
@@ -330,6 +336,7 @@ async def get_assets(
     - **page**: 页码，从1开始
     - **limit**: 每页记录数，最多100
     - **search**: 搜索关键词，会在物业名称、地址、权属方等字段中搜索
+    - **project_id**: 按当前有效项目资产绑定筛选
     - **ownership_status**: 按确权状态筛选
     - **property_nature**: 按物业性质筛选
     - **usage_status**: 按使用状态筛选
@@ -367,6 +374,7 @@ async def get_assets(
         skip=(page - 1) * page_size,
         limit=page_size,
         search=search,
+        project_id=project_id,
         filters=filters,
         sort_field=resolved_sort_field,
         sort_order=sort_order,

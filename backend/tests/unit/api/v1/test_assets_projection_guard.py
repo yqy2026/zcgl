@@ -4,8 +4,11 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from src.api.v1.assets import assets as assets_api
+from src.middleware.auth import DataScopeContext
 from src.models.asset import Asset
 from src.models.contract_group import (
     Contract,
@@ -18,6 +21,16 @@ from src.models.ownership import Ownership
 
 pytestmark = [pytest.mark.unit, pytest.mark.api]
 
+_TEST_SCOPE_CONTEXT = DataScopeContext(
+    scope_mode="owner",
+    allowed_binding_types=["owner"],
+    owner_party_ids=["owner-1"],
+    manager_party_ids=[],
+    effective_party_ids=["owner-1"],
+    source="query",
+    is_unrestricted=False,
+)
+
 
 class _AssetServiceStub:
     def __init__(self, assets, total):
@@ -28,6 +41,34 @@ class _AssetServiceStub:
     async def get_assets(self, **kwargs):
         self.last_kwargs = kwargs
         return self._assets, self._total
+
+
+def _build_list_app() -> FastAPI:
+    app = FastAPI()
+    app.include_router(assets_api.router, prefix="/assets")
+    app.dependency_overrides[assets_api.get_async_db] = lambda: MagicMock()
+    app.dependency_overrides[assets_api.get_current_active_user] = lambda: MagicMock(
+        id="user-1"
+    )
+    list_route = next(
+        route
+        for route in assets_api.router.routes
+        if route.path == "" and "GET" in route.methods
+    )
+    for dependency in list_route.dependant.dependencies:
+        if dependency.name == "_scope_ctx":
+            app.dependency_overrides[dependency.call] = lambda: _TEST_SCOPE_CONTEXT
+        elif dependency.name == "_authz_ctx":
+            app.dependency_overrides[dependency.call] = lambda: MagicMock()
+    return app
+
+
+def test_get_assets_rejects_blank_project_id_query() -> None:
+    app = _build_list_app()
+
+    with TestClient(app) as client:
+        assert client.get("/assets?project_id=").status_code == 422
+        assert client.get("/assets?project_id=%20%20").status_code == 422
 
 
 def _build_asset() -> Asset:
@@ -84,6 +125,7 @@ async def test_get_assets_without_relations_keeps_contract_projection_empty(
             page=1,
             page_size=20,
             search=None,
+            project_id="project-1",
             ownership_status=None,
             property_nature=None,
             usage_status=None,
@@ -102,6 +144,7 @@ async def test_get_assets_without_relations_keeps_contract_projection_empty(
             sort_order="desc",
             db=MagicMock(),
             current_user=MagicMock(),
+            _scope_ctx=_TEST_SCOPE_CONTEXT,
         )
 
     payload = json.loads(response.body)
@@ -109,6 +152,7 @@ async def test_get_assets_without_relations_keeps_contract_projection_empty(
 
     assert service_stub.last_kwargs is not None
     assert service_stub.last_kwargs["include_relations"] is False
+    assert service_stub.last_kwargs["project_id"] == "project-1"
     assert item["tenant_name"] is None
     assert item["lease_contract_number"] is None
     assert item["contract_start_date"] is None
@@ -147,6 +191,7 @@ async def test_get_assets_with_relations_projects_active_contract(monkeypatch):
         page=1,
         page_size=20,
         search=None,
+        project_id=None,
         ownership_status=None,
         property_nature=None,
         usage_status=None,
@@ -165,6 +210,7 @@ async def test_get_assets_with_relations_projects_active_contract(monkeypatch):
         sort_order="desc",
         db=MagicMock(),
         current_user=MagicMock(),
+        _scope_ctx=_TEST_SCOPE_CONTEXT,
     )
     payload = json.loads(response.body)
     item = payload["data"]["items"][0]

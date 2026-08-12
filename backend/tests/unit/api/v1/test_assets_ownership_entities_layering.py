@@ -40,7 +40,8 @@ async def test_get_ownership_entities_should_delegate_asset_service() -> None:
                 owner_party_ids=["owner-1"],
                 manager_party_ids=[],
                 effective_party_ids=["owner-1"],
-                source="header",
+                source="query",
+                is_unrestricted=False,
             ),
         )
 

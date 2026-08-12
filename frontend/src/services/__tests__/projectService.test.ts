@@ -1047,13 +1047,15 @@ describe('ProjectService', () => {
         success: true,
         data: { items: [], total: 0 },
       });
+      const params = { view_mode: 'owner' } as const;
 
-      await service.getProjectTenants('project-1', 'owner');
+      await service.getProjectTenants('project-1', params);
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.stringContaining('/projects/project-1/tenants'),
-        expect.objectContaining({ params: { view_mode: 'owner' } })
+        expect.objectContaining({ params })
       );
+      expect(vi.mocked(apiClient.get).mock.calls[0]?.[1]?.params).toBe(params);
     });
   });
 
@@ -1143,13 +1145,15 @@ describe('ProjectService', () => {
           mode_summaries: [],
         },
       });
+      const params = { view_mode: 'manager' } as const;
 
-      await service.getProjectAnalytics('project-1', 'manager');
+      await service.getProjectAnalytics('project-1', params);
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.stringContaining('/projects/project-1/analytics'),
-        expect.objectContaining({ params: { view_mode: 'manager' } })
+        expect.objectContaining({ params })
       );
+      expect(vi.mocked(apiClient.get).mock.calls[0]?.[1]?.params).toBe(params);
     });
   });
 });

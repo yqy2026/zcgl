@@ -79,6 +79,10 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       queryClient.invalidateQueries({ queryKey: ['assets-list'] });
       queryClient.invalidateQueries({ queryKey: ['asset'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['property-certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['asset-certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['project-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
     },
     onError: (error: unknown) => {
       MessageManager.error(`批量更新失败: ${error instanceof Error ? error.message : '未知错误'}`);

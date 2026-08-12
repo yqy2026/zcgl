@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { message } from 'antd';
-import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
+import { act, fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import PDFImportPage from '../PDFImportPage';
 import { documentExtractionService } from '@/services/documentExtractionService';
 
@@ -54,8 +54,22 @@ vi.mock('@/components/Common/PartySelector', () => ({
 }));
 
 vi.mock('@/components/Common/AssetMultiSelect', () => ({
-  default: ({ onChange }: { onChange?: (ids: string[]) => void }) => (
-    <button type="button" data-testid="asset-multi-select" onClick={() => onChange?.(['asset-1'])}>
+  default: ({
+    value,
+    onChange,
+    projectId,
+  }: {
+    value?: string[];
+    onChange?: (ids: string[]) => void;
+    projectId?: string;
+  }) => (
+    <button
+      type="button"
+      data-testid="asset-multi-select"
+      data-value={(value ?? []).join(',')}
+      data-project-id={projectId ?? ''}
+      onClick={() => onChange?.(['asset-1'])}
+    >
       set-assets
     </button>
   ),
@@ -151,6 +165,36 @@ describe('PDFImportPage - 上传页（中文 + 预填锁定）', () => {
       );
     });
   });
+
+  it('URL 项目变化时清空已选资产，避免跨项目提交资产', async () => {
+    createContractSessionMock.mockResolvedValue(session as never);
+    const { rerender } = renderWithProviders(<PDFImportPage />, {
+      route: '/contract-center/import?project_id=project-1',
+    });
+
+    await fillRequiredUploadFields();
+    fireEvent.click(screen.getByText('开始解析'));
+    await waitFor(() => {
+      expect(screen.getByText('逐项确认提取的合同字段')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('asset-multi-select'));
+    expect(screen.getByTestId('asset-multi-select')).toHaveAttribute('data-value', 'asset-1');
+
+    await act(async () => {
+      window.history.pushState({}, 'Test page', '/contract-center/import?project_id=project-2');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    rerender(<PDFImportPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('asset-multi-select')).toHaveAttribute(
+        'data-project-id',
+        'project-2'
+      );
+      expect(screen.getByTestId('asset-multi-select')).toHaveAttribute('data-value', '');
+    });
+  });
 });
 
 describe('PDFImportPage - 确认页（中文 + 选择器 + 付款周期）', () => {
@@ -205,7 +249,7 @@ describe('PDFImportPage - 确认页（中文 + 选择器 + 付款周期）', () 
 });
 
 describe('approvedPartyFetcher（#81 契约对齐）', () => {
-  it('请求携带 review_status=approved + status=active 且不再客户端过滤', async () => {
+  it('请求携带 review_status=approved + status=active，不限定 Party 类型且不再客户端过滤', async () => {
     const { approvedPartyFetcher } = await import('../PDFImportPage');
     const { partyService } = await import('@/services/partyService');
     vi.mocked(partyService.searchParties).mockResolvedValue({
@@ -223,9 +267,9 @@ describe('approvedPartyFetcher（#81 契约对齐）', () => {
         },
         {
           id: 'party-draft',
-          name: '草稿主体',
-          code: 'LE-000002',
-          party_type: 'legal_entity',
+          name: '草稿自然人主体',
+          code: 'NP-000002',
+          party_type: 'natural_person',
           business_roles: ['owner'],
           status: 'active',
           review_status: 'draft',
@@ -242,7 +286,6 @@ describe('approvedPartyFetcher（#81 契约对齐）', () => {
 
     expect(partyService.searchParties).toHaveBeenCalledWith('acme', {
       limit: 20,
-      party_type: 'legal_entity',
       status: 'active',
       review_status: 'approved',
     });

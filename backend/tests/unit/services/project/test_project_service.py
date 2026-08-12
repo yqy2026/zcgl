@@ -211,6 +211,42 @@ class TestCreateProject:
 
         assert result is not None
 
+    async def test_create_project_can_defer_commit_to_outer_transaction(
+        self,
+        project_service: ProjectService,
+        mock_db: MagicMock,
+        mock_project: MagicMock,
+    ) -> None:
+        obj_in = ProjectCreate(
+            project_name="new-project",
+            project_code="PRJ-TEST01-202606-0099",
+            status="planning",
+        )
+
+        with (
+            patch(
+                "src.crud.project.project_crud.get_by_code",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.crud.project.project_crud.create",
+                new_callable=AsyncMock,
+                return_value=mock_project,
+            ) as create_project,
+        ):
+            result = await project_service.create_project(
+                mock_db,
+                obj_in=obj_in,
+                commit=False,
+            )
+
+        assert result is mock_project
+        create_project.assert_awaited_once()
+        assert create_project.await_args.kwargs["commit"] is False
+        mock_db.commit.assert_not_awaited()
+        mock_db.refresh.assert_not_awaited()
+
     async def test_create_project_auto_generates_code(
         self,
         project_service: ProjectService,
@@ -881,7 +917,9 @@ class TestSearchProjects:
                     new_callable=AsyncMock,
                     return_value={},
                 ):
-                    result = await project_service.search_projects(mock_db, search_params)
+                    result = await project_service.search_projects(
+                        mock_db, search_params
+                    )
 
         assert result["total"] == 2
         assert result["page"] == 1
@@ -909,7 +947,9 @@ class TestSearchProjects:
                     new_callable=AsyncMock,
                     return_value={},
                 ):
-                    result = await project_service.search_projects(mock_db, search_params)
+                    result = await project_service.search_projects(
+                        mock_db, search_params
+                    )
 
         assert result["page"] == 2
         assert result["pages"] == 2
@@ -955,7 +995,9 @@ class TestSearchProjects:
                     new_callable=AsyncMock,
                     return_value={"project-a": "广州国有资产管理集团有限公司"},
                 ):
-                    result = await project_service.search_projects(mock_db, search_params)
+                    result = await project_service.search_projects(
+                        mock_db, search_params
+                    )
 
         assert result["items"][0].asset_count == 3
         assert result["items"][1].asset_count == 0
@@ -2280,6 +2322,10 @@ class TestGetProjectRisks:
                 "src.services.project.service.contract_crud.list_by_group",
                 new=AsyncMock(return_value=[]),
             ),
+            patch(
+                "src.services.project.service.property_certificate_crud.list_by_asset_ids",
+                new=AsyncMock(return_value=[]),
+            ),
         ):
             response = await project_service.get_project_risks(
                 mock_db,
@@ -2290,7 +2336,186 @@ class TestGetProjectRisks:
         assert response.total == 1
         assert response.items[0].risk_type == "vacancy"
         assert response.items[0].severity == "warning"
+        assert response.items[0].asset_id == "asset-1"
         assert "60.00" in response.items[0].message
+
+    async def test_get_project_risks_limits_certificate_warnings_to_project_assets(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        """One certificate linked elsewhere must not leak non-project asset risks."""
+        from src.schemas.project import ProjectContractRelationsResponse
+
+        project_asset = SimpleNamespace(
+            id="asset-project",
+            asset_name="Project Asset",
+            owner_party_id="owner-project",
+            rentable_area=Decimal(0),
+            rented_area=Decimal(0),
+        )
+        outside_asset = SimpleNamespace(
+            id="asset-outside",
+            asset_name="Outside Asset",
+            owner_party_id="owner-outside",
+        )
+        certificate = SimpleNamespace(
+            id="cert-1",
+            certificate_number="CERT-001",
+            party_relations=[
+                SimpleNamespace(
+                    party_id="holder-1",
+                    relation_role="owner",
+                    valid_from=datetime(2026, 1, 1),
+                    valid_to=None,
+                )
+            ],
+            assets=[project_asset, outside_asset],
+        )
+        list_certificates = AsyncMock(return_value=[certificate])
+
+        with (
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(
+                    return_value=ProjectContractRelationsResponse(items=[], total=0)
+                ),
+            ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([project_asset], None)),
+            ),
+            patch(
+                "src.services.project.service.property_certificate_crud.list_by_asset_ids",
+                new=list_certificates,
+            ),
+            patch(
+                "src.services.project.service.ProjectService._utcnow_naive",
+                return_value=datetime(2026, 8, 12),
+            ),
+        ):
+            response = await project_service.get_project_risks(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        list_certificates.assert_awaited_once_with(
+            mock_db,
+            asset_ids=["asset-project"],
+        )
+        certificate_risks = [
+            item
+            for item in response.items
+            if item.risk_type == "property_certificate_data_quality"
+        ]
+        assert len(certificate_risks) == 1
+        assert certificate_risks[0].model_dump() == {
+            "risk_id": (
+                "property-certificate:cert-1:asset:asset-project:holder_owner_mismatch"
+            ),
+            "risk_type": "property_certificate_data_quality",
+            "severity": "warning",
+            "message": (
+                "产权证 CERT-001 的当前权利人与资产 Project Asset 的主产权主体不一致"
+            ),
+            "contract_relation_id": None,
+            "display_name": "Project Asset",
+            "asset_id": "asset-project",
+            "property_certificate_id": "cert-1",
+            "warning_code": "holder_owner_mismatch",
+        }
+
+    async def test_get_project_risks_does_not_warn_when_holder_matches_owner(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        """A matching current holder is valid certificate data, not a project risk."""
+        from src.schemas.project import ProjectContractRelationsResponse
+
+        project_asset = SimpleNamespace(
+            id="asset-1",
+            asset_name="Matched Asset",
+            owner_party_id="party-1",
+            rentable_area=Decimal(0),
+            rented_area=Decimal(0),
+        )
+        certificate = SimpleNamespace(
+            id="cert-1",
+            certificate_number="CERT-001",
+            party_relations=[
+                SimpleNamespace(
+                    party_id="party-1",
+                    relation_role="owner",
+                    valid_from=datetime(2026, 1, 1),
+                    valid_to=None,
+                )
+            ],
+            assets=[project_asset],
+        )
+
+        with (
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(
+                    return_value=ProjectContractRelationsResponse(items=[], total=0)
+                ),
+            ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([project_asset], None)),
+            ),
+            patch(
+                "src.services.project.service.property_certificate_crud.list_by_asset_ids",
+                new=AsyncMock(return_value=[certificate]),
+            ),
+            patch(
+                "src.services.project.service.ProjectService._utcnow_naive",
+                return_value=datetime(2026, 8, 12),
+            ),
+        ):
+            response = await project_service.get_project_risks(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        assert response.items == []
+
+    async def test_get_project_risks_skips_certificate_query_without_active_assets(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        """An empty project asset set must not expand into an all-certificate query."""
+        from src.schemas.project import ProjectContractRelationsResponse
+
+        list_certificates = AsyncMock()
+        with (
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(
+                    return_value=ProjectContractRelationsResponse(items=[], total=0)
+                ),
+            ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([], None)),
+            ),
+            patch(
+                "src.services.project.service.property_certificate_crud.list_by_asset_ids",
+                new=list_certificates,
+            ),
+        ):
+            response = await project_service.get_project_risks(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        assert response.items == []
+        list_certificates.assert_not_awaited()
 
 
 class TestGetProjectLedgerSummary:
@@ -2834,8 +3059,20 @@ class TestGetProjectAnalytics:
                     contract_relation_id="group-agency",
                     display_name="GRP-AGENCY",
                 ),
+                ProjectRiskItem(
+                    risk_id=(
+                        "property-certificate:cert-1:asset:asset-1:"
+                        "holder_owner_mismatch"
+                    ),
+                    risk_type="property_certificate_data_quality",
+                    severity="warning",
+                    message="holder and owner differ",
+                    asset_id="asset-1",
+                    property_certificate_id="cert-1",
+                    warning_code="holder_owner_mismatch",
+                ),
             ],
-            total=2,
+            total=3,
         )
         ledger_entries = [
             _ledger_entry(
@@ -2929,6 +3166,7 @@ class TestGetProjectAnalytics:
 
         assert response.contract_relation_count == 2
         assert response.tenant_count == 2
+        assert response.risk_count == 3
         assert response.high_risk_count == 1
         by_kind = {item.relation_kind: item for item in response.mode_summaries}
         assert by_kind["lease_sublease"].receivable_amount == Decimal("2400.00")
@@ -2979,6 +3217,8 @@ class TestGetProjectAnalytics:
             total=1,
         )
 
+        tenants_mock = AsyncMock(return_value=tenants)
+
         with (
             patch.object(
                 project_service,
@@ -3000,7 +3240,7 @@ class TestGetProjectAnalytics:
             patch.object(
                 project_service,
                 "get_project_tenants",
-                new=AsyncMock(return_value=tenants),
+                new=tenants_mock,
             ),
             patch.object(
                 project_service,
@@ -3030,6 +3270,7 @@ class TestGetProjectAnalytics:
 
         assert response.tenant_count is None
         assert response.customer_contract_count is None
+        tenants_mock.assert_not_awaited()
         assert (
             response.customer_metrics_suppression_reason
             == "customer_metrics_requires_single_perspective"

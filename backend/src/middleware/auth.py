@@ -15,6 +15,7 @@ from ..core.exception_handler import forbidden
 from ..database import get_async_db
 from ..models.auth import User
 from ..schemas.auth import TokenData
+from ..schemas.authz import ScopeMode
 from ..security.cookie_manager import cookie_manager as cookie_manager
 from ..services import RBACService
 from ..services.authz import authz_service
@@ -196,11 +197,18 @@ def require_authz(
 
 
 def require_data_scope_context(
-    *, resource_type: str | None = None
+    *,
+    resource_type: str | None = None,
+    accepts_view_mode: bool | None = None,
+    query_modes: tuple[ScopeMode, ...] = ("owner", "manager", "all"),
+    require_single_perspective: bool = False,
 ) -> DataScopeContextChecker:
     """Data-scope request-contract dependency factory."""
     return DataScopeContextChecker(
         resource_type=resource_type,
+        accepts_view_mode=accepts_view_mode,
+        query_modes=query_modes,
+        require_single_perspective=require_single_perspective,
         authz_service_getter=lambda: authz_service,
         rbac_service_factory=lambda db: RBACService(db),
     )

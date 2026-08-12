@@ -27,7 +27,7 @@
 
 - **现象**：项目列表页总项目数 0；`GET /api/v1/projects` 返回空。但 19 个资产均带 `project_name`（越华路穗南大厦、人民南路等），且资产接口 `project_id` 为 `None`。
 - **判断**：功能面（项目列表页渲染、空态）正常；问题在**验收/开发环境种子数据不完整**——资产有项目归属名但 `projects` 表无对应实体。属种子数据缺口，不是功能缺陷；但会阻塞 G1 项目经营摘要、ACC-005（项目绑定运营管理方）及 REQ-PRJ 系列验收。
-- **修复**：新增幂等补数脚本 `backend/scripts/maintenance/seed_projects_from_assets.py`——按 `assets.project_name` 去重建 11 个项目实体（走 `ProjectService.create_project` 保证 `project_code` 按 `PRJ-{operator_seg}-{YYYYMM}-{SEQ4}` 自动生成，运营管理方使用环境唯一主体"广州国有资产管理集团有限公司" `LE-000001`），并回填 `project_assets` 活跃关联（19 条）。脚本含幂等检查（同名项目/活跃关联跳过）与显式提交。修复过程中发现隐式提交不可靠（最后一个项目的关联在 scope 退出时未提交），已改为循环后显式 `db.commit()`，重跑确认全量幂等（0 created / 19 existing）。
+- **修复**：新增幂等补数脚本 `backend/scripts/maintenance/seed_projects_from_assets.py`——按 `assets.project_name` 去重建 11 个项目实体（走 `ProjectService.create_project` 保证 `project_code` 按 `PRJ-{operator_seg}-{YYYYMM}-{SEQ4}` 自动生成，运营管理方由必填参数 `--manager-party-id <Party UUID>` 显式指定），并回填 `project_assets` 活跃关联（19 条）。运行命令：`cd backend && uv run --frozen --extra dev python scripts/maintenance/seed_projects_from_assets.py --manager-party-id <Party UUID>`。脚本含幂等检查（同名项目/活跃关联跳过）与显式提交。修复过程中发现隐式提交不可靠（最后一个项目的关联在 scope 退出时未提交），已改为循环后显式 `db.commit()`，重跑确认全量幂等（0 created / 19 existing）。
 - **验证**：项目 API 返回 11 个项目（编码 `PRJ-LE000001-202608-0001~0011`，状态 active）；资产详情派生 `manager_party_id` 从 None 恢复为 `27ef9966`（REQ-AST-002 收口语义生效）；浏览器实测项目详情页完整渲染——关联资产 1 个、可出租总面积 2,097.96 ㎡、收付款摘要五项、空置资产风险派生（长提大马路 空置 2,097.96㎡）、关联资产表与租赁情况（合同口径）表。
 - **影响范围**：G1 项目侧已可抽验；ACC-005、REQ-PRJ-002/003 验收前置条件满足。
 

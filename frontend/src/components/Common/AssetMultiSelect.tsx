@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Select } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import { assetService } from '@/services/assetService';
 import type { Asset } from '@/types/asset';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
-const DEFAULT_SEARCH_LIMIT = 20;
+const DEFAULT_SEARCH_PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
 
 interface AssetMultiSelectProps {
   value?: string[];
@@ -28,6 +31,11 @@ const toAssetOption = (asset: Asset): AssetOption => ({
   asset,
 });
 
+interface DebouncedSearch {
+  projectId: string;
+  keyword: string;
+}
+
 /**
  * 覆盖资产多选选择器：按项目远程搜索（PDF 导入确认页使用）。
  */
@@ -38,42 +46,37 @@ const AssetMultiSelect: React.FC<AssetMultiSelectProps> = ({
   disabled = false,
   placeholder = '请选择覆盖资产（可多选）',
 }) => {
-  const [options, setOptions] = useState<AssetOption[]>([]);
-  const [loading, setLoading] = useState(false);
-  const requestIdRef = useRef(0);
-
-  const loadOptions = useCallback(
-    async (query: string) => {
-      requestIdRef.current += 1;
-      const currentRequestId = requestIdRef.current;
-      setLoading(true);
-      try {
-        const result = await assetService.searchAssets(query, {
-          limit: DEFAULT_SEARCH_LIMIT,
-          project_id: projectId,
-        });
-        if (currentRequestId !== requestIdRef.current) {
-          return;
-        }
-        setOptions(result.items.map(toAssetOption));
-      } catch (error) {
-        // 失败不静默：保留日志便于定位（搜索框降级为空列表）
-        console.error('资产搜索失败:', error);
-        if (currentRequestId === requestIdRef.current) {
-          setOptions([]);
-        }
-      } finally {
-        if (currentRequestId === requestIdRef.current) {
-          setLoading(false);
-        }
-      }
-    },
-    [projectId]
-  );
+  const [keyword, setKeyword] = useState('');
+  const normalizedProjectId = projectId?.trim() ?? '';
+  const [debouncedSearch, setDebouncedSearch] = useState<DebouncedSearch>({
+    projectId: normalizedProjectId,
+    keyword: '',
+  });
+  const debouncedKeyword =
+    debouncedSearch.projectId === normalizedProjectId ? debouncedSearch.keyword : '';
+  const queryScopeKey = buildQueryScopeKey();
 
   useEffect(() => {
-    void loadOptions('');
-  }, [loadOptions]);
+    setKeyword('');
+    setDebouncedSearch({ projectId: normalizedProjectId, keyword: '' });
+  }, [normalizedProjectId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch({ projectId: normalizedProjectId, keyword: keyword.trim() });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [keyword, normalizedProjectId]);
+
+  const { data, isFetching, isError } = useQuery({
+    queryKey: ['asset-options', queryScopeKey, normalizedProjectId, debouncedKeyword],
+    queryFn: () =>
+      assetService.searchAssets(debouncedKeyword, {
+        page_size: DEFAULT_SEARCH_PAGE_SIZE,
+        project_id: normalizedProjectId,
+      }),
+    enabled: normalizedProjectId !== '',
+  });
 
   return (
     <Select<string[]>
@@ -83,12 +86,13 @@ const AssetMultiSelect: React.FC<AssetMultiSelectProps> = ({
       placeholder={placeholder}
       disabled={disabled}
       showSearch
+      searchValue={keyword}
       filterOption={false}
-      onSearch={query => {
-        void loadOptions(query);
-      }}
-      options={options}
-      loading={loading}
+      onSearch={setKeyword}
+      options={(data?.items ?? []).map(toAssetOption)}
+      loading={isFetching}
+      status={isError ? 'error' : undefined}
+      notFoundContent={isError ? '资产加载失败，请重试' : '暂无数据'}
     />
   );
 };

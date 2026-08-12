@@ -5,6 +5,8 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 
 def _load_module() -> ModuleType:
     script_path = (
@@ -648,6 +650,73 @@ def test_direct_params_forwarding_requires_mapped_params_type_binding(
             for issue in issues
         )
         assert module.run((mapping,)) == 1
+
+
+def test_same_file_params_type_declaration_is_not_a_proven_binding(
+    tmp_path: Path,
+) -> None:
+    """A params type declared inside the service file must still be proven bound.
+
+    The type must live in the mapped type file and be imported by the service;
+    a same-file declaration gives the gate nothing to bind and must fail loudly
+    instead of silently passing.
+    """
+    module = _load_module()
+    mapping, backend_file, _, _ = _fixture_mapping(module, tmp_path)
+    shared_file = tmp_path / "shared.ts"
+    mapping = module.ContractMapping(
+        name=mapping.name,
+        backend_file=backend_file,
+        backend_symbol=mapping.backend_symbol,
+        backend_route_symbol=mapping.backend_route_symbol,
+        backend_route_path=mapping.backend_route_path,
+        backend_route_dependency=mapping.backend_route_dependency,
+        frontend_type_file=shared_file,
+        frontend_type=mapping.frontend_type,
+        service_file=shared_file,
+        service_method=mapping.service_method,
+        request_method=mapping.request_method,
+        request_path=mapping.request_path,
+    )
+    backend_file.write_text(
+        "from fastapi import APIRouter, Query\n\n"
+        "router = APIRouter()\n\n"
+        "@router.get('/parties')\n"
+        "async def list_parties(\n"
+        "    skip: str | None = Query(None),\n"
+        "    limit: str | None = Query(None),\n"
+        "    review_status: str | None = Query(None),\n"
+        "):\n"
+        "    return []\n",
+        encoding="utf-8",
+    )
+    shared_file.write_text(
+        "import { apiClient } from '@/api/client';\n\n"
+        "export interface PartyListParams {\n"
+        "  skip?: string;\n"
+        "  limit?: string;\n"
+        "  review_status?: string;\n"
+        "}\n\n"
+        "export class PartyService {\n"
+        "  async getParties(params: PartyListParams = {}) {\n"
+        "    const requestParams = {\n"
+        "      skip: params.skip,\n"
+        "      limit: params.limit,\n"
+        "      review_status: params.review_status,\n"
+        "    };\n"
+        "    return apiClient.get('/parties', { params: requestParams });\n"
+        "  }\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    issues = module.check_mapping(mapping)
+
+    assert any(
+        issue.kind == "parse_error" and "mapped Params type binding" in issue.detail
+        for issue in issues
+    )
+    assert module.run((mapping,)) == 1
 
 
 def test_direct_params_forwarding_rejects_prior_reassignment(tmp_path: Path) -> None:
@@ -2032,6 +2101,71 @@ def test_interface_extensions_and_declaration_merging_fail_loudly(
         assert module.run((mapping,)) == 1
 
 
+def test_backend_router_aggregation_prefix_is_part_of_route_proof(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    registration_file = tmp_path / "api_v1.py"
+    backend_file = tmp_path / "assets" / "project.py"
+    backend_file.parent.mkdir()
+    backend_file.write_text(
+        "from fastapi import APIRouter\n\nrouter = APIRouter()\n",
+        encoding="utf-8",
+    )
+    registration_file.write_text(
+        "from fastapi import APIRouter\n"
+        "from .assets.project import router as project_router\n\n"
+        "api_router = APIRouter()\n"
+        "api_router.include_router(project_router, prefix='/projectz')\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        module.SourceParseError,
+        match="complete backend route path",
+    ):
+        module._parse_backend_registered_route_path(
+            registration_file,
+            backend_file,
+            "project_router",
+            "/{project_id}/tenants",
+            "/projects/{project_id}/tenants",
+        )
+
+
+def test_backend_router_aggregation_rejects_registered_router_rebinding(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    registration_file = tmp_path / "api_v1.py"
+    backend_file = tmp_path / "assets" / "project.py"
+    backend_file.parent.mkdir()
+    backend_file.write_text(
+        "from fastapi import APIRouter\n\nrouter = APIRouter()\n",
+        encoding="utf-8",
+    )
+    registration_file.write_text(
+        "from fastapi import APIRouter\n"
+        "from .assets.project import router as project_router\n\n"
+        "project_router = APIRouter()\n"
+        "api_router = APIRouter()\n"
+        "api_router.include_router(project_router, prefix='/projects')\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        module.SourceParseError,
+        match="registered backend router import",
+    ):
+        module._parse_backend_registered_route_path(
+            registration_file,
+            backend_file,
+            "project_router",
+            "/{project_id}/tenants",
+            "/projects/{project_id}/tenants",
+        )
+
+
 def test_mapped_backend_route_path_and_method_are_required(tmp_path: Path) -> None:
     module = _load_module()
     mapping, backend_file, frontend_type_file, service_file = _fixture_mapping(
@@ -2302,6 +2436,107 @@ def test_mapped_request_target_and_method_are_required(tmp_path: Path) -> None:
         assert module.run((mapping,)) == 1
 
 
+def test_dynamic_endpoint_constant_matches_backend_route_parameter_name(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    mapping, backend_file, frontend_type_file, service_file = _fixture_mapping(
+        module, tmp_path
+    )
+    mapping = module.ContractMapping(
+        **{
+            **mapping.__dict__,
+            "request_path": "/projects/{project_id}/tenants",
+        }
+    )
+    _write_fixture(backend_file, frontend_type_file, service_file)
+    service_file.write_text(
+        "import { apiClient } from '@/api/client';\n"
+        "import { API_ENDPOINTS } from '@/constants/api';\n"
+        "import type { PartyListParams } from './types';\n\n"
+        "export class PartyService {\n"
+        "  async getParties(projectId: string, params: PartyListParams = {}) {\n"
+        "    const requestParams = {\n"
+        "      skip: params.skip,\n"
+        "      limit: params.limit,\n"
+        "      review_status: params.review_status,\n"
+        "    };\n"
+        "    return apiClient.get(API_ENDPOINTS.PROJECT.TENANTS(projectId), {\n"
+        "      params: requestParams,\n"
+        "    });\n"
+        "  }\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert module.check_mapping(mapping) == []
+
+
+def test_dynamic_endpoint_constant_rejects_unproven_call_arguments(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    mapping, backend_file, frontend_type_file, service_file = _fixture_mapping(
+        module, tmp_path
+    )
+    mapping = module.ContractMapping(
+        **{
+            **mapping.__dict__,
+            "request_path": "/projects/{project_id}/tenants",
+        }
+    )
+    _write_fixture(backend_file, frontend_type_file, service_file)
+
+    for target in (
+        "API_ENDPOINTS.PROJECT.TENANTS()",
+        "API_ENDPOINTS.PROJECT.TENANTS(projectId, extra)",
+        "API_ENDPOINTS.PROJECT.TENANTS(project.id)",
+    ):
+        service_file.write_text(
+            "import { apiClient } from '@/api/client';\n"
+            "import { API_ENDPOINTS } from '@/constants/api';\n"
+            "import type { PartyListParams } from './types';\n\n"
+            "export class PartyService {\n"
+            "  async getParties(projectId: string, params: PartyListParams = {}) {\n"
+            "    const requestParams = {\n"
+            "      skip: params.skip,\n"
+            "      limit: params.limit,\n"
+            "      review_status: params.review_status,\n"
+            "    };\n"
+            f"    return apiClient.get({target}, {{ params: requestParams }});\n"
+            "  }\n"
+            "}\n",
+            encoding="utf-8",
+        )
+
+        issues = module.check_mapping(mapping)
+
+        assert any(
+            issue.kind == "parse_error" and "mapped outbound request" in issue.detail
+            for issue in issues
+        )
+
+
+def test_dynamic_endpoint_constant_rejects_unbound_template_identifier(
+    tmp_path: Path, monkeypatch
+) -> None:
+    module = _load_module()
+    constants_file = tmp_path / "frontend/src/constants/api.ts"
+    constants_file.parent.mkdir(parents=True)
+    constants_file.write_text(
+        "export const PROJECT_API = {\n"
+        "  TENANTS: (id: string) => `/projects/${projectId}/tenants`,\n"
+        "} as const;\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+
+    assert (
+        module._resolve_request_path("", "API_ENDPOINTS.PROJECT.TENANTS(projectId)")
+        is None
+    )
+
+
 def test_whitelist_rejects_method_input_alias_mutation(tmp_path: Path) -> None:
     module = _load_module()
     mapping, backend_file, frontend_type_file, service_file = _fixture_mapping(
@@ -2399,10 +2634,16 @@ def test_repository_request_metadata_matches_mapped_routes() -> None:
             mapping.backend_route_dependency,
             mapping.request_method,
             mapping.request_path,
+            (
+                mapping.backend_registration_file.relative_to(module.ROOT).as_posix()
+                if mapping.backend_registration_file is not None
+                else None
+            ),
+            mapping.backend_registered_router,
         )
         for mapping in module.CONTRACT_MAPPINGS
     ] == [
-        ("parties", "list_parties", "/parties", None, "get", "/parties"),
+        ("parties", "list_parties", "/parties", None, "get", "/parties", None, None),
         (
             "contract_groups",
             "list_contract_groups",
@@ -2410,6 +2651,8 @@ def test_repository_request_metadata_matches_mapped_routes() -> None:
             None,
             "get",
             "/contract-groups",
+            None,
+            None,
         ),
         (
             "ledger_entries",
@@ -2418,6 +2661,47 @@ def test_repository_request_metadata_matches_mapped_routes() -> None:
             "resolve_ledger_query_params",
             "get",
             "/ledger/entries",
+            None,
+            None,
         ),
-        ("projects", "list_projects", "", None, "get", "/projects"),
+        (
+            "projects",
+            "list_projects",
+            "",
+            None,
+            "get",
+            "/projects",
+            "backend/src/api/v1/__init__.py",
+            "project_router",
+        ),
+        (
+            "project_tenants",
+            "get_project_tenants",
+            "/{project_id}/tenants",
+            None,
+            "get",
+            "/projects/{project_id}/tenants",
+            "backend/src/api/v1/__init__.py",
+            "project_router",
+        ),
+        (
+            "project_analytics",
+            "get_project_analytics",
+            "/{project_id}/analytics",
+            None,
+            "get",
+            "/projects/{project_id}/analytics",
+            "backend/src/api/v1/__init__.py",
+            "project_router",
+        ),
+        (
+            "property_certificates",
+            "list_certificates",
+            "",
+            None,
+            "get",
+            "/property-certificates",
+            None,
+            None,
+        ),
     ]

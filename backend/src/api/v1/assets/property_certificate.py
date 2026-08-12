@@ -6,7 +6,7 @@ Property Certificate API Endpoints
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import forbidden
@@ -25,7 +25,10 @@ from ....schemas.property_certificate import (
 )
 from ....services.authz import authz_service
 from ....services.organization import organization_service
-from ....services.property_certificate.service import PropertyCertificateService
+from ....services.property_certificate.service import (
+    PropertyCertificateService,
+    map_property_certificate_response,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +139,7 @@ async def _require_property_certificate_create_authz(
 async def list_certificates(
     skip: int = 0,
     limit: int = 100,
+    asset_id: str | None = Query(None, min_length=1, pattern=r".*\S.*"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
@@ -161,6 +165,7 @@ async def list_certificates(
         certificates = await service.list_certificates(
             skip=skip,
             limit=limit,
+            asset_id=asset_id,
             current_user_id=str(current_user.id),
         )
         logger.debug(
@@ -170,7 +175,7 @@ async def list_certificates(
             limit,
         )
         return [
-            PropertyCertificateResponse.model_validate(certificate)
+            map_property_certificate_response(certificate)
             for certificate in certificates
         ]
     except Exception as e:
@@ -221,7 +226,7 @@ async def get_certificate(
                 detail="产权证不存在",
             )
         logger.debug(f"Retrieved certificate {certificate_id}")
-        return PropertyCertificateResponse.model_validate(cert)
+        return map_property_certificate_response(cert)
     except HTTPException:
         raise
     except Exception as e:
@@ -275,7 +280,7 @@ async def create_certificate(
             result.id,
             certificate.certificate_number,
         )
-        return PropertyCertificateResponse.model_validate(result)
+        return map_property_certificate_response(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -329,7 +334,7 @@ async def update_certificate(
 
         updated = await service.update_certificate(cert, certificate)
         logger.info("Updated certificate %s", certificate_id)
-        return PropertyCertificateResponse.model_validate(updated)
+        return map_property_certificate_response(updated)
     except HTTPException:
         raise
     except Exception as e:

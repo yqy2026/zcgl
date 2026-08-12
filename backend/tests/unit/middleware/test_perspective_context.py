@@ -210,6 +210,48 @@ async def test_require_data_scope_context_should_allow_admin_without_header() ->
     assert result.allowed_binding_types == ["owner", "manager"]
     assert result.effective_party_ids == []
     assert result.source == "auto"
+    assert result.is_unrestricted is True
+
+
+async def test_require_data_scope_context_should_reject_unavailable_project_view_mode() -> (
+    None
+):
+    checker = require_data_scope_context(
+        resource_type="project",
+        accepts_view_mode=True,
+        query_modes=("owner", "manager"),
+    )
+    request = _build_request(
+        method="GET",
+        path="/api/v1/projects/project-1/analytics",
+        query_string=b"view_mode=manager",
+    )
+
+    with (
+        patch(
+            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            new=AsyncMock(
+                return_value=SubjectContext(
+                    user_id="user-1",
+                    owner_party_ids=["owner-1"],
+                    manager_party_ids=[],
+                    role_ids=[],
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth.RBACService.is_admin",
+            new=AsyncMock(return_value=False),
+        ),
+        pytest.raises(Exception) as exc_info,
+    ):
+        await checker(
+            request=request,
+            current_user=_UserStub("user-1"),
+            db=MagicMock(),
+        )
+
+    assert getattr(exc_info.value, "status_code", None) == 403
 
 
 async def test_require_data_scope_context_should_ignore_legacy_header_and_keep_auto_scope() -> (
@@ -288,6 +330,92 @@ async def test_require_data_scope_context_should_ignore_view_mode_query_for_proj
     assert result.scope_mode == "all"
     assert result.effective_party_ids == ["manager-1", "owner-1"]
     assert result.source == "auto"
+
+
+async def test_require_data_scope_context_should_consume_enabled_project_view_mode() -> (
+    None
+):
+    checker = require_data_scope_context(
+        resource_type="project",
+        accepts_view_mode=True,
+        query_modes=("owner", "manager"),
+        require_single_perspective=True,
+    )
+    request = _build_request(
+        method="GET",
+        path="/api/v1/projects/project-1/tenants",
+        query_string=b"view_mode=owner",
+    )
+
+    with (
+        patch(
+            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            new=AsyncMock(
+                return_value=SubjectContext(
+                    user_id="user-1",
+                    owner_party_ids=["owner-1"],
+                    manager_party_ids=["manager-1"],
+                    role_ids=[],
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth.RBACService.is_admin",
+            new=AsyncMock(return_value=False),
+        ),
+    ):
+        result = await checker(
+            request=request,
+            current_user=_UserStub("user-1"),
+            db=MagicMock(),
+        )
+
+    assert result is not None
+    assert result.scope_mode == "owner"
+    assert result.effective_party_ids == ["owner-1"]
+    assert result.source == "query"
+    assert result.is_unrestricted is False
+
+
+async def test_require_data_scope_context_should_reject_mixed_restricted_tenants_scope() -> (
+    None
+):
+    checker = require_data_scope_context(
+        resource_type="project",
+        accepts_view_mode=True,
+        query_modes=("owner", "manager"),
+        require_single_perspective=True,
+    )
+    request = _build_request(
+        method="GET",
+        path="/api/v1/projects/project-1/tenants",
+    )
+
+    with (
+        patch(
+            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            new=AsyncMock(
+                return_value=SubjectContext(
+                    user_id="user-1",
+                    owner_party_ids=["owner-1"],
+                    manager_party_ids=["manager-1"],
+                    role_ids=[],
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth.RBACService.is_admin",
+            new=AsyncMock(return_value=False),
+        ),
+        pytest.raises(Exception) as exc_info,
+    ):
+        await checker(
+            request=request,
+            current_user=_UserStub("user-1"),
+            db=MagicMock(),
+        )
+
+    assert getattr(exc_info.value, "status_code", None) == 400
 
 
 async def test_require_data_scope_context_should_build_single_scope_when_single_binding_header_missing() -> (

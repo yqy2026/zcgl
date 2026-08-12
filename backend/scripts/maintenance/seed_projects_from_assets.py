@@ -1,42 +1,52 @@
-"""One-off maintenance runner: backfill project entities from asset project_name.
+"""One-off maintenance runner: backfill projects from asset project names.
 
-背景：验收环境种子数据缺口 —— 19 个资产的 `project_name` 字段有值，
-但 `projects` 表为空（资产接口 `project_id` 恒为 None），阻塞 G1 项目侧
-验收与 REQ-PRJ 系列抽验（见 docs/issues/2026-08-09-mvp-g1-acceptance-dryrun.md §3.2）。
+The runner is idempotent: existing projects and current project-asset bindings
+are reused. Project creation stays in ``ProjectService`` so generated project
+codes follow the domain rules.
 
-本脚本（幂等，可重复执行）：
-1. 按 `assets.project_name` 去重建项目实体；
-2. 项目创建走 `ProjectService.create_project`，保证 project_code 自动生成
-   （`PRJ-{operator_seg}-{YYYYMM}-{SEQ4}`，需运营方 party 与 party.code 存在）；
-3. 回填 `project_assets` 活跃关联（valid_to IS NULL），同一资产已有活跃关联则跳过。
-
-运行：`cd backend && uv run --frozen --extra dev python scripts/maintenance/seed_projects_from_assets.py`
+Usage:
+    cd backend
+    uv run --frozen --extra dev python scripts/maintenance/seed_projects_from_assets.py \
+        --manager-party-id <party-uuid>
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
-from datetime import UTC, datetime
-
-from sqlalchemy import select
+import json
+from uuid import UUID
 
 from src.crud.project import project_crud
+from src.crud.project_asset import project_asset_crud
 from src.database import async_session_scope
-from src.models.asset import Asset
-from src.models.project_asset import ProjectAsset
 from src.schemas.project import ProjectCreate
 from src.services.project.service import ProjectService
 
-# 开发/验收环境唯一主体：广州国有资产管理集团有限公司（legal_entity / owner）
-OWNER_PARTY_ID = "27ef9966-98f4-4a27-a221-978f744f9db7"
 DEFAULT_PROJECT_STATUS = "active"
 
 
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+def _party_id(value: str) -> str:
+    try:
+        return str(UUID(value))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a valid UUID") from exc
 
 
-async def main() -> dict[str, object]:
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Backfill projects and active bindings from asset project names."
+    )
+    parser.add_argument(
+        "--manager-party-id",
+        required=True,
+        type=_party_id,
+        help="Party UUID assigned as manager_party_id on newly created projects.",
+    )
+    return parser
+
+
+async def main(*, manager_party_id: str) -> dict[str, object]:
     project_service = ProjectService()
     summary: dict[str, object] = {
         "project_names": 0,
@@ -48,13 +58,12 @@ async def main() -> dict[str, object]:
     }
 
     async with async_session_scope() as db:
-        # 1. 资产去重项目名
-        rows = (await db.execute(select(Asset.project_name).distinct())).scalars().all()
-        project_names = sorted(name for name in rows if name)
-        summary["project_names"] = len(project_names)
+        grouped_asset_ids = (
+            await project_asset_crud.get_asset_ids_grouped_by_project_name(db)
+        )
+        summary["project_names"] = len(grouped_asset_ids)
 
-        for name in project_names:
-            # 2. 幂等：同名项目已存在则跳过创建
+        for name, asset_ids in grouped_asset_ids.items():
             existing = await project_crud.get_by_name(db, name)
             if existing is not None:
                 project = existing
@@ -65,42 +74,26 @@ async def main() -> dict[str, object]:
                     obj_in=ProjectCreate(
                         project_name=name,
                         status=DEFAULT_PROJECT_STATUS,
-                        manager_party_id=OWNER_PARTY_ID,
+                        manager_party_id=manager_party_id,
                     ),
                     created_by="maintenance-seed-projects",
+                    commit=False,
                 )
                 summary["projects_created"] += 1
 
-            # 3. 该项目名下的资产回填活跃关联
-            asset_ids = (
-                (
-                    await db.execute(
-                        select(Asset.id).where(Asset.project_name == name)
-                    )
-                )
-                .scalars()
-                .all()
-            )
             linked = 0
             for asset_id in asset_ids:
-                existing_link = (
-                    await db.execute(
-                        select(ProjectAsset.id).where(
-                            ProjectAsset.asset_id == asset_id,
-                            ProjectAsset.valid_to.is_(None),
-                        )
-                    )
-                ).scalars().first()
+                existing_link = await project_asset_crud.get_active_by_asset_id(
+                    db=db,
+                    asset_id=asset_id,
+                )
                 if existing_link is not None:
                     summary["asset_links_existing"] += 1
                     continue
-                db.add(
-                    ProjectAsset(
-                        project_id=str(project.id),
-                        asset_id=asset_id,
-                        valid_from=_utcnow_naive(),
-                        valid_to=None,
-                    )
+                await project_asset_crud.create_active(
+                    db=db,
+                    project_id=str(project.id),
+                    asset_id=asset_id,
                 )
                 linked += 1
             summary["asset_links_created"] += linked
@@ -113,14 +106,12 @@ async def main() -> dict[str, object]:
                 }
             )
 
-        # 显式提交，避免最后一个项目的关联依赖 scope 退出时的隐式提交
         await db.commit()
 
     return summary
 
 
 if __name__ == "__main__":
-    import json
-
-    result = asyncio.run(main())
+    args = _build_parser().parse_args()
+    result = asyncio.run(main(manager_party_id=args.manager_party_id))
     print(json.dumps(result, ensure_ascii=False, indent=2))

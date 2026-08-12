@@ -94,6 +94,7 @@ export interface ProjectActiveAssetsResponse {
 }
 
 export type ProjectRevenueMode = 'lease' | 'agency';
+export type ProjectViewMode = 'owner' | 'manager';
 export type ProjectContractRelationKind = 'lease_sublease' | 'agency_operation';
 
 export interface ProjectContractRelation {
@@ -150,6 +151,9 @@ export interface ProjectRiskItem {
   message: string;
   contract_relation_id?: string | null;
   display_name?: string | null;
+  asset_id?: string | null;
+  property_certificate_id?: string | null;
+  warning_code?: string | null;
 }
 
 export interface ProjectRisksResponse {
@@ -212,6 +216,14 @@ export interface ProjectAnalyticsResponse {
   service_fee_received: string;
   mode_summaries: ProjectAnalysisModeSummary[];
   monthly_trends: ProjectMonthlyTrendItem[];
+}
+
+export interface ProjectTenantParams {
+  view_mode?: ProjectViewMode | null;
+}
+
+export interface ProjectAnalyticsParams {
+  view_mode?: ProjectViewMode | null;
 }
 
 // 项目搜索参数类型

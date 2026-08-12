@@ -14,11 +14,13 @@ const projectLogger = createLogger('Project');
 import type {
   Project,
   ProjectActiveAssetsResponse,
+  ProjectAnalyticsParams,
   ProjectAnalyticsResponse,
   ProjectContractRelationsResponse,
   ProjectCreate,
   ProjectLedgerSummaryResponse,
   ProjectRisksResponse,
+  ProjectTenantParams,
   ProjectTenantSummaryResponse,
   ProjectUpdate,
   ProjectListResponse,
@@ -186,7 +188,7 @@ export class ProjectService {
    */
   async getProjectTenants(
     projectId: string,
-    viewMode?: 'owner' | 'manager' | null
+    params?: ProjectTenantParams
   ): Promise<ProjectTenantSummaryResponse> {
     try {
       const result = await apiClient.get<ProjectTenantSummaryResponse>(
@@ -195,7 +197,7 @@ export class ProjectService {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-          params: viewMode == null ? undefined : { view_mode: viewMode },
+          params: params,
         }
       );
 
@@ -215,7 +217,7 @@ export class ProjectService {
    */
   async getProjectAnalytics(
     projectId: string,
-    viewMode?: 'owner' | 'manager' | null
+    params?: ProjectAnalyticsParams
   ): Promise<ProjectAnalyticsResponse> {
     try {
       const result = await apiClient.get<ProjectAnalyticsResponse>(
@@ -224,7 +226,7 @@ export class ProjectService {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-          params: viewMode == null ? undefined : { view_mode: viewMode },
+          params: params,
         }
       );
 

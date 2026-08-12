@@ -220,6 +220,10 @@ describe('useAssets - Hook验证', () => {
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['asset'] });
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['property-certificates'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['asset-certificates'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['project-risks'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['project-analytics'] });
   });
 
   it('useDeleteAsset 成功后应失效资产列表与分析查询前缀', async () => {

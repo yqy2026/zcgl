@@ -501,20 +501,24 @@ describe('AssetCoreService', () => {
       );
     });
 
-    it('should apply filters when searching', async () => {
+    it('should apply project and page-size filters when searching', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: { items: [], total: 0, page: 1, page_size: 20, pages: 0 },
       });
 
-      await service.searchAssets('测试', { owner_party_id: 'party-1' });
+      await service.searchAssets('测试', {
+        project_id: 'project-1',
+        page_size: 20,
+      });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           params: expect.objectContaining({
             search: '测试',
-            owner_party_id: 'party-1',
+            project_id: 'project-1',
+            page_size: 20,
           }),
         })
       );

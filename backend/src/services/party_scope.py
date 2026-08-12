@@ -36,7 +36,15 @@ def _normalize_identifier_sequence(values: Sequence[object] | None) -> list[str]
 def build_party_filter_from_scope_context(
     scope_context: object,
 ) -> PartyFilter | None:
+    if bool(getattr(scope_context, "is_unrestricted", False)):
+        return None
+
     scope_mode = getattr(scope_context, "scope_mode", None)
+    if scope_mode not in {"owner", "manager", "all"}:
+        raise PartyScopeForbiddenError(
+            code="PARTY_SCOPE_INVALID_MODE",
+            message="当前主体范围模式无效",
+        )
     if scope_mode == "all":
         owner_ids = _normalize_identifier_sequence(
             getattr(scope_context, "owner_party_ids", None)
@@ -45,7 +53,12 @@ def build_party_filter_from_scope_context(
             getattr(scope_context, "manager_party_ids", None)
         )
         if len(owner_ids) == 0 and len(manager_ids) == 0:
-            return None
+            return PartyFilter(
+                party_ids=[],
+                filter_mode="any",
+                owner_party_ids=[],
+                manager_party_ids=[],
+            )
 
         merged_ids = sorted(set(owner_ids + manager_ids))
         return PartyFilter(
@@ -58,9 +71,6 @@ def build_party_filter_from_scope_context(
     effective_party_ids = _normalize_identifier_sequence(
         getattr(scope_context, "effective_party_ids", None)
     )
-    if len(effective_party_ids) == 0:
-        return None
-
     if scope_mode == "owner":
         return PartyFilter(
             party_ids=effective_party_ids,

@@ -4,6 +4,7 @@
 
 | 文档 | 内容 | 归档原因 |
 |------|------|------|
+| [2026-08-12-code-review-develop-vs-main.md](./2026-08-12-code-review-develop-vs-main.md) | develop vs main 双轴代码审查复核：误报修订、项目视角/资产范围/产权证 warning/漂移门禁与 seed 边界整改 | 10 项发现已全部修复并有测试证据，双轴复核无遗留，门禁通过；逐项状态与验证证据见报告「整改状态」章节 |
 | [2026-08-09-fe-blank-pages-diagnosis.md](./2026-08-09-fe-blank-pages-diagnosis.md) | 前端「空白页/冻结页」点检诊断：死路由渲染 null、rAF 冻结假设被实验推翻、backup `/list[Any]` 路由缺陷、WebBridge 后台标签快照伪影疑点 | 根因与修复已落地（404 兜底 `56a038d0`、backup 路由 `470d0810`），冒烟回归 `34c8f40a` + CI 全绿；WebBridge 伪影疑点留档供后续点检参考 |
 | [2026-04-party-architecture-analysis.md](./2026-04-party-architecture-analysis.md) | Party 业务角色体验问题与旧 A+C 方案 | REQ-PTY-003 已实施当前关系实时派生；旧 JSONB 缓存方案保持拒绝 |
 | [2026-07-10-payment-flow-lifecycle-and-voucher-audit.md](./2026-07-10-payment-flow-lifecycle-and-voucher-audit.md) | 收付流水作废/更正状态机与凭证下载审计 | 生命周期、事务重算、凭证权限/审计和前端操作已实施并通过定向门禁 |

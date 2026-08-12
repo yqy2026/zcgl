@@ -93,6 +93,7 @@ async def test_get_comprehensive_statistics_delegates_to_service(mock_db):
         manager_party_ids=["manager-1"],
         effective_party_ids=["manager-1"],
         source="query",
+        is_unrestricted=False,
     )
 
     result = await get_comprehensive_statistics(
@@ -122,6 +123,7 @@ async def test_get_basic_statistics_delegates_scope_filter(mock_db):
         manager_party_ids=["manager-1"],
         effective_party_ids=["owner-1"],
         source="query",
+        is_unrestricted=False,
     )
 
     result = await get_basic_statistics(

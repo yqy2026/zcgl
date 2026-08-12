@@ -27,6 +27,7 @@ from ...crud.contract_group import contract_group_crud
 from ...crud.party import party_crud
 from ...crud.project import project_crud
 from ...crud.project_asset import project_asset_crud
+from ...crud.property_certificate import property_certificate_crud
 from ...crud.query_builder import PartyFilter
 from ...models import Asset, Project
 from ...models.contract_group import (
@@ -61,6 +62,11 @@ from ...services.contract.ledger_service_v2 import (
 )
 from ...services.contract.service_fee_ledger_service import service_fee_ledger_service
 from ...services.party_scope import resolve_user_party_filter
+from ...services.property_certificate.risks import (
+    AssetOwnerSnapshot,
+    HolderRelationSnapshot,
+    calculate_holder_owner_mismatch,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -474,6 +480,7 @@ class ProjectService:
         obj_in: ProjectCreate,
         created_by: str | None = None,
         organization_id: str | None = None,  # DEPRECATED alias
+        commit: bool = True,
     ) -> Project:
         """创建项目"""
         try:
@@ -518,8 +525,9 @@ class ProjectService:
                 party_relations=obj_in.party_relations,
                 operator_id=created_by,
             )
-            await db.commit()
-            await db.refresh(project)
+            if commit:
+                await db.commit()
+                await db.refresh(project)
             return project
 
         except Exception as e:
@@ -706,9 +714,7 @@ class ProjectService:
                 for item in items:
                     item_id = str(item.id)
                     setattr(item, "asset_count", asset_counts.get(item_id, 0))
-                    setattr(
-                        item, "manager_party_name", manager_names.get(item_id)
-                    )
+                    setattr(item, "manager_party_name", manager_names.get(item_id))
         return {
             "items": items,
             "total": total,
@@ -994,6 +1000,7 @@ class ProjectService:
                     message=message,
                     contract_relation_id=None,
                     display_name=asset_name,
+                    asset_id=asset_id,
                 )
             )
 
@@ -1155,10 +1162,12 @@ class ProjectService:
             db,
             project_id=project_id,
         )
+        active_asset_by_id: dict[str, Any] = {}
         for asset in active_assets:
             asset_id = str(getattr(asset, "id", "") or "").strip()
             if asset_id == "":
                 continue
+            active_asset_by_id[asset_id] = asset
             rentable_area = self._as_decimal(getattr(asset, "rentable_area", None))
             rented_area = self._as_decimal(getattr(asset, "rented_area", None))
             vacant_area = max(rentable_area - rented_area, Decimal(0))
@@ -1176,6 +1185,84 @@ class ProjectService:
                 message=f"空置资产 {asset_name} 空置面积 {vacant_area:.2f}㎡",
                 severity="warning",
             )
+
+        if active_asset_by_id:
+            certificates = await property_certificate_crud.list_by_asset_ids(
+                db,
+                asset_ids=list(active_asset_by_id),
+            )
+            as_of = self._utcnow_naive()
+            for certificate in certificates:
+                risk_result = calculate_holder_owner_mismatch(
+                    certificate_id=str(certificate.id),
+                    certificate_number=str(certificate.certificate_number),
+                    holder_relations=(
+                        HolderRelationSnapshot(
+                            party_id=str(relation.party_id),
+                            relation_role=relation.relation_role,
+                            valid_from=relation.valid_from,
+                            valid_to=relation.valid_to,
+                        )
+                        for relation in certificate.party_relations
+                    ),
+                    assets=(
+                        AssetOwnerSnapshot(
+                            asset_id=asset_id,
+                            owner_party_id=getattr(asset, "owner_party_id", None),
+                            asset_name=(
+                                getattr(asset, "asset_name", None)
+                                or getattr(asset, "name", None)
+                            ),
+                        )
+                        for asset_id, asset in active_asset_by_id.items()
+                        if any(
+                            str(getattr(linked_asset, "id", "") or "").strip()
+                            == asset_id
+                            for linked_asset in certificate.assets
+                        )
+                    ),
+                    as_of=as_of,
+                )
+                if risk_result.missing_current_holders:
+                    logger.warning(
+                        "Project certificate risk skipped holder-owner comparison "
+                        "because no current holder exists "
+                        "(project_id=%s, certificate_id=%s)",
+                        project_id,
+                        certificate.id,
+                    )
+                for asset_id in risk_result.asset_ids_missing_owner:
+                    logger.warning(
+                        "Project certificate risk skipped holder-owner comparison "
+                        "because asset has no owner_party_id "
+                        "(project_id=%s, certificate_id=%s, asset_id=%s)",
+                        project_id,
+                        certificate.id,
+                        asset_id,
+                    )
+                for warning in risk_result.warnings:
+                    if warning.risk_id in seen:
+                        continue
+                    seen.add(warning.risk_id)
+                    asset = active_asset_by_id[warning.asset_id]
+                    asset_name = str(
+                        getattr(asset, "asset_name", None)
+                        or getattr(asset, "name", None)
+                        or warning.asset_id
+                    ).strip()
+                    items.append(
+                        ProjectRiskItem(
+                            risk_id=warning.risk_id,
+                            risk_type="property_certificate_data_quality",
+                            severity=warning.severity,
+                            message=warning.message,
+                            contract_relation_id=None,
+                            display_name=asset_name,
+                            asset_id=warning.asset_id,
+                            property_certificate_id=warning.certificate_id,
+                            warning_code=warning.risk_type,
+                        )
+                    )
 
         return ProjectRisksResponse(items=items, total=len(items))
 
@@ -1383,7 +1470,6 @@ class ProjectService:
         project_id: str,
         current_user_id: str | None = None,
         party_filter: PartyFilter | None = None,
-        suppress_customer_metrics: bool = False,
     ) -> ProjectAnalyticsResponse:
         """获取项目维度分析摘要，按经营模式分区。"""
         resolved_party_filter = await self._resolve_party_filter(
@@ -1392,10 +1478,9 @@ class ProjectService:
             party_filter=party_filter,
         )
         if self._is_fail_closed_party_filter(resolved_party_filter):
-            raise ResourceNotFoundError("椤圭洰", project_id)
+            raise ResourceNotFoundError("项目", project_id)
         should_suppress_customer_metrics = (
-            suppress_customer_metrics
-            or getattr(resolved_party_filter, "filter_mode", None) == "any"
+            getattr(resolved_party_filter, "filter_mode", None) == "any"
         )
         _, asset_summary = await self.get_project_active_assets(
             db=db,
@@ -1415,11 +1500,15 @@ class ProjectService:
             current_user_id=current_user_id,
             party_filter=resolved_party_filter,
         )
-        tenants = await self.get_project_tenants(
-            db=db,
-            project_id=project_id,
-            current_user_id=current_user_id,
-            party_filter=resolved_party_filter,
+        tenants = (
+            ProjectTenantSummaryResponse(items=[], total=0)
+            if should_suppress_customer_metrics
+            else await self.get_project_tenants(
+                db=db,
+                project_id=project_id,
+                current_user_id=current_user_id,
+                party_filter=resolved_party_filter,
+            )
         )
         risks = await self.get_project_risks(
             db=db,

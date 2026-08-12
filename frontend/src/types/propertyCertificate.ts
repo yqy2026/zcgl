@@ -15,6 +15,22 @@ export const CERTIFICATE_TYPE_LABELS: Record<CertificateType, string> = {
   [CertificateType.OTHER]: '其他',
 };
 
+export interface PropertyCertificateDataQualityWarning {
+  risk_id: string;
+  risk_type: 'holder_owner_mismatch';
+  severity: 'warning';
+  message: string;
+  certificate_id: string;
+  asset_id: string;
+}
+
+/** 产权证列表查询参数（query-param drift gate 绑定契约） */
+export interface PropertyCertificateListParams {
+  skip?: number;
+  limit?: number;
+  asset_id?: string;
+}
+
 export interface PropertyCertificate {
   id: string;
   certificate_number: string;
@@ -32,6 +48,8 @@ export interface PropertyCertificate {
   restrictions: string | null;
   remarks: string | null;
   asset_ids: string[];
+  holder_party_ids: string[];
+  data_quality_warnings: PropertyCertificateDataQualityWarning[];
   created_at: string;
   updated_at: string;
   created_by: string | null;

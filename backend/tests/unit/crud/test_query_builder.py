@@ -302,7 +302,8 @@ class TestQueryBuilder:
                 owner_party_ids=["owner-1"],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["owner-1"],
-                source="header",
+                source="query",
+                is_unrestricted=False,
             )
         )
 
@@ -323,7 +324,8 @@ class TestQueryBuilder:
                 owner_party_ids=["owner-1"],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="query",
+                is_unrestricted=False,
             )
         )
 

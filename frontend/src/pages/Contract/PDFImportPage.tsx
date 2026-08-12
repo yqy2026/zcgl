@@ -107,7 +107,7 @@ export const isPdfFile = (file: Pick<File, 'name' | 'type'>): boolean =>
 const APPROVED_PARTY_SEARCH_LIMIT = 20;
 
 /**
- * 已审核主体选择器：只允许选择 review_status=approved 且 status=active 的法人主体。
+ * 已审核主体选择器：只允许选择 review_status=approved 且 status=active 的主体。
  * 过滤由服务端完成（GET /api/v1/parties?review_status=approved&status=active，#81/#82 契约对齐），
  * 客户端不再二次过滤。
  */
@@ -117,7 +117,6 @@ export const approvedPartyFetcher = async (
 ): Promise<Party[]> => {
   const result = await partyService.searchParties(query, {
     limit: APPROVED_PARTY_SEARCH_LIMIT,
-    party_type: 'legal_entity',
     status: 'active',
     review_status: 'approved',
   });
@@ -139,8 +138,9 @@ const PDFImportPage: React.FC = () => {
   });
   const [assetIds, setAssetIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const revenueMode = Form.useWatch('revenue_mode', form) ?? 'lease';
-  const selectedProjectId = Form.useWatch('project_id', form);
+  const revenueMode =
+    Form.useWatch('revenue_mode', { form, preserve: true }) ?? 'lease';
+  const selectedProjectId = Form.useWatch('project_id', { form, preserve: true });
   const relationTypeOptions = relationTypeOptionsForRevenueMode(revenueMode);
   const projectLocked = projectIdFromUrl != null && projectIdFromUrl !== '';
 
@@ -150,6 +150,10 @@ const PDFImportPage: React.FC = () => {
       form.setFieldValue('project_id', projectIdFromUrl);
     }
   }, [projectIdFromUrl, projectLocked, form]);
+
+  useEffect(() => {
+    setAssetIds([]);
+  }, [selectedProjectId]);
 
   const fields = useMemo(() => {
     const extracted = session?.candidates.fields ?? {};

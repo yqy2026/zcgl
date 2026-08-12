@@ -24,7 +24,8 @@ class TestResolveUserPartyFilter:
             owner_party_ids=["owner-1"],
             manager_party_ids=["manager-1"],
             effective_party_ids=["owner-1"],
-            source="header",
+            source="query",
+            is_unrestricted=False,
         )
 
         assert build_party_filter_from_scope_context(context) == PartyFilter(
@@ -41,7 +42,8 @@ class TestResolveUserPartyFilter:
             owner_party_ids=["owner-1"],
             manager_party_ids=["manager-1"],
             effective_party_ids=["manager-1"],
-            source="header",
+            source="query",
+            is_unrestricted=False,
         )
 
         assert build_party_filter_from_scope_context(context) == PartyFilter(
@@ -65,6 +67,47 @@ class TestResolveUserPartyFilter:
             owner_party_ids=["owner-1"],
             manager_party_ids=["manager-1"],
         )
+
+    async def test_restricted_empty_scope_builds_fail_closed_filter(self) -> None:
+        context = DataScopeContext(
+            scope_mode="owner",
+            allowed_binding_types=["owner"],
+            owner_party_ids=[],
+            manager_party_ids=[],
+            effective_party_ids=[],
+            source="auto",
+            is_unrestricted=False,
+        )
+
+        assert build_party_filter_from_scope_context(context) == PartyFilter(
+            party_ids=[],
+            filter_mode="owner",
+            owner_party_ids=[],
+            manager_party_ids=[],
+        )
+
+    async def test_unrestricted_scope_bypasses_party_filter(self) -> None:
+        context = DataScopeContext(
+            scope_mode="all",
+            allowed_binding_types=["owner", "manager"],
+            owner_party_ids=[],
+            manager_party_ids=[],
+            effective_party_ids=[],
+            source="auto",
+            is_unrestricted=True,
+        )
+
+        assert build_party_filter_from_scope_context(context) is None
+
+    async def test_unknown_context_scope_mode_is_rejected(self) -> None:
+        context = SimpleNamespace(
+            scope_mode="tenant",
+            effective_party_ids=["tenant-1"],
+            is_unrestricted=False,
+        )
+
+        with pytest.raises(PartyScopeForbiddenError):
+            build_party_filter_from_scope_context(context)
 
     async def test_explicit_filter_wins_without_resolving(self) -> None:
         explicit_filter = PartyFilter(party_ids=["party-1"])

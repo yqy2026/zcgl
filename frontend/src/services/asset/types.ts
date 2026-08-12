@@ -312,6 +312,7 @@ import type { OwnershipStatus, UsageStatus, PropertyNature, TenantType } from '@
 /** 搜索过滤器接口 */
 export interface AssetSearchFilters {
   project_id?: string;
+  page_size?: number;
   owner_party_id?: string;
   ownership_status?: OwnershipStatus;
   property_nature?: PropertyNature;

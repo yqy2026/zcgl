@@ -7,6 +7,7 @@ import { apiClient } from '@/api/client';
 import type {
   PropertyCertificate,
   PropertyCertificateCreate,
+  PropertyCertificateListParams,
   PropertyCertificateUpdate,
 } from '@/types/propertyCertificate';
 
@@ -14,12 +15,11 @@ export const propertyCertificateService = {
   /**
    * List certificates
    */
-  async listCertificates(params?: {
-    skip?: number;
-    limit?: number;
-  }): Promise<PropertyCertificate[]> {
+  async listCertificates(
+    params?: PropertyCertificateListParams
+  ): Promise<PropertyCertificate[]> {
     const result = await apiClient.get<PropertyCertificate[]>('/property-certificates', {
-      params,
+      params: params,
     });
     return result.data ?? [];
   },

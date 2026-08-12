@@ -146,6 +146,10 @@ describe('AssetCreatePage', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['asset'] });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['property-certificates'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['asset-certificates'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['project-risks'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['project-analytics'] });
   });
 
   it('编辑态不再依赖视角就绪门闸才请求资产详情', async () => {

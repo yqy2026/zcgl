@@ -62,6 +62,10 @@ const AssetCreatePage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['assets-list'] });
       queryClient.invalidateQueries({ queryKey: ['asset'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['property-certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['asset-certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['project-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
       navigate(`/assets/${id}`);
     },
     onError: (error: unknown) => {

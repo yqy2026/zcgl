@@ -351,6 +351,9 @@ class ProjectRiskItem(BaseModel):
     message: str
     contract_relation_id: str | None = None
     display_name: str | None = None
+    asset_id: str | None = None
+    property_certificate_id: str | None = None
+    warning_code: str | None = None
 
 
 class ProjectRisksResponse(BaseModel):

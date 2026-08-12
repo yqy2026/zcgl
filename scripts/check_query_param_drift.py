@@ -40,6 +40,8 @@ class ContractMapping:
     service_method: str
     request_method: str
     request_path: str
+    backend_registration_file: Path | None = None
+    backend_registered_router: str | None = None
 
 
 @dataclass(frozen=True)
@@ -139,6 +141,54 @@ CONTRACT_MAPPINGS: tuple[ContractMapping, ...] = (
         service_method="getProjects",
         request_method="get",
         request_path="/projects",
+        backend_registration_file=ROOT / "backend/src/api/v1/__init__.py",
+        backend_registered_router="project_router",
+    ),
+    ContractMapping(
+        name="project_tenants",
+        backend_file=ROOT / "backend/src/api/v1/assets/project.py",
+        backend_symbol="get_project_tenants",
+        backend_route_symbol="get_project_tenants",
+        backend_route_path="/{project_id}/tenants",
+        backend_route_dependency=None,
+        frontend_type_file=ROOT / "frontend/src/types/project.ts",
+        frontend_type="ProjectTenantParams",
+        service_file=ROOT / "frontend/src/services/projectService.ts",
+        service_method="getProjectTenants",
+        request_method="get",
+        request_path="/projects/{project_id}/tenants",
+        backend_registration_file=ROOT / "backend/src/api/v1/__init__.py",
+        backend_registered_router="project_router",
+    ),
+    ContractMapping(
+        name="project_analytics",
+        backend_file=ROOT / "backend/src/api/v1/assets/project.py",
+        backend_symbol="get_project_analytics",
+        backend_route_symbol="get_project_analytics",
+        backend_route_path="/{project_id}/analytics",
+        backend_route_dependency=None,
+        frontend_type_file=ROOT / "frontend/src/types/project.ts",
+        frontend_type="ProjectAnalyticsParams",
+        service_file=ROOT / "frontend/src/services/projectService.ts",
+        service_method="getProjectAnalytics",
+        request_method="get",
+        request_path="/projects/{project_id}/analytics",
+        backend_registration_file=ROOT / "backend/src/api/v1/__init__.py",
+        backend_registered_router="project_router",
+    ),
+    ContractMapping(
+        name="property_certificates",
+        backend_file=ROOT / "backend/src/api/v1/assets/property_certificate.py",
+        backend_symbol="list_certificates",
+        backend_route_symbol="list_certificates",
+        backend_route_path="",
+        backend_route_dependency=None,
+        frontend_type_file=ROOT / "frontend/src/types/propertyCertificate.ts",
+        frontend_type="PropertyCertificateListParams",
+        service_file=ROOT / "frontend/src/services/propertyCertificateService.ts",
+        service_method="listCertificates",
+        request_method="get",
+        request_path="/property-certificates",
     ),
 )
 
@@ -596,6 +646,110 @@ def _parse_backend_route_path(
         line = routes[0][1] if len(routes) == 1 else function.lineno
         raise SourceParseError(
             f"cannot verify mapped backend route path: {symbol}", line=line
+        )
+
+
+def _parse_backend_registered_route_path(
+    registration_path: Path,
+    backend_path: Path,
+    registered_router: str,
+    local_path: str,
+    expected_complete_path: str,
+) -> None:
+    """Prove an aggregated router prefix completes the backend route path."""
+
+    source = _read_source(registration_path)
+    try:
+        tree = ast.parse(source, filename=str(registration_path))
+    except SyntaxError as exc:
+        raise SourceParseError(
+            f"Python syntax error: {exc.msg}", line=exc.lineno
+        ) from exc
+
+    matching_imports: list[ast.ImportFrom] = []
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom) or node.level < 1:
+            continue
+        if not any(
+            alias.name == "router" and alias.asname == registered_router
+            for alias in node.names
+        ):
+            continue
+        module_base = registration_path.parent
+        for _ in range(node.level - 1):
+            module_base = module_base.parent
+        module_parts = [] if node.module is None else node.module.split(".")
+        imported_path = module_base.joinpath(*module_parts).with_suffix(".py")
+        if imported_path.resolve() == backend_path.resolve():
+            matching_imports.append(node)
+    if len(matching_imports) != 1 or any(
+        _python_target_binds_name(target, registered_router)
+        for node in ast.walk(tree)
+        for target in (
+            node.targets
+            if isinstance(node, ast.Assign)
+            else [node.target]
+            if isinstance(node, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr))
+            else []
+        )
+    ):
+        raise SourceParseError(
+            f"cannot verify registered backend router import: {registered_router}"
+        )
+    if not _is_proven_fastapi_router_binding(tree, "api_router"):
+        raise SourceParseError("cannot verify backend aggregation APIRouter binding")
+
+    registrations: list[tuple[str, int]] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+            continue
+        call = node.value
+        if (
+            not isinstance(call.func, ast.Attribute)
+            or call.func.attr != "include_router"
+        ):
+            continue
+        if (
+            not isinstance(call.func.value, ast.Name)
+            or call.func.value.id != "api_router"
+        ):
+            continue
+        if (
+            not call.args
+            or not isinstance(call.args[0], ast.Name)
+            or call.args[0].id != registered_router
+        ):
+            continue
+        prefix_keywords = [
+            keyword for keyword in call.keywords if keyword.arg == "prefix"
+        ]
+        if len(prefix_keywords) != 1:
+            raise SourceParseError(
+                f"cannot verify static backend router prefix: {registered_router}",
+                line=node.lineno,
+            )
+        prefix_value = prefix_keywords[0].value
+        if not isinstance(prefix_value, ast.Constant) or not isinstance(
+            prefix_value.value, str
+        ):
+            raise SourceParseError(
+                f"cannot verify static backend router prefix: {registered_router}",
+                line=node.lineno,
+            )
+        registrations.append((prefix_value.value, node.lineno))
+
+    if len(registrations) != 1:
+        raise SourceParseError(
+            f"cannot verify unique backend router registration: {registered_router}"
+        )
+    prefix, line = registrations[0]
+    complete_path = f"{prefix.rstrip('/')}/{local_path.lstrip('/')}"
+    if local_path == "":
+        complete_path = prefix.rstrip("/") or "/"
+    if not _request_paths_match(complete_path, expected_complete_path):
+        raise SourceParseError(
+            f"cannot verify complete backend route path: {expected_complete_path}",
+            line=line,
         )
 
 
@@ -1086,6 +1240,54 @@ def _method_aliases_identifier(method_body: str, name: str) -> bool:
     return any(alias.group("alias") != name for alias in aliases)
 
 
+def _resolve_dynamic_endpoint_path(
+    group_body: str,
+    key: str,
+    call_arguments: str,
+) -> str | None:
+    arguments = [
+        argument.strip()
+        for argument, _ in _split_top_level_object_entries(call_arguments)
+    ]
+    if any(_IDENTIFIER_RE.fullmatch(argument) is None for argument in arguments):
+        return None
+
+    value_matches = list(
+        re.finditer(
+            rf"\b{re.escape(key)}\s*:\s*\((?P<parameters>[^)]*)\)\s*=>\s*"
+            r"`(?P<template>[^`]*)`",
+            group_body,
+        )
+    )
+    if len(value_matches) != 1:
+        return None
+
+    parameters = []
+    for parameter, _ in _split_top_level_object_entries(
+        value_matches[0].group("parameters")
+    ):
+        parameter_match = re.fullmatch(
+            r"\s*(?P<name>[A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*[^,]+\s*",
+            parameter,
+        )
+        if parameter_match is None:
+            return None
+        parameters.append(parameter_match.group("name"))
+    if len(arguments) != len(parameters):
+        return None
+
+    template = value_matches[0].group("template")
+    interpolations = re.findall(r"\$\{\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\}", template)
+    if len(interpolations) != len(parameters) or set(interpolations) != set(parameters):
+        return None
+    resolved = re.sub(
+        r"\$\{\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\}",
+        lambda match: "{" + match.group(1) + "}",
+        template,
+    )
+    return None if "${" in resolved else resolved
+
+
 def _resolve_request_path(source: str, target: str) -> str | None:
     target = re.sub(r"\s+", "", target)
     literal = re.fullmatch(r"(['\"])(?P<path>[^'\"]*)\1", target)
@@ -1115,10 +1317,15 @@ def _resolve_request_path(source: str, target: str) -> str | None:
 
     if target.startswith("API_ENDPOINTS."):
         target = target.removeprefix("API_ENDPOINTS.")
-    endpoint = re.fullmatch(r"([A-Z_]+)\.([A-Z_]+)", target)
+    endpoint = re.fullmatch(
+        r"(?P<group>[A-Z_]+)\.(?P<key>[A-Z_]+)"
+        r"(?:\((?P<arguments>.*)\))?",
+        target,
+    )
     if endpoint is None:
         return None
-    group, key = endpoint.groups()
+    group = endpoint.group("group")
+    key = endpoint.group("key")
     constants_source = _read_source(ROOT / "frontend/src/constants/api.ts")
     group_match = re.search(
         rf"export\s+const\s+{re.escape(group)}_API\s*=\s*\{{(?P<body>.*?)\}}\s*as\s+const;",
@@ -1127,11 +1334,33 @@ def _resolve_request_path(source: str, target: str) -> str | None:
     )
     if group_match is None:
         return None
+    group_body = group_match.group("body")
+    call_arguments = endpoint.group("arguments")
+    if call_arguments is not None:
+        return _resolve_dynamic_endpoint_path(group_body, key, call_arguments)
+
     value_match = re.search(
         rf"\b{re.escape(key)}\s*:\s*(['\"])(?P<path>[^'\"]*)\1",
-        group_match.group("body"),
+        group_body,
     )
     return None if value_match is None else value_match.group("path")
+
+
+def _request_paths_match(actual: str | None, expected: str) -> bool:
+    if actual is None:
+        return False
+    dynamic_segment = re.compile(r"\{[A-Za-z_$][A-Za-z0-9_$]*\}")
+    normalized_actual = dynamic_segment.sub("{}", actual)
+    normalized_expected = dynamic_segment.sub("{}", expected)
+    if "{" in normalized_actual.replace("{}", "") or "}" in normalized_actual.replace(
+        "{}", ""
+    ):
+        return False
+    if "{" in normalized_expected.replace(
+        "{}", ""
+    ) or "}" in normalized_expected.replace("{}", ""):
+        return False
+    return normalized_actual == normalized_expected
 
 
 def _is_within_expression_arrow_body(code: str, index: int) -> bool:
@@ -1236,9 +1465,8 @@ def _find_outbound_params(
         target, _ = arguments[0]
         request_method = client_match.group("method")
         request_path = _resolve_request_path(source, target)
-        if (
-            request_method != mapping.request_method
-            or request_path != mapping.request_path
+        if request_method != mapping.request_method or not _request_paths_match(
+            request_path, mapping.request_path
         ):
             raise SourceParseError(
                 f"cannot verify mapped outbound request: expected "
@@ -1255,7 +1483,7 @@ def _find_outbound_params(
             )
         config_opening = opening_parenthesis + 1 + config_offset + config_leading
         config_closing = _find_matching_brace(method_body, config_opening)
-        if config_closing != closing_parenthesis - 1:
+        if method_body[config_closing + 1 : closing_parenthesis].strip() != "":
             raise SourceParseError(
                 f"unsupported outbound request config shape: {mapping.service_method}",
                 line=_line_number(method_body, config_opening),
@@ -1751,6 +1979,7 @@ def check_mapping(mapping: ContractMapping) -> list[DriftIssue]:
         ),
     )
     backend_route_error: DriftIssue | None = None
+    backend_registration_error: DriftIssue | None = None
     if (
         mapping.backend_route_symbol is not None
         and mapping.backend_route_path is not None
@@ -1767,6 +1996,33 @@ def check_mapping(mapping: ContractMapping) -> list[DriftIssue]:
                 mapping.backend_route_dependency,
             ),
         )
+    if (mapping.backend_registration_file is None) != (
+        mapping.backend_registered_router is None
+    ):
+        backend_registration_error = DriftIssue(
+            contract=mapping.name,
+            kind="parse_error",
+            field=None,
+            path=mapping.backend_registration_file or mapping.backend_file,
+            detail="backend router registration metadata must be configured together",
+        )
+    elif (
+        mapping.backend_registration_file is not None
+        and mapping.backend_registered_router is not None
+        and mapping.backend_route_path is not None
+    ):
+        _, backend_registration_error = _parse_or_issue(
+            contract=mapping,
+            kind="parse_error",
+            path=mapping.backend_registration_file,
+            parse=lambda: _parse_backend_registered_route_path(
+                mapping.backend_registration_file,
+                mapping.backend_file,
+                mapping.backend_registered_router,
+                mapping.backend_route_path,
+                mapping.request_path,
+            ),
+        )
     request_fields, request_error = _parse_or_issue(
         contract=mapping,
         kind="parse_error",
@@ -1776,7 +2032,13 @@ def check_mapping(mapping: ContractMapping) -> list[DriftIssue]:
 
     issues = [
         issue
-        for issue in (backend_error, frontend_error, backend_route_error, request_error)
+        for issue in (
+            backend_error,
+            frontend_error,
+            backend_route_error,
+            backend_registration_error,
+            request_error,
+        )
         if issue is not None
     ]
     if issues:

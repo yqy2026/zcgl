@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
   Space,
@@ -22,6 +22,7 @@ import { FileTextOutlined, HomeOutlined, EditOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
 import { CERTIFICATE_TYPE_LABELS } from '@/types/propertyCertificate';
+import type { PropertyCertificateDataQualityWarning } from '@/types/propertyCertificate';
 import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
 import { assetService } from '@/services/assetService';
 import type { Asset } from '@/types/asset';
@@ -29,9 +30,26 @@ import { PageContainer } from '@/components/Common';
 import { PropertyCertificateAttachmentsPanel } from '@/components/PropertyCertificate/PropertyCertificateAttachmentsPanel';
 import styles from './PropertyCertificateDetailPage.module.css';
 
+const CertificateWarnings: React.FC<{
+  warnings: PropertyCertificateDataQualityWarning[];
+}> = ({ warnings }) => {
+  if (warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <Space orientation="vertical" size="small" className={styles.fullWidthStack}>
+      {warnings.map(warning => (
+        <Alert key={warning.risk_id} type="warning" showIcon title={warning.message} />
+      ))}
+    </Space>
+  );
+};
+
 const PropertyCertificateDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [editVisible, setEditVisible] = useState(false);
   const [assetVisible, setAssetVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +60,6 @@ const PropertyCertificateDetailPage: React.FC = () => {
     data: certificate,
     isLoading,
     error,
-    refetch,
   } = useQuery({
     queryKey: ['property-certificate', id],
     queryFn: () => propertyCertificateService.getCertificate(id as string),
@@ -62,12 +79,22 @@ const PropertyCertificateDetailPage: React.FC = () => {
     return map;
   }, [assetResponse]);
 
+  const invalidateCertificateCaches = async () => {
+    await Promise.all(
+      [
+        ['property-certificate'],
+        ['property-certificates'],
+        ['asset-certificates'],
+        ['asset'],
+        ['project-risks'],
+        ['project-analytics'],
+      ].map(queryKey => queryClient.invalidateQueries({ queryKey }))
+    );
+  };
+
   if (error) {
     return (
-      <PageContainer
-        title="产权证详情"
-        onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
-      >
+      <PageContainer title="产权证详情" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
         <Alert type="error" title="加载失败" />
       </PageContainer>
     );
@@ -75,10 +102,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
 
   if (!isLoading && !certificate) {
     return (
-      <PageContainer
-        title="产权证详情"
-        onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
-      >
+      <PageContainer title="产权证详情" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
         <Alert type="warning" title="产权证不存在" />
       </PageContainer>
     );
@@ -134,7 +158,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
       });
       message.success('更新成功');
       setEditVisible(false);
-      await refetch();
+      await invalidateCertificateCaches();
     } catch {
       message.error('更新失败');
     } finally {
@@ -147,6 +171,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
     setSubmitting(true);
     try {
       await propertyCertificateService.deleteCertificate(id);
+      await invalidateCertificateCaches();
       message.success('删除成功');
       navigate(PROPERTY_CERTIFICATE_ROUTES.LIST);
     } catch {
@@ -174,7 +199,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
       });
       message.success('资产关联已更新');
       setAssetVisible(false);
-      await refetch();
+      await invalidateCertificateCaches();
     } catch {
       message.error('资产关联更新失败');
     } finally {
@@ -225,6 +250,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
     >
       {certificate && (
         <Space orientation="vertical" size="large" className={styles.fullWidthStack}>
+          <CertificateWarnings warnings={certificate.data_quality_warnings} />
           <Row gutter={[24, 24]}>
             <Col span={24}>
               <Card title="基本信息">
@@ -263,9 +289,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
                   <Descriptions.Item label="权利限制">
                     {certificate.restrictions ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="备注">
-                    {certificate.remarks ?? '-'}
-                  </Descriptions.Item>
+                  <Descriptions.Item label="备注">{certificate.remarks ?? '-'}</Descriptions.Item>
                   <Descriptions.Item label="创建时间">
                     {certificate.created_at
                       ? dayjs(certificate.created_at).format('YYYY-MM-DD')
@@ -314,6 +338,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
         confirmLoading={submitting}
       >
         <Form form={form} layout="vertical">
+          <CertificateWarnings warnings={certificate?.data_quality_warnings ?? []} />
           <Form.Item
             label="证书编号"
             name="certificate_number"

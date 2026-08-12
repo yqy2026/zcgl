@@ -71,6 +71,10 @@ export const useUpdateAsset = () => {
       queryClient.invalidateQueries({ queryKey: ['assets-list'] });
       queryClient.invalidateQueries({ queryKey: ['asset'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['property-certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['asset-certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['project-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
       MessageManager.success('资产更新成功');
     },
     onError: (error: { message: string }) => {

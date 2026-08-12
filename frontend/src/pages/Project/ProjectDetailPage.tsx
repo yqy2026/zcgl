@@ -42,6 +42,7 @@ import type {
   ProjectAnalysisModeSummary,
   ProjectContractRelation,
   ProjectRiskItem,
+  ProjectViewMode,
 } from '@/types/project';
 import type { GroupRelationType } from '@/types/contractGroup';
 import { useArrayListData } from '@/hooks/useArrayListData';
@@ -361,20 +362,35 @@ const ProjectDetailPage: React.FC = () => {
     staleTime: 60_000,
   });
 
-  const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
+  const currentViewMode = useDataScopeStore(state =>
+    state.getEffectiveViewMode()
+  ) as ProjectViewMode | null;
   const isDualBinding = useDataScopeStore(state => state.isDualBinding);
   const isAdmin = useDataScopeStore(state => state.isAdmin);
+  const canQueryProjectTenants = canQuery && (!isDualBinding || currentViewMode != null);
 
   const { data: projectTenantsData, isLoading: projectTenantsLoading } = useQuery({
     queryKey: ['project-tenants', queryScopeKey, id, currentViewMode],
-    queryFn: () => projectService.getProjectTenants(id as string, currentViewMode),
-    enabled: canQuery,
+    queryFn: () => {
+      if (!canQueryProjectTenants) {
+        throw new Error('项目租户摘要需要单一视角');
+      }
+      return projectService.getProjectTenants(
+        id as string,
+        currentViewMode == null ? undefined : { view_mode: currentViewMode }
+      );
+    },
+    enabled: canQueryProjectTenants,
     staleTime: 60_000,
   });
 
   const { data: projectAnalyticsData, isLoading: projectAnalyticsLoading } = useQuery({
     queryKey: ['project-analytics', queryScopeKey, id, currentViewMode],
-    queryFn: () => projectService.getProjectAnalytics(id as string, currentViewMode),
+    queryFn: () =>
+      projectService.getProjectAnalytics(
+        id as string,
+        currentViewMode == null ? undefined : { view_mode: currentViewMode }
+      ),
     enabled: canQuery,
     staleTime: 60_000,
   });

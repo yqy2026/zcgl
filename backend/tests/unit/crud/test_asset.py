@@ -333,6 +333,46 @@ class TestCRUDAssetGetMulti:
         assert mock_build_count_query.call_args.kwargs.get("party_filter") is None
         assert mock_apply_party_filter.await_count == 2
 
+    async def test_get_multi_with_project_composes_current_binding_scope_and_search(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        """项目过滤必须进入列表和计数基表，并与主体范围、搜索条件取交集。"""
+        execute_result_assets = MagicMock()
+        execute_result_assets.scalars.return_value.all.return_value = []
+        execute_result_count = MagicMock()
+        execute_result_count.scalar.return_value = 0
+        mock_db.execute = AsyncMock(
+            side_effect=[execute_result_assets, execute_result_count]
+        )
+
+        await crud.get_multi_with_search_async(
+            mock_db,
+            skip=0,
+            limit=20,
+            search="办公",
+            project_id="project-1",
+            party_filter=PartyFilter(
+                party_ids=["owner-1"],
+                filter_mode="owner",
+                owner_party_ids=["owner-1"],
+                manager_party_ids=[],
+            ),
+        )
+
+        assert mock_db.execute.await_count == 2
+        compiled_statements = [
+            str(call.args[0].compile(compile_kwargs={"literal_binds": True}))
+            for call in mock_db.execute.await_args_list
+        ]
+        for compiled in compiled_statements:
+            assert "EXISTS (SELECT project_assets.id" in compiled
+            assert "project_assets.asset_id = assets.id" in compiled
+            assert "project_assets.project_id = 'project-1'" in compiled
+            assert "project_assets.valid_to IS NULL" in compiled
+            assert "assets.owner_party_id IN ('owner-1')" in compiled
+            assert "assets.asset_name" in compiled
+            assert "%办公%" in compiled
+
     async def test_apply_asset_party_filter_manager_uses_current_project_manager(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:

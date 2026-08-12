@@ -50,9 +50,22 @@ class PropertyCertificateUpdate(BaseModel):
     holder_party_ids: list[str] | None = None
 
 
+class PropertyCertificateDataQualityWarning(BaseModel):
+    risk_id: str
+    risk_type: str
+    severity: str = "warning"
+    message: str
+    certificate_id: str
+    asset_id: str
+
+
 class PropertyCertificateResponse(PropertyCertificateBase):
     id: str = Field(description="Certificate ID")
     asset_ids: list[str] = Field(default_factory=list)
+    holder_party_ids: list[str] = Field(default_factory=list)
+    data_quality_warnings: list[PropertyCertificateDataQualityWarning] = Field(
+        default_factory=list
+    )
     created_at: datetime
     updated_at: datetime
     created_by: str | None = None

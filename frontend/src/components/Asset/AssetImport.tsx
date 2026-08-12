@@ -194,8 +194,13 @@ const OptimizedAssetImport: React.FC = () => {
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['assets-list'] }),
+        queryClient.invalidateQueries({ queryKey: ['asset'] }),
         queryClient.invalidateQueries({ queryKey: ['asset-stats'] }),
         queryClient.invalidateQueries({ queryKey: ['analytics'] }),
+        queryClient.invalidateQueries({ queryKey: ['property-certificates'] }),
+        queryClient.invalidateQueries({ queryKey: ['asset-certificates'] }),
+        queryClient.invalidateQueries({ queryKey: ['project-risks'] }),
+        queryClient.invalidateQueries({ queryKey: ['project-analytics'] }),
       ]);
 
       if (result.processing_time !== undefined && result.processing_time !== null) {

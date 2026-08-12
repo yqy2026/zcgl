@@ -367,7 +367,7 @@ describe('AssetImport - 渲染与交互测试', () => {
     expect(screen.getByText(/导入成功/)).toBeInTheDocument();
   });
 
-  it('导入成功后应失效资产列表、资产统计与分析查询前缀', async () => {
+  it('导入成功后应失效资产与 owner 派生风险查询前缀', async () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -410,8 +410,13 @@ describe('AssetImport - 渲染与交互测试', () => {
     });
 
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['asset'] });
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['asset-stats'] });
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['property-certificates'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['asset-certificates'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['project-risks'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['project-analytics'] });
   });
 
   it('导入失败应提示错误并显示失败摘要', async () => {

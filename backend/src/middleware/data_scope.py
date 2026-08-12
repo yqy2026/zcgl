@@ -44,6 +44,7 @@ class DataScopeContext:
     manager_party_ids: list[str]
     effective_party_ids: list[str]
     source: Literal["query", "auto"]
+    is_unrestricted: bool
 
 
 class DataScopeContextChecker:
@@ -59,10 +60,16 @@ class DataScopeContextChecker:
         self,
         *,
         resource_type: str | None = None,
+        accepts_view_mode: bool | None = None,
+        query_modes: tuple[ScopeMode, ...] = ("owner", "manager", "all"),
+        require_single_perspective: bool = False,
         authz_service_getter: AuthzServiceGetter | None = None,
         rbac_service_factory: RBACServiceFactory | None = None,
     ) -> None:
         self.resource_type = resource_type
+        self.accepts_view_mode = accepts_view_mode
+        self.query_modes = query_modes
+        self.require_single_perspective = require_single_perspective
         self.authz_service_getter = (
             authz_service_getter or _default_authz_service_getter
         )
@@ -90,13 +97,16 @@ class DataScopeContextChecker:
         db: AsyncSession,
     ) -> DataScopeContext | None:
         request_path = request.url.path
-        raw_view_mode = (
-            self._normalize_view_mode(request)
-            if any(
+        accepts_view_mode = (
+            any(
                 request_path.startswith(prefix)
                 for prefix in self.ANALYTICS_PATH_PREFIXES
             )
-            else None
+            if self.accepts_view_mode is None
+            else self.accepts_view_mode
+        )
+        raw_view_mode = (
+            self._normalize_view_mode(request) if accepts_view_mode else None
         )
 
         if self._is_exempt_path(request_path):
@@ -123,15 +133,24 @@ class DataScopeContextChecker:
         source: Literal["query", "auto"] = "query"
         if raw_view_mode is None:
             raw_view_mode = self._resolve_auto_scope_mode(
-                request_path=request_path,
+                accepts_view_mode=accepts_view_mode,
                 is_admin=is_admin,
                 subject_binding_types=subject_binding_types,
             )
             source = "auto"
 
         if raw_view_mode not in {"owner", "manager", "all"}:
-            raise bad_request("view_mode 仅支持 owner 或 manager")
+            raise bad_request("view_mode 仅支持 owner、manager 或 all")
         normalized_scope_mode = cast(ScopeMode, raw_view_mode)
+        if source == "query" and normalized_scope_mode not in self.query_modes:
+            allowed_modes = "、".join(self.query_modes)
+            raise bad_request(f"view_mode 仅支持 {allowed_modes}")
+        if (
+            self.require_single_perspective
+            and normalized_scope_mode == "all"
+            and not is_admin
+        ):
+            raise bad_request("当前接口要求选择 owner 或 manager 单一视角")
 
         if self.resource_type is not None:
             if is_admin:
@@ -183,6 +202,7 @@ class DataScopeContextChecker:
             manager_party_ids=list(subject_context.manager_party_ids),
             effective_party_ids=effective_party_ids,
             source=source,
+            is_unrestricted=is_admin,
         )
         request.state.data_scope_context = data_scope_context
         return data_scope_context
@@ -195,17 +215,13 @@ class DataScopeContextChecker:
     def _resolve_auto_scope_mode(
         cls,
         *,
-        request_path: str,
+        accepts_view_mode: bool,
         is_admin: bool,
         subject_binding_types: list[BindingType],
     ) -> ScopeMode:
         if is_admin:
             return "all"
-        if any(
-            request_path.startswith(prefix) for prefix in cls.ANALYTICS_PATH_PREFIXES
-        ):
-            # PRD §5：省略 view_mode 时，范围只有一种视角则自动采用；
-            # 同时含 owner/manager 时解析为 scope_mode=all，不得从绑定顺序或展示偏好猜选
+        if accepts_view_mode:
             if "owner" in subject_binding_types and "manager" in subject_binding_types:
                 return "all"
             if "owner" in subject_binding_types:
@@ -227,10 +243,3 @@ class DataScopeContextChecker:
     @classmethod
     def _normalize_view_mode(cls, request: Request) -> str | None:
         return cls._normalize_optional_mode(request.query_params.get("view_mode"))
-
-
-def require_data_scope_context(
-    *, resource_type: str | None = None
-) -> DataScopeContextChecker:
-    """Data-scope request-contract dependency factory."""
-    return DataScopeContextChecker(resource_type=resource_type)

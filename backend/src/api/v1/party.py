@@ -21,6 +21,7 @@ from ...middleware.auth import (
     require_data_scope_context,
 )
 from ...models.auth import User
+from ...models.party import PartyReviewStatus
 from ...schemas.organization import RepresentingOrganizationItem
 from ...schemas.party import (
     CustomerProfileResponse,
@@ -37,7 +38,6 @@ from ...schemas.party import (
     PartyResponse,
     PartyReviewLogResponse,
     PartyReviewRejectRequest,
-    PartyReviewStatus,
     PartyUpdate,
     UserPartyBindingResponse,
 )

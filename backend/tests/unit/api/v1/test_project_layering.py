@@ -18,9 +18,10 @@ def _read_module_source() -> str:
 
 
 def test_project_api_module_should_not_use_crud_adapter_calls() -> None:
-    """路由模块不应直接调用 project_crud。"""
+    """路由模块不应直接调用 project_crud 或重新解释 scope context。"""
     module_source = _read_module_source()
     assert "project_crud." not in module_source
+    assert "def _build_project_party_filter" not in module_source
 
 
 def test_project_read_endpoints_should_use_require_authz() -> None:
@@ -433,7 +434,8 @@ async def test_get_project_statistics_should_delegate_project_service() -> None:
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 
@@ -470,7 +472,8 @@ async def test_get_project_contract_relations_should_delegate_project_service() 
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 
@@ -507,7 +510,8 @@ async def test_get_project_risks_should_delegate_project_service() -> None:
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 
@@ -544,7 +548,8 @@ async def test_get_project_tenants_should_delegate_project_service() -> None:
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 
@@ -559,8 +564,8 @@ async def test_get_project_tenants_should_delegate_project_service() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_project_tenants_should_narrow_filter_with_explicit_view_mode() -> None:
-    """显式 view_mode 时租户摘要以单一视角构建 party filter（S6：客户双指标单视图契约）。"""
+async def test_get_project_tenants_should_use_dependency_resolved_context() -> None:
+    """租户摘要只消费 dependency 最终上下文，不在 endpoint 二次解析 query。"""
     from src.api.v1.assets.project import get_project_tenants
     from src.middleware.auth import DataScopeContext
     from src.schemas.project import ProjectTenantSummaryResponse
@@ -577,19 +582,20 @@ async def test_get_project_tenants_should_narrow_filter_with_explicit_view_mode(
             db=MagicMock(),
             current_user=MagicMock(id="user-1"),
             _scope_ctx=DataScopeContext(
-                scope_mode="all",
+                scope_mode="owner",
                 allowed_binding_types=["owner", "manager"],
                 owner_party_ids=["owner-1"],
                 manager_party_ids=["manager-1"],
-                effective_party_ids=["owner-1", "manager-1"],
-                source="header",
+                effective_party_ids=["owner-1"],
+                source="query",
+                is_unrestricted=False,
             ),
         )
 
     assert response.status_code == 200
     call_kwargs = mock_service.get_project_tenants.call_args.kwargs
-    assert call_kwargs["party_filter"].filter_mode == "manager"
-    assert call_kwargs["party_filter"].party_ids == ["manager-1"]
+    assert call_kwargs["party_filter"].filter_mode == "owner"
+    assert call_kwargs["party_filter"].party_ids == ["owner-1"]
 
 
 @pytest.mark.asyncio
@@ -640,19 +646,16 @@ async def test_get_project_analytics_should_delegate_project_service() -> None:
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 
     payload = json.loads(response.body)
     assert payload["data"]["contract_relation_count"] == 0
-    mock_service.get_project_analytics.assert_awaited_once_with(
-        db=ANY,
-        project_id="project-1",
-        current_user_id="user-1",
-        party_filter=ANY,
-        suppress_customer_metrics=False,
-    )
+    call_kwargs = mock_service.get_project_analytics.call_args.kwargs
+    assert "suppress_customer_metrics" not in call_kwargs
+    assert call_kwargs["party_filter"] is not None
 
 
 @pytest.mark.asyncio
@@ -706,7 +709,8 @@ async def test_get_project_analytics_should_suppress_customer_metrics_for_all_sc
                 owner_party_ids=["owner-1"],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["owner-1", "manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 
@@ -718,20 +722,14 @@ async def test_get_project_analytics_should_suppress_customer_metrics_for_all_sc
         == "customer_metrics_requires_single_perspective"
     )
     assert payload["data"]["receivable_amount"] == "100.00"
-    mock_service.get_project_analytics.assert_awaited_once_with(
-        db=ANY,
-        project_id="project-1",
-        current_user_id="user-1",
-        party_filter=ANY,
-        suppress_customer_metrics=True,
-    )
+    call_kwargs = mock_service.get_project_analytics.call_args.kwargs
+    assert "suppress_customer_metrics" not in call_kwargs
+    assert call_kwargs["party_filter"].filter_mode == "any"
 
 
 @pytest.mark.asyncio
-async def test_get_project_analytics_should_lift_suppression_with_explicit_view_mode() -> (
-    None
-):
-    """显式 view_mode 时项目分析解除客户双指标抑制，party filter 收窄为单视角（S2 视图联动契约）。"""
+async def test_get_project_analytics_should_use_dependency_resolved_context() -> None:
+    """项目分析只消费 dependency 最终上下文，不在 endpoint 二次解析 query。"""
     from decimal import Decimal
 
     from src.api.v1.assets.project import get_project_analytics
@@ -770,16 +768,17 @@ async def test_get_project_analytics_should_lift_suppression_with_explicit_view_
         monkeypatch.setattr("src.api.v1.assets.project.project_service", mock_service)
         response = await get_project_analytics(
             project_id="project-1",
-            view_mode="owner",
+            view_mode="manager",
             db=MagicMock(),
             current_user=MagicMock(id="user-1"),
             _scope_ctx=DataScopeContext(
-                scope_mode="all",
+                scope_mode="owner",
                 allowed_binding_types=["owner", "manager"],
                 owner_party_ids=["owner-1"],
                 manager_party_ids=["manager-1"],
-                effective_party_ids=["owner-1", "manager-1"],
-                source="header",
+                effective_party_ids=["owner-1"],
+                source="query",
+                is_unrestricted=False,
             ),
         )
 
@@ -789,7 +788,7 @@ async def test_get_project_analytics_should_lift_suppression_with_explicit_view_
     assert payload["data"]["customer_metrics_suppression_reason"] is None
 
     call_kwargs = mock_service.get_project_analytics.call_args.kwargs
-    assert call_kwargs["suppress_customer_metrics"] is False
+    assert "suppress_customer_metrics" not in call_kwargs
     assert call_kwargs["party_filter"].filter_mode == "owner"
     assert call_kwargs["party_filter"].party_ids == ["owner-1"]
 
@@ -845,7 +844,8 @@ async def test_get_project_ledger_summary_should_delegate_project_service() -> N
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 
@@ -928,7 +928,8 @@ async def test_get_project_should_delegate_project_service_lookup() -> None:
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
-                source="header",
+                source="auto",
+                is_unrestricted=False,
             ),
         )
 

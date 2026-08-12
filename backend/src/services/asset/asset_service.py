@@ -374,6 +374,7 @@ class AssetService:
         skip: int = 0,
         limit: int = 100,
         search: str | None = None,
+        project_id: str | None = None,
         filters: dict[str, Any] | None = None,
         sort_field: str = "created_at",
         sort_order: str = "desc",
@@ -397,6 +398,8 @@ class AssetService:
             "sort_order": sort_order,
             "include_relations": include_relations,
         }
+        if project_id is not None:
+            query_kwargs["project_id"] = project_id
         if resolved_party_filter is not None:
             query_kwargs["party_filter"] = resolved_party_filter
         result = cast(

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithProviders, screen } from '@/test/utils/test-helpers';
+import { fireEvent, renderWithProviders, screen, waitFor, within } from '@/test/utils/test-helpers';
+import { QueryClient } from '@tanstack/react-query';
 import PropertyCertificateDetailPage from '../PropertyCertificateDetailPage';
 
 const mockNavigate = vi.fn();
@@ -66,6 +67,25 @@ describe('PropertyCertificateDetailPage', () => {
       restrictions: null,
       remarks: null,
       asset_ids: [],
+      holder_party_ids: ['party-holder'],
+      data_quality_warnings: [
+        {
+          risk_id: 'warning-1',
+          risk_type: 'holder_owner_mismatch',
+          severity: 'warning',
+          message: '资产一主产权主体不一致',
+          certificate_id: 'cert-1',
+          asset_id: 'asset-1',
+        },
+        {
+          risk_id: 'warning-2',
+          risk_type: 'holder_owner_mismatch',
+          severity: 'warning',
+          message: '资产二主产权主体不一致',
+          certificate_id: 'cert-1',
+          asset_id: 'asset-2',
+        },
+      ],
       created_at: '2026-03-01',
       updated_at: '2026-03-02',
     });
@@ -93,5 +113,82 @@ describe('PropertyCertificateDetailPage', () => {
     } finally {
       consoleErrorSpy.mockRestore();
     }
+  });
+
+  it('shows every certificate warning on the detail page and edit modal', async () => {
+    renderWithProviders(<PropertyCertificateDetailPage />, {
+      route: '/property-certificates/cert-1',
+    });
+
+    expect(await screen.findByText('资产一主产权主体不一致')).toBeInTheDocument();
+    expect(screen.getByText('资产二主产权主体不一致')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /编辑/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('资产一主产权主体不一致')).toBeInTheDocument();
+    expect(within(dialog).getByText('资产二主产权主体不一致')).toBeInTheDocument();
+  });
+
+  it('invalidates certificate, asset and project risk cache families after update', async () => {
+    vi.mocked(propertyCertificateService.updateCertificate).mockResolvedValue(
+      await propertyCertificateService.getCertificate('cert-1')
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    renderWithProviders(<PropertyCertificateDetailPage />, {
+      route: '/property-certificates/cert-1',
+      queryClient,
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /编辑/ }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: /确\s*定/ }));
+
+    await waitFor(() => {
+      expect(propertyCertificateService.updateCertificate).toHaveBeenCalled();
+    });
+    for (const queryKey of [
+      ['property-certificate'],
+      ['property-certificates'],
+      ['asset-certificates'],
+      ['asset'],
+      ['project-risks'],
+      ['project-analytics'],
+    ]) {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey });
+    }
+  });
+
+  it('invalidates dependent caches before navigating after deletion', async () => {
+    vi.mocked(propertyCertificateService.deleteCertificate).mockResolvedValue(undefined);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    renderWithProviders(<PropertyCertificateDetailPage />, {
+      route: '/property-certificates/cert-1',
+      queryClient,
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /删\s*除/ }));
+    const confirm = await screen.findByRole('tooltip');
+    fireEvent.click(within(confirm).getByRole('button', { name: /删\s*除/ }));
+
+    await waitFor(() => {
+      expect(propertyCertificateService.deleteCertificate).toHaveBeenCalledWith('cert-1');
+    });
+    for (const queryKey of [
+      ['property-certificate'],
+      ['property-certificates'],
+      ['asset-certificates'],
+      ['asset'],
+      ['project-risks'],
+      ['project-analytics'],
+    ]) {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey });
+    }
+    expect(mockNavigate).toHaveBeenCalledWith('/property-certificates');
   });
 });

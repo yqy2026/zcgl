@@ -2,7 +2,12 @@
 
 from datetime import UTC, datetime
 
-from src.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
+from src.schemas.project import (
+    ProjectCreate,
+    ProjectResponse,
+    ProjectRiskItem,
+    ProjectUpdate,
+)
 
 
 def _build_project_payload() -> dict[str, object]:
@@ -89,3 +94,27 @@ def test_project_response_should_not_expose_review_fields() -> None:
     assert "review_by" not in project.model_fields_set
     assert "reviewed_at" not in project.model_fields_set
     assert "review_reason" not in project.model_fields_set
+
+
+def test_project_risk_item_serializes_property_certificate_linkage() -> None:
+    """Data-quality risks expose stable source fields instead of message parsing."""
+    item = ProjectRiskItem(
+        risk_id=("property-certificate:cert-1:asset:asset-1:holder_owner_mismatch"),
+        risk_type="property_certificate_data_quality",
+        message="holder and owner differ",
+        asset_id="asset-1",
+        property_certificate_id="cert-1",
+        warning_code="holder_owner_mismatch",
+    )
+
+    assert item.model_dump() == {
+        "risk_id": ("property-certificate:cert-1:asset:asset-1:holder_owner_mismatch"),
+        "risk_type": "property_certificate_data_quality",
+        "severity": "warning",
+        "message": "holder and owner differ",
+        "contract_relation_id": None,
+        "display_name": None,
+        "asset_id": "asset-1",
+        "property_certificate_id": "cert-1",
+        "warning_code": "holder_owner_mismatch",
+    }

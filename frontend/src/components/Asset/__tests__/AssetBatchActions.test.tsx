@@ -197,7 +197,12 @@ describe('AssetBatchActions', () => {
 
     expect(updateAssetMock).toHaveBeenCalledWith('asset-2', { usage_status: '出租' });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['asset'] });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['property-certificates'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['asset-certificates'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['project-risks'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['project-analytics'] });
     expect(mockResetFields).toHaveBeenCalled();
   });
 });

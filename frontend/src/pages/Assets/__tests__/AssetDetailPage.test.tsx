@@ -278,14 +278,8 @@ describe('AssetDetailPage', () => {
           certificate_number: '粤(2026)0001号',
           certificate_type: 'real_estate',
           asset_ids: ['asset_123'],
-          created_at: '2026-03-01',
-          updated_at: '2026-03-01',
-        },
-        {
-          id: 'cert-2',
-          certificate_number: '粤(2026)0002号',
-          certificate_type: 'land_use',
-          asset_ids: ['asset-other'],
+          holder_party_ids: [],
+          data_quality_warnings: [],
           created_at: '2026-03-01',
           updated_at: '2026-03-01',
         },
@@ -297,10 +291,52 @@ describe('AssetDetailPage', () => {
         expect(screen.getByText('粤(2026)0001号')).toBeInTheDocument();
       });
 
-      // 仅显示属于该资产的证书（asset_ids 过滤）
-      expect(screen.queryByText('粤(2026)0002号')).not.toBeInTheDocument();
       expect(screen.getByText('不动产权证')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '管理产权证' })).toBeInTheDocument();
+      expect(propertyCertificateService.listCertificates).toHaveBeenCalledWith({
+        asset_id: 'asset_123',
+      });
+    });
+
+    it('产权证卡片只显示当前资产的数据质量 warning', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_123',
+        asset_name: '测试资产A栋',
+      });
+      vi.mocked(propertyCertificateService.listCertificates).mockResolvedValue([
+        {
+          id: 'cert-1',
+          certificate_number: '粤(2026)0001号',
+          certificate_type: 'real_estate',
+          asset_ids: ['asset_123', 'asset-other'],
+          holder_party_ids: ['party-holder'],
+          data_quality_warnings: [
+            {
+              risk_id: 'warning-current',
+              risk_type: 'holder_owner_mismatch',
+              severity: 'warning',
+              message: '当前资产产权主体不一致',
+              certificate_id: 'cert-1',
+              asset_id: 'asset_123',
+            },
+            {
+              risk_id: 'warning-other',
+              risk_type: 'holder_owner_mismatch',
+              severity: 'warning',
+              message: '其他资产产权主体不一致',
+              certificate_id: 'cert-1',
+              asset_id: 'asset-other',
+            },
+          ],
+          created_at: '2026-03-01',
+          updated_at: '2026-03-01',
+        },
+      ] as never);
+
+      renderAssetDetailPage('asset_123');
+
+      expect(await screen.findByText('当前资产产权主体不一致')).toBeInTheDocument();
+      expect(screen.queryByText('其他资产产权主体不一致')).not.toBeInTheDocument();
     });
 
     it('显示租赁情况和客户摘要', async () => {
