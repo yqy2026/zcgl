@@ -4,7 +4,6 @@ JWT令牌黑名单管理器
 """
 
 import fnmatch
-import json
 import logging
 import time
 from collections.abc import Callable
@@ -275,41 +274,6 @@ class TokenBlacklistManager:
         self._revoked_users.clear()
         if self._use_cache:
             cache_manager.clear(namespace=self._cache_namespace)
-
-    def save_to_file(self, filepath: str) -> None:
-        """保存黑名单到文件"""
-        try:
-            data = {
-                "blacklisted_tokens": list(self._blacklisted_tokens),
-                "blacklist_expiry": self._blacklist_expiry,
-                "revoked_users": self._revoked_users,
-                "last_cleanup": self._last_cleanup,
-            }
-
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-
-        except Exception as e:
-            logger.error(f"保存黑名单到文件失败: {e}")
-
-    def load_from_file(self, filepath: str) -> None:
-        """从文件加载黑名单"""
-        try:
-            with open(filepath, encoding="utf-8") as f:
-                data = json.load(f)
-
-            self._blacklisted_tokens = set(data.get("blacklisted_tokens", []))
-            self._blacklist_expiry = data.get("blacklist_expiry", {})
-            self._revoked_users = data.get("revoked_users", {})
-            self._last_cleanup = data.get("last_cleanup", time.time())
-
-            # 清理过期令牌
-            self._cleanup_expired_tokens()
-
-        except FileNotFoundError:
-            logger.warning(f"黑名单文件不存在: {filepath}")
-        except Exception as e:
-            logger.error(f"从文件加载黑名单失败: {e}")
 
 
 # 全局黑名单管理器实例
