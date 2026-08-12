@@ -67,7 +67,7 @@ def test_mapper_explicitly_projects_current_holders_assets_and_warnings() -> Non
 
 
 def test_mapper_emits_incomplete_certificate_info_warning() -> None:
-    # 字段缺失证书 + 匹配 holder：只验证 incomplete 派生
+    # 字段缺失 + 无当前权利人（mismatch 无比较输入不派生）：只验证 incomplete
     certificate = SimpleNamespace(
         id="cert-1",
         certificate_number="CERT-001",
@@ -112,8 +112,55 @@ def test_mapper_emits_incomplete_certificate_info_warning() -> None:
         == "property-certificate:cert-1:asset:asset-1:incomplete_certificate_info"
     )
     assert "证载建筑面积" in incomplete_warning.message
-    # 同一证书两类 warning 并存
     assert codes == {"incomplete_certificate_info"}
+
+
+def test_mapper_emits_both_warning_codes_coexisting() -> None:
+    """Same certificate with a mismatched holder AND missing fields hits both codes."""
+    certificate = SimpleNamespace(
+        id="cert-1",
+        certificate_number="CERT-001",
+        certificate_type="real_estate",
+        registration_date=None,
+        property_address="Test address",
+        property_type=None,
+        building_area=None,
+        floor_info=None,
+        land_area=None,
+        land_use_type=None,
+        land_use_term_start=None,
+        land_use_term_end=None,
+        co_ownership=None,
+        restrictions=None,
+        remarks=None,
+        created_at=datetime(2026, 1, 1),
+        updated_at=datetime(2026, 1, 2),
+        created_by="user-1",
+        party_relations=[
+            SimpleNamespace(
+                party_id="party-holder",
+                relation_role=CertificateRelationRole.OWNER,
+                valid_from=datetime(2026, 1, 1),
+                valid_to=None,
+            )
+        ],
+        assets=[
+            SimpleNamespace(
+                id="asset-1",
+                asset_name="Asset One",
+                owner_party_id="party-other",
+            )
+        ],
+    )
+    response = map_property_certificate_response(
+        certificate,
+        as_of=datetime(2026, 8, 12),
+    )
+    assert {w.risk_type for w in response.data_quality_warnings} == {
+        "holder_owner_mismatch",
+        "incomplete_certificate_info",
+    }
+    assert len(response.data_quality_warnings) == 2
 
 
 def test_mapper_logs_missing_comparison_inputs_without_warning(

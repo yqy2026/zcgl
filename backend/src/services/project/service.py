@@ -72,6 +72,26 @@ from ...services.property_certificate.risks import (
 logger = logging.getLogger(__name__)
 
 
+def _certificate_asset_snapshots(
+    certificate: Any, active_asset_by_id: dict[str, Any]
+) -> list[AssetOwnerSnapshot]:
+    """Project-active assets linked to the certificate, as risk snapshots."""
+    return [
+        AssetOwnerSnapshot(
+            asset_id=asset_id,
+            owner_party_id=getattr(asset, "owner_party_id", None),
+            asset_name=(
+                getattr(asset, "asset_name", None) or getattr(asset, "name", None)
+            ),
+        )
+        for asset_id, asset in active_asset_by_id.items()
+        if any(
+            str(getattr(linked_asset, "id", "") or "").strip() == asset_id
+            for linked_asset in certificate.assets
+        )
+    ]
+
+
 class ProjectService:
     """项目服务层"""
 
@@ -1206,21 +1226,8 @@ class ProjectService:
                         )
                         for relation in certificate.party_relations
                     ),
-                    assets=(
-                        AssetOwnerSnapshot(
-                            asset_id=asset_id,
-                            owner_party_id=getattr(asset, "owner_party_id", None),
-                            asset_name=(
-                                getattr(asset, "asset_name", None)
-                                or getattr(asset, "name", None)
-                            ),
-                        )
-                        for asset_id, asset in active_asset_by_id.items()
-                        if any(
-                            str(getattr(linked_asset, "id", "") or "").strip()
-                            == asset_id
-                            for linked_asset in certificate.assets
-                        )
+                    assets=_certificate_asset_snapshots(
+                        certificate, active_asset_by_id
                     ),
                     as_of=as_of,
                 )
@@ -1235,21 +1242,8 @@ class ProjectService:
                     ),
                     land_use_term_end=getattr(certificate, "land_use_term_end", None),
                     restrictions=getattr(certificate, "restrictions", None),
-                    assets=(
-                        AssetOwnerSnapshot(
-                            asset_id=asset_id,
-                            owner_party_id=getattr(asset, "owner_party_id", None),
-                            asset_name=(
-                                getattr(asset, "asset_name", None)
-                                or getattr(asset, "name", None)
-                            ),
-                        )
-                        for asset_id, asset in active_asset_by_id.items()
-                        if any(
-                            str(getattr(linked_asset, "id", "") or "").strip()
-                            == asset_id
-                            for linked_asset in certificate.assets
-                        )
+                    assets=_certificate_asset_snapshots(
+                        certificate, active_asset_by_id
                     ),
                 )
                 if risk_result.missing_current_holders:

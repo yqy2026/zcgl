@@ -47,16 +47,16 @@ def _normalized_id(value: object) -> str:
     return str(value or "").strip()
 
 
-def _normalized_role(value: object) -> str:
-    role_value = getattr(value, "value", value)
-    return str(role_value or "").strip().lower()
+def _normalized_enum_value(value: object) -> str:
+    enum_value = getattr(value, "value", value)
+    return str(enum_value or "").strip().lower()
 
 
 def _is_current_holder_relation(
     relation: HolderRelationSnapshot, *, as_of: datetime
 ) -> bool:
     return (
-        _normalized_role(relation.relation_role) in _CURRENT_HOLDER_ROLES
+        _normalized_enum_value(relation.relation_role) in _CURRENT_HOLDER_ROLES
         and relation.valid_from <= as_of
         and (relation.valid_to is None or as_of < relation.valid_to)
     )
@@ -172,9 +172,7 @@ class IncompleteCertificateInfoResult:
     warnings: tuple[PropertyCertificateDataQualityWarning, ...]
 
 
-def _normalized_type(value: object) -> str:
-    type_value = getattr(value, "value", value)
-    return str(type_value or "").strip().lower()
+
 
 
 def _field_is_missing(value: object | None) -> bool:
@@ -203,7 +201,7 @@ def calculate_incomplete_certificate_info(
         "restrictions": restrictions,
     }
     checked_fields = _INCOMPLETE_FIELD_SETS.get(
-        _normalized_type(certificate_type),
+        _normalized_enum_value(certificate_type),
         _INCOMPLETE_FIELD_SETS["other"],
     )
     missing_field_keys = tuple(
