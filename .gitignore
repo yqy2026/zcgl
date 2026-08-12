@@ -640,4 +640,5 @@ frontend/.pnpm-store/
 .codex/
 .workbuddy/
 .agents/
+.zcode/
 skills-lock.json
