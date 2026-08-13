@@ -642,3 +642,8 @@ frontend/.pnpm-store/
 .agents/
 .zcode/
 skills-lock.json
+.impeccable/
+.mimosa/
+backend/.mimosa/
+frontend/.impeccable/
+frontend/.mimosa/
