@@ -24,6 +24,7 @@ from src.services.core.authentication_service import (
     AsyncAuthenticationService,
     TokenPair,
 )
+from tests.fixtures import fake_bcrypt_hash
 
 # ============================================================================
 # Fixtures
@@ -55,7 +56,7 @@ def mock_user():
     user.id = "test-user-123"
     user.username = "testuser"
     user.email = "test@example.com"
-    user.password_hash = "$2b$12$valid_hash"
+    user.password_hash = fake_bcrypt_hash()
     user.is_active = True
     user.is_locked = False
     user.failed_login_attempts = 0

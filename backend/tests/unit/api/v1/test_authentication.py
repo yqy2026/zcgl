@@ -31,6 +31,8 @@ import pytest
 from fastapi import Response, status
 from pydantic import ValidationError
 
+from tests.fixtures import fake_access_token, fake_password, fake_refresh_token
+
 pytestmark = pytest.mark.api
 
 ADMIN_ROLE_SUMMARY = {
@@ -187,8 +189,10 @@ def test_login_success_security_check(
 
         # Mock tokens
         mock_tokens = MagicMock()
-        mock_tokens.access_token = "access-token-123"
-        mock_tokens.refresh_token = "refresh-token-123"
+        access_token = fake_access_token()
+        refresh_token = fake_refresh_token()
+        mock_tokens.access_token = access_token
+        mock_tokens.refresh_token = refresh_token
         mock_tokens.session_id = "session-123"
         mock_tokens.token_type = "bearer"
         mock_tokens.expires_in = 3600
@@ -208,7 +212,7 @@ def test_login_success_security_check(
 
                 # Execute
                 credentials = LoginRequest(
-                    identifier="testuser", password="password", remember=False
+                    identifier="testuser", password=fake_password(), remember=False
                 )
                 mock_response = MagicMock(spec=Response)
 
@@ -227,10 +231,10 @@ def test_login_success_security_check(
 
             # 2. Verify cookies were set
             mock_cookie_manager.set_auth_cookie.assert_called_once_with(
-                mock_response, "access-token-123", persistent=False
+                mock_response, access_token, persistent=False
             )
             mock_cookie_manager.set_refresh_cookie.assert_called_once_with(
-                mock_response, "refresh-token-123", persistent=False
+                mock_response, refresh_token, persistent=False
             )
             csrf_token = mock_cookie_manager.create_csrf_token.return_value
             mock_cookie_manager.set_csrf_cookie.assert_called_once_with(
@@ -242,8 +246,8 @@ def test_login_success_security_check(
 def mock_tokens():
     """Create mock tokens"""
     tokens = MagicMock()
-    tokens.access_token = "mock_access_token"
-    tokens.refresh_token = "mock_refresh_token"
+    tokens.access_token = fake_access_token()
+    tokens.refresh_token = fake_refresh_token()
     tokens.token_type = "bearer"
     tokens.expires_in = 3600
     tokens.session_id = "session-id"
@@ -255,7 +259,7 @@ def mock_session(mock_user_model):
     """Create mock session"""
     session = MagicMock()
     session.user_id = "user-id"
-    session.refresh_token = "refresh_token"
+    session.refresh_token = fake_refresh_token()
     session.ip_address = "127.0.0.1"
     session.user_agent = "test-agent"
     session.device_id = "device-id"
@@ -298,7 +302,8 @@ class TestLogin:
         from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="testuser", password="password123")
+        password = fake_password()
+        credentials = LoginRequest(identifier="testuser", password=password)
 
         mock_user = MagicMock()
         mock_user.id = "user-id"
@@ -310,8 +315,8 @@ class TestLogin:
         mock_user.organization_id = None
 
         mock_tokens = MagicMock()
-        mock_tokens.access_token = "access_token"
-        mock_tokens.refresh_token = "refresh_token"
+        mock_tokens.access_token = fake_access_token()
+        mock_tokens.refresh_token = fake_refresh_token()
         mock_tokens.token_type = "bearer"
         mock_tokens.expires_in = 3600
 
@@ -345,7 +350,7 @@ class TestLogin:
         assert result["auth_mode"] == "cookie"
         assert "tokens" not in result
         mock_auth_service.authenticate_user.assert_called_once_with(
-            "testuser", "password123"
+            "testuser", password
         )
         mock_auth_service.create_tokens.assert_called_once()
 
@@ -366,7 +371,7 @@ class TestLogin:
         from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="testuser", password="password123")
+        credentials = LoginRequest(identifier="testuser", password=fake_password())
 
         mock_user = MagicMock()
         mock_user.id = "user-id"
@@ -384,8 +389,8 @@ class TestLogin:
         mock_user.updated_at = now
 
         mock_tokens = MagicMock()
-        mock_tokens.access_token = "access_token"
-        mock_tokens.refresh_token = "refresh_token"
+        mock_tokens.access_token = fake_access_token()
+        mock_tokens.refresh_token = fake_refresh_token()
         mock_tokens.token_type = "bearer"
         mock_tokens.expires_in = 3600
         mock_tokens.session_id = "session-id"
@@ -475,7 +480,7 @@ class TestLogin:
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="13800002000", password="wrongpass")
+        credentials = LoginRequest(identifier="13800002000", password=fake_password())
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(return_value=None)
@@ -539,7 +544,7 @@ class TestLogin:
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="13800002000", password="wrongpass")
+        credentials = LoginRequest(identifier="13800002000", password=fake_password())
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(return_value=None)
@@ -597,7 +602,7 @@ class TestLogin:
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="wronguser", password="wrongpass")
+        credentials = LoginRequest(identifier="wronguser", password=fake_password())
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(return_value=None)
@@ -652,7 +657,7 @@ class TestLogin:
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="nonexistent", password="wrongpass")
+        credentials = LoginRequest(identifier="nonexistent", password=fake_password())
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(return_value=None)
@@ -703,7 +708,7 @@ class TestLogin:
         from src.core.exception_handler import InternalServerError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="testuser", password="password123")
+        credentials = LoginRequest(identifier="testuser", password=fake_password())
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(
@@ -743,7 +748,7 @@ class TestLogin:
         from src.exceptions import BusinessLogicError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="lockeduser", password="password123")
+        credentials = LoginRequest(identifier="lockeduser", password=fake_password())
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(
@@ -781,7 +786,7 @@ class TestLogin:
         from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(identifier="testuser", password="password123")
+        credentials = LoginRequest(identifier="testuser", password=fake_password())
 
         mock_user = MagicMock()
         mock_user.id = "user-id"
@@ -791,8 +796,8 @@ class TestLogin:
         mock_user.is_active = True  # Boolean instead of int
 
         mock_tokens = MagicMock()
-        mock_tokens.access_token = "access_token"
-        mock_tokens.refresh_token = "refresh_token"
+        mock_tokens.access_token = fake_access_token()
+        mock_tokens.refresh_token = fake_refresh_token()
         mock_tokens.token_type = "bearer"
         mock_tokens.expires_in = 3600
 
@@ -1642,7 +1647,7 @@ class TestDebugAuth:
         mock_authenticated_user = MagicMock()
 
         mock_tokens = MagicMock()
-        mock_tokens.access_token = "test_access_token_with_sufficient_length"
+        mock_tokens.access_token = fake_access_token()
 
         mock_user_service = MagicMock()
         mock_user_service.get_user_by_username = AsyncMock(return_value=mock_admin_user)

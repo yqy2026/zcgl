@@ -22,6 +22,7 @@ from src.exceptions import BusinessLogicError
 from src.models.auth import User
 from src.schemas.auth import UserCreate, UserUpdate
 from src.services.core.user_management_service import AsyncUserManagementService
+from tests.fixtures import fake_password
 
 pytestmark = pytest.mark.asyncio
 
@@ -127,7 +128,7 @@ def sample_user_create():
         email="newuser@example.com",
         phone="13800001001",
         full_name="New User",
-        password="SecurePass123!",
+        password=fake_password(),
         role_id="role-user-id",
     )
 
@@ -271,7 +272,7 @@ class TestUserCreation:
             email="weak@example.com",
             phone="13800001002",
             full_name="Weak User",
-            password="WeakPass123!",
+            password=fake_password(),
         )
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
         mock_password_service.validate_password_strength.return_value = False
@@ -310,7 +311,7 @@ class TestUserCreation:
             email="basic@example.com",
             phone="13800001003",
             full_name="Basic User",
-            password="SecurePass123!",
+            password=fake_password(),
         )
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
 
@@ -651,16 +652,17 @@ class TestAdminResetPassword:
         mock_password_service.get_password_hash.return_value = "admin_reset_hash"
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
 
+        new_password = fake_password()
         result = await user_management_service.admin_reset_password(
             user_id="user_123",
-            new_password="NewSecurePass123!",
+            new_password=new_password,
         )
 
         assert result == sample_user
         assert sample_user.password_hash == "admin_reset_hash"
         assert sample_user.updated_at is not None
         mock_password_service.get_password_hash.assert_called_once_with(
-            "NewSecurePass123!"
+            new_password
         )
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once_with(sample_user)
@@ -672,7 +674,7 @@ class TestAdminResetPassword:
 
         result = await user_management_service.admin_reset_password(
             user_id="nonexistent",
-            new_password="NewSecurePass123!",
+            new_password=fake_password(),
         )
 
         assert result is None
@@ -800,7 +802,7 @@ class TestEdgeCases:
             email="admin@example.com",
             phone="13800001004",
             full_name="Admin User",
-            password="AdminPass123!",
+            password=fake_password(),
             role_id="role-admin-id",
         )
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))

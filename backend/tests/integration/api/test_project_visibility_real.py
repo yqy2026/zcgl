@@ -18,6 +18,7 @@ from src.models.project_asset import ProjectAsset
 from src.models.rbac import Role, UserRoleAssignment
 from src.models.user_party_binding import RelationType, UserPartyBinding
 from src.services.core.password_service import PasswordService
+from tests.fixtures import fake_password
 
 
 def _build_project_code() -> str:
@@ -91,7 +92,7 @@ def test_non_admin_project_visibility_isolation(
     """真实链路验证：非管理员仅能看到本组织项目。"""
     suffix = uuid.uuid4().hex[:8]
     party_serial = int(suffix, 16) % 999_999
-    password = "User123!@#"
+    password = fake_password()
     password_hash = PasswordService().get_password_hash(password)
 
     org_a = Organization(
@@ -228,7 +229,7 @@ def test_owner_user_sees_projects_via_asset_relation(
 ):
     suffix = uuid.uuid4().hex[:8]
     party_serial = int(suffix, 16) % 999_999
-    password = "User123!@#"
+    password = fake_password()
     password_hash = PasswordService().get_password_hash(password)
 
     org = Organization(

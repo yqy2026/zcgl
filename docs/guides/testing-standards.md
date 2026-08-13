@@ -830,6 +830,29 @@ jobs:
 7. **Don't catch all exceptions** - catch only expected exceptions
 8. **Don't sleep in tests** - use proper async/await or mocks
 
+## 假凭证值约定（#86）
+
+测试代码**禁止硬编码凭证形状的假值**——即形如 `refresh_token = "xxx"`、`password="xxx"`
+的「凭证名 + 字符串字面量」赋值（安全扫描器（Mimosa L3 git-gate）将其判为高危硬编码
+凭据）。统一改用 `backend/tests/fixtures/fake_credentials.py` 的**确定性**生成函数
+（计数器驱动，单次运行内值唯一、跨运行可复现，符合「测试不使用随机数据」约定）：
+
+- `fake_refresh_token()` / `fake_access_token()` / `fake_api_key()`：假 token / key
+- `fake_password()` / `fake_weak_password()`：合规 / 弱口令
+- `fake_bcrypt_hash()` / `fake_secret_key()` / `fake_identifier(prefix)`：哈希 / 密钥 / 标识
+
+等值断言站点用「生成一次 → 变量双侧复用」，禁止生成两次：
+
+```python
+refresh_token = fake_refresh_token()
+result = service.create(refresh_token=refresh_token)
+assert result.refresh_token == refresh_token
+```
+
+防回归由 `scripts/check_test_credentials.py` 门禁兜底（已挂入 `make check` / `make ci-gate`，
+`--self-test` 锁定判据边界）。白名单：`backend/tests/e2e/` 与 `frontend/tests/e2e/` 的
+e2e 种子默认口令按 #86 处置决策暂保留，待 L3 门禁处置完成后复核。
+
 ---
 
 **Document Owner**: Development Team

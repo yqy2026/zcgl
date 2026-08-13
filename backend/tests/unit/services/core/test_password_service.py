@@ -10,6 +10,7 @@ from pathlib import Path
 
 from src.services.core import password_service as password_service_module
 from src.services.core.password_service import PasswordService
+from tests.fixtures import fake_password
 
 
 def test_password_service_module_avoids_datetime_utcnow() -> None:
@@ -29,7 +30,7 @@ class TestGetPasswordHash:
     def test_generates_hash(self):
         """测试生成密码哈希"""
         service = PasswordService()
-        password = "TestPassword123!"
+        password = fake_password()
         hashed = service.get_password_hash(password)
 
         # bcrypt 哈希格式: $2b$[cost]$[salt][hash]
@@ -39,7 +40,7 @@ class TestGetPasswordHash:
     def test_same_password_different_hashes(self):
         """测试相同密码产生不同哈希（随机盐）"""
         service = PasswordService()
-        password = "TestPassword123!"
+        password = fake_password()
 
         hash1 = service.get_password_hash(password)
         hash2 = service.get_password_hash(password)
@@ -65,7 +66,7 @@ class TestVerifyPassword:
     def test_verify_correct_password(self):
         """测试验证正确密码"""
         service = PasswordService()
-        password = "TestPassword123!"
+        password = fake_password()
         hashed = service.get_password_hash(password)
 
         assert service.verify_password(password, hashed) is True
@@ -73,7 +74,7 @@ class TestVerifyPassword:
     def test_verify_incorrect_password(self):
         """测试验证错误密码"""
         service = PasswordService()
-        password = "TestPassword123!"
+        password = fake_password()
         hashed = service.get_password_hash(password)
 
         assert service.verify_password("WrongPassword", hashed) is False
@@ -206,7 +207,7 @@ class TestIsPasswordInHistory:
     def test_password_in_history(self):
         """测试密码在历史中"""
         service = PasswordService()
-        password = "TestPassword123!"
+        password = fake_password()
         hashed = service.get_password_hash(password)
 
         user = MockUser(password_history=json.dumps({"passwords": [hashed]}))
@@ -243,7 +244,7 @@ class TestIsPasswordInHistory:
     def test_dict_password_history(self):
         """测试字典格式的密码历史"""
         service = PasswordService()
-        password = "TestPassword123!"
+        password = fake_password()
         hashed = service.get_password_hash(password)
 
         user = MockUser(password_history={"passwords": [hashed]})

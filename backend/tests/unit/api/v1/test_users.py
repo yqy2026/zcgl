@@ -22,6 +22,7 @@ from src.schemas.auth import (
     UserResponse,
     UserUpdate,
 )
+from tests.fixtures import fake_password
 
 pytestmark = pytest.mark.api
 
@@ -208,7 +209,7 @@ class TestCreateUser:
             email="new-user@example.com",
             phone="13800000123",
             full_name="New User",
-            password="StrongPass123!",
+            password=fake_password(),
             role_id="role-user-id",
         )
         created_user = _build_fake_user("new-user-id", "new-user")
@@ -241,7 +242,7 @@ class TestCreateUser:
             email="multi-role-user@example.com",
             phone="13800000125",
             full_name="Multi Role User",
-            password="StrongPass123!",
+            password=fake_password(),
             role_ids=["role-user-id", "role-reviewer-id"],
         )
         created_user = _build_fake_user("multi-role-user-id", "multi-role-user")
@@ -276,7 +277,7 @@ class TestCreateUser:
             email="exists-user@example.com",
             phone="13800000124",
             full_name="Exists User",
-            password="StrongPass123!",
+            password=fake_password(),
         )
 
         mock_service = MagicMock()
@@ -459,8 +460,8 @@ class TestChangePassword:
                 change_password(
                     user_id="another-user",
                     password_data=PasswordChangeRequest(
-                        current_password="OldPass123!",
-                        new_password="NewPass123!",
+                        current_password=fake_password(),
+                        new_password=fake_password(),
                     ),
                     db=mock_db,
                     current_user=regular_user,
@@ -497,8 +498,8 @@ class TestChangePassword:
             change_password(
                 user_id="target-id",
                 password_data=PasswordChangeRequest(
-                    current_password="OldPass123!",
-                    new_password="NewPass123!",
+                    current_password=fake_password(),
+                    new_password=fake_password(),
                 ),
                 db=mock_db,
                 current_user=admin_user,
@@ -659,10 +660,11 @@ class TestUserSecurityActions:
         mock_audit_crud.create_async = AsyncMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
+        new_password = fake_password()
         result = asyncio.run(
             reset_user_password(
                 user_id="target-id",
-                password_data=AdminPasswordResetRequest(new_password="StrongPass123!"),
+                password_data=AdminPasswordResetRequest(new_password=new_password),
                 request=mock_request,
                 db=mock_db,
                 current_user=admin_user,
@@ -673,7 +675,7 @@ class TestUserSecurityActions:
         assert result["user_id"] == "target-id"
         mock_service.admin_reset_password.assert_awaited_once_with(
             user_id="target-id",
-            new_password="StrongPass123!",
+            new_password=new_password,
         )
 
 

@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi import status
 
+from tests.fixtures import fake_bcrypt_hash
+
 
 def test_party_hierarchy_routes_are_removed() -> None:
     from src.api.v1 import party as party_module
@@ -30,7 +32,7 @@ def _create_user(
             email=f"{user_id}@example.com",
             phone=f"1{phone_suffix[:10]}",
             full_name=f"用户{user_id}",
-            password_hash="hashed-password",
+            password_hash=fake_bcrypt_hash(),
             is_active=organization_id is not None,
             is_locked=False,
             organization_id=organization_id,
@@ -407,7 +409,7 @@ def test_user_party_bindings_list_should_work(client, db_session) -> None:
         email="binding.user.1@example.com",
         phone="13900000001",
         full_name="绑定用户1",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         is_active=False,
         is_locked=False,
     )
@@ -704,7 +706,7 @@ def test_create_user_party_binding_should_return_400_for_invalid_time_range(
         email="binding.user.invalid.time@example.com",
         phone="13900000002",
         full_name="绑定用户非法时间",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         is_active=False,
         is_locked=False,
     )
@@ -934,7 +936,7 @@ def test_approved_party_lifecycle_requires_preview_then_commit(
         email="test.user.001@example.com",
         phone="13900000001",
         full_name="Party lifecycle manager",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="service",
         is_active=True,
         is_locked=False,
@@ -1034,7 +1036,7 @@ def test_party_lifecycle_preview_reports_scope_impact_and_rejects_status_drift(
         email="test.user.001@example.com",
         phone="13900000001",
         full_name="Party lifecycle manager",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="service",
         is_active=True,
         is_locked=False,
@@ -1068,7 +1070,7 @@ def test_party_lifecycle_preview_reports_scope_impact_and_rejects_status_drift(
         email="party.lifecycle.user.1@example.com",
         phone="13900000062",
         full_name="Affected human user",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="human",
         organization_id=organization.id,
         is_active=True,

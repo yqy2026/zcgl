@@ -7,6 +7,8 @@ from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
+from tests.fixtures import fake_password
+
 pytestmark = pytest.mark.api
 
 
@@ -207,10 +209,11 @@ async def test_reset_password_should_delegate_user_service_admin_reset() -> None
             "AuditLogCRUD",
             MagicMock(return_value=audit_logger),
         )
+        new_password = fake_password()
         result = await reset_user_password(
             user_id="user-1",
             password_data=AdminPasswordResetRequest(
-                new_password="NewSecurePass123!",
+                new_password=new_password,
                 reason="ops",
             ),
             request=MagicMock(
@@ -223,7 +226,7 @@ async def test_reset_password_should_delegate_user_service_admin_reset() -> None
     assert result["success"] is True
     user_service.admin_reset_password.assert_awaited_once_with(
         user_id="user-1",
-        new_password="NewSecurePass123!",
+        new_password=new_password,
     )
     audit_logger.create_async.assert_awaited_once()
 

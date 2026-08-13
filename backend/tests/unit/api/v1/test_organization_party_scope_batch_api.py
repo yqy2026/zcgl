@@ -2,6 +2,8 @@
 
 from fastapi import status
 
+from tests.fixtures import fake_bcrypt_hash
+
 
 def _add_batch_fixture(db_session):
     from src.models.auth import User
@@ -14,7 +16,7 @@ def _add_batch_fixture(db_session):
         email="test.user.001@example.com",
         phone="13900000001",
         full_name="Scope manager",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="service",
         is_active=True,
         is_locked=False,

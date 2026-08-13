@@ -11,6 +11,7 @@ from src.schemas.organization import (
     OrganizationPartyScopeProposal,
     OrganizationPartyScopeState,
 )
+from tests.fixtures import fake_access_token
 
 pytestmark = pytest.mark.api
 
@@ -37,7 +38,7 @@ async def test_preview_endpoint_passes_actor_and_proposal_to_sensitive_service()
             user_count=1,
             user_scope_change_count=1,
         ),
-        preview_token="opaque-token",
+        preview_token=fake_access_token(),
         expires_at=datetime.now(UTC),
     )
     service = MagicMock()
@@ -114,7 +115,7 @@ async def test_commit_endpoint_passes_actor_and_request_to_sensitive_service() -
     service = MagicMock()
     service.commit = AsyncMock(return_value=commit)
     request = OrganizationPartyScopeCommitRequest(
-        preview_token="opaque-token",
+        preview_token=fake_access_token(),
         reason="组织权属调整",
         idempotency_key="request-1",
     )

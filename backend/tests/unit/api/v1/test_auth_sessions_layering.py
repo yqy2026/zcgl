@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.fixtures import fake_refresh_token
+
 pytestmark = pytest.mark.api
 
 
@@ -90,7 +92,8 @@ async def test_revoke_session_should_delegate_lookup_and_revoke() -> None:
 
     session_id = "session-1"
     current_user = MagicMock(id="user-1")
-    mock_session = MagicMock(user_id="user-1", refresh_token="refresh-token")
+    refresh_token = fake_refresh_token()
+    mock_session = MagicMock(user_id="user-1", refresh_token=refresh_token)
     mock_session_service = MagicMock()
     mock_session_service.get_session_by_id = AsyncMock(return_value=mock_session)
     mock_session_service.revoke_session = AsyncMock(return_value=True)
@@ -104,4 +107,4 @@ async def test_revoke_session_should_delegate_lookup_and_revoke() -> None:
 
     assert result == {"message": "会话已撤销"}
     mock_session_service.get_session_by_id.assert_awaited_once_with(session_id)
-    mock_session_service.revoke_session.assert_awaited_once_with("refresh-token")
+    mock_session_service.revoke_session.assert_awaited_once_with(refresh_token)

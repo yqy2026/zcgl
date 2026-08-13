@@ -26,6 +26,8 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
+from tests.fixtures import fake_password, fake_refresh_token, fake_weak_password
+
 pytestmark = pytest.mark.api
 
 
@@ -116,7 +118,7 @@ class TestUserLogin:
 
         with pytest.raises(HTTPException) as exc_info:
             mock_auth_service.authenticate(
-                db=MagicMock(), username="testuser", password="wrongpassword"
+                db=MagicMock(), username="testuser", password=fake_password()
             )
 
         assert exc_info.value.status_code == 401
@@ -131,7 +133,7 @@ class TestUserLogin:
 
         with pytest.raises(HTTPException) as exc_info:
             mock_auth_service.authenticate(
-                db=MagicMock(), username="inactive_user", password="password"
+                db=MagicMock(), username="inactive_user", password=fake_password()
             )
 
         assert exc_info.value.status_code == 403
@@ -197,7 +199,7 @@ class TestRefreshToken:
         }
 
         result = mock_auth_service.refresh_access_token(
-            refresh_token="valid_refresh_token"
+            refresh_token=fake_refresh_token()
         )
 
         assert "access_token" in result
@@ -212,7 +214,7 @@ class TestRefreshToken:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            mock_auth_service.refresh_access_token(refresh_token="invalid_token")
+            mock_auth_service.refresh_access_token(refresh_token=fake_refresh_token())
 
         assert exc_info.value.status_code == 401
 
@@ -224,7 +226,7 @@ class TestRefreshToken:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            mock_auth_service.refresh_access_token(refresh_token="expired_token")
+            mock_auth_service.refresh_access_token(refresh_token=fake_refresh_token())
 
         assert exc_info.value.status_code == 401
         assert "expired" in exc_info.value.detail.lower()
@@ -302,8 +304,8 @@ class TestChangePassword:
             mock_auth_service.change_password(
                 db=MagicMock(),
                 user_id="user-123",
-                old_password="wrong_old_password",
-                new_password="newpassword",
+                old_password=fake_password(),
+                new_password=fake_password(),
             )
 
         assert exc_info.value.status_code == 400
@@ -319,8 +321,8 @@ class TestChangePassword:
             mock_auth_service.change_password(
                 db=MagicMock(),
                 user_id="user-123",
-                old_password="oldpassword123",
-                new_password="123",  # Too weak
+                old_password=fake_password(),
+                new_password=fake_weak_password(),  # Too weak
             )
 
         assert "security requirements" in str(exc_info.value)
@@ -396,7 +398,7 @@ class TestResetPassword:
 
         with pytest.raises(HTTPException) as exc_info:
             mock_auth_service.reset_password(
-                db=MagicMock(), token="invalid_token", new_password="newpassword"
+                db=MagicMock(), token="invalid_token", new_password=fake_password()
             )
 
         assert exc_info.value.status_code == 400
@@ -410,7 +412,7 @@ class TestResetPassword:
 
         with pytest.raises(HTTPException) as exc_info:
             mock_auth_service.reset_password(
-                db=MagicMock(), token="expired_token", new_password="newpassword"
+                db=MagicMock(), token="expired_token", new_password=fake_password()
             )
 
         assert exc_info.value.status_code == 400

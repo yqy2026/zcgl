@@ -13,6 +13,7 @@ import pytest
 from src.core.config import settings
 from src.models.auth import UserSession
 from src.services.core.session_service import AsyncSessionService
+from tests.fixtures import fake_refresh_token
 
 
 def test_session_service_module_should_not_use_datetime_utcnow() -> None:
@@ -89,15 +90,16 @@ class TestCreateUserSession:
         """测试创建基本会话"""
         mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_all([]))
 
+        refresh_token = fake_refresh_token()
         session = asyncio.run(
             session_service.create_user_session(
                 user_id="user_123",
-                refresh_token="refresh_token_abc",
+                refresh_token=refresh_token,
             )
         )
 
         assert session.user_id == "user_123"
-        assert session.refresh_token == "refresh_token_abc"
+        assert session.refresh_token == refresh_token
         assert session.is_active is True
         mock_db.add.assert_called_once()
         mock_db.commit.assert_awaited_once()
@@ -114,7 +116,7 @@ class TestCreateUserSession:
         session = asyncio.run(
             session_service.create_user_session(
                 user_id="user_123",
-                refresh_token="refresh_token_abc",
+                refresh_token=fake_refresh_token(),
                 device_info=device_info,
             )
         )
@@ -131,7 +133,7 @@ class TestCreateUserSession:
         session = asyncio.run(
             session_service.create_user_session(
                 user_id="user_123",
-                refresh_token="refresh_token_abc",
+                refresh_token=fake_refresh_token(),
                 device_info=device_info,
             )
         )
@@ -146,7 +148,7 @@ class TestCreateUserSession:
         session = asyncio.run(
             session_service.create_user_session(
                 user_id="user_123",
-                refresh_token="refresh_token_abc",
+                refresh_token=fake_refresh_token(),
                 ip_address="192.168.1.100",
                 user_agent="Mozilla/5.0",
             )
@@ -162,7 +164,7 @@ class TestCreateUserSession:
         session = asyncio.run(
             session_service.create_user_session(
                 user_id="user_123",
-                refresh_token="refresh_token_abc",
+                refresh_token=fake_refresh_token(),
                 session_id="session_xyz",
             )
         )
@@ -181,7 +183,7 @@ class TestCreateUserSession:
             session = asyncio.run(
                 session_service.create_user_session(
                     user_id="user_123",
-                    refresh_token="refresh_token_abc",
+                    refresh_token=fake_refresh_token(),
                 )
             )
 
@@ -199,7 +201,7 @@ class TestCreateUserSession:
         session = asyncio.run(
             session_service.create_user_session(
                 user_id="user_123",
-                refresh_token="refresh_token_abc",
+                refresh_token=fake_refresh_token(),
                 device_info="invalid json {{",
             )
         )
@@ -230,7 +232,7 @@ class TestCreateUserSession:
         asyncio.run(
             session_service.create_user_session(
                 user_id="user_123",
-                refresh_token="refresh_token_abc",
+                refresh_token=fake_refresh_token(),
             )
         )
 
@@ -289,7 +291,7 @@ class TestRevokeSession:
         """测试成功撤销会话"""
         mock_session = MagicMock(spec=UserSession)
         mock_session.is_active = True
-        mock_session.refresh_token = "refresh_token_abc"
+        mock_session.refresh_token = fake_refresh_token()
 
         mock_db.execute = AsyncMock(
             return_value=_mock_execute_scalars_first(mock_session)
@@ -302,7 +304,7 @@ class TestRevokeSession:
             }
 
             result = asyncio.run(
-                session_service.revoke_session(refresh_token="refresh_token_abc")
+                session_service.revoke_session(refresh_token=fake_refresh_token())
             )
 
             assert result is True
@@ -314,7 +316,7 @@ class TestRevokeSession:
         mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
 
         result = asyncio.run(
-            session_service.revoke_session(refresh_token="nonexistent_token")
+            session_service.revoke_session(refresh_token=fake_refresh_token())
         )
 
         assert result is False
@@ -324,7 +326,7 @@ class TestRevokeSession:
         """测试撤销没有jti的会话"""
         mock_session = MagicMock(spec=UserSession)
         mock_session.is_active = True
-        mock_session.refresh_token = "refresh_token_abc"
+        mock_session.refresh_token = fake_refresh_token()
 
         mock_db.execute = AsyncMock(
             return_value=_mock_execute_scalars_first(mock_session)
@@ -335,7 +337,7 @@ class TestRevokeSession:
             mock_decode.return_value = {"exp": 1234567890}
 
             result = asyncio.run(
-                session_service.revoke_session(refresh_token="refresh_token_abc")
+                session_service.revoke_session(refresh_token=fake_refresh_token())
             )
 
             assert result is True
@@ -345,7 +347,7 @@ class TestRevokeSession:
         """测试JWT解码错误"""
         mock_session = MagicMock(spec=UserSession)
         mock_session.is_active = True
-        mock_session.refresh_token = "refresh_token_abc"
+        mock_session.refresh_token = fake_refresh_token()
 
         mock_db.execute = AsyncMock(
             return_value=_mock_execute_scalars_first(mock_session)
@@ -355,7 +357,7 @@ class TestRevokeSession:
             mock_decode.side_effect = Exception("Invalid token")
 
             result = asyncio.run(
-                session_service.revoke_session(refresh_token="refresh_token_abc")
+                session_service.revoke_session(refresh_token=fake_refresh_token())
             )
 
             # Should still revoke the session even if JWT decoding fails
@@ -366,7 +368,7 @@ class TestRevokeSession:
         """测试将令牌添加到黑名单"""
         mock_session = MagicMock(spec=UserSession)
         mock_session.is_active = True
-        mock_session.refresh_token = "refresh_token_abc"
+        mock_session.refresh_token = fake_refresh_token()
 
         mock_db.execute = AsyncMock(
             return_value=_mock_execute_scalars_first(mock_session)
@@ -379,7 +381,7 @@ class TestRevokeSession:
                 mock_decode.return_value = {"jti": "jti_123", "exp": 1234567890}
 
                 asyncio.run(
-                    session_service.revoke_session(refresh_token="refresh_token_abc")
+                    session_service.revoke_session(refresh_token=fake_refresh_token())
                 )
 
                 # Verify token was added to blacklist

@@ -15,6 +15,7 @@ from src.services.organization.party_scope_change_service import (
     OrganizationPartyScopePreviewStore,
     OrganizationPartyScopeService,
 )
+from tests.fixtures import fake_access_token, fake_bcrypt_hash
 from tests.shared.conftest_utils import AsyncSessionAdapter
 
 
@@ -77,7 +78,7 @@ async def test_commit_applies_scope_records_reason_and_is_idempotent(
 
     committed_at = datetime(2026, 8, 4, 12, 0, 0)
     request = OrganizationPartyScopeCommitRequest(
-        preview_token="preview-token",
+        preview_token=fake_access_token(),
         reason="组织权属调整",
         idempotency_key="request-1",
     )
@@ -179,7 +180,7 @@ async def test_commit_applies_scope_records_reason_and_is_idempotent(
 @pytest.mark.asyncio
 async def test_commit_rejects_preview_bound_to_a_different_actor() -> None:
     request = OrganizationPartyScopeCommitRequest(
-        preview_token="preview-token",
+        preview_token=fake_access_token(),
         reason="组织权属调整",
         idempotency_key="request-actor-mismatch",
     )
@@ -323,7 +324,7 @@ async def test_preview_counts_inheriting_users_but_not_explicitly_bound_users(
         email="inheriting@example.com",
         phone="13800000101",
         full_name="Inheriting User",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="human",
         organization_id=child.id,
         is_active=True,
@@ -334,7 +335,7 @@ async def test_preview_counts_inheriting_users_but_not_explicitly_bound_users(
         email="explicit@example.com",
         phone="13800000102",
         full_name="Explicit User",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="human",
         organization_id=child.id,
         is_active=True,

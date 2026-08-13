@@ -9,6 +9,7 @@ from fastapi import Response
 
 from src.core.exception_handler import BaseBusinessError
 from src.schemas.auth import LoginRequest
+from tests.fixtures import fake_password
 
 pytestmark = pytest.mark.api
 
@@ -55,7 +56,7 @@ def test_login_failed_should_delegate_user_lookup_and_audit_logger(
     """登录失败分支应委托用户查询与审计服务。"""
     from src.api.v1.auth.auth_modules.authentication import login
 
-    credentials = LoginRequest(identifier="testuser", password="wrong-password")
+    credentials = LoginRequest(identifier="testuser", password=fake_password())
     response = MagicMock(spec=Response)
 
     with (

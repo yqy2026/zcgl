@@ -11,6 +11,7 @@ import pytest
 from src.crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from src.models.auth import AuditLog, User, UserSession
 from src.schemas.auth import UserCreate, UserUpdate
+from tests.fixtures import fake_password, fake_refresh_token
 
 pytestmark = pytest.mark.asyncio
 
@@ -93,7 +94,7 @@ def sample_session():
     return UserSession(
         id="session_123",
         user_id="user_123",
-        refresh_token="refresh_token_value",
+        refresh_token=fake_refresh_token(),
         device_info="Chrome on Windows",
         ip_address="192.168.1.1",
         user_agent="Mozilla/5.0",
@@ -123,7 +124,7 @@ def user_create_data():
         email="newuser@example.com",
         phone="13800002001",
         full_name="New User",
-        password="SecurePass123!",
+        password=fake_password(),
         role_id="role-user-id",
     )
 
@@ -450,10 +451,11 @@ class TestUserSessionCRUD:
         assert result == [sample_session]
 
     async def test_create_session(self, session_crud, mock_db):
+        refresh_token = fake_refresh_token()
         result = await session_crud.create_async(
             db=mock_db,
             user_id="user_123",
-            refresh_token="new_refresh_token",
+            refresh_token=refresh_token,
             device_info="Chrome",
             ip_address="192.168.1.1",
             user_agent="Mozilla",
@@ -463,7 +465,7 @@ class TestUserSessionCRUD:
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once()
         assert result.user_id == "user_123"
-        assert result.refresh_token == "new_refresh_token"
+        assert result.refresh_token == refresh_token
 
     async def test_deactivate_session(self, session_crud, mock_db, sample_session):
         mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_session))
@@ -695,7 +697,7 @@ class TestAuthCRUDEdgeCases:
             email="complete@example.com",
             phone="13800002002",
             full_name="Complete User",
-            password="SecurePass123!",
+            password=fake_password(),
             role_id="role-admin-id",
         )
 
@@ -714,12 +716,13 @@ class TestAuthCRUDEdgeCases:
         mock_db.commit.assert_awaited_once()
 
     async def test_session_create_with_minimal_params(self, session_crud, mock_db):
+        refresh_token = fake_refresh_token()
         result = await session_crud.create_async(
-            db=mock_db, user_id="user_123", refresh_token="token"
+            db=mock_db, user_id="user_123", refresh_token=refresh_token
         )
 
         assert result.user_id == "user_123"
-        assert result.refresh_token == "token"
+        assert result.refresh_token == refresh_token
         assert result.expires_at is not None
 
     async def test_audit_log_create_with_all_params(

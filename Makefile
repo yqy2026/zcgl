@@ -144,9 +144,9 @@ backend-import:
 		fi; \
 		SECRET_KEY="$$RESOLVED_SECRET_KEY" DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
-check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend check-document-runtime backend-import check-query-param-drift docs-lint
+check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend check-document-runtime backend-import check-query-param-drift check-test-credentials docs-lint
 
-ci-gate: lint-backend type-check test-backend test-frontend-ci check-document-runtime check-query-param-drift
+ci-gate: lint-backend type-check test-backend test-frontend-ci check-document-runtime check-query-param-drift check-test-credentials
 
 check-document-runtime:
 	cd backend && uv run --frozen --extra dev --extra document-processing python -c "from src.core.document_processing_runtime import validate_document_processing_runtime; validate_document_processing_runtime(); print('document runtime ok')"
@@ -180,6 +180,9 @@ check-field-drift:
 
 check-query-param-drift:
 	$(PYTHON) scripts/check_query_param_drift.py
+
+check-test-credentials:
+	$(PYTHON) scripts/check_test_credentials.py
 
 # 运行集成测试
 test-integration:

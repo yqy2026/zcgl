@@ -4,6 +4,8 @@ from datetime import datetime
 
 from fastapi import status
 
+from tests.fixtures import fake_bcrypt_hash
+
 
 def test_user_party_binding_mutations_require_preview_then_commit(
     client, db_session
@@ -19,7 +21,7 @@ def test_user_party_binding_mutations_require_preview_then_commit(
         email="test.user.001@example.com",
         phone="13900000001",
         full_name="范围管理员",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="service",
         is_active=True,
         is_locked=False,
@@ -30,7 +32,7 @@ def test_user_party_binding_mutations_require_preview_then_commit(
         email="user.party.scope.api.1@example.com",
         phone="13900000031",
         full_name="用户主体范围接口测试",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         is_active=False,
         is_locked=False,
     )
@@ -140,7 +142,7 @@ def test_user_party_binding_update_and_close_require_fresh_previews(
         email="test.user.001@example.com",
         phone="13900000001",
         full_name="Scope manager",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         account_type="service",
         is_active=True,
         is_locked=False,
@@ -151,7 +153,7 @@ def test_user_party_binding_update_and_close_require_fresh_previews(
         email="user.party.scope.api.2@example.com",
         phone="13900000032",
         full_name="Scoped user",
-        password_hash="hashed-password",
+        password_hash=fake_bcrypt_hash(),
         is_active=False,
         is_locked=False,
     )
