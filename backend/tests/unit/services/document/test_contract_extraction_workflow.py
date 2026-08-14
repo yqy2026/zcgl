@@ -327,3 +327,23 @@ async def test_create_contract_rejects_unparseable_monthly_rent_loudly(
             current_user_id="user-1",
         )
     assert str(exc_info.value) == "invalid_field_value"
+
+
+def test_decimal_value_rejects_non_finite_and_non_positive_values() -> None:
+    """月租金归一化必须拒绝 NaN/Infinity/非正值（2026-08-14 复核收口）。
+
+    NaN 参与比较会抛未捕获的 InvalidOperation（→ 500），Infinity 能通过 ≤0 守卫并在
+    numeric 列写入时溢出；两者都必须显式失败为 invalid_field_value，而不是留到 DB 层
+    才爆出 500。
+    """
+    from src.services.document.candidate_review import CandidateReviewError
+
+    workflow = _build_workflow()
+    for raw in ("nan", "Infinity", "-1", "0"):
+        with pytest.raises(CandidateReviewError) as exc_info:
+            workflow._decimal_value({"monthly_rent": raw}, "monthly_rent")
+        assert str(exc_info.value) == "invalid_field_value"
+    assert (
+        workflow._decimal_value({"monthly_rent": "68000"}, "monthly_rent")
+        == Decimal("68000")
+    )

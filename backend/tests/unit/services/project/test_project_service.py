@@ -99,6 +99,20 @@ def project_service() -> ProjectService:
     return ProjectService()
 
 
+@pytest.fixture(autouse=True)
+def _mock_manager_party_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """create_project 的运营方主体存在性校验统一打桩（2026-08-14 复核收口）。
+
+    自带 project_code 路径新增 `party_crud.get_party` 存在性校验（不存在 → 404）；
+    除专门的拒绝测试外，本文件既有用例不关心该存在性，统一返回有效主体，避免
+    mock_db 与真实查询链（`.scalars().first()`）不兼容。
+    """
+    monkeypatch.setattr(
+        "src.services.project.service.party_crud.get_party",
+        AsyncMock(return_value=SimpleNamespace(code="P-TEST")),
+    )
+
+
 def _ledger_entry(
     *,
     contract_id: str,
@@ -3676,6 +3690,34 @@ class TestCreateProjectManagerRequired:
         with pytest.raises(
             OperationNotAllowedError,
             match="项目必须绑定运营管理方",
+        ):
+            await service.create_project(mock_db, obj_in=obj_in)
+
+        # 未达 crud 层：不产生任何落库调用
+        mock_db.execute.assert_not_called()
+
+    async def test_create_project_rejects_nonexistent_manager_when_code_provided(
+        self, mock_db: MagicMock
+    ) -> None:
+        """客户端自带 project_code 时 manager_party_id 必须指向既有主体（404 而非 FK 500）。
+
+        收口（2026-08-14 复核）：必填校验只保证非空，伪造 id 会撞 parties.id 外键变成
+        500；自带编码路径必须与自动生成路径一致地校验主体存在性（ResourceNotFoundError
+        → 404）。
+        """
+        service = ProjectService()
+        obj_in = ProjectCreate(
+            project_name="验收无运营方项目",
+            project_code="PRJ-QC01-202608-0002",
+            manager_party_id="party-not-exist",
+        )
+
+        with (
+            patch(
+                "src.services.project.service.party_crud.get_party",
+                AsyncMock(return_value=None),
+            ),
+            pytest.raises(ResourceNotFoundError, match="运营方主体"),
         ):
             await service.create_project(mock_db, obj_in=obj_in)
 

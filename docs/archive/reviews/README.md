@@ -10,4 +10,4 @@
 
 | 文档 | 内容 |
 |------|------|
-| [2026-08-14-mvp-pre-scale-acceptance.md](./2026-08-14-mvp-pre-scale-acceptance.md) | MVP 放量前验收（工程侧执行）：门禁全绿、G1-G3 与 30 项 ACC 证据、6 项缺陷修复与复验、产品负责人抽验待办清单 |
+| [2026-08-14-mvp-pre-scale-acceptance-review.md](./2026-08-14-mvp-pre-scale-acceptance-review.md) | MVP 放量前验收（工程侧执行）：门禁全绿、G1-G3 与 30 项 ACC 证据、10 项缺陷修复（D1–D10）与复验、LLM 配置后 ACC-008/009 真实全链路复验、可观测性收口、产品负责人抽验待办清单 |

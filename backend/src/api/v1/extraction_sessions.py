@@ -11,8 +11,6 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from src.api.v1 import property_certificate_extraction_sessions as property_sessions
 from src.constants.document_processing_constants import (
     CONTRACT_MAX_PDF_PAGES,
@@ -55,6 +53,8 @@ from src.services.document.extraction_sessions import (
 )
 from src.services.document.page_text_pipeline import get_ordered_page_text_pipeline
 from src.services.file_upload import StagedFileService, UploadPurpose
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 _TEMP_UPLOAD_ROOT = Path("temp_uploads")
@@ -168,9 +168,10 @@ async def _authorize_existing_session(
 
     public_session（_workflow().get 的返回值）有意剥离 context；产权证授权的
     context 校验（mode/asset_id/certificate_id）需要完整会话（2026-08-14 验收
-    ACC-009 回归修复）。调用方（confirm）必须复用本函数返回的快照，不得再次
-    get_raw：即用即弃会话可能在两次读取之间被清理，二次读取会得到伪 404
-    （2026-08-14 两轴复核 D9）。
+    ACC-009 回归修复）。调用方（confirm）应复用本函数返回的快照，端点层不再二次
+    get_raw：同一仓库的两次读取是冗余 IO，即用即弃会话也可能在两次读取之间被清理
+    （2026-08-14 两轴复核 D9）；workflow 内部 confirm 经 repository.transition
+    的状态机读取不在此列。
     """
     if session.get("target_type") == "contract":
         await _authorize(
@@ -355,9 +356,8 @@ async def confirm_extraction_session(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="session not found"
         )
-    # 授权即快照：产权证确认直接复用授权步骤返回的完整会话，不再二次 get_raw
-    # （即用即弃会话可能在两次读取之间被清理，二次读取会得到伪 404，2026-08-14
-    # 两轴复核 D9）。
+    # 授权即快照：产权证确认直接复用授权步骤返回的完整会话，端点层不再二次 get_raw
+    # （2026-08-14 两轴复核 D9）。
     raw_session = await _authorize_existing_session(
         db=db, current_user=current_user, session=session
     )

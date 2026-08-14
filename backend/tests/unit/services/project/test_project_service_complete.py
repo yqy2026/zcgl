@@ -14,7 +14,7 @@ Test Coverage:
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -40,6 +40,20 @@ pytestmark = pytest.mark.unit
 def project_service():
     """Project service instance"""
     return ProjectService()
+
+
+@pytest.fixture(autouse=True)
+def _mock_manager_party_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """create_project 的运营方主体存在性校验统一打桩（2026-08-14 复核收口）。
+
+    自带 project_code 路径新增 `party_crud.get_party` 存在性校验（不存在 → 404）；
+    除专门的拒绝测试外，本文件既有用例不关心该存在性，统一返回有效主体，避免
+    mock_db 与真实查询链（`.scalars().first()`）不兼容。
+    """
+    monkeypatch.setattr(
+        "src.services.project.service.party_crud.get_party",
+        AsyncMock(return_value=MagicMock(code="P-TEST")),
+    )
 
 
 @pytest.fixture

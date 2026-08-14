@@ -150,15 +150,15 @@ class CRUDPropertyCertificate(
             # 直接写关联表而非 db_obj.assets = [...]：集合整体赋值会先懒加载未加载的
             # 关系（异步上下文 MissingGreenlet，2026-08-14 验收 ACC-009 回归修复），
             # 与 _add_owner_relations 的独立对象写法保持对称。
-            await db.execute(
-                insert(property_cert_assets).values(
-                    [
-                        {"certificate_id": db_obj.id, "asset_id": asset_id}
-                        for asset_id in asset_ids
-                        if str(asset_id).strip() != ""
-                    ]
-                )
-            )
+            rows = [
+                {"certificate_id": db_obj.id, "asset_id": asset_id}
+                for asset_id in asset_ids
+                if str(asset_id).strip() != ""
+            ]
+            # 过滤后可能为空（如全空字符串入参）：空 values 列表会编译为非法
+            # `INSERT INTO t () VALUES ()`（2026-08-14 复核收口），跳过写入。
+            if rows:
+                await db.execute(insert(property_cert_assets).values(rows))
         if commit:
             await db.commit()
         else:

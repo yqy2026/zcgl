@@ -34,13 +34,17 @@ def _build_app() -> FastAPI:
         id="user-1"
     )
     # 五个端点（list/get/create/update/delete）均声明 `_authz_ctx` 授权依赖，逐一覆盖，
-    # 使业务错误传播测试直达服务层。
+    # 使业务错误传播测试直达服务层。若端点参数改名导致依赖匹配失败，覆盖数不等于 5 即
+    # 显式失败（避免静默绕过授权却仍假绿，2026-08-14 复核收口）。
+    overridden = 0
     for route in module.router.routes:
         if route.dependant is None:
             continue
         for dependency in route.dependant.dependencies:
             if dependency.name == "_authz_ctx":
                 app.dependency_overrides[dependency.call] = lambda: MagicMock()
+                overridden += 1
+    assert overridden == 5, f"expected 5 _authz_ctx dependencies, got {overridden}"
     return app
 
 

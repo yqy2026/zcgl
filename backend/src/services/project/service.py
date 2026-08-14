@@ -511,6 +511,7 @@ class ProjectService:
                     "项目 party_relations 写入口已下线；项目主体关系由产权/运营方字段派生，禁止通过该字段写入",
                     reason="project_party_relations_write_removed",
                 )
+            client_provided_code = bool(obj_in.project_code)
             if not obj_in.project_code:
                 (
                     operator_party_id,
@@ -526,11 +527,19 @@ class ProjectService:
             # 项目必须绑定运营管理方（PRD ACC-005 / REQ-PRJ-001）。自动生成编码路径已在
             # _resolve_operator_party_for_code 强制；客户端自带 project_code 时同样必须
             # 提供 manager_party_id（或由 API 层从组织/用户范围推断后写入），否则拒绝创建。
-            if not (obj_in.manager_party_id or "").strip():
+            manager_party_id = (obj_in.manager_party_id or "").strip()
+            if not manager_party_id:
                 raise OperationNotAllowedError(
                     "项目必须绑定运营管理方（manager_party_id）",
                     reason="project_manager_required",
                 )
+
+            # 客户端自带 project_code 路径：manager_party_id 必须指向既有主体，否则外键
+            # 失败会变成 500；自动生成路径已在 _resolve_operator_party_for_code 校验过存在性。
+            if client_provided_code:
+                manager_party = await party_crud.get_party(db, party_id=manager_party_id)
+                if manager_party is None:
+                    raise ResourceNotFoundError("运营方主体", manager_party_id)
 
             # 2. 检查编码唯一性
             existing_project = await project_crud.get_by_code(

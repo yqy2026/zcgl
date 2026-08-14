@@ -307,7 +307,10 @@ class ContractExtractionWorkflow:
             decimal_value = Decimal(str(value).strip())
         except (InvalidOperation, ValueError):
             raise CandidateReviewError("invalid_field_value")
-        if decimal_value <= 0:
+        # 非有限值（NaN/Infinity）：NaN 参与比较会抛未捕获的 InvalidOperation（→ 500），
+        # Infinity 能通过 ≤0 守卫并在 numeric 列写入时溢出；两者都不是合法月租金，必须
+        # 显式拒绝为 invalid_field_value（2026-08-14 复核收口）。
+        if not decimal_value.is_finite() or decimal_value <= 0:
             raise CandidateReviewError("invalid_field_value")
         return decimal_value
 

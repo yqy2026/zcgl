@@ -10,8 +10,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from src.constants.document_processing_constants import (
     PROPERTY_CERTIFICATE_MAX_PDF_PAGES,
 )
@@ -40,6 +38,8 @@ from src.services.document.property_certificate_extraction_workflow import (
     PropertyCertificateExtractionWorkflow,
 )
 from src.services.file_upload import StagedFileService, UploadPurpose
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 _TEMP_UPLOAD_ROOT = Path("temp_uploads")

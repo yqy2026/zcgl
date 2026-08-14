@@ -17,7 +17,7 @@
 | 实现状态：开发中 | 1 | REQ-NTF-001（剩余阻塞仅为企业微信外部前置：可信 IP 配置与 userid 映射；站内通知证据齐全，企业微信为 PRD 可选通道） |
 | **已验收** | **0** | 最终放量认定需产品负责人按 PRD §3.2 抽验；工程侧验收动作已于 2026-08-14 完成并登记（见 §3/§4） |
 
-**2026-08-14 验收执行结论**：工程侧全量门禁 `make check` 链全绿（后端单元 4187 passed / 前端测试 / 生产构建 / backend-import / query-param-drift 7 契约 0 漂移 / test-credentials / docs-lint 10 PASS）；G1/G2/G3 与 ACC 建议验收项逐条执行（真实 API 实测 + 既有 Playwright GUI 冒烟 7/7 + 测试证据），验收中发现 6 项缺陷全部修复并复验（详见 `docs/archive/reviews/2026-08-14-mvp-pre-scale-acceptance.md`）。剩余均为产品负责人抽验项与外部依赖项。
+**2026-08-14 验收执行结论**：工程侧全量门禁 `make check` 链全绿（后端单元 4187 passed / 前端测试 / 生产构建 / backend-import / query-param-drift 7 契约 0 漂移 / test-credentials / docs-lint 10 PASS）；G1/G2/G3 与 ACC 建议验收项逐条执行（真实 API 实测 + 既有 Playwright GUI 冒烟 7/7 + 测试证据），验收中发现 6 项缺陷全部修复并复验（详见 `docs/archive/reviews/2026-08-14-mvp-pre-scale-acceptance-review.md`）。剩余均为产品负责人抽验项与外部依赖项。
 
 ## 3. 放量前门槛（PRD §9）
 

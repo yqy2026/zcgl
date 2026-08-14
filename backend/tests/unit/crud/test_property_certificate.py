@@ -194,3 +194,34 @@ async def test_create_with_owners_skips_asset_insert_without_asset_ids() -> None
 
     calls = db.execute.await_args_list
     assert len(calls) == 1  # 仅重载查询，无关联表写入
+
+
+@pytest.mark.asyncio
+async def test_create_with_owners_skips_asset_insert_when_all_ids_blank() -> None:
+    """全空字符串资产 id 不得触发空 values 的非法 INSERT（2026-08-14 复核收口）。
+
+    过滤后空列表传给 insert().values([]) 会编译为 `INSERT INTO t () VALUES ()`
+    （PG 非法 SQL → 500）；服务层会前置归一化，但 CRUD 必须自行兜底。
+    """
+    from src.schemas.property_certificate import PropertyCertificateCreate
+
+    certificate = PropertyCertificateCreate(
+        certificate_number="CERT-003",
+        certificate_type="real_estate",
+    )
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.first.return_value = MagicMock()
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=execute_result)
+    db.flush = AsyncMock()
+
+    await property_certificate_crud.create_with_owners_async(
+        db,
+        obj_in=certificate,
+        owner_ids=None,
+        asset_ids=["", "  "],
+        commit=False,
+    )
+
+    calls = db.execute.await_args_list
+    assert len(calls) == 1  # 仅重载查询，无关联表写入
