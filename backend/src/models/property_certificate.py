@@ -8,7 +8,6 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, String, Text
-from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -47,8 +46,11 @@ class PropertyCertificate(Base):
         index=True,
         comment="Certificate number",
     )
-    certificate_type: Mapped[CertificateType] = mapped_column(
-        SQLEnum(CertificateType), nullable=False, index=True, comment="Certificate type"
+    certificate_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+        comment="Certificate type",
     )
     registration_date: Mapped[date | None] = mapped_column(
         Date, comment="Registration date"

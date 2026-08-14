@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import exists, false, select
+from sqlalchemy import exists, false, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -147,10 +147,17 @@ class CRUDPropertyCertificate(
         await db.flush()
         self._add_owner_relations(db, certificate_id=db_obj.id, owner_ids=owner_ids)
         if asset_ids:
-            db_obj.assets = list(
-                (await db.execute(select(Asset).where(Asset.id.in_(asset_ids))))
-                .scalars()
-                .all()
+            # 直接写关联表而非 db_obj.assets = [...]：集合整体赋值会先懒加载未加载的
+            # 关系（异步上下文 MissingGreenlet，2026-08-14 验收 ACC-009 回归修复），
+            # 与 _add_owner_relations 的独立对象写法保持对称。
+            await db.execute(
+                insert(property_cert_assets).values(
+                    [
+                        {"certificate_id": db_obj.id, "asset_id": asset_id}
+                        for asset_id in asset_ids
+                        if str(asset_id).strip() != ""
+                    ]
+                )
             )
         if commit:
             await db.commit()

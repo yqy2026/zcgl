@@ -57,7 +57,9 @@ class TestProjectService:
         self, service: ProjectService, mock_db
     ):
         obj_in = ProjectCreate(
-            project_name="Test Project", project_code="PRJ-TEST01-202606-0002"
+            project_name="Test Project",
+            project_code="PRJ-TEST01-202606-0002",
+            manager_party_id="party-1",
         )
 
         with patch(

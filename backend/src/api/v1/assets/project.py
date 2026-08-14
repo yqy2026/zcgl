@@ -703,6 +703,7 @@ async def get_project(
     )
     if not project:
         raise not_found("项目不存在", resource_type="project", resource_id=project_id)
+    await project_service.attach_project_display_summary(db, project)
     return project_service.project_to_response(project)
 
 

@@ -51,6 +51,7 @@ def client(monkeypatch):
         should_use_cache=True,
         current_user=None,
         party_filter=None,
+        perspective=None,
     ):
         return {
             "total_assets": 1,
@@ -64,6 +65,7 @@ def client(monkeypatch):
             "should_use_cache": should_use_cache,
             "requested_by": getattr(current_user, "username", None),
             "party_filter_applied": party_filter is not None,
+            "perspective_applied": perspective,
         }
 
     async def mock_calculate_trend(
@@ -171,6 +173,8 @@ class TestComprehensiveAnalytics:
         assert "success" in data
         assert data["success"] is True
         assert "data" in data
+        # 端点必须把公开 view_mode 解析为服务契约的单一 perspective 并转发（PRD §5 / api-contract §4.9）
+        assert data["data"]["perspective_applied"] == "manager"
 
     def test_get_comprehensive_analytics_with_date_filters(
         self, client, admin_user_headers
@@ -326,23 +330,28 @@ class TestDebugEndpoints:
 class TestAnalyticsDataValidation:
     """测试分析数据验证"""
 
-    def test_invalid_date_format(self, client, admin_user_headers):
-        """测试无效的日期格式"""
+    def test_invalid_date_format_is_passed_through_to_service(self, client, admin_user_headers):
+        """无效日期格式不在 API 层校验，原样透传给服务层（服务层按 %Y-%m 截断口径处理）。"""
         response = client.get(
             "/api/v1/analytics/comprehensive?view_mode=manager&date_from=invalid-date",
             headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["data"]["filters_applied"]["date_from"] == "invalid-date"
 
-    def test_date_from_after_date_to(self, client, admin_user_headers):
-        """测试日期范围无效（起始日期晚于结束日期）"""
+    def test_date_range_ordering_is_passed_through_to_service(self, client, admin_user_headers):
+        """日期范围顺序不在 API 层校验，原样透传给服务层（与真实服务行为一致）。"""
         response = client.get(
             "/api/v1/analytics/comprehensive?view_mode=manager&date_from=2024-12-31&date_to=2024-01-01",
             headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["data"]["filters_applied"]["date_from"] == "2024-12-31"
+        assert data["data"]["filters_applied"]["date_to"] == "2024-01-01"
 
 
 # ============================================================================

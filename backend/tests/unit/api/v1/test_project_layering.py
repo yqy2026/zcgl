@@ -914,6 +914,7 @@ async def test_get_project_should_delegate_project_service_lookup() -> None:
 
     mock_service = MagicMock()
     mock_service.get_project_by_id = AsyncMock(return_value=project)
+    mock_service.attach_project_display_summary = AsyncMock()
     mock_service.project_to_response = MagicMock(side_effect=lambda value: value)
 
     with pytest.MonkeyPatch.context() as monkeypatch:

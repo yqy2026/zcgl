@@ -143,7 +143,9 @@ class Party(Base):
         Text, nullable=True, comment="审核原因/驳回原因"
     )
     metadata_json: Mapped[dict[str, Any] | None] = mapped_column(
-        "metadata", JSONB, comment="扩展信息"
+        "metadata",
+        JSONB(none_as_null=True),
+        comment="扩展信息",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"

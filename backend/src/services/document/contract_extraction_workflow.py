@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
@@ -15,6 +15,7 @@ from src.models.contract_group import ContractDirection, GroupRelationType, Reve
 from src.schemas.contract_group import (
     ContractCreate,
     ContractGroupCreate,
+    ContractRentTermCreate,
     LeaseDetailCreate,
 )
 from src.services.contract.contract_group_service import contract_group_service
@@ -188,15 +189,31 @@ class ContractExtractionWorkflow:
             current_user=current_user_id,
             commit=False,
         )
-        monthly_rent = values.get("monthly_rent")
+        monthly_rent = self._decimal_value(values, "monthly_rent")
         lease_detail = None
-        if revenue_mode is RevenueMode.LEASE and isinstance(monthly_rent, Decimal):
+        rent_terms: list[ContractRentTermCreate] = []
+        if revenue_mode is RevenueMode.LEASE and monthly_rent is not None:
             lease_detail = LeaseDetailCreate.model_validate(
                 {
                     "rent_amount": monthly_rent,
                     "monthly_rent_base": monthly_rent,
                 }
             )
+            effective_to = self._optional_date(values, "effective_to")
+            # 台账展开以 RentTerm 为源（ledger_service_v2.generate_ledger_on_activation
+            # 无 RentTerm 时跳过生成），确认了月租金且期限完整时必须构造租金条款，
+            # 否则「人工确认补录租金条款 → 生成经营台账」闭环缺失（ACC-008）。
+            if effective_to is not None and effective_to >= effective_from:
+                rent_terms.append(
+                    ContractRentTermCreate(
+                        sort_order=1,
+                        start_date=effective_from,
+                        end_date=effective_to,
+                        monthly_rent=monthly_rent,
+                        management_fee=Decimal("0"),
+                        other_fees=Decimal("0"),
+                    )
+                )
         contract = await contract_group_service.add_contract_to_group(
             db,
             obj_in=ContractCreate.model_validate(
@@ -218,6 +235,7 @@ class ContractExtractionWorkflow:
                     "payment_cycle": self._optional_string(values, "payment_cycle"),
                     "asset_ids": asset_ids,
                     "lease_detail": lease_detail,
+                    "rent_terms": rent_terms,
                 }
             ),
             current_user=current_user_id,
@@ -269,6 +287,29 @@ class ContractExtractionWorkflow:
         if not isinstance(value, str):
             raise CandidateReviewError("invalid_field_value")
         return value
+
+    @staticmethod
+    def _decimal_value(
+        values: Mapping[str, CandidateValue | None], key: str
+    ) -> Decimal | None:
+        """归一化数值字段（月租金），不可解析时显式失败而不是静默跳过。
+
+        确认链路的 monthly_rent 经候选/动作解析均为 Decimal，但台账生成以
+        rent_terms 为源，若以 isinstance 类型门静默跳过（例如未来 LLM 返回浮点），
+        「确认月租金 → 生成经营台账」闭环会无声断裂（ACC-008）。此处接受任何
+        可数值化的输入（Decimal/int/float/数字字符串）并归一为 Decimal；无法解析
+        时抛 invalid_field_value，失败要响亮（2026-08-14 两轴复核 D8）。
+        """
+        value = values.get(key)
+        if value is None:
+            return None
+        try:
+            decimal_value = Decimal(str(value).strip())
+        except (InvalidOperation, ValueError):
+            raise CandidateReviewError("invalid_field_value")
+        if decimal_value <= 0:
+            raise CandidateReviewError("invalid_field_value")
+        return decimal_value
 
     def _staged_path(self, storage_key: str) -> Path:
         return (self._lifecycle.storage_root / storage_key).resolve()

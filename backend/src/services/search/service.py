@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...core.exception_handler import PermissionDeniedError
 from ...crud.asset import asset_crud
 from ...crud.party import party_crud
 from ...crud.query_builder import PartyFilter
@@ -25,6 +26,7 @@ class SearchService:
         query: str,
         scope_mode: str,
         effective_party_ids: list[str] | None,
+        is_unrestricted: bool,
     ) -> dict[str, Any]:
         normalized_query = query.strip()
         if normalized_query == "":
@@ -35,9 +37,13 @@ class SearchService:
             for item in (effective_party_ids or [])
             if str(item).strip() != ""
         ]
-        if len(normalized_effective_party_ids) == 0:
-            return {"query": normalized_query, "total": 0, "items": [], "groups": []}
-
+        # 空主体范围 = 无范围限制 仅对内建 admin/system_admin（is_unrestricted，
+        # REQ-SCH-003 权限豁免）成立。数据范围中间件对无有效范围的普通用户失败关闭
+        # （403 PARTY_SCOPE_*），但此处必须自校验而不信任中间件：若中间件失效导致
+        # 非豁免用户到达，显式拒绝（403）而不是按无范围搜索全部对象，避免数据范围
+        # 泄漏（2026-08-14 两轴复核 D6）。
+        if not normalized_effective_party_ids and not is_unrestricted:
+            raise PermissionDeniedError("搜索需要有效的主体数据范围")
         items = await self._collect_results(
             db=db,
             query=normalized_query,
@@ -113,7 +119,10 @@ class SearchService:
     @staticmethod
     def _build_party_filter(
         *, scope_mode: str, effective_party_ids: list[str]
-    ) -> PartyFilter:
+    ) -> PartyFilter | None:
+        if not effective_party_ids:
+            # 管理员（unrestricted）无有效主体 ID：不施加主体范围过滤
+            return None
         if scope_mode == "owner":
             return PartyFilter(
                 party_ids=effective_party_ids,
@@ -139,6 +148,9 @@ class SearchService:
     def _apply_contract_group_scope(
         stmt: Any, *, scope_mode: str, effective_party_ids: list[str]
     ) -> Any:
+        if not effective_party_ids:
+            # 管理员（unrestricted）：不施加主体范围过滤
+            return stmt
         if scope_mode == "owner":
             return stmt.where(ContractGroup.owner_party_id.in_(effective_party_ids))
         if scope_mode == "manager":
@@ -156,7 +168,7 @@ class SearchService:
         db: AsyncSession,
         query: str,
         scope_mode: str,
-        party_filter: PartyFilter,
+        party_filter: PartyFilter | None,
     ) -> list[dict[str, Any]]:
         _ = scope_mode
         assets, _ = await asset_crud.get_multi_with_search_async(
@@ -198,7 +210,7 @@ class SearchService:
         db: AsyncSession,
         query: str,
         scope_mode: str,
-        party_filter: PartyFilter,
+        party_filter: PartyFilter | None,
     ) -> list[dict[str, Any]]:
         _ = scope_mode
         result = await project_service.search_projects(
@@ -352,7 +364,9 @@ class SearchService:
         customer_ids: OrderedDict[str, None] = OrderedDict()
         for contract in contracts:
             binding_types = (
-                ["owner", "manager"] if scope_mode == "all" else [scope_mode]
+                ["owner", "manager"]
+                if scope_mode == "all" or not effective_party_ids
+                else [scope_mode]
             )
             for binding_type in binding_types:
                 customer_party_id = party_service._resolve_customer_party_id(

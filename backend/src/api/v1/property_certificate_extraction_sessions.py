@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from src.constants.document_processing_constants import (
     PROPERTY_CERTIFICATE_MAX_PDF_PAGES,
@@ -198,6 +201,9 @@ async def _confirm_property_certificate_extraction_session(
     except HTTPException:
         raise
     except Exception as exc:
+        logger.exception(
+            "property certificate confirmation failed: %s", exc
+        )
         raise internal_error(
             "property certificate confirmation failed", original_error=exc
         ) from exc

@@ -66,6 +66,18 @@ def test_party_code_and_identifier_uniqueness_are_database_enforced() -> None:
     assert indexes["uq_parties_individual_identifier_fingerprint"].unique is True
 
 
+def test_party_metadata_json_must_use_none_as_null() -> None:
+    """metadata_json 的 JSONB 必须 none_as_null=True。
+
+    回归（2026-08-14 验收）：默认 none_as_null=False 会把 Python None 编码为 JSON
+    'null' 而非 SQL NULL，违反 ck_parties_metadata_object（jsonb_typeof(metadata)
+    必须为 'object' 或 NULL），导致无 metadata 的主体创建主路径 500（REQ-PTY-001）。
+    """
+    column = Party.__table__.columns["metadata"]
+
+    assert column.type.none_as_null is True
+
+
 def test_party_hierarchy_is_not_part_of_the_model_contract() -> None:
     assert "PartyHierarchy" not in party_model.__all__
     assert not hasattr(party_model, "PartyHierarchy")

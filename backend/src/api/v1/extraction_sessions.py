@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Literal
@@ -9,6 +10,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from src.api.v1 import property_certificate_extraction_sessions as property_sessions
 from src.constants.document_processing_constants import (
@@ -160,7 +163,15 @@ def _require_property_context(session: Mapping[str, object]) -> Mapping[str, str
 
 async def _authorize_existing_session(
     *, db: AsyncSession, current_user: User, session: Mapping[str, object]
-) -> None:
+) -> dict[str, object] | None:
+    """授权既有解析会话；产权证目标返回完整会话快照，contract 目标返回 None。
+
+    public_session（_workflow().get 的返回值）有意剥离 context；产权证授权的
+    context 校验（mode/asset_id/certificate_id）需要完整会话（2026-08-14 验收
+    ACC-009 回归修复）。调用方（confirm）必须复用本函数返回的快照，不得再次
+    get_raw：即用即弃会话可能在两次读取之间被清理，二次读取会得到伪 404
+    （2026-08-14 两轴复核 D9）。
+    """
     if session.get("target_type") == "contract":
         await _authorize(
             db=db,
@@ -170,12 +181,22 @@ async def _authorize_existing_session(
             resource_id=None,
             resource_context=_CONTRACT_CREATE_RESOURCE_CONTEXT,
         )
-        return
+        return None
     if session.get("target_type") != "property_certificate":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="session not found"
         )
-    context = _require_property_context(session)
+    # public_session（_workflow().get 的返回值）有意剥离 context；产权证授权的
+    # context 校验（mode/asset_id/certificate_id）需要完整会话，否则解析会话创建后
+    # GET/confirm 一律 404（2026-08-14 验收 ACC-009 回归修复）。
+    raw_session = property_sessions._workflow().get_raw(
+        str(session.get("session_id", ""))
+    )
+    if raw_session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="session not found"
+        )
+    context = _require_property_context(raw_session)
     if context.get("mode") == "existing":
         await _authorize(
             db=db,
@@ -185,7 +206,7 @@ async def _authorize_existing_session(
             resource_id=context.get("certificate_id"),
             deny_as_not_found=True,
         )
-        return
+        return raw_session
     await _authorize(
         db=db,
         current_user=current_user,
@@ -194,6 +215,7 @@ async def _authorize_existing_session(
         resource_id=None,
         resource_context=_PROPERTY_CERTIFICATE_CREATE_RESOURCE_CONTEXT,
     )
+    return raw_session
 
 
 @router.post("/extraction-sessions", status_code=status.HTTP_201_CREATED)
@@ -333,7 +355,12 @@ async def confirm_extraction_session(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="session not found"
         )
-    await _authorize_existing_session(db=db, current_user=current_user, session=session)
+    # 授权即快照：产权证确认直接复用授权步骤返回的完整会话，不再二次 get_raw
+    # （即用即弃会话可能在两次读取之间被清理，二次读取会得到伪 404，2026-08-14
+    # 两轴复核 D9）。
+    raw_session = await _authorize_existing_session(
+        db=db, current_user=current_user, session=session
+    )
     try:
         if session.get("target_type") == "contract":
             contract_request = ExtractionSessionConfirmRequest.model_validate(payload)
@@ -346,7 +373,11 @@ async def confirm_extraction_session(
                 current_user_id=str(current_user.id),
             )
             return {"contract_id": contract_id}
-        context = _require_property_context(session)
+        if raw_session is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="session not found"
+            )
+        context = _require_property_context(raw_session)
         if context.get("mode") == "existing":
             existing_request = (
                 PropertyCertificateExistingExtractionConfirmRequest.model_validate(
@@ -380,6 +411,8 @@ async def confirm_extraction_session(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors()
         ) from exc
+    except HTTPException:
+        raise
     except ExtractionSessionStateError as exc:
         raise _session_error(exc) from exc
     except CandidateReviewError as exc:
@@ -389,6 +422,7 @@ async def confirm_extraction_session(
     except BaseBusinessError:
         raise
     except Exception as exc:
+        logger.exception("document extraction confirmation failed: %s", exc)
         raise internal_error(
             "document extraction confirmation failed", original_error=exc
         ) from exc

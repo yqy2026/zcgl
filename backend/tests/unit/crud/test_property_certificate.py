@@ -121,3 +121,76 @@ async def test_get_eager_loads_assets_and_party_relations_without_party_filter()
     option_paths = " ".join(str(option.path) for option in stmt._with_options)
     assert "PropertyCertificate.assets" in option_paths
     assert "PropertyCertificate.party_relations" in option_paths
+
+
+@pytest.mark.asyncio
+async def test_create_with_owners_writes_asset_links_via_raw_insert() -> None:
+    """资产关联必须直接写关联表，不得集合赋值触发异步懒加载（ACC-009）。
+
+    回归（2026-08-14 验收 ACC-009 + 两轴复核）：此前 `db_obj.assets = [...]` 会先执行
+    `SELECT ... FROM assets WHERE id IN (...)` 再整体赋值，在异步上下文触发
+    MissingGreenlet；改为直接 `insert(property_cert_assets)` 后必须锁定该写路径，
+    且任何读取路径都不得再出现 Asset 全表/IN 查询。
+    """
+    from sqlalchemy import Insert
+
+    from src.schemas.property_certificate import PropertyCertificateCreate
+
+    certificate = PropertyCertificateCreate(
+        certificate_number="CERT-001",
+        certificate_type="real_estate",
+    )
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.first.return_value = MagicMock()
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=execute_result)
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+
+    await property_certificate_crud.create_with_owners_async(
+        db,
+        obj_in=certificate,
+        owner_ids=["party-1"],
+        asset_ids=["asset-1", "asset-2", ""],
+        commit=True,
+    )
+
+    calls = db.execute.await_args_list
+    assert len(calls) == 2  # 关联表 insert + 创建后重载查询
+    insert_stmt = calls[0].args[0]
+    assert isinstance(insert_stmt, Insert)
+    sql = str(insert_stmt.compile(compile_kwargs={"literal_binds": True})).upper()
+    assert "INSERT INTO PROPERTY_CERT_ASSETS" in sql
+    assert "ASSET-1" in sql
+    assert "ASSET-2" in sql
+    reload_sql = str(
+        calls[1].args[0].compile(compile_kwargs={"literal_binds": True})
+    ).upper()
+    assert "FROM ASSETS" not in reload_sql
+
+
+@pytest.mark.asyncio
+async def test_create_with_owners_skips_asset_insert_without_asset_ids() -> None:
+    """无关联资产时不执行任何关联表写入（空资产集保持为空）。"""
+    from src.schemas.property_certificate import PropertyCertificateCreate
+
+    certificate = PropertyCertificateCreate(
+        certificate_number="CERT-002",
+        certificate_type="real_estate",
+    )
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.first.return_value = MagicMock()
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=execute_result)
+    db.flush = AsyncMock()
+
+    await property_certificate_crud.create_with_owners_async(
+        db,
+        obj_in=certificate,
+        owner_ids=None,
+        asset_ids=None,
+        commit=False,
+    )
+
+    calls = db.execute.await_args_list
+    assert len(calls) == 1  # 仅重载查询，无关联表写入

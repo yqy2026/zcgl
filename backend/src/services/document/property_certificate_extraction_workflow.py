@@ -63,6 +63,15 @@ class PropertyCertificateExtractionWorkflow(ContractExtractionWorkflow):
             lifecycle=lifecycle,
         )
 
+    def get_raw(self, session_id: str) -> dict[str, Any] | None:
+        """返回含 context 的完整会话，供端点服务端内授权校验使用。
+
+        public_session（继承自 ContractExtractionWorkflow）有意剥离 context 以免向
+        客户端暴露 staged 元信息；产权证确认/授权的 context 校验（mode/asset_id）需要
+        完整会话（2026-08-14 验收 ACC-009 回归修复）。
+        """
+        return self._repository.get(session_id)
+
     def create(
         self, *, staged: StagedFile, context: Mapping[str, str]
     ) -> dict[str, Any]:

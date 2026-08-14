@@ -118,3 +118,120 @@ async def test_contract_session_requires_redis_before_staging(
     assert exc_info.value.status_code == 503
     authorize.assert_awaited_once()
     stage_upload.assert_not_awaited()
+
+
+async def test_property_session_authorization_uses_full_session_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """产权证解析会话的 GET/confirm 授权必须基于含 context 的完整会话。
+
+    回归（2026-08-14 验收 ACC-009）：`ContractExtractionWorkflow.public_session` 有意
+    剥离 context（不向客户端暴露 staged 元信息），而授权校验 `_require_property_context`
+    依赖 context（mode / asset_id），导致产权证解析会话创建后 GET/confirm 一律 404
+    「session not found」，产权证解析确认链路不可用。
+    """
+    from src.api.v1 import extraction_sessions as module
+
+    public_session = {
+        "session_id": "s-1",
+        "target_type": "property_certificate",
+        "status": "ready_for_review",
+        "candidates": {"fields": {}},
+        "errors": [],
+    }
+    full_session = {
+        **public_session,
+        "staged_file_key": ".staging/x/source.pdf",
+        "context": {
+            "mode": "new",
+            "source_kind": "staged",
+            "asset_id": "asset-1",
+        },
+    }
+    workflow = Mock()
+    workflow.get = Mock(return_value=public_session)
+    monkeypatch.setattr(module, "_workflow", lambda: workflow)
+    property_workflow = Mock()
+    property_workflow.get_raw = Mock(return_value=full_session)
+    monkeypatch.setattr(
+        module.property_sessions, "_workflow", lambda: property_workflow
+    )
+    authorize = AsyncMock()
+    monkeypatch.setattr(module, "_authorize", authorize)
+
+    result = await module.get_extraction_session(
+        session_id="s-1",
+        db=AsyncMock(),
+        current_user=Mock(),
+    )
+
+    assert result["session_id"] == "s-1"
+    authorize.assert_awaited_once()
+
+
+async def test_confirm_reuses_authorization_snapshot_without_refetching_raw(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """confirm 必须复用授权步骤的完整会话快照，不得二次 get_raw。
+
+    回归（2026-08-14 两轴复核 D9）：授权与确认各自 get_raw 一次，即用即弃会话若在
+    两次读取之间被清理，确认会拿到伪 404；且同一仓库两次读取是冗余 IO。
+    """
+    from src.api.v1 import extraction_sessions as module
+
+    public_session = {
+        "session_id": "s-1",
+        "target_type": "property_certificate",
+        "status": "ready_for_review",
+        "candidates": {"fields": {}},
+        "errors": [],
+    }
+    full_session = {
+        **public_session,
+        "staged_file_key": ".staging/x/source.pdf",
+        "context": {
+            "mode": "new",
+            "source_kind": "staged",
+            "asset_id": "asset-1",
+        },
+    }
+    workflow = Mock()
+    workflow.get = Mock(return_value=public_session)
+    monkeypatch.setattr(module, "_workflow", lambda: workflow)
+    property_workflow = Mock()
+    property_workflow.get_raw = Mock(return_value=full_session)
+    monkeypatch.setattr(
+        module.property_sessions, "_workflow", lambda: property_workflow
+    )
+    authorize = AsyncMock()
+    monkeypatch.setattr(module, "_authorize", authorize)
+    confirm = AsyncMock(return_value={"certificate_id": "cert-1"})
+    monkeypatch.setattr(
+        module.property_sessions,
+        "_confirm_property_certificate_extraction_session",
+        confirm,
+    )
+
+    result = await module.confirm_extraction_session(
+        session_id="s-1",
+        payload={
+            "certificate_type": "real_estate",
+            "holder_party_ids": [],
+            "actions": [
+                {
+                    "field_key": "certificate_number",
+                    "action": "accept_candidate",
+                    "candidate_value": None,
+                    "value": None,
+                }
+            ],
+            "link_existing_certificate_id": None,
+            "attach_staged": True,
+        },
+        db=AsyncMock(),
+        current_user=Mock(),
+    )
+
+    assert result == {"certificate_id": "cert-1"}
+    property_workflow.get_raw.assert_called_once()
+    confirm.assert_awaited_once()

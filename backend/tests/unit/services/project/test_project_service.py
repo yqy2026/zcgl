@@ -195,6 +195,7 @@ class TestCreateProject:
             project_name="new-project",
             project_code="PRJ-TEST01-202606-0002",
             status="planning",
+            manager_party_id="operator-party-1",
         )
 
         with patch(
@@ -221,6 +222,7 @@ class TestCreateProject:
             project_name="new-project",
             project_code="PRJ-TEST01-202606-0099",
             status="planning",
+            manager_party_id="operator-party-1",
         )
 
         with (
@@ -298,6 +300,7 @@ class TestCreateProject:
             project_name="new-project",
             project_code="PRJ-TEST01-202606-0001",
             status="planning",
+            manager_party_id="operator-party-1",
         )
 
         with patch(
@@ -318,6 +321,7 @@ class TestCreateProject:
             project_name="new-project",
             project_code="PRJ-TEST01-202606-0002",
             status="planning",
+            manager_party_id="operator-party-1",
         )
 
         with patch(
@@ -394,6 +398,7 @@ class TestCreateProject:
             project_name="new-project",
             project_code="PRJ-TEST01-202606-0011",
             status="planning",
+            manager_party_id="operator-party-1",
         )
 
         mock_db.add.reset_mock()
@@ -3649,3 +3654,76 @@ async def test_get_project_risks_does_not_treat_service_fee_unpaid_as_overdue(
     )
 
     assert response.items == []
+
+
+class TestCreateProjectManagerRequired:
+    """PRD ACC-005 / REQ-PRJ-001：项目必须绑定运营管理方。"""
+
+    async def test_create_project_rejects_missing_manager_when_code_provided(
+        self, mock_db: MagicMock
+    ) -> None:
+        """客户端自带 project_code 时同样必须提供 manager_party_id。
+
+        回归（2026-08-14 验收）：此前运营方必填只在自动生成 project_code 路径强制，
+        自带 project_code 可绕过，创建出无运营方的项目。
+        """
+        service = ProjectService()
+        obj_in = ProjectCreate(
+            project_name="验收无运营方项目",
+            project_code="PRJ-QC01-202608-0001",
+        )
+
+        with pytest.raises(
+            OperationNotAllowedError,
+            match="项目必须绑定运营管理方",
+        ):
+            await service.create_project(mock_db, obj_in=obj_in)
+
+        # 未达 crud 层：不产生任何落库调用
+        mock_db.execute.assert_not_called()
+
+
+class TestAttachProjectDisplaySummary:
+    """项目详情展示字段（asset_count / manager_party_name）填充。"""
+
+    async def test_attach_populates_asset_count_and_manager_name(
+        self, mock_db: MagicMock
+    ) -> None:
+        project = SimpleNamespace(id="project-1")
+        service = ProjectService()
+
+        with (
+            patch(
+                "src.services.project.service.project_crud.get_asset_counts",
+                AsyncMock(return_value={"project-1": 3}),
+            ),
+            patch(
+                "src.services.project.service.project_crud.get_manager_party_names",
+                AsyncMock(return_value={"project-1": "广州运营管理公司"}),
+            ),
+        ):
+            await service.attach_project_display_summary(mock_db, project)
+
+        assert project.asset_count == 3
+        assert project.manager_party_name == "广州运营管理公司"
+
+    async def test_attach_defaults_missing_asset_count_to_zero(
+        self, mock_db: MagicMock
+    ) -> None:
+        project = SimpleNamespace(id="project-2")
+        service = ProjectService()
+
+        with (
+            patch(
+                "src.services.project.service.project_crud.get_asset_counts",
+                AsyncMock(return_value={}),
+            ),
+            patch(
+                "src.services.project.service.project_crud.get_manager_party_names",
+                AsyncMock(return_value={}),
+            ),
+        ):
+            await service.attach_project_display_summary(mock_db, project)
+
+        assert project.asset_count == 0
+        assert project.manager_party_name is None

@@ -49,6 +49,39 @@ class TestAnalyticsQueries:
         assert "contracts.effective_to >= '2026-05-01'" in compiled
 
 
+class TestListByGroup:
+    async def test_list_by_group_eager_loads_lessee_party(
+        self,
+        crud: CRUDContract,
+        mock_db: MagicMock,
+    ) -> None:
+        """list_by_group 必须预加载 lessee_party。
+
+        回归（2026-08-14 验收）：项目租户摘要 get_project_tenants 通过
+        `contract.lessee_party` 读取承租方名称，若未预加载则在异步上下文触发
+        MissingGreenlet 懒加载崩溃，GET /projects/{id}/tenants 恒 500。
+        """
+        await crud.list_by_group(mock_db, group_id="group-1")
+
+        stmt = mock_db.execute.await_args.args[0]
+        loader_paths = [str(getattr(opt, "path", "")) for opt in stmt._with_options]
+        assert any("Contract.lessee_party" in path for path in loader_paths)
+
+    async def test_list_by_group_load_details_adds_detail_relationships(
+        self,
+        crud: CRUDContract,
+        mock_db: MagicMock,
+    ) -> None:
+        await crud.list_by_group(mock_db, group_id="group-1", load_details=True)
+
+        stmt = mock_db.execute.await_args.args[0]
+        loader_paths = [str(getattr(opt, "path", "")) for opt in stmt._with_options]
+        assert any("Contract.lease_detail" in path for path in loader_paths)
+        assert any("Contract.agency_detail" in path for path in loader_paths)
+        assert any("Contract.scan_documents" in path for path in loader_paths)
+        assert any("Contract.lessee_party" in path for path in loader_paths)
+
+
 class TestContractNumberQueries:
     async def test_shared_scan_scope_excludes_deleted_contract_groups(
         self,

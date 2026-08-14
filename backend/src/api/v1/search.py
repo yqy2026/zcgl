@@ -34,6 +34,7 @@ async def global_search(
             query=q,
             scope_mode=_scope_ctx.scope_mode,
             effective_party_ids=_scope_ctx.effective_party_ids,
+            is_unrestricted=_scope_ctx.is_unrestricted,
         )
         normalized_result = GlobalSearchResponse.model_validate(result)
         return ResponseHandler.success(

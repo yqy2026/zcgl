@@ -68,6 +68,7 @@ class TestCreateProject:
         project_data = ProjectCreate(
             project_name="New Project",
             project_code="PRJ-TEST01-202606-0002",
+            manager_party_id="operator-party-1",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-999"
@@ -89,6 +90,7 @@ class TestCreateProject:
         project_data = ProjectCreate(
             project_name="Date Project",
             project_code="PRJ-TEST01-202606-0003",
+            manager_party_id="operator-party-1",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-998"
@@ -108,6 +110,7 @@ class TestCreateProject:
         project_data = ProjectCreate(
             project_name="Budget Project",
             project_code="PRJ-TEST01-202606-0004",
+            manager_party_id="operator-party-1",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-997"
@@ -127,6 +130,7 @@ class TestCreateProject:
         project_data = ProjectCreate(
             project_name="Default Status Project",
             project_code="PRJ-TEST01-202606-0005",
+            manager_party_id="operator-party-1",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-996"
@@ -147,6 +151,7 @@ class TestCreateProject:
         project_data = ProjectCreate(
             project_name="Duplicate Code Project",
             project_code="PRJ-TEST01-202606-0001",
+            manager_party_id="operator-party-1",
         )
 
         with patch(
@@ -451,6 +456,7 @@ class TestProjectErrorHandling:
                     project_data = ProjectCreate(
                         project_name="Test Project",
                         project_code="PRJ-TEST01-202606-0001",
+                        manager_party_id="operator-party-1",
                     )
                     await project_service.create_project(
                         db=mock_db, obj_in=project_data

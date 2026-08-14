@@ -523,6 +523,15 @@ class ProjectService:
                     operator_party_code=operator_party_code,
                 )
 
+            # 项目必须绑定运营管理方（PRD ACC-005 / REQ-PRJ-001）。自动生成编码路径已在
+            # _resolve_operator_party_for_code 强制；客户端自带 project_code 时同样必须
+            # 提供 manager_party_id（或由 API 层从组织/用户范围推断后写入），否则拒绝创建。
+            if not (obj_in.manager_party_id or "").strip():
+                raise OperationNotAllowedError(
+                    "项目必须绑定运营管理方（manager_party_id）",
+                    reason="project_manager_required",
+                )
+
             # 2. 检查编码唯一性
             existing_project = await project_crud.get_by_code(
                 db, code=obj_in.project_code
@@ -743,6 +752,23 @@ class ProjectService:
             "page_size": search_params.page_size,
             "pages": (total + search_params.page_size - 1) // search_params.page_size,
         }
+
+    async def attach_project_display_summary(
+        self,
+        db: AsyncSession,
+        project: Project,
+    ) -> None:
+        """填充项目详情展示字段（asset_count / manager_party_name），与 search_projects 列表口径一致。
+
+        列表路径在 search_projects 内批量填充；详情路径经 get_project_by_id 返回的 ORM
+        对象无这些属性，响应 schema 的 coerce validator 仅在属性存在时填充，因此详情必须
+        在此显式补齐，否则项目详情页会显示 0 关联资产与空运营方名。
+        """
+        item_id = str(project.id)
+        asset_counts = await project_crud.get_asset_counts(db, [item_id])
+        manager_names = await project_crud.get_manager_party_names(db, [item_id])
+        setattr(project, "asset_count", asset_counts.get(item_id, 0))
+        setattr(project, "manager_party_name", manager_names.get(item_id))
 
     async def get_project_dropdown_options(
         self,

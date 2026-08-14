@@ -14,17 +14,128 @@ def search_service():
     return SearchService()
 
 
-async def test_search_global_should_fail_closed_when_scope_empty(search_service):
+async def test_search_global_should_search_without_scope_restriction_when_party_ids_empty(
+    search_service,
+):
+    """空 effective_party_ids 仅可能来自内建 admin/system_admin（unrestricted）。
+
+    回归（2026-08-14 验收）：此前空主体范围被短路为恒空结果，管理员全局搜索 total
+    恒为 0（数据范围中间件已对无范围普通用户失败关闭 403，能到服务层的空 ids 必为
+    admin 豁免，REQ-SCH-003）。修复后必须照常收集并排序结果。
+    """
+    item = {
+        "object_type": "project",
+        "object_id": "project-1",
+        "title": "测试项目",
+        "subtitle": "PRJ-001",
+        "summary": "项目结果",
+        "keywords": ["project_name"],
+        "route_path": "/project/project-1",
+        "score": 70,
+        "business_rank": 40,
+        "group_label": "项目",
+    }
+    search_service._collect_results = AsyncMock(  # type: ignore[attr-defined]
+        return_value=[item]
+    )
+
     result = await search_service.search_global(
         db=AsyncMock(),
         query="测试",
         scope_mode="manager",
         effective_party_ids=[],
+        is_unrestricted=True,
     )
 
-    assert result["items"] == []
-    assert result["groups"] == []
-    assert result["total"] == 0
+    search_service._collect_results.assert_awaited_once()  # type: ignore[attr-defined]
+    assert result["total"] == 1
+    assert result["items"] == [item]
+
+
+async def test_search_global_fails_closed_for_empty_scope_without_unrestricted(
+    search_service,
+) -> None:
+    """空主体范围 + 非 unrestricted 必须显式拒绝，而不是按无范围搜索全部对象。
+
+    回归（2026-08-14 两轴复核 D6）：此前空 effective_party_ids 无条件按无范围处理，
+    只信任数据范围中间件已对普通用户失败关闭；若中间件失效，普通用户会看到全部对象。
+    服务层必须自校验 is_unrestricted，不满足即抛 PermissionDeniedError（403）。
+    """
+    from src.core.exception_handler import PermissionDeniedError
+
+    with pytest.raises(PermissionDeniedError):
+        await search_service.search_global(
+            db=AsyncMock(),
+            query="测试",
+            scope_mode="manager",
+            effective_party_ids=[],
+            is_unrestricted=False,
+        )
+
+
+async def test_build_party_filter_returns_none_for_empty_party_ids():
+    assert (
+        SearchService._build_party_filter(
+            scope_mode="manager", effective_party_ids=[]
+        )
+        is None
+    )
+    assert (
+        SearchService._build_party_filter(
+            scope_mode="all", effective_party_ids=["p-1"]
+        ).filter_mode
+        == "any"
+    )
+
+
+async def test_apply_contract_group_scope_skips_filter_for_empty_party_ids():
+    from sqlalchemy import select
+
+    from src.models.contract_group import ContractGroup
+
+    stmt = select(ContractGroup)
+    out = SearchService._apply_contract_group_scope(
+        stmt,
+        scope_mode="manager",
+        effective_party_ids=[],
+    )
+    compiled = str(out.compile(compile_kwargs={"literal_binds": True}))
+    assert "operator_party_id IN" not in compiled
+    assert "owner_party_id IN" not in compiled
+
+
+async def test_search_assets_forwards_none_party_filter_when_unrestricted(search_service):
+    from unittest.mock import patch
+
+    with patch(
+        "src.services.search.service.asset_crud.get_multi_with_search_async",
+        AsyncMock(return_value=([], 0)),
+    ) as mocked:
+        await search_service._search_assets(
+            db=AsyncMock(),
+            query="测试",
+            scope_mode="manager",
+            party_filter=None,
+        )
+
+    assert mocked.await_args.kwargs["party_filter"] is None
+
+
+async def test_search_projects_forwards_none_party_filter_when_unrestricted(search_service):
+    from unittest.mock import patch
+
+    with patch(
+        "src.services.search.service.project_service.search_projects",
+        AsyncMock(return_value={"items": [], "total": 0}),
+    ) as mocked:
+        await search_service._search_projects(
+            db=AsyncMock(),
+            query="测试",
+            scope_mode="manager",
+            party_filter=None,
+        )
+
+    assert mocked.await_args.kwargs["party_filter"] is None
 
 
 async def test_search_global_should_sort_and_group_results(search_service):
@@ -74,6 +185,7 @@ async def test_search_global_should_sort_and_group_results(search_service):
         query="测试",
         scope_mode="manager",
         effective_party_ids=["party-manager-1"],
+        is_unrestricted=False,
     )
 
     assert [item["object_type"] for item in result["items"]] == [

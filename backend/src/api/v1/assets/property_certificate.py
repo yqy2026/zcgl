@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import forbidden
+from ....core.exception_handler import BaseBusinessError, forbidden
 from ....core.router_registry import route_registry
 from ....database import get_async_db
 from ....middleware.auth import (
@@ -178,6 +178,8 @@ async def list_certificates(
             map_property_certificate_response(certificate)
             for certificate in certificates
         ]
+    except BaseBusinessError:
+        raise
     except Exception as e:
         logger.error(f"Error listing certificates: {e}", exc_info=True)
         raise HTTPException(
@@ -228,6 +230,8 @@ async def get_certificate(
         logger.debug(f"Retrieved certificate {certificate_id}")
         return map_property_certificate_response(cert)
     except HTTPException:
+        raise
+    except BaseBusinessError:
         raise
     except Exception as e:
         logger.error(f"Error getting certificate {certificate_id}: {e}", exc_info=True)
@@ -283,6 +287,8 @@ async def create_certificate(
         return map_property_certificate_response(result)
     except HTTPException:
         raise
+    except BaseBusinessError:
+        raise
     except Exception as e:
         logger.error(f"Error creating certificate: {e}", exc_info=True)
         raise HTTPException(
@@ -337,6 +343,8 @@ async def update_certificate(
         return map_property_certificate_response(updated)
     except HTTPException:
         raise
+    except BaseBusinessError:
+        raise
     except Exception as e:
         logger.error(f"Error updating certificate {certificate_id}: {e}", exc_info=True)
         raise HTTPException(
@@ -388,6 +396,8 @@ async def delete_certificate(
         logger.info("Deleted certificate %s", certificate_id)
         return {"message": "删除成功"}
     except HTTPException:
+        raise
+    except BaseBusinessError:
         raise
     except Exception as e:
         logger.error(f"Error deleting certificate {certificate_id}: {e}", exc_info=True)

@@ -179,7 +179,9 @@ class CRUDContract:
         data_status: str = "正常",
         load_details: bool = False,
     ) -> list[Contract]:
-        stmt = select(Contract).where(
+        stmt = select(Contract).options(
+            selectinload(Contract.lessee_party),
+        ).where(
             Contract.contract_group_id == group_id,
             Contract.data_status == data_status,
         )

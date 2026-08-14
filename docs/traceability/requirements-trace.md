@@ -22,6 +22,10 @@
 
 > 放量前验收执行清单见 [mvp-acceptance-checklist.md](mvp-acceptance-checklist.md)。当前 36 个 MVP REQ 均未完成产品验收（2026-08-09 基线），本表实现状态仅代表代码与测试证据。
 
+> **2026-08-14 验收执行注记**：放量前验收（工程侧）已执行——`make check` 门禁链全绿（后端单元 4187 passed / 前端测试与生产构建 / backend-import / query-param-drift 7 契约 0 漂移 / test-credentials / docs-lint 10 PASS）；G1-G3 与 ACC 建议验收项逐条 API/GUI 实测；本表引用的 342 条代码/测试证据路径全部存在（0 缺失）。验收发现并修复 6 项缺陷：①`test_analytics.py` 陈旧 mock（缺 `perspective` 参数，9 用例 500）；②产权证创建端点吞 `BaseBusinessError` 一律 500（业务错误应 422/409/404）；③项目租户摘要 `list_by_group` 未预加载 `lessee_party` 触发异步懒加载 MissingGreenlet（`/projects/{id}/tenants` 恒 500）；④项目详情 `asset_count`/`manager_party_name` 未填充（列表正常详情空）；⑤项目创建自带 `project_code` 时绕过运营方必填（ACC-005）；⑥管理员全局搜索空主体范围被短路恒空（REQ-SCH-001/003）。全部修复均有 TDD 回归测试并已在线复验。各 REQ 实现状态维持「已有证据」，待产品负责人按 PRD §3.2 抽验认定后推进「已验收」。详见 `docs/archive/reviews/2026-08-14-mvp-pre-scale-acceptance.md`。
+
+> **2026-08-14 LLM 复验注记（追加）**：产品负责人配置 `DOCUMENT_LLM_ENABLED=true` + DeepSeek 后，ACC-008/009 真实全链路闭环（OCR 版扫描件 + RapidOCR + DeepSeek 4 字段候选 → 逐字段人工确认 → 合同创建 + 12 条台账生成 / 产权证创建 + warning 派生）。复验新发现并修复 4 项缺陷：⑦`Party.metadata_json` JSONB 未 `none_as_null=True` 致主体创建主路径 500（REQ-PTY-001）；⑧解析确认创建合同缺 `rent_terms` 致台账不生成（REQ-RNT-006/REQ-DOC-001）；⑨产权证解析会话 GET/confirm 因 `public_session` 剥离 context 一律 404（REQ-AST-005/REQ-DOC-001）；⑩产权证 `certificate_type` 模型 `SQLEnum` 与迁移 `String` 漂移致 DB 层 500（REQ-AST-005）。另修复确认路径异常日志不可见（可观测性）。全量后端单元 **4187 passed / 0 failed**（含 4 个新回归测试）。
+
 ### 3.1 资产域
 
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |
