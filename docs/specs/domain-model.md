@@ -217,6 +217,8 @@
 | `counterparty_contract_breakdown` | map | 是 | 非客户对手方合同拆分，包含 `upstream_lease`、`entrusted_operation`，不得并入客户口径 |
 | `project_breakdown` | array | 是 | 按项目分区；每项包含项目 ID、项目名称、合同/协议数、承租转租数、代理运营数、终端租户收缴、运营方收入、运营方成本、经营结果、客户主体数和客户合同数 |
 | `mode_breakdown` | array | 是 | 按 `lease_sublease` / `agency_operation` 分区；每项包含合同/协议数、运营方收入、终端租户收缴、服务费、客户主体数和客户合同数 |
+| `property_nature_distribution` / `ownership_status_distribution` / `usage_status_distribution` / `business_category_distribution` | array | 是 | 当前主体范围内资产的四组数量分布；每项含分类标签、`count`、`percentage`，空分类归入“未分类” |
+| `property_nature_area_distribution` / `ownership_status_area_distribution` / `usage_status_area_distribution` / `business_category_area_distribution` | array | 是 | 与数量分布同源资产集合的四组可出租面积分布；每项含分类标签、`count`、`total_area`、`area_percentage`、`average_area`，面积固定取 `rentable_area`，空值按 0 计 |
 | `metrics_version` | string | 是 | 经营分析口径版本 |
 
 ### 4.7 Contract

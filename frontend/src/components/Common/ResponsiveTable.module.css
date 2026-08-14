@@ -109,7 +109,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: calc(var(--breakpoint-sm) - var(--border-width-thin))) {
+@media (max-width: calc(48rem - 0.0625rem)) {
   .mobileHeader {
     margin-bottom: calc(var(--spacing-md) - var(--focus-ring-width));
   }

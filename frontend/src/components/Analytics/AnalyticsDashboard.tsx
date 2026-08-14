@@ -44,13 +44,6 @@ interface OccupancyDistributionItem {
   percentage?: number;
 }
 
-interface BusinessCategoryItem {
-  category: string;
-  occupancy_rate: number;
-  count?: number;
-  avg_annual_income?: number;
-}
-
 import { AnalyticsFilters } from './AnalyticsFilters';
 import { StatisticCard, FinancialStatisticCard } from './StatisticCard';
 import { ChartCard } from './AnalyticsCard';
@@ -453,30 +446,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                   yDataKey="count"
                   barName="资产数量"
                   isPercentage={false}
-                />
-              </ChartCard>
-            </Col>
-
-            {/* 业态类别分析 */}
-            <Col xs={24} lg={12}>
-              <ChartCard
-                title="业态类别出租率"
-                hasData={(analytics?.business_category_distribution?.length ?? 0) > 0}
-                loading={isLoading}
-              >
-                <AnalyticsBarChart
-                  data={(analytics?.business_category_distribution ?? []).map(
-                    (item: BusinessCategoryItem) => ({
-                      category: item.category,
-                      occupancy_rate: item.occupancy_rate,
-                      count: item.count,
-                      avg_annual_income: item.avg_annual_income,
-                    })
-                  )}
-                  xDataKey="category"
-                  yDataKey="occupancy_rate"
-                  barName="出租率"
-                  isPercentage={true}
                 />
               </ChartCard>
             </Col>

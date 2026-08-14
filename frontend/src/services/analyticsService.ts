@@ -165,6 +165,57 @@ const toOperationalMetricGroup = (value: unknown): RawOperationalMetricGroup => 
   return value;
 };
 
+const DISTRIBUTION_SPECS = {
+  property_nature_distribution: { label: 'name', area: false },
+  ownership_status_distribution: { label: 'status', area: false },
+  usage_status_distribution: { label: 'status', area: false },
+  business_category_distribution: { label: 'category', area: false },
+  property_nature_area_distribution: { label: 'name', area: true },
+  ownership_status_area_distribution: { label: 'status', area: true },
+  usage_status_area_distribution: { label: 'status', area: true },
+  business_category_area_distribution: { label: 'category', area: true },
+} as const;
+
+const isNonNegativeNumberLike = (value: unknown): boolean => {
+  const number =
+    typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(number) && number >= 0;
+};
+
+const isPercentageLike = (value: unknown): boolean => {
+  const number =
+    typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(number) && number >= 0 && number <= 100;
+};
+
+const assertDistributionContract = (apiData: RawApiData): void => {
+  for (const [field, spec] of Object.entries(DISTRIBUTION_SPECS)) {
+    const items = apiData[field as keyof RawApiData];
+    if (!Array.isArray(items)) {
+      throw new Error(`综合分析接口缺少分布字段: ${field}`);
+    }
+
+    items.forEach((item, index) => {
+      const label = isRecord(item) ? item[spec.label] : undefined;
+      const validBase =
+        isRecord(item) &&
+        typeof label === 'string' &&
+        label.trim() !== '' &&
+        isNonNegativeNumberLike(item.count);
+      const validMetrics = spec.area
+        ? isRecord(item) &&
+          isNonNegativeNumberLike(item.total_area) &&
+          isPercentageLike(item.area_percentage) &&
+          isNonNegativeNumberLike(item.average_area)
+        : isRecord(item) && isPercentageLike(item.percentage);
+
+      if (!validBase || !validMetrics) {
+        throw new Error(`综合分析接口分布项无效: ${field}[${index}]`);
+      }
+    });
+  }
+};
+
 export class AnalyticsService {
   private api = apiClient;
 
@@ -246,6 +297,7 @@ export class AnalyticsService {
    * 将后端API返回的数据适配为前端期望的 AnalyticsData 格式
    */
   private adaptApiDataToAnalyticsData(apiData: RawApiData): AnalyticsData {
+    assertDistributionContract(apiData);
     serviceLogger.debug(
       'Adapting API data to AnalyticsData format:',
       apiData as Record<string, unknown>
@@ -296,8 +348,7 @@ export class AnalyticsService {
       rawBusinessCategories.map((item: RawBusinessCategoryItem) => ({
         category: typeof item.category === 'string' ? item.category : '未分类',
         count: toNumber(item.count),
-        occupancy_rate: toNumber(item.occupancy_rate),
-        avg_annual_income: toNumber(item.avg_annual_income),
+        percentage: toNumber(item.percentage),
       }));
 
     // 提取趋势数据

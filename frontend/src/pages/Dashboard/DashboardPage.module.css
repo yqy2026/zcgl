@@ -211,7 +211,7 @@
 }
 
 /* 响应式设计 */
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .dashboardContainer {
     padding: var(--spacing-lg);
   }
@@ -237,7 +237,7 @@
   }
 }
 
-@media (max-width: var(--breakpoint-xs)) {
+@media (max-width: 36rem) {
   .dashboardContainer {
     padding: var(--spacing-md);
   }
@@ -331,6 +331,6 @@
 
 .viewModeGuide {
   padding: 0 var(--spacing-xl) var(--spacing-xl);
-  max-width: 75rem;
+  max-width: var(--breakpoint-lg);
   margin: 0 auto;
 }

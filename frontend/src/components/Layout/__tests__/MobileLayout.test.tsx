@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@/test/utils/test-helpers';
+import { fireEvent, screen } from '@/test/utils/test-helpers';
 import type { CSSProperties, ReactNode } from 'react';
 
 import MobileLayout from '../MobileLayout';
@@ -23,6 +23,8 @@ interface ButtonMockProps {
   size?: number | string;
   style?: CSSProperties;
   className?: string;
+  onClick?: () => void;
+  'aria-label'?: string;
 }
 
 interface SpaceMockProps {
@@ -75,13 +77,24 @@ vi.mock('antd', () => {
 
   return {
     Layout: MockLayout,
-    Button: ({ children, icon, type, size, style, className }: ButtonMockProps) => (
+    Button: ({
+      children,
+      icon,
+      type,
+      size,
+      style,
+      className,
+      onClick,
+      'aria-label': ariaLabel,
+    }: ButtonMockProps) => (
       <button
         data-testid="button"
         data-type={type}
         data-size={size}
         style={style}
         className={className}
+        onClick={onClick}
+        aria-label={ariaLabel}
       >
         {icon}
         {children}
@@ -114,9 +127,23 @@ vi.mock('antd', () => {
   };
 });
 
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => navigateMock,
+}));
+
 vi.mock('@ant-design/icons', () => ({
   UserOutlined: () => <div data-testid="icon-user" />,
-  BellOutlined: () => <div data-testid="icon-bell" />,
+  SearchOutlined: () => <div data-testid="icon-search" />,
+}));
+
+vi.mock('@/components/Notification', () => ({
+  NotificationCenter: () => <div data-testid="notification-center" />,
+}));
+
+vi.mock('../UserActionMenu', () => ({
+  default: () => <div data-testid="user-action-menu" />,
 }));
 
 vi.mock('../MobileMenu', () => ({
@@ -137,7 +164,7 @@ describe('MobileLayout', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument();
   });
 
-  it('renders mobile menu, title, notification, and avatar in header', () => {
+  it('renders mobile menu, title, search, notification center, and user actions', () => {
     renderWithProviders(
       <MobileLayout>
         <div>Content</div>
@@ -146,8 +173,20 @@ describe('MobileLayout', () => {
 
     expect(screen.getByTestId('mobile-menu')).toBeInTheDocument();
     expect(screen.getByText('资产管理系统')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-bell')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-user')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-search')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-center')).toBeInTheDocument();
+    expect(screen.getByTestId('user-action-menu')).toBeInTheDocument();
+  });
+
+  it('opens global search from the mobile header', () => {
+    renderWithProviders(
+      <MobileLayout>
+        <div>Content</div>
+      </MobileLayout>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '全局搜索' }));
+    expect(navigateMock).toHaveBeenCalledWith('/search');
   });
 
   it('renders content area container', () => {

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen } from '@/test/utils/test-helpers';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import AppLayout from '../AppLayout';
 
 // =============================================================================
@@ -41,20 +41,15 @@ vi.mock('../AppHeader', () => ({
   ),
 }));
 
+vi.mock('../MobileLayout', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mobile-layout">{children}</div>
+  ),
+}));
+
 vi.mock('@/services/systemService', () => ({
   userService: {
-    getMyPartyScope: vi.fn(async () => ({
-      user_id: 'test-user-001',
-      source: 'unrestricted',
-      scope_mode: 'unrestricted',
-      owner_party_ids: [],
-      manager_party_ids: [],
-      organization_id: 'org-001',
-      source_organization_id: null,
-      next_transition_at: null,
-      error_code: null,
-      issues: [],
-    })),
+    getMyPartyScope: vi.fn(() => new Promise(() => undefined)),
   },
 }));
 
@@ -63,6 +58,10 @@ vi.mock('@/services/systemService', () => ({
 // =============================================================================
 
 const TestContent = () => <div data-testid="test-content">Test Content</div>;
+
+beforeEach(() => {
+  window.innerWidth = 1280;
+});
 
 // =============================================================================
 // 基础功能测试
@@ -105,6 +104,66 @@ describe('AppLayout - 基础功能', () => {
 
     expect(screen.getByTestId('test-content')).toBeInTheDocument();
     expect(screen.getByText('Test Content')).toBeInTheDocument();
+  });
+});
+
+describe('AppLayout - 响应式壳层', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.innerWidth = 1280;
+  });
+
+  it('390 宽视口使用移动壳层且不渲染桌面侧栏', () => {
+    window.innerWidth = 390;
+
+    renderWithProviders(
+      <AppLayout>
+        <TestContent />
+      </AppLayout>
+    );
+
+    expect(screen.getByTestId('mobile-layout')).toBeInTheDocument();
+    expect(screen.queryByTestId('app-sidebar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('test-content')).toBeInTheDocument();
+  });
+
+  it('767 宽视口使用移动壳层，768 宽视口使用桌面壳层', () => {
+    window.innerWidth = 767;
+
+    const { unmount } = renderWithProviders(
+      <AppLayout>
+        <TestContent />
+      </AppLayout>
+    );
+
+    expect(screen.getByTestId('mobile-layout')).toBeInTheDocument();
+    expect(screen.queryByTestId('app-sidebar')).not.toBeInTheDocument();
+
+    unmount();
+    window.innerWidth = 768;
+    renderWithProviders(
+      <AppLayout>
+        <TestContent />
+      </AppLayout>
+    );
+
+    expect(screen.getByTestId('app-sidebar')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-layout')).not.toBeInTheDocument();
+  });
+
+  it('视口跨过移动断点时切换壳层', () => {
+    renderWithProviders(
+      <AppLayout>
+        <TestContent />
+      </AppLayout>
+    );
+    expect(screen.getByTestId('app-sidebar')).toBeInTheDocument();
+
+    window.innerWidth = 390;
+    fireEvent(window, new Event('resize'));
+
+    expect(screen.getByTestId('mobile-layout')).toBeInTheDocument();
+    expect(screen.queryByTestId('app-sidebar')).not.toBeInTheDocument();
   });
 });
 

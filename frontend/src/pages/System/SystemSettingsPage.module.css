@@ -184,7 +184,7 @@
   display: none;
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .tabs :global(.ant-tabs-tab) {
     min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }

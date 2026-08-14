@@ -1,7 +1,4 @@
 .mobileLayout {
-  --mobile-layout-compact-breakpoint: calc(
-    var(--breakpoint-xs) - (var(--button-height-lg) * 5) - var(--border-width-thin)
-  );
   min-height: 100%;
   background: var(--color-bg-tertiary);
 }
@@ -42,7 +39,8 @@
   gap: var(--spacing-sm);
 }
 
-.notificationButton {
+.headerActionButton,
+.userActionButton {
   width: var(--mobile-header-touch-size);
   min-width: var(--mobile-header-touch-size);
   min-height: var(--mobile-header-touch-size);
@@ -54,14 +52,25 @@
     background-color var(--transition-fast);
 }
 
-.notificationButton:hover {
+.userActionButton {
+  padding: 0;
+}
+
+.headerActionButton:hover,
+.userActionButton:hover {
   color: var(--color-primary);
   background: var(--color-primary-light);
 }
 
-.notificationButton:focus-visible {
+.headerActionButton:focus-visible,
+.userActionButton:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-primary);
   outline-offset: var(--focus-ring-offset);
+}
+
+.notificationSlot {
+  display: flex;
+  align-items: center;
 }
 
 .userAvatar {
@@ -88,7 +97,7 @@
   font-size: var(--font-size-xs);
 }
 
-@media (max-width: var(--mobile-layout-compact-breakpoint)) {
+@media (max-width: 23.4375rem) {
   .mobileHeaderTitle {
     font-size: var(--font-size-base);
   }

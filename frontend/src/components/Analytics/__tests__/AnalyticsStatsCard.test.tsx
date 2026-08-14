@@ -21,11 +21,11 @@ vi.mock('@/styles/colorMap', () => ({
   getOccupancyRateColor: (rate: number) =>
     rate >= 80 ? '#52c41a' : rate >= 60 ? '#faad14' : '#ff4d4f',
   COLORS: {
-    primary: '#1890ff',
+    primary: '#0e63e5',
     success: '#52c41a',
     warning: '#faad14',
     error: '#ff4d4f',
-    textTertiary: '#8c8c8c',
+    textTertiary: '#717171',
   },
 }));
 

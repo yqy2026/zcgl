@@ -2,6 +2,7 @@
 Contract CRUD query predicate tests.
 """
 
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -23,6 +24,29 @@ def mock_db() -> MagicMock:
     result.scalars.return_value.all.return_value = []
     db.execute = AsyncMock(return_value=result)
     return db
+
+
+class TestAnalyticsQueries:
+    async def test_list_active_for_analytics_applies_scope_and_date_overlap(
+        self,
+        crud: CRUDContract,
+        mock_db: MagicMock,
+    ) -> None:
+        await crud.list_active_for_analytics(
+            mock_db,
+            party_ids=["manager-1"],
+            filter_mode="manager",
+            date_from=date(2026, 5, 1),
+            date_to=date(2026, 5, 31),
+        )
+
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "contract_groups.operator_party_id IN ('manager-1')" in compiled
+        assert "contracts.effective_from <= '2026-05-31'" in compiled
+        assert "contracts.effective_to IS NULL" in compiled
+        assert "contracts.effective_to >= '2026-05-01'" in compiled
 
 
 class TestContractNumberQueries:

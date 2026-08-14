@@ -20,7 +20,6 @@
   --list-toolbar-select-line-height-mobile: calc(
     var(--list-toolbar-control-size-mobile) - (var(--spacing-xs) / 2)
   );
-  --list-toolbar-mobile-breakpoint: calc(var(--breakpoint-sm) - var(--border-width-thin));
   width: 100%;
 }
 
@@ -75,7 +74,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: var(--list-toolbar-mobile-breakpoint)) {
+@media (max-width: 47.9375rem) {
   .toolbarCard {
     margin-bottom: var(--spacing-md);
   }

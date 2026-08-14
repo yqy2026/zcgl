@@ -24,8 +24,8 @@ interface ExportableAnalyticsData {
   occupancy_distribution?: Array<{ range: string; count: number; percentage?: number }>;
   business_category_distribution?: Array<{
     category: string;
-    occupancy_rate: number;
-    count?: number;
+    count: number;
+    percentage?: number;
   }>;
   occupancy_trend?: Array<{
     date: string;
@@ -125,10 +125,10 @@ async function exportToCSV(data: ExportableAnalyticsData, filename: string): Pro
   }
 
   if (data.business_category_distribution && data.business_category_distribution.length > 0) {
-    csvRows.push('业态类别出租率');
-    csvRows.push('类别,出租率(%),数量');
+    csvRows.push('业态类别分布');
+    csvRows.push('类别,数量,占比(%)');
     data.business_category_distribution.forEach(item => {
-      csvRows.push(`${item.category},${item.occupancy_rate.toFixed(2)},${item.count ?? 0}`);
+      csvRows.push(`${item.category},${item.count},${item.percentage?.toFixed(2) ?? '0.00'}`);
     });
     csvRows.push('');
   }

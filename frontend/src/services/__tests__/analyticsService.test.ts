@@ -33,6 +33,17 @@ vi.mock('@/stores/dataScopeStore', () => ({
 
 import { apiClient } from '@/api/client';
 
+const completeDistributions = {
+  property_nature_distribution: [],
+  ownership_status_distribution: [],
+  usage_status_distribution: [],
+  business_category_distribution: [],
+  property_nature_area_distribution: [],
+  ownership_status_area_distribution: [],
+  usage_status_area_distribution: [],
+  business_category_area_distribution: [],
+};
+
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
 
@@ -47,6 +58,7 @@ describe('AnalyticsService', () => {
       const mockResponse = {
         success: true,
         data: {
+          ...completeDistributions,
           area_summary: {
             total_assets: 100,
             total_area: 50000,
@@ -68,6 +80,7 @@ describe('AnalyticsService', () => {
             assets_with_rent_data: 75,
             profit_margin: 80,
           },
+          ...completeDistributions,
           property_nature_distribution: [],
           ownership_status_distribution: [],
           usage_status_distribution: [],
@@ -92,6 +105,7 @@ describe('AnalyticsService', () => {
       const mockResponse = {
         success: true,
         data: {
+          ...completeDistributions,
           area_summary: { total_assets: 50 },
         },
       };
@@ -113,6 +127,7 @@ describe('AnalyticsService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
+          ...completeDistributions,
           area_summary: { total_assets: 50 },
         },
       });
@@ -145,10 +160,39 @@ describe('AnalyticsService', () => {
       await expect(service.getComprehensiveAnalytics()).rejects.toThrow('综合分析接口返回为空');
     });
 
+    it('有资产时缺少必填分布字段应显式失败', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          area_summary: { total_assets: 3 },
+          financial_summary: {},
+        },
+      });
+
+      await expect(service.getComprehensiveAnalytics()).rejects.toThrow(
+        '综合分析接口缺少分布字段: property_nature_distribution'
+      );
+    });
+
+    it('分布数组项不符合契约时应显式失败', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          ...completeDistributions,
+          property_nature_distribution: [{}],
+        },
+      });
+
+      await expect(service.getComprehensiveAnalytics()).rejects.toThrow(
+        '综合分析接口分布项无效: property_nature_distribution[0]'
+      );
+    });
+
     it('适配原始 API 数据格式', async () => {
       const rawApiData = {
         success: true,
         data: {
+          ...completeDistributions,
           area_summary: {
             total_assets: 100,
             total_land_area: 50000,
@@ -172,6 +216,7 @@ describe('AnalyticsService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
+          ...completeDistributions,
           area_summary: {
             total_assets: 10,
             total_land_area: '50000.75',
@@ -186,8 +231,7 @@ describe('AnalyticsService', () => {
             {
               category: '办公',
               count: '6',
-              occupancy_rate: '80.5',
-              avg_annual_income: '120000.75',
+              percentage: '60',
             },
           ],
         },
@@ -204,8 +248,7 @@ describe('AnalyticsService', () => {
       expect(analyticsData?.business_category_distribution[0]).toEqual({
         category: '办公',
         count: 6,
-        occupancy_rate: 80.5,
-        avg_annual_income: 120000.75,
+        percentage: 60,
       });
     });
 
@@ -213,6 +256,7 @@ describe('AnalyticsService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
+          ...completeDistributions,
           area_summary: {
             total_assets: 10,
           },
@@ -316,6 +360,7 @@ describe('AnalyticsService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
+          ...completeDistributions,
           area_summary: {
             total_assets: 10,
           },

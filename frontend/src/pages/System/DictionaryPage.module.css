@@ -142,7 +142,7 @@
   border-color: var(--color-error);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .refreshButton {
     min-height: var(--dictionary-control-height-mobile);
   }

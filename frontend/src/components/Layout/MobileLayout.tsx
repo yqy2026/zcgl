@@ -1,8 +1,13 @@
 import React from 'react';
-import { Layout, Typography, Space, Avatar, Button } from 'antd';
-import { UserOutlined, BellOutlined } from '@ant-design/icons';
+import { Layout, Typography, Space, Button } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+
+import { NotificationCenter } from '@/components/Notification';
+import { SEARCH_ROUTES } from '@/constants/routes';
 
 import MobileMenu from './MobileMenu';
+import UserActionMenu from './UserActionMenu';
 import styles from './MobileLayout.module.css';
 
 const { Header, Content, Footer } = Layout;
@@ -13,6 +18,8 @@ interface MobileLayoutProps {
 }
 
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
+  const navigate = useNavigate();
+
   return (
     <Layout className={styles.mobileLayout}>
       {/* 移动端头部 */}
@@ -27,16 +34,20 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        {/* 右侧：用户信息 */}
+        {/* 右侧：全局操作和用户菜单 */}
         <Space size="small" className={styles.mobileHeaderRight}>
           <Button
             type="text"
-            icon={<BellOutlined />}
+            icon={<SearchOutlined />}
             size="small"
-            aria-label="通知"
-            className={styles.notificationButton}
+            onClick={() => navigate(SEARCH_ROUTES.LIST)}
+            aria-label="全局搜索"
+            className={styles.headerActionButton}
           />
-          <Avatar size="small" icon={<UserOutlined />} className={styles.userAvatar} />
+          <div className={styles.notificationSlot}>
+            <NotificationCenter />
+          </div>
+          <UserActionMenu />
         </Space>
       </Header>
 

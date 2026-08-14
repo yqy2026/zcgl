@@ -44,7 +44,7 @@
   margin: 0;
 }
 
-@media (min-width: var(--breakpoint-sm)) {
+@media (min-width: 48rem) {
   .analyticsContainer {
     padding: var(--spacing-xl);
   }
@@ -57,7 +57,7 @@
   gap: var(--spacing-md);
 }
 
-@media (min-width: var(--breakpoint-xs)) {
+@media (min-width: 36rem) {
   .headerActions {
     flex-direction: row;
     justify-content: flex-end;
@@ -70,7 +70,7 @@
   display: inline;
 }
 
-@media (max-width: var(--breakpoint-xs)) {
+@media (max-width: 36rem) {
   .btnText {
     display: none;
   }
@@ -119,11 +119,6 @@
   font-weight: var(--font-weight-medium);
 }
 
-.occupancyRate {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
-}
-
 /* 统计卡片响应式优化 */
 .statsGrid {
   display: grid;
@@ -131,13 +126,13 @@
   gap: var(--spacing-lg);
 }
 
-@media (min-width: var(--breakpoint-lg)) {
+@media (min-width: 75rem) {
   .statsGrid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
-@media (min-width: var(--breakpoint-sm)) and (max-width: calc(var(--breakpoint-lg) - var(--border-width-thin))) {
+@media (min-width: 48rem) and (max-width: calc(75rem - 0.0625rem)) {
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -150,25 +145,25 @@
   gap: var(--asset-analytics-grid-gap);
 }
 
-@media (min-width: var(--breakpoint-xl)) {
+@media (min-width: 87.5rem) {
   .chartsGrid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
-@media (min-width: var(--breakpoint-md)) and (max-width: calc(var(--breakpoint-xl) - var(--border-width-thin))) {
+@media (min-width: 62rem) and (max-width: calc(87.5rem - 0.0625rem)) {
   .chartsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (min-width: var(--breakpoint-xs)) and (max-width: calc(var(--breakpoint-md) - var(--border-width-thin))) {
+@media (min-width: 36rem) and (max-width: calc(62rem - 0.0625rem)) {
   .chartsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: calc(var(--breakpoint-xs) - var(--border-width-thin))) {
+@media (max-width: calc(36rem - 0.0625rem)) {
   .chartsGrid {
     grid-template-columns: 1fr;
   }
@@ -194,13 +189,13 @@
   gap: var(--asset-analytics-grid-gap);
 }
 
-@media (min-width: var(--breakpoint-lg)) {
+@media (min-width: 75rem) {
   .financialGrid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
-@media (min-width: var(--breakpoint-sm)) and (max-width: calc(var(--breakpoint-lg) - var(--border-width-thin))) {
+@media (min-width: 48rem) and (max-width: calc(75rem - 0.0625rem)) {
   .financialGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -216,25 +211,25 @@
   gap: var(--asset-analytics-grid-gap);
 }
 
-@media (min-width: var(--breakpoint-lg)) {
+@media (min-width: 75rem) {
   .detailsGrid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
-@media (min-width: var(--breakpoint-md)) and (max-width: calc(var(--breakpoint-lg) - var(--border-width-thin))) {
+@media (min-width: 62rem) and (max-width: calc(75rem - 0.0625rem)) {
   .detailsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (min-width: var(--breakpoint-xs)) and (max-width: calc(var(--breakpoint-md) - var(--border-width-thin))) {
+@media (min-width: 36rem) and (max-width: calc(62rem - 0.0625rem)) {
   .detailsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: calc(var(--breakpoint-xs) - var(--border-width-thin))) {
+@media (max-width: calc(36rem - 0.0625rem)) {
   .detailsGrid {
     grid-template-columns: 1fr;
   }
@@ -298,7 +293,7 @@
   margin-bottom: var(--spacing-xl);
 }
 
-@media (max-width: var(--breakpoint-xs)) {
+@media (max-width: 36rem) {
   .filtersCard {
     margin-bottom: var(--spacing-lg);
   }
@@ -313,7 +308,7 @@
   min-height: var(--asset-analytics-content-height);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .trendChart {
     min-height: var(--asset-analytics-content-height-mobile);
   }

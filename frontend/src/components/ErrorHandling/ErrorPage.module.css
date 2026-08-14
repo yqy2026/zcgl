@@ -74,7 +74,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: var(--breakpoint-xs)) {
+@media (max-width: 36rem) {
   .errorPage {
     padding: var(--spacing-xxl) var(--spacing-lg);
   }

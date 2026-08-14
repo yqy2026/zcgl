@@ -38,7 +38,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .iconActionButton,
   .advancedToggleButton {
     min-height: var(--button-height-lg);

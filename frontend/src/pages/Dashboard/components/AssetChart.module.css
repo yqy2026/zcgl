@@ -79,7 +79,7 @@
   color: var(--color-text-primary);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .sectionBody {
     margin-bottom: calc(var(--spacing-lg) + var(--spacing-xs));
   }

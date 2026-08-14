@@ -6,11 +6,7 @@ import {
   chartDataUtils,
 } from '@/components/Analytics/AnalyticsChart';
 import styles from './AssetDistributionGrid.module.css';
-import type {
-  AnalyticsData,
-  OwnershipStatusAreaDistribution,
-  UsageStatusAreaDistribution,
-} from '@/types/analytics';
+import type { AnalyticsData } from '@/types/analytics';
 import type { AnalysisDimension } from '@/hooks/useAssetAnalytics';
 
 interface AssetDistributionGridProps {
@@ -32,8 +28,8 @@ const AssetDistributionGrid: React.FC<AssetDistributionGridProps> = ({
           title={`物业性质分布 (${dimension === 'count' ? '数量' : '面积'})`}
           data={
             dimension === 'count'
-              ? chartDataUtils.toPieData(analyticsData.property_nature_distribution ?? [])
-              : chartDataUtils.toAreaData(analyticsData.property_nature_area_distribution ?? [])
+              ? chartDataUtils.toPieData(analyticsData.property_nature_distribution)
+              : chartDataUtils.toAreaData(analyticsData.property_nature_area_distribution)
           }
           loading={loading}
           height={280}
@@ -54,16 +50,12 @@ const AssetDistributionGrid: React.FC<AssetDistributionGridProps> = ({
                   }))
                 )
               : chartDataUtils.toAreaData(
-                  (
-                    analyticsData.ownership_status_area_distribution as
-                      | OwnershipStatusAreaDistribution[]
-                      | undefined
-                  )?.map(item => ({
+                  analyticsData.ownership_status_area_distribution.map(item => ({
                     name: item.status,
                     total_area: item.total_area,
-                    area_percentage: item.area_percentage ?? item.percentage ?? 0,
+                    area_percentage: item.area_percentage,
                     average_area: item.average_area,
-                  })) ?? []
+                  }))
                 )
           }
           loading={loading}
@@ -82,16 +74,12 @@ const AssetDistributionGrid: React.FC<AssetDistributionGridProps> = ({
                   value: item.count,
                 }))
               : chartDataUtils.toAreaBarData(
-                  (
-                    analyticsData.usage_status_area_distribution as
-                      | UsageStatusAreaDistribution[]
-                      | undefined
-                  )?.map(item => ({
+                  analyticsData.usage_status_area_distribution.map(item => ({
                     name: item.status,
                     total_area: item.total_area,
                     count: item.count,
                     average_area: item.average_area,
-                  })) ?? []
+                  }))
                 )
           }
           xAxisKey="name"
@@ -108,10 +96,10 @@ const AssetDistributionGrid: React.FC<AssetDistributionGridProps> = ({
           data={
             dimension === 'count'
               ? chartDataUtils.toBusinessCategoryData(
-                  analyticsData.business_category_distribution ?? []
+                  analyticsData.business_category_distribution
                 )
               : chartDataUtils.toBusinessCategoryAreaData(
-                  analyticsData.business_category_area_distribution ?? []
+                  analyticsData.business_category_area_distribution
                 )
           }
           xAxisKey="name"

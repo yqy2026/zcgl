@@ -145,6 +145,7 @@ class TestComprehensiveAnalytics:
             assert "data" in data
             assert data["data"]["total_assets"] == 100
             assert data["data"]["occupancy_rate"] == 85.5
+            assert mock_get.await_args.kwargs["perspective"] == "manager"
 
     def test_get_comprehensive_analytics_with_filters(self, client, mock_db):
         """
@@ -389,11 +390,14 @@ class TestDataExport:
             mock_get.return_value = sample_analytics_data
 
             # Act
-            response = client.post("/api/v1/analytics/export?export_format=csv&view_mode=manager")
+            response = client.post(
+                "/api/v1/analytics/export?export_format=csv&view_mode=manager"
+            )
 
             # Assert
             # 导出功能应该返回 200 或 streaming response
             assert response.status_code == 200
+            assert mock_get.await_args.kwargs["perspective"] == "manager"
 
 
 # =============================================================================
@@ -441,6 +445,7 @@ class TestErrorHandling:
 
             # Assert
             assert response.status_code == 500
+            mock_get.assert_awaited_once()
 
     def test_invalid_date_format(self, client, mock_db):
         """

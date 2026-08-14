@@ -6,7 +6,7 @@ from typing import Any
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class StatisticsRequest(BaseModel):
@@ -157,6 +157,62 @@ class DistributionResponse(BaseModel):
     total: int = Field(..., description="总数")
     categories: list[ChartDataItem] = Field(..., description="分类数据")
     chart_type: str = Field(default="pie", description="图表类型")
+
+
+class ComprehensiveDistributionItem(BaseModel):
+    """综合分析分布项公共字段。"""
+
+    model_config = ConfigDict(extra="allow")
+
+    count: int = Field(..., ge=0, description="资产数量")
+
+
+class ComprehensiveCountDistributionItem(ComprehensiveDistributionItem):
+    """综合分析数量分布项。"""
+
+    percentage: float = Field(..., ge=0, le=100, description="数量占比")
+
+
+class ComprehensiveAreaDistributionItem(ComprehensiveDistributionItem):
+    """综合分析可出租面积分布项。"""
+
+    total_area: float = Field(..., ge=0, description="可出租面积合计")
+    area_percentage: float = Field(..., ge=0, le=100, description="可出租面积占比")
+    average_area: float = Field(..., ge=0, description="平均可出租面积")
+
+
+class ComprehensiveAnalyticsResponse(BaseModel):
+    """综合分析服务契约；既有扩展指标保持透传。"""
+
+    model_config = ConfigDict(extra="allow")
+
+    property_nature_distribution: list[ComprehensiveCountDistributionItem]
+    ownership_status_distribution: list[ComprehensiveCountDistributionItem]
+    usage_status_distribution: list[ComprehensiveCountDistributionItem]
+    business_category_distribution: list[ComprehensiveCountDistributionItem]
+    property_nature_area_distribution: list[ComprehensiveAreaDistributionItem]
+    ownership_status_area_distribution: list[ComprehensiveAreaDistributionItem]
+    usage_status_area_distribution: list[ComprehensiveAreaDistributionItem]
+    business_category_area_distribution: list[ComprehensiveAreaDistributionItem]
+
+    @model_validator(mode="after")
+    def validate_distribution_labels(self) -> "ComprehensiveAnalyticsResponse":
+        label_fields = {
+            "property_nature_distribution": "name",
+            "ownership_status_distribution": "status",
+            "usage_status_distribution": "status",
+            "business_category_distribution": "category",
+            "property_nature_area_distribution": "name",
+            "ownership_status_area_distribution": "status",
+            "usage_status_area_distribution": "status",
+            "business_category_area_distribution": "category",
+        }
+        for field_name, label_name in label_fields.items():
+            for item in getattr(self, field_name):
+                label = item.model_extra.get(label_name) if item.model_extra else None
+                if not isinstance(label, str) or label.strip() == "":
+                    raise ValueError(f"{field_name} 缺少分类字段 {label_name}")
+        return self
 
 
 class TrendDataResponse(BaseModel):

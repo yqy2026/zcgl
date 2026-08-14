@@ -5,7 +5,7 @@ CRUD helpers for Contract（合同基表）。
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -17,6 +17,7 @@ from ..models.associations import contract_assets, contract_scan_document_links
 from ..models.contract_group import (
     AgencyAgreementDetail,
     Contract,
+    ContractGroup,
     ContractLifecycleStatus,
     ContractScanDocument,
     GroupRelationType,
@@ -251,6 +252,62 @@ class CRUDContract:
                 selectinload(Contract.lessee_party),
             )
         )
+        return list((await db.execute(stmt)).scalars().unique().all())
+
+    async def list_active_for_analytics(
+        self,
+        db: AsyncSession,
+        *,
+        party_ids: list[str] | None = None,
+        filter_mode: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> list[Contract]:
+        """列出综合分析所需的生效合同及关联数据。"""
+        stmt = (
+            select(Contract)
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(
+                Contract.status == ContractLifecycleStatus.ACTIVE,
+                Contract.data_status == "正常",
+            )
+            .options(
+                selectinload(Contract.contract_group).selectinload(
+                    ContractGroup.operator_party
+                ),
+                selectinload(Contract.contract_group).selectinload(
+                    ContractGroup.owner_party
+                ),
+                selectinload(Contract.lease_detail),
+                selectinload(Contract.agency_detail),
+                selectinload(Contract.ledger_entries),
+                selectinload(Contract.lessor_party),
+                selectinload(Contract.lessee_party),
+                selectinload(Contract.service_fee_ledgers),
+            )
+        )
+        if party_ids is not None:
+            if len(party_ids) == 0:
+                return []
+            if filter_mode == "owner":
+                stmt = stmt.where(ContractGroup.owner_party_id.in_(party_ids))
+            elif filter_mode == "manager":
+                stmt = stmt.where(ContractGroup.operator_party_id.in_(party_ids))
+            else:
+                stmt = stmt.where(
+                    ContractGroup.owner_party_id.in_(party_ids)
+                    | ContractGroup.operator_party_id.in_(party_ids)
+                )
+        if date_to is not None:
+            stmt = stmt.where(Contract.effective_from <= date_to)
+        if date_from is not None:
+            stmt = stmt.where(
+                Contract.effective_to.is_(None) | (Contract.effective_to >= date_from)
+            )
+
         return list((await db.execute(stmt)).scalars().unique().all())
 
     async def list_active_lease_contracts_for_ledger(

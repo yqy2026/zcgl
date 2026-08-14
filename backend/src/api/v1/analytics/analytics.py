@@ -29,7 +29,10 @@ from ....middleware.auth import (
 from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
 from ....services.analytics.analytics_export_service import AnalyticsExportService
-from ....services.analytics.analytics_service import AnalyticsService
+from ....services.analytics.analytics_service import (
+    AnalyticsPerspective,
+    AnalyticsService,
+)
 from ....services.party_scope import build_party_filter_from_scope_context
 
 logger = logging.getLogger(__name__)
@@ -43,11 +46,13 @@ _ANALYTICS_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
 }
 
 
-def _assert_analytics_customer_metrics_perspective(
+def _get_analytics_perspective(
     scope_ctx: DataScopeContext,
-) -> None:
-    if scope_ctx.scope_mode != "all":
-        return
+) -> AnalyticsPerspective:
+    if scope_ctx.scope_mode == "owner":
+        return "owner"
+    if scope_ctx.scope_mode == "manager":
+        return "manager"
     raise bad_request(
         "客户双指标分析口径不支持 view_mode=all，请选择 owner 或 manager 视图",
         field="view_mode",
@@ -86,7 +91,7 @@ async def get_comprehensive_analytics(
 
     权限要求: 需要登录
     """
-    _assert_analytics_customer_metrics_perspective(_scope_ctx)
+    perspective = _get_analytics_perspective(_scope_ctx)
 
     filters: dict[str, Any] = {
         "include_deleted": should_include_deleted,
@@ -104,6 +109,7 @@ async def get_comprehensive_analytics(
             should_use_cache=should_use_cache,
             current_user=current_user,
             party_filter=build_party_filter_from_scope_context(_scope_ctx),
+            perspective=perspective,
         )
 
         success_response: JSONResponse = ResponseHandler.success(
@@ -112,32 +118,12 @@ async def get_comprehensive_analytics(
             request_id=get_request_id(request),
         )
         return success_response
-
-    except Exception as e:
-        logger.error(f"获取综合分析数据失败: {str(e)}", exc_info=True)
-        try:
-            fallback_service = AnalyticsService(db)
-            fallback_result = await fallback_service.get_comprehensive_analytics(
-                filters=filters,
-                should_use_cache=False,
-                current_user=current_user,
-                party_filter=build_party_filter_from_scope_context(_scope_ctx),
-            )
-            return ResponseHandler.success(
-                data=fallback_result,
-                message="统计分析数据获取成功",
-                request_id=get_request_id(request),
-            )
-        except Exception as fallback_error:
-            logger.error(
-                f"获取综合分析数据降级失败: {str(fallback_error)}",
-                exc_info=True,
-            )
-            error_response: JSONResponse = ResponseHandler.error(
-                message=f"获取分析数据失败: {str(e)}",
-                request_id=get_request_id(request),
-            )
-            return error_response
+    except Exception as error:
+        logger.error("获取综合分析数据失败: %s", error, exc_info=True)
+        return ResponseHandler.error(
+            message=f"获取分析数据失败: {error}",
+            request_id=get_request_id(request),
+        )
 
 
 @router.get("/cache/stats", summary="获取缓存统计信息")
@@ -406,7 +392,7 @@ async def export_analytics(
     支持导出为 Excel、CSV 或 PDF 格式
     权限要求: 需要登录
     """
-    _assert_analytics_customer_metrics_perspective(_scope_ctx)
+    perspective = _get_analytics_perspective(_scope_ctx)
 
     try:
         filters: dict[str, Any] = {
@@ -440,6 +426,7 @@ async def export_analytics(
             should_use_cache=False,
             current_user=current_user,
             party_filter=build_party_filter_from_scope_context(_scope_ctx),
+            perspective=perspective,
         )
         export_service = AnalyticsExportService()
         export_rows = export_service.build_export_rows(result)

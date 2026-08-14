@@ -15,18 +15,18 @@ import logging
 from collections import defaultdict
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from ...models.auth import User
 
-from sqlalchemy import and_, or_, select
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ...constants.business_constants import DataStatusValues
 from ...core.cache_manager import analytics_cache
 from ...core.response_handler import ResponseHandler
+from ...crud.contract import contract_crud
 from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
 from ...models.contract_group import (
@@ -37,6 +37,7 @@ from ...models.contract_group import (
     RevenueMode,
 )
 from ...models.party import PartyReviewStatus
+from ...schemas.statistics import ComprehensiveAnalyticsResponse
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,8 @@ COUNTERPARTY_BREAKDOWN_KEYS = (
     "upstream_lease",
     "entrusted_operation",
 )
+AnalyticsPerspective = Literal["owner", "manager"]
+ASSET_ANALYTICS_BATCH_SIZE = 1000
 
 
 class AnalyticsService:
@@ -69,6 +72,7 @@ class AnalyticsService:
         should_use_cache: bool = True,
         current_user: "User | None" = None,
         party_filter: PartyFilter | None = None,
+        perspective: AnalyticsPerspective | None = None,
     ) -> dict[str, Any]:
         """
         获取综合统计分析数据
@@ -87,7 +91,11 @@ class AnalyticsService:
         validated_filters = self._validate_filters(filters or {})
 
         # 尝试从缓存获取
-        cache_key = self._generate_cache_key(validated_filters)
+        cache_key = self._generate_cache_key(
+            validated_filters,
+            party_filter,
+            perspective=perspective,
+        )
         if should_use_cache:
             try:
                 cached_result = await self._cache_get(cache_key)
@@ -95,23 +103,37 @@ class AnalyticsService:
                 logger.warning(f"缓存读取失败，继续回源计算: {e}", exc_info=True)
                 cached_result = None
             if cached_result is not None:
-                logger.info(f"从缓存返回分析结果: {cache_key}")
-                return cast(dict[str, Any], cached_result)
+                try:
+                    return self._validate_comprehensive_result(cached_result)
+                except ValidationError:
+                    logger.warning(
+                        "综合分析缓存不符合当前响应契约，回源重新计算: %s",
+                        cache_key,
+                        exc_info=True,
+                    )
 
         # 执行分析计算
         result = await self._calculate_analytics(
             validated_filters,
             party_filter=party_filter,
+            perspective=perspective,
         )
+        validated_result = self._validate_comprehensive_result(result)
 
         # 存入缓存
         if should_use_cache:
             try:
-                await self._cache_set(cache_key, result, ttl=3600)
+                await self._cache_set(cache_key, validated_result, ttl=3600)
             except Exception as e:
                 logger.warning(f"缓存写入失败，不影响本次返回: {e}", exc_info=True)
 
-        return result
+        return validated_result
+
+    @staticmethod
+    def _validate_comprehensive_result(result: object) -> dict[str, Any]:
+        return ComprehensiveAnalyticsResponse.model_validate(result).model_dump(
+            mode="json"
+        )
 
     def _validate_filters(self, filters: dict[str, Any]) -> dict[str, Any]:
         """验证和规范化筛选条件"""
@@ -150,20 +172,51 @@ class AnalyticsService:
             }
         return {"data_status": DataStatusValues.ASSET_NORMAL}
 
-    def _generate_cache_key(self, filters: dict[str, Any]) -> str:
-        """生成缓存键"""
-        # 简化版本：基于筛选条件生成键
+    def _generate_cache_key(
+        self,
+        filters: dict[str, Any],
+        party_filter: PartyFilter | None = None,
+        *,
+        perspective: AnalyticsPerspective | None = None,
+    ) -> str:
+        """生成包含主体范围的版本化缓存键。"""
         import hashlib
         import json
 
-        filter_str = json.dumps(filters, sort_keys=True)
-        return f"analytics:{hashlib.md5(filter_str.encode(), usedforsecurity=False).hexdigest()}"
+        scope: dict[str, object] = (
+            {"kind": "unrestricted"}
+            if party_filter is None
+            else {
+                "kind": "scoped",
+                "filter_mode": party_filter.filter_mode,
+                "party_ids": sorted(
+                    set(self._normalize_party_ids(party_filter.party_ids))
+                ),
+                "owner_party_ids": sorted(
+                    set(self._normalize_party_ids(party_filter.owner_party_ids))
+                ),
+                "manager_party_ids": sorted(
+                    set(self._normalize_party_ids(party_filter.manager_party_ids))
+                ),
+            }
+        )
+        cache_payload = {
+            "filters": filters,
+            "scope": scope,
+            "perspective": perspective,
+        }
+        serialized_payload = json.dumps(cache_payload, sort_keys=True)
+        digest = hashlib.md5(
+            serialized_payload.encode(), usedforsecurity=False
+        ).hexdigest()
+        return f"analytics:v3:{digest}"
 
     async def _calculate_analytics(
         self,
         filters: dict[str, Any],
         *,
         party_filter: PartyFilter | None = None,
+        perspective: AnalyticsPerspective | None = None,
     ) -> dict[str, Any]:
         """
         执行核心分析计算
@@ -182,14 +235,22 @@ class AnalyticsService:
             include_deleted=filters.get("include_deleted", False)
         )
 
-        assets, _ = await asset_crud.get_multi_with_search_async(
-            db=self.db,
-            skip=0,
-            limit=10000,
-            filters=query_filters,
-            include_contract_projection=False,
-            party_filter=party_filter,
-        )
+        assets: list[Asset] = []
+        offset = 0
+        total_assets: int | None = None
+        while total_assets is None or offset < total_assets:
+            assets_batch, total_assets = await asset_crud.get_multi_with_search_async(
+                db=self.db,
+                skip=offset,
+                limit=ASSET_ANALYTICS_BATCH_SIZE,
+                filters=query_filters,
+                include_contract_projection=False,
+                party_filter=party_filter,
+            )
+            assets.extend(assets_batch)
+            offset += len(assets_batch)
+            if not assets_batch:
+                break
 
         # 计算各项统计
         stats = {
@@ -222,16 +283,77 @@ class AnalyticsService:
             filters,
             party_filter=party_filter,
         )
+        stats.update(self._calculate_asset_distributions(assets))
         stats.update(
             self._calculate_operational_metrics(
                 active_contracts,
                 filters,
                 party_filter=party_filter,
+                perspective=perspective,
             )
         )
         stats.update(self._calculate_analytics_breakdowns(active_contracts, filters))
 
         return stats
+
+    @staticmethod
+    def _calculate_asset_distributions(assets: list[Asset]) -> dict[str, Any]:
+        distribution_specs = (
+            ("property_nature", "name"),
+            ("ownership_status", "status"),
+            ("usage_status", "status"),
+            ("business_category", "category"),
+        )
+        buckets: dict[str, defaultdict[str, dict[str, float | int]]] = {
+            field: defaultdict(lambda: {"count": 0, "area": 0.0})
+            for field, _ in distribution_specs
+        }
+
+        for asset in assets:
+            rentable_area = float(asset.rentable_area or 0)
+            for field, _ in distribution_specs:
+                raw_label = getattr(asset, field, None)
+                label = str(raw_label).strip() if raw_label is not None else ""
+                if label == "":
+                    label = "未分类"
+                buckets[field][label]["count"] += 1
+                buckets[field][label]["area"] += rentable_area
+
+        total_count = len(assets)
+        total_area = sum(float(asset.rentable_area or 0) for asset in assets)
+        result: dict[str, Any] = {}
+
+        for field, label_key in distribution_specs:
+            count_items: list[dict[str, Any]] = []
+            area_items: list[dict[str, Any]] = []
+            for label, values in buckets[field].items():
+                count = int(values["count"])
+                area = float(values["area"])
+                percentage = round(count / total_count * 100, 2) if total_count else 0.0
+                area_percentage = (
+                    round(area / total_area * 100, 2) if total_area else 0.0
+                )
+
+                count_item: dict[str, Any] = {
+                    label_key: label,
+                    "count": count,
+                    "percentage": percentage,
+                }
+                count_items.append(count_item)
+
+                area_item: dict[str, Any] = {
+                    label_key: label,
+                    "count": count,
+                    "total_area": round(area, 2),
+                    "area_percentage": area_percentage,
+                    "average_area": round(area / count, 2) if count else 0.0,
+                }
+                area_items.append(area_item)
+
+            result[f"{field}_distribution"] = count_items
+            result[f"{field}_area_distribution"] = area_items
+
+        return result
 
     async def _list_active_contracts(
         self,
@@ -239,66 +361,20 @@ class AnalyticsService:
         *,
         party_filter: PartyFilter | None = None,
     ) -> list[Contract]:
-        stmt = (
-            select(Contract)
-            .join(
-                ContractGroup,
-                Contract.contract_group_id == ContractGroup.contract_group_id,
-            )
-            .where(
-                Contract.status == ContractLifecycleStatus.ACTIVE,
-                Contract.data_status == "正常",
-            )
-            .options(
-                selectinload(Contract.contract_group).selectinload(
-                    ContractGroup.operator_party
-                ),
-                selectinload(Contract.contract_group).selectinload(
-                    ContractGroup.owner_party
-                ),
-                selectinload(Contract.lease_detail),
-                selectinload(Contract.agency_detail),
-                selectinload(Contract.ledger_entries),
-                selectinload(Contract.lessor_party),
-                selectinload(Contract.lessee_party),
-                selectinload(Contract.service_fee_ledgers),
-            )
+        scoped_party_ids = (
+            self._normalize_party_ids(party_filter.party_ids)
+            if party_filter is not None
+            else None
         )
-
-        date_from = self._safe_parse_date(filters.get("date_from"))
-        date_to = self._safe_parse_date(filters.get("date_to"))
-        scoped_party_ids = self._normalize_party_ids(
-            party_filter.party_ids if party_filter is not None else None
+        return await contract_crud.list_active_for_analytics(
+            self.db,
+            party_ids=scoped_party_ids,
+            filter_mode=(
+                party_filter.filter_mode if party_filter is not None else None
+            ),
+            date_from=self._safe_parse_date(filters.get("date_from")),
+            date_to=self._safe_parse_date(filters.get("date_to")),
         )
-        if party_filter is not None and len(scoped_party_ids) == 0:
-            return []
-        if party_filter is not None:
-            if party_filter.filter_mode == "owner":
-                stmt = stmt.where(ContractGroup.owner_party_id.in_(scoped_party_ids))
-            elif party_filter.filter_mode == "manager":
-                stmt = stmt.where(ContractGroup.operator_party_id.in_(scoped_party_ids))
-            else:
-                stmt = stmt.where(
-                    or_(
-                        ContractGroup.owner_party_id.in_(scoped_party_ids),
-                        ContractGroup.operator_party_id.in_(scoped_party_ids),
-                    )
-                )
-        if date_from is not None or date_to is not None:
-            overlap_clauses: list[Any] = []
-            if date_to is not None:
-                overlap_clauses.append(Contract.effective_from <= date_to)
-            if date_from is not None:
-                overlap_clauses.append(
-                    or_(
-                        Contract.effective_to.is_(None),
-                        Contract.effective_to >= date_from,
-                    )
-                )
-            if len(overlap_clauses) > 0:
-                stmt = stmt.where(and_(*overlap_clauses))
-
-        return list((await self.db.execute(stmt)).scalars().unique().all())
 
     @staticmethod
     def _normalize_party_ids(values: Any) -> list[str]:
@@ -505,6 +581,7 @@ class AnalyticsService:
         filters: dict[str, Any] | None = None,
         *,
         party_filter: PartyFilter | None = None,
+        perspective: AnalyticsPerspective | None = None,
     ) -> dict[str, Any]:
         self_operated_rent_income = Decimal("0")
         agency_service_income = Decimal("0")
@@ -608,6 +685,7 @@ class AnalyticsService:
                 upstream_party_id = self._resolve_counterparty_for_bucket(
                     contract,
                     party_filter=party_filter,
+                    perspective=perspective,
                 )
                 if upstream_party_id is not None:
                     counterparty_party_ids_by_bucket["upstream_lease"].add(
@@ -622,6 +700,7 @@ class AnalyticsService:
                 entrusted_party_id = self._resolve_counterparty_for_bucket(
                     contract,
                     party_filter=party_filter,
+                    perspective=perspective,
                 )
                 if entrusted_party_id is not None:
                     counterparty_party_ids_by_bucket["entrusted_operation"].add(
@@ -1058,13 +1137,17 @@ class AnalyticsService:
         contract: Contract,
         *,
         party_filter: PartyFilter | None,
+        perspective: AnalyticsPerspective | None = None,
     ) -> str | None:
         lessor_party_id = str(getattr(contract, "lessor_party_id", "")).strip()
         lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
+        effective_perspective = perspective or (
+            party_filter.filter_mode if party_filter is not None else None
+        )
 
-        if party_filter is not None and party_filter.filter_mode == "owner":
+        if effective_perspective == "owner":
             return lessee_party_id or None
-        if party_filter is not None and party_filter.filter_mode == "manager":
+        if effective_perspective == "manager":
             return lessor_party_id or None
         return None
 

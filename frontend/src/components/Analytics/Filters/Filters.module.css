@@ -159,7 +159,7 @@
   line-height: 1.5;
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .historySaveRow {
     flex-wrap: wrap;
   }

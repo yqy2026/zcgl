@@ -37,7 +37,7 @@ vi.mock('@/hooks/useAnalytics', () => ({
         ownership_status_distribution: [{ status: '已确权', count: 80, percentage: 80 }],
         usage_status_distribution: [{ status: '出租', count: 70, percentage: 70 }],
         occupancy_distribution: [{ range: '80-100%', count: 30, percentage: 30 }],
-        business_category_distribution: [{ category: '零售', occupancy_rate: 90, count: 20 }],
+        business_category_distribution: [{ category: '零售', count: 20, percentage: 20 }],
         occupancy_trend: [
           {
             date: '2024-01',
@@ -211,7 +211,7 @@ const resetAnalyticsHookMock = (): void => {
         ownership_status_distribution: [{ status: '已确权', count: 80, percentage: 80 }],
         usage_status_distribution: [{ status: '出租', count: 70, percentage: 70 }],
         occupancy_distribution: [{ range: '80-100%', count: 30, percentage: 30 }],
-        business_category_distribution: [{ category: '零售', occupancy_rate: 90, count: 20 }],
+        business_category_distribution: [{ category: '零售', count: 20, percentage: 20 }],
         occupancy_trend: [
           {
             date: '2024-01',

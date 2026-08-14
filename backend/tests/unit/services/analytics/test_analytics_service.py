@@ -2,6 +2,7 @@
 测试 AnalyticsService (综合分析服务)
 """
 
+from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -71,6 +72,49 @@ class TestAnalyticsService:
         key3 = analytics_service._generate_cache_key(filters3)
         assert key1 != key3
 
+    def test_generate_cache_key_isolated_by_party_scope(self, analytics_service):
+        filters = {"include_deleted": False}
+        owner_scope = PartyFilter(
+            party_ids=["party-b", "party-a"],
+            filter_mode="owner",
+        )
+        reordered_owner_scope = PartyFilter(
+            party_ids=["party-a", "party-b", "party-a"],
+            filter_mode="owner",
+        )
+        manager_scope = PartyFilter(
+            party_ids=["party-a", "party-b"],
+            filter_mode="manager",
+        )
+
+        owner_key = analytics_service._generate_cache_key(filters, owner_scope)
+
+        assert owner_key == analytics_service._generate_cache_key(
+            filters, reordered_owner_scope
+        )
+        assert owner_key != analytics_service._generate_cache_key(
+            filters, manager_scope
+        )
+        assert owner_key != analytics_service._generate_cache_key(filters, None)
+
+    def test_generate_cache_key_isolates_unrestricted_perspective(
+        self, analytics_service
+    ):
+        filters = {"include_deleted": False}
+
+        owner_key = analytics_service._generate_cache_key(
+            filters,
+            None,
+            perspective="owner",
+        )
+        manager_key = analytics_service._generate_cache_key(
+            filters,
+            None,
+            perspective="manager",
+        )
+
+        assert owner_key != manager_key
+
     @patch(
         "src.services.analytics.analytics_service.AnalyticsService._calculate_analytics",
         new_callable=AsyncMock,
@@ -84,7 +128,18 @@ class TestAnalyticsService:
     ):
         """测试使用缓存的综合分析"""
         # Mock缓存命中
-        mock_cache_data = {"total": 100, "timestamp": "2024-01-01"}
+        mock_cache_data = {
+            "total": 100,
+            "timestamp": "2024-01-01",
+            "property_nature_distribution": [],
+            "ownership_status_distribution": [],
+            "usage_status_distribution": [],
+            "business_category_distribution": [],
+            "property_nature_area_distribution": [],
+            "ownership_status_area_distribution": [],
+            "usage_status_area_distribution": [],
+            "business_category_area_distribution": [],
+        }
         analytics_service.cache.get = MagicMock(return_value=mock_cache_data)
         mock_generate_key.return_value = "test_key"
 
@@ -96,6 +151,54 @@ class TestAnalyticsService:
         assert result == mock_cache_data
         # 不应该调用计算方法
         mock_calculate.assert_not_called()
+
+    @patch(
+        "src.services.analytics.analytics_service.AnalyticsService._calculate_analytics",
+        new_callable=AsyncMock,
+    )
+    @pytest.mark.asyncio
+    async def test_incomplete_cached_comprehensive_result_should_recalculate(
+        self, mock_calculate, analytics_service
+    ):
+        """旧缓存缺少必填分布时必须回源，不能继续返回残缺契约。"""
+        analytics_service.cache.get = MagicMock(
+            return_value={"total_assets": 1, "timestamp": "2024-01-01"}
+        )
+        mock_calculate.return_value = {
+            "total_assets": 1,
+            "timestamp": "2024-01-01",
+            "property_nature_distribution": [],
+            "ownership_status_distribution": [],
+            "usage_status_distribution": [],
+            "business_category_distribution": [],
+            "property_nature_area_distribution": [],
+            "ownership_status_area_distribution": [],
+            "usage_status_area_distribution": [],
+            "business_category_area_distribution": [],
+        }
+
+        result = await analytics_service.get_comprehensive_analytics(
+            filters={}, should_use_cache=True
+        )
+
+        assert result == mock_calculate.return_value
+        mock_calculate.assert_awaited_once()
+
+    @patch(
+        "src.services.analytics.analytics_service.AnalyticsService._calculate_analytics",
+        new_callable=AsyncMock,
+    )
+    @pytest.mark.asyncio
+    async def test_incomplete_calculated_comprehensive_result_should_fail_loudly(
+        self, mock_calculate, analytics_service
+    ):
+        """新计算缺少必填分布表示服务契约破坏，必须显式失败。"""
+        mock_calculate.return_value = {"total_assets": 1, "timestamp": "2024-01-01"}
+
+        with pytest.raises(ValueError, match="property_nature_distribution"):
+            await analytics_service.get_comprehensive_analytics(
+                filters={}, should_use_cache=False
+            )
 
     @patch(
         "src.services.analytics.analytics_service.AnalyticsService._generate_cache_key"
@@ -149,6 +252,108 @@ class TestAnalyticsService:
                 assert "timestamp" in result
                 assert "area_summary" in result
                 assert "occupancy_rate" in result
+
+    @pytest.mark.asyncio
+    async def test_comprehensive_analytics_includes_count_and_rentable_area_distributions(
+        self, analytics_service
+    ):
+        assets = [
+            MagicMock(
+                property_nature="经营类",
+                ownership_status="已确权",
+                usage_status="出租",
+                business_category="商业",
+                rentable_area=Decimal("120.00"),
+            ),
+            MagicMock(
+                property_nature="经营类",
+                ownership_status="未确权",
+                usage_status="闲置",
+                business_category=None,
+                rentable_area=Decimal("30.00"),
+            ),
+            MagicMock(
+                property_nature="非经营类",
+                ownership_status="已确权",
+                usage_status="出租",
+                business_category="商业",
+                rentable_area=None,
+            ),
+        ]
+
+        with (
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+                return_value=(assets, len(assets)),
+            ),
+            patch(
+                "src.services.analytics.area_service.AreaService.calculate_summary_with_aggregation",
+                new_callable=AsyncMock,
+                return_value={"total_assets": 3},
+            ),
+            patch(
+                "src.services.analytics.occupancy_service.OccupancyService.calculate_with_aggregation",
+                new_callable=AsyncMock,
+                return_value={"rate": 80},
+            ),
+            patch.object(
+                analytics_service,
+                "_list_active_contracts",
+                AsyncMock(return_value=[]),
+            ),
+        ):
+            result = await analytics_service.get_comprehensive_analytics(
+                filters={}, should_use_cache=False
+            )
+
+        assert result["property_nature_distribution"] == [
+            {"name": "经营类", "count": 2, "percentage": 66.67},
+            {"name": "非经营类", "count": 1, "percentage": 33.33},
+        ]
+        assert result["ownership_status_distribution"] == [
+            {"status": "已确权", "count": 2, "percentage": 66.67},
+            {"status": "未确权", "count": 1, "percentage": 33.33},
+        ]
+        assert result["usage_status_distribution"] == [
+            {"status": "出租", "count": 2, "percentage": 66.67},
+            {"status": "闲置", "count": 1, "percentage": 33.33},
+        ]
+        assert result["business_category_distribution"] == [
+            {"category": "商业", "count": 2, "percentage": 66.67},
+            {"category": "未分类", "count": 1, "percentage": 33.33},
+        ]
+        # 契约守卫：业态分布只承载标签/count/percentage（api-contract 八组分布口径），
+        # 不得携带无数据来源的伪造 occupancy_rate/avg_annual_income
+        for item in result["business_category_distribution"]:
+            assert "occupancy_rate" not in item
+            assert "avg_annual_income" not in item
+        assert result["property_nature_area_distribution"] == [
+            {
+                "name": "经营类",
+                "count": 2,
+                "total_area": 150.0,
+                "area_percentage": 100.0,
+                "average_area": 75.0,
+            },
+            {
+                "name": "非经营类",
+                "count": 1,
+                "total_area": 0.0,
+                "area_percentage": 0.0,
+                "average_area": 0.0,
+            },
+        ]
+        assert (
+            sum(
+                item["total_area"]
+                for item in result["business_category_area_distribution"]
+            )
+            == 150.0
+        )
+        # 契约守卫：面积分布项同样不得携带伪造的 occupancy_rate
+        for item in result["business_category_area_distribution"]:
+            assert "occupancy_rate" not in item
 
     @pytest.mark.asyncio
     async def test_clear_cache(self, analytics_service):
@@ -275,7 +480,18 @@ class TestAnalyticsService:
         analytics_service.cache.get = MagicMock(return_value=None)
         analytics_service.cache.set = MagicMock()
         mock_generate_key.return_value = "test_key"
-        mock_calculate.return_value = {"total": 100}
+        complete_result = {
+            "total": 100,
+            "property_nature_distribution": [],
+            "ownership_status_distribution": [],
+            "usage_status_distribution": [],
+            "business_category_distribution": [],
+            "property_nature_area_distribution": [],
+            "ownership_status_area_distribution": [],
+            "usage_status_area_distribution": [],
+            "business_category_area_distribution": [],
+        }
+        mock_calculate.return_value = complete_result
 
         # 调用时使用缓存
         result = await analytics_service.get_comprehensive_analytics(
@@ -284,9 +500,9 @@ class TestAnalyticsService:
 
         # 验证缓存被设置
         analytics_service.cache.set.assert_called_once_with(
-            "test_key", {"total": 100}, ttl=3600
+            "test_key", complete_result, ttl=3600
         )
-        assert result == {"total": 100}
+        assert result == complete_result
 
     @pytest.mark.asyncio
     async def test_calculate_trend_unknown_type(self, analytics_service):
@@ -1014,6 +1230,69 @@ class TestAnalyticsService:
                 "customer_contract_count": 2,
             }
         ]
+
+    @pytest.mark.asyncio
+    async def test_list_active_contracts_delegates_scope_and_dates_to_crud(
+        self, analytics_service
+    ):
+        party_filter = PartyFilter(
+            party_ids=[" party-2 ", "party-1", "party-2"],
+            filter_mode="manager",
+        )
+
+        with patch(
+            "src.services.analytics.analytics_service.contract_crud.list_active_for_analytics",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as mock_list:
+            result = await analytics_service._list_active_contracts(
+                {"date_from": "2026-05-01", "date_to": "2026-05-31"},
+                party_filter=party_filter,
+            )
+
+        assert result == []
+        mock_list.assert_awaited_once_with(
+            analytics_service.db,
+            party_ids=["party-2", "party-1"],
+            filter_mode="manager",
+            date_from=date(2026, 5, 1),
+            date_to=date(2026, 5, 31),
+        )
+
+    @pytest.mark.asyncio
+    async def test_calculate_analytics_reads_every_asset_page(self, analytics_service):
+        first_batch = [MagicMock(rentable_area=1) for _ in range(1000)]
+        second_batch = [MagicMock(rentable_area=2)]
+
+        with (
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+                side_effect=[(first_batch, 1001), (second_batch, 1001)],
+            ) as mock_list_assets,
+            patch("src.services.analytics.area_service.AreaService") as mock_area_cls,
+            patch(
+                "src.services.analytics.occupancy_service.OccupancyService"
+            ) as mock_occupancy_cls,
+            patch.object(
+                analytics_service,
+                "_list_active_contracts",
+                AsyncMock(return_value=[]),
+            ),
+        ):
+            mock_area_cls.return_value.calculate_summary_with_aggregation = AsyncMock(
+                return_value={"total_assets": 1001}
+            )
+            mock_occupancy_cls.return_value.calculate_with_aggregation = AsyncMock(
+                return_value={"rate": 0}
+            )
+
+            result = await analytics_service._calculate_analytics({})
+
+        assert result["total_assets"] == 1001
+        assert mock_list_assets.await_count == 2
+        assert mock_list_assets.await_args_list[0].kwargs["skip"] == 0
+        assert mock_list_assets.await_args_list[1].kwargs["skip"] == 1000
 
     @pytest.mark.asyncio
     async def test_calculate_analytics_should_include_operational_metrics(

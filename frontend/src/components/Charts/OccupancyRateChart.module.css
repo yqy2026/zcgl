@@ -115,7 +115,7 @@
   margin-bottom: var(--spacing-xs);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .rankingItem {
     align-items: flex-start;
   }

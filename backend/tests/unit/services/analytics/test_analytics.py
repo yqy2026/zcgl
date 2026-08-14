@@ -196,8 +196,9 @@ class TestAnalyticsServiceCacheManagement:
         filters = {"include_deleted": True}
         key = analytics_service._generate_cache_key(filters)
 
-        assert key.startswith("analytics:")
-        assert len(key.split(":")) == 2
+        prefix, version, digest = key.split(":")
+        assert (prefix, version) == ("analytics", "v3")
+        assert len(digest) == 32
 
     @pytest.mark.asyncio
     async def test_clear_cache_success(self, analytics_service):
@@ -256,6 +257,14 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         mock_cache_data = {
             "total_assets": 100,
             "timestamp": "2024-01-01T00:00:00",
+            "property_nature_distribution": [],
+            "ownership_status_distribution": [],
+            "usage_status_distribution": [],
+            "business_category_distribution": [],
+            "property_nature_area_distribution": [],
+            "ownership_status_area_distribution": [],
+            "usage_status_area_distribution": [],
+            "business_category_area_distribution": [],
         }
         analytics_service.cache.get = MagicMock(return_value=mock_cache_data)
 

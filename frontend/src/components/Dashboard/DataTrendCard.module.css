@@ -161,7 +161,7 @@
 }
 
 /* 响应式设计 */
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .trendCard.small,
   .trendCard.default,
   .trendCard.large {

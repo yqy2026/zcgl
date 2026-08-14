@@ -47,32 +47,42 @@ export interface UsageStatusDistribution {
   percentage: number;
 }
 
-export interface OwnershipStatusAreaDistribution extends OwnershipStatusDistribution {
+export interface PropertyNatureAreaDistribution {
+  name: string;
+  count: number;
   total_area: number;
-  area_percentage?: number;
+  area_percentage: number;
   average_area: number;
 }
 
-export interface UsageStatusAreaDistribution extends UsageStatusDistribution {
+export interface OwnershipStatusAreaDistribution {
+  status: string;
+  count: number;
   total_area: number;
-  area_percentage?: number;
+  area_percentage: number;
+  average_area: number;
+}
+
+export interface UsageStatusAreaDistribution {
+  status: string;
+  count: number;
+  total_area: number;
+  area_percentage: number;
   average_area: number;
 }
 
 export interface BusinessCategoryDistribution {
   category: string;
   count: number;
-  occupancy_rate: number;
-  avg_annual_income: number;
+  percentage: number;
 }
 
 export interface BusinessCategoryAreaDistribution {
   category: string;
   count: number;
-  occupancy_rate?: number;
-  total_area?: number;
-  area_percentage?: number;
-  avg_annual_income?: number;
+  total_area: number;
+  area_percentage: number;
+  average_area: number;
 }
 
 export interface OccupancyTrend {
@@ -173,10 +183,10 @@ export interface AnalyticsData {
   usage_status_distribution: UsageStatusDistribution[];
   business_category_distribution: BusinessCategoryDistribution[];
   occupancy_trend: OccupancyTrend[];
-  property_nature_area_distribution?: PropertyNatureDistribution[];
-  ownership_status_area_distribution?: OwnershipStatusDistribution[];
-  usage_status_area_distribution?: UsageStatusDistribution[];
-  business_category_area_distribution?: BusinessCategoryDistribution[];
+  property_nature_area_distribution: PropertyNatureAreaDistribution[];
+  ownership_status_area_distribution: OwnershipStatusAreaDistribution[];
+  usage_status_area_distribution: UsageStatusAreaDistribution[];
+  business_category_area_distribution: BusinessCategoryAreaDistribution[];
   // performance_metrics: PerformanceMetrics  // 暂时注释，等待后端API支持
   // comparison_data?: ComparisonData  // 暂时注释，等待后端API支持
 }
@@ -211,10 +221,10 @@ export interface AnalyticsResponse {
   usage_status_distribution?: UsageStatusDistribution[];
   business_category_distribution?: BusinessCategoryDistribution[];
   occupancy_trend?: OccupancyTrend[];
-  property_nature_area_distribution?: PropertyNatureDistribution[];
-  ownership_status_area_distribution?: OwnershipStatusDistribution[];
-  usage_status_area_distribution?: UsageStatusDistribution[];
-  business_category_area_distribution?: BusinessCategoryDistribution[];
+  property_nature_area_distribution?: PropertyNatureAreaDistribution[];
+  ownership_status_area_distribution?: OwnershipStatusAreaDistribution[];
+  usage_status_area_distribution?: UsageStatusAreaDistribution[];
+  business_category_area_distribution?: BusinessCategoryAreaDistribution[];
   cache_stats?: { cache_size: number; hits: number; misses: number; hit_rate: number };
   performance_info?: { calculation_time: number; asset_count: number; cache_enabled: boolean };
 }

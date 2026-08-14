@@ -30,7 +30,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .retryButton {
     min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }

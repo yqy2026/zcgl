@@ -8,7 +8,6 @@
     var(--table-pagination-control-size-mobile) - (var(--spacing-xs) / 2)
   );
   --table-pagination-input-min-width: calc(var(--spacing-xl) * 3);
-  --table-pagination-mobile-breakpoint: calc(var(--breakpoint-sm) - var(--border-width-thin));
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
@@ -82,7 +81,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: var(--table-pagination-mobile-breakpoint)) {
+@media (max-width: 47.9375rem) {
   .tableRoot :global(.ant-table-thead > tr > th),
   .tableRoot :global(.ant-table-tbody > tr > td) {
     padding-top: var(--spacing-sm);

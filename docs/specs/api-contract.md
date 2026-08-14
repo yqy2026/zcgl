@@ -231,6 +231,8 @@ When an existing service-fee receivable no longer matches its monthly key becaus
 
 分析端点公开接收 `view_mode=owner|manager|all`。不传时，有效范围仅含一种视角则自动采用；双视角则解析为内部 `scope_mode=all`，不从绑定顺序或展示偏好猜选。常规客户列表可使用混合并集视图；综合分析和分析导出产出客户双指标，必须选定 owner 或 manager 单一视角。
 
+综合分析响应必须包含八组分布数组：`property_nature_distribution`、`ownership_status_distribution`、`usage_status_distribution`、`business_category_distribution` 及对应四组 `*_area_distribution`。数量分布项返回分类标签、`count` 和 `percentage`；面积分布项返回分类标签、`count`、`total_area`、`area_percentage` 和 `average_area`，面积口径固定为资产 `rentable_area`。空或纯空白分类归入“未分类”；可出租面积为空按 0 计，面积分母为 0 时占比为 0。八组字段缺失或类型错误属于响应契约失败，不得静默归一化为空数组。缓存键必须隔离筛选条件、主体视角及排序去重后的主体范围。
+
 ### 4.10 扫描件解析辅助补录
 
 | 能力 | 方法与路径 | 契约 |

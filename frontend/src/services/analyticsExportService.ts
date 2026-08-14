@@ -42,7 +42,7 @@ export interface AnalyticsExportData {
   business_category_distribution: Array<{
     category: string;
     count: number;
-    occupancy_rate: number | string;
+    percentage: number | string;
   }>;
   occupancy_trend?: Array<{
     date: string;
@@ -120,11 +120,11 @@ class AnalyticsExportService {
 
       // 创建业态类别分布工作表
       const businessCategoryData = [
-        ['业态类别', '数量', '出租率(%)'],
+        ['业态类别', '数量', '占比(%)'],
         ...data.business_category_distribution.map(item => [
           item.category,
           item.count,
-          item.occupancy_rate,
+          item.percentage,
         ]),
       ];
       const businessCategorySheet = workbook.addWorksheet('业态类别分布');
@@ -233,9 +233,9 @@ class AnalyticsExportService {
 
       // 添加业态类别分布
       csvData.push(['业态类别分布']);
-      csvData.push(['业态类别', '数量', '出租率(%)']);
+      csvData.push(['业态类别', '数量', '占比(%)']);
       data.business_category_distribution.forEach(item => {
-        csvData.push([item.category, item.count, item.occupancy_rate]);
+        csvData.push([item.category, item.count, item.percentage]);
       });
 
       // 转换为CSV格式
@@ -463,13 +463,13 @@ class AnalyticsExportService {
         <h2>业态类别分布</h2>
         <table>
             <thead>
-                <tr><th>业态类别</th><th>数量</th><th>出租率(%)</th></tr>
+                <tr><th>业态类别</th><th>数量</th><th>占比(%)</th></tr>
             </thead>
             <tbody>
                 ${data.business_category_distribution
                   .map(
                     item =>
-                      `<tr><td>${item.category}</td><td>${item.count}</td><td>${item.occupancy_rate}</td></tr>`
+                      `<tr><td>${item.category}</td><td>${item.count}</td><td>${item.percentage}</td></tr>`
                   )
                   .join('')}
             </tbody>

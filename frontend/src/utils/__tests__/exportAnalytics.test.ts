@@ -21,7 +21,7 @@ const mockData = {
   ownership_status_distribution: [{ status: '已确权', count: 8, percentage: 66.67 }],
   usage_status_distribution: [{ status: '在用', count: 9, percentage: 75 }],
   occupancy_distribution: [{ range: '80-100%', count: 7, percentage: 58.33 }],
-  business_category_distribution: [{ category: '零售', occupancy_rate: 90.12, count: 4 }],
+  business_category_distribution: [{ category: '零售', count: 4, percentage: 33.33 }],
   occupancy_trend: [
     {
       date: '2026-02-01',
@@ -94,7 +94,11 @@ describe('exportAnalytics', () => {
       expect(text).toContain('面积概览');
       expect(text).toContain('财务概览');
       expect(text).toContain('物业性质分布');
+      expect(text).toContain('业态类别分布');
+      expect(text).toContain('零售,4,33.33');
       expect(text).toContain('出租率趋势');
+      // 业态分布不再携带无数据来源的伪造出租率列
+      expect(text).not.toContain('类别,出租率(%),数量');
 
       const link = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
       expect(link.tagName).toBe('A');
