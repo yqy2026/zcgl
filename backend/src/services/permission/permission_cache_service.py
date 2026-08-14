@@ -383,16 +383,11 @@ def get_permission_cache_service() -> PermissionCacheService:
     global _permission_cache_service
 
     if _permission_cache_service is None:
-        # 尝试获取Redis客户端
-        redis_client = None
-        try:
-            from ...core.database import get_redis
+        # 获取全局 Redis 客户端（src.database.get_redis；导入路径错误会让
+        # 权限缓存静默禁用，此处直接导入以 Fail Loud）
+        from ...database import get_redis
 
-            redis_client = get_redis()
-        except ImportError:  # pragma: no cover
-            logger.warning("Redis client not available")  # pragma: no cover
-        except Exception as e:  # pragma: no cover
-            logger.warning(f"Failed to get Redis client: {e}")  # pragma: no cover
+        redis_client = get_redis()
 
         # 从配置获取TTL
         ttl_seconds = 300  # 默认5分钟，固定值

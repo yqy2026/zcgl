@@ -715,3 +715,40 @@ class TestGlobalServiceInstance:
         import src.services.permission.permission_cache_service as cache_module
 
         cache_module._permission_cache_service = None
+
+
+class TestGetPermissionCacheServiceRedisResolution:
+    """测试 get_permission_cache_service() 的 Redis 客户端解析路径。
+
+    回归：get_redis 曾从不存在的 src.core.database 导入，ImportError 被静默吞掉，
+    导致即使 Redis 可用权限缓存也永远禁用（#85 之外独立发现）。
+    """
+
+    def test_enabled_when_redis_client_resolvable(self, monkeypatch):
+        """get_redis 返回客户端时单例必须启用（当前实现红：导入路径错误）。"""
+        import src.services.permission.permission_cache_service as cache_module
+
+        cache_module._permission_cache_service = None
+        fake_redis = AsyncMock()
+        monkeypatch.setattr("src.database.get_redis", lambda: fake_redis)
+
+        service = get_permission_cache_service()
+
+        assert service.enabled is True
+        assert service.redis is fake_redis
+
+        cache_module._permission_cache_service = None
+
+    def test_disabled_when_redis_unavailable(self, monkeypatch):
+        """get_redis 返回 None（未启用 Redis）时保持优雅降级。"""
+        import src.services.permission.permission_cache_service as cache_module
+
+        cache_module._permission_cache_service = None
+        monkeypatch.setattr("src.database.get_redis", lambda: None)
+
+        service = get_permission_cache_service()
+
+        assert service.enabled is False
+        assert service.redis is None
+
+        cache_module._permission_cache_service = None

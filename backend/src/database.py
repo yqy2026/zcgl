@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Empty, Queue
+from typing import Any
 
 from sqlalchemy import event, text
 from sqlalchemy.engine.interfaces import DBAPIConnection
@@ -486,6 +487,36 @@ def get_database_engine() -> AsyncEngine:
     if db_manager.engine is None:
         raise InternalServerError("Database engine is not initialized")
     return db_manager.engine
+
+
+# 全局异步 Redis 客户端（延迟初始化，权限缓存等场景复用）
+_redis_client: Any | None = None
+
+
+def get_redis() -> Any | None:
+    """获取全局异步 Redis 客户端（`redis.asyncio.Redis`）。
+
+    未启用 Redis（`REDIS_ENABLED=false` / 未配置 `REDIS_HOST`）或 redis 库不可用时
+    返回 None，调用方按优雅降级处理；连接故障由调用方在运行期捕获。
+    """
+    global _redis_client
+    if _redis_client is not None:
+        return _redis_client
+    if not settings.REDIS_ENABLED or not settings.REDIS_HOST:
+        return None
+    try:
+        import redis.asyncio as aioredis
+    except ImportError:
+        logger.warning("redis 库不可用，Redis 客户端未创建")
+        return None
+    _redis_client = aioredis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        password=settings.REDIS_PASSWORD,
+        decode_responses=True,
+    )
+    return _redis_client
 
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
