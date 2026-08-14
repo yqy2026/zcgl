@@ -23,6 +23,8 @@ interface ScanReport {
 }
 
 interface TokenSyncReport {
+  themeConfigPath: string;
+  variablesCssPath: string;
   checkedKeys: number;
   mismatches: string[];
   passed: boolean;
@@ -187,28 +189,47 @@ describe('Style Guard Scripts', () => {
   });
 
   it('verify-token-sync should pass for aligned token fixtures', async () => {
-    const sharedTokensPath = writeFixtureFile(
-      'fixtures/sharedTokens.ts',
-      `export const SHARED_THEME_TOKENS = {
-  spacing: {
-    sm: '0.5rem',
-    md: '1rem',
+    const themeConfigPath = writeFixtureFile(
+      'fixtures/themeConfig.ts',
+      `export const baseThemeConfig = {
+  token: {
+    colorPrimary: '#0e63e5',
+    colorPrimaryHover: '#1169f0',
+    colorPrimaryActive: '#0958d9',
+    colorInfo: '#1677ff',
+    colorSuccess: '#52c41a',
+    colorWarning: '#faad14',
+    colorError: '#ff4d4f',
+    colorBgLayout: '#f0f2f5',
+    colorBgContainer: '#ffffff',
+    colorText: '#262626',
+    colorTextSecondary: '#595959',
+    colorTextTertiary: '#717171',
+    colorTextQuaternary: '#bfbfbf',
+    colorTextHeading: '#262626',
+    fontSize: 14,
+    borderRadius: 8,
   },
-  fontSize: {
-    sm: '0.875rem',
-  },
-  borderRadius: {
-    md: '0.5rem',
-  },
-} as const;
+};
 `
     );
     const variablesCssPath = writeFixtureFile(
       'fixtures/variables.css',
       `:root {
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --font-size-sm: 0.875rem;
+  --color-primary: #0e63e5;
+  --color-primary-hover: #1169f0;
+  --color-primary-active: #0958d9;
+  --color-info: #1677ff;
+  --color-success: #52c41a;
+  --color-warning: #faad14;
+  --color-error: #ff4d4f;
+  --color-bg-layout: #f0f2f5;
+  --color-bg-primary: #ffffff;
+  --color-text-primary: #262626;
+  --color-text-secondary: #595959;
+  --color-text-tertiary: #717171;
+  --color-text-quaternary: #bfbfbf;
+  --font-size-base: 0.875rem;
   --radius-md: 0.5rem;
 }
 `
@@ -216,8 +237,8 @@ describe('Style Guard Scripts', () => {
     const reportPath = path.join(tempRoot, 'token-sync-pass-report.json');
 
     const result = await runNodeScript(verifyScriptPath, [
-      '--shared-tokens-file',
-      sharedTokensPath,
+      '--theme-config-file',
+      themeConfigPath,
       '--variables-css-file',
       variablesCssPath,
       '--json-file',
@@ -226,32 +247,55 @@ describe('Style Guard Scripts', () => {
 
     expect(result.code).toBe(0);
     const report = readJsonFile<TokenSyncReport>(reportPath);
-    expect(report.checkedKeys).toBe(4);
+    expect(report.themeConfigPath).toBe(path.relative(frontendRoot, themeConfigPath));
+    expect(report.variablesCssPath).toBe(path.relative(frontendRoot, variablesCssPath));
+    expect(report.checkedKeys).toBe(16);
     expect(report.passed).toBe(true);
     expect(report.mismatches).toHaveLength(0);
   });
 
   it('verify-token-sync should fail when token value mismatches', async () => {
-    const sharedTokensPath = writeFixtureFile(
-      'fixtures/sharedTokens.ts',
-      `export const SHARED_THEME_TOKENS = {
-  spacing: {
-    md: '1rem',
+    const themeConfigPath = writeFixtureFile(
+      'fixtures/themeConfig.ts',
+      `export const baseThemeConfig = {
+  token: {
+    colorPrimary: '#0e63e5',
+    colorPrimaryHover: '#1169f0',
+    colorPrimaryActive: '#0958d9',
+    colorInfo: '#1677ff',
+    colorSuccess: '#52c41a',
+    colorWarning: '#faad14',
+    colorError: '#ff4d4f',
+    colorBgLayout: '#f0f2f5',
+    colorBgContainer: '#ffffff',
+    colorText: '#262626',
+    colorTextSecondary: '#595959',
+    colorTextTertiary: '#717171',
+    colorTextQuaternary: '#bfbfbf',
+    colorTextHeading: '#262626',
+    fontSize: 14,
+    borderRadius: 8,
   },
-  fontSize: {
-    sm: '0.875rem',
-  },
-  borderRadius: {
-    md: '0.5rem',
-  },
-} as const;
+};
 `
     );
     const variablesCssPath = writeFixtureFile(
       'fixtures/variables.css',
       `:root {
-  --spacing-md: 2rem;
-  --font-size-sm: 0.875rem;
+  --color-primary: #1677ff;
+  --color-primary-hover: #1169f0;
+  --color-primary-active: #0958d9;
+  --color-info: #1677ff;
+  --color-success: #52c41a;
+  --color-warning: #faad14;
+  --color-error: #ff4d4f;
+  --color-bg-layout: #f0f2f5;
+  --color-bg-primary: #ffffff;
+  --color-text-primary: #262626;
+  --color-text-secondary: #595959;
+  --color-text-tertiary: #717171;
+  --color-text-quaternary: #bfbfbf;
+  --font-size-base: 0.875rem;
   --radius-md: 0.5rem;
 }
 `
@@ -259,8 +303,8 @@ describe('Style Guard Scripts', () => {
     const reportPath = path.join(tempRoot, 'token-sync-fail-report.json');
 
     const result = await runNodeScript(verifyScriptPath, [
-      '--shared-tokens-file',
-      sharedTokensPath,
+      '--theme-config-file',
+      themeConfigPath,
       '--variables-css-file',
       variablesCssPath,
       '--json-file',
@@ -270,8 +314,11 @@ describe('Style Guard Scripts', () => {
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('Token sync mismatches');
     const report = readJsonFile<TokenSyncReport>(reportPath);
+    expect(report.themeConfigPath).toBe(path.relative(frontendRoot, themeConfigPath));
     expect(report.passed).toBe(false);
-    expect(report.mismatches.length).toBeGreaterThan(0);
+    expect(report.mismatches).toContain(
+      '--color-primary: themeConfig #0e63e5, variables.css #1677ff'
+    );
   });
 
   it('scan-lint-disable-comments should pass when no directive marker exists', async () => {

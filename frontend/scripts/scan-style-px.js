@@ -33,10 +33,7 @@ const jsonFile = readArgValue(jsonFileFlag);
 
 function loadTokenSourceFiles() {
   if (!fs.existsSync(configPath)) {
-    return new Set([
-      path.normalize(path.join('styles', 'variables.css')),
-      path.normalize(path.join('theme', 'sharedTokens.ts')),
-    ]);
+    return new Set([path.normalize(path.join('styles', 'variables.css'))]);
   }
 
   const raw = fs.readFileSync(configPath, 'utf8');

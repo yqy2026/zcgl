@@ -13,7 +13,7 @@ import {
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
-import { ConfigProvider, theme as antdTheme } from 'antd';
+import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import userEvent from '@testing-library/user-event';
 
@@ -24,12 +24,10 @@ import userEvent from '@testing-library/user-event';
 interface ProvidersProps {
   children: ReactNode;
   queryClient?: QueryClient;
-  theme?: 'light' | 'dark';
 }
 
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient;
-  theme?: 'light' | 'dark';
   route?: string;
 }
 
@@ -79,7 +77,7 @@ export const createTestQueryClient = (): QueryClient => {
  * - QueryClientProvider (React Query支持)
  * - ConfigProvider (Ant Design主题和国际化)
  */
-const AllInOneProvider = ({ children, queryClient, theme = 'light' }: ProvidersProps) => {
+const AllInOneProvider = ({ children, queryClient }: ProvidersProps) => {
   const testQueryClient = queryClient || createTestQueryClient();
 
   return (
@@ -93,9 +91,8 @@ const AllInOneProvider = ({ children, queryClient, theme = 'light' }: ProvidersP
         <ConfigProvider
           locale={zhCN}
           theme={{
-            algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
             token: {
-              colorPrimary: '#1890ff',
+              colorPrimary: '#0e63e5',
             },
           }}
         >
@@ -124,16 +121,13 @@ const AllInOneProvider = ({ children, queryClient, theme = 'light' }: ProvidersP
  * const queryClient = createTestQueryClient()
  * renderWithProviders(<MyComponent />, { queryClient })
  *
- * // 使用深色主题
- * renderWithProviders(<MyComponent />, { theme: 'dark' })
- *
  * // 传递其他RTL选项
  * renderWithProviders(<MyComponent />, { route: '/assets/123' })
  * ```
  */
 export const renderWithProviders = (
   ui: ReactElement,
-  { queryClient, theme = 'light', route, ...renderOptions }: CustomRenderOptions = {}
+  { queryClient, route, ...renderOptions }: CustomRenderOptions = {}
 ) => {
   // 如果指定了路由，设置window.location
   if (route) {
@@ -142,7 +136,7 @@ export const renderWithProviders = (
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <AllInOneProvider queryClient={queryClient} theme={theme}>
+      <AllInOneProvider queryClient={queryClient}>
         {children}
       </AllInOneProvider>
     );
@@ -176,11 +170,11 @@ export const renderHookWithProviders = <TProps, TResult>(
   callback: (props: TProps) => TResult,
   options?: Omit<CustomRenderOptions, 'wrapper'>
 ) => {
-  const { queryClient, theme = 'light', ...renderOptions } = options || {};
+  const { queryClient, ...renderOptions } = options || {};
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <AllInOneProvider queryClient={queryClient} theme={theme}>
+      <AllInOneProvider queryClient={queryClient}>
         {children}
       </AllInOneProvider>
     );

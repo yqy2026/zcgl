@@ -16,7 +16,6 @@ describe('useAppStore - 基础功能', () => {
     // 重置store状态
     useAppStore.setState({
       sidebarCollapsed: false,
-      theme: 'light',
       language: 'zh-CN',
       preferences: {
         pageSize: 20,
@@ -32,7 +31,6 @@ describe('useAppStore - 基础功能', () => {
       const { result } = renderHook(() => useAppStore());
 
       expect(result.current.sidebarCollapsed).toBe(false);
-      expect(result.current.theme).toBe('light');
       expect(result.current.language).toBe('zh-CN');
       expect(result.current.preferences.pageSize).toBe(20);
       expect(result.current.notifications).toEqual([]);
@@ -41,11 +39,6 @@ describe('useAppStore - 基础功能', () => {
     it('sidebarCollapsed应该默认为false', () => {
       const { result } = renderHook(() => useAppStore());
       expect(result.current.sidebarCollapsed).toBe(false);
-    });
-
-    it('theme应该默认为light', () => {
-      const { result } = renderHook(() => useAppStore());
-      expect(result.current.theme).toBe('light');
     });
 
     it('language应该默认为zh-CN', () => {
@@ -81,35 +74,6 @@ describe('useAppStore - 基础功能', () => {
       });
 
       expect(result.current.sidebarCollapsed).toBe(!initialCollapsed);
-    });
-  });
-
-  describe('setTheme', () => {
-    it('应该设置主题', () => {
-      const { result } = renderHook(() => useAppStore());
-
-      act(() => {
-        result.current.setTheme('dark');
-      });
-
-      expect(result.current.theme).toBe('dark');
-
-      act(() => {
-        result.current.setTheme('light');
-      });
-
-      expect(result.current.theme).toBe('light');
-    });
-
-    it('应该只接受有效主题值', () => {
-      const { result } = renderHook(() => useAppStore());
-
-      act(() => {
-        result.current.setTheme('dark');
-      });
-
-      // TypeScript会限制类型，但测试运行时行为
-      expect(result.current.theme).toBe('dark');
     });
   });
 
@@ -384,9 +348,6 @@ describe('useAppStore - 选择器', () => {
   it('应该支持选择器获取状态', () => {
     const { result: _result } = renderHook(() => useAppStore());
 
-    const theme = useAppStore.getState().theme;
-    expect(theme).toBe('light');
-
     const language = useAppStore.getState().language;
     expect(language).toBe('zh-CN');
   });
@@ -398,7 +359,7 @@ describe('useAppStore - 选择器', () => {
     const { rerender: _rerender } = result;
 
     // 仅获取一个值，不订阅
-    const value = useAppStore.getState().theme;
+    const value = useAppStore.getState().language;
 
     // 更新其他状态
     act(() => {
@@ -406,7 +367,7 @@ describe('useAppStore - 选择器', () => {
     });
 
     // value应该不变
-    expect(value).toBe('light');
+    expect(value).toBe('zh-CN');
   });
 });
 
@@ -419,13 +380,13 @@ describe('useAppStore - 持久化', () => {
     const { result } = renderHook(() => useAppStore());
 
     act(() => {
-      result.current.setTheme('dark');
+      result.current.setLanguage('en-US');
       result.current.setSidebarCollapsed(true);
     });
 
     // 在真实场景中，这些应该被保存到localStorage
     // 在测试中，我们验证状态确实被更新了
-    expect(result.current.theme).toBe('dark');
+    expect(result.current.language).toBe('en-US');
     expect(result.current.sidebarCollapsed).toBe(true);
   });
 
@@ -453,7 +414,6 @@ describe('useAppStore - 边界情况', () => {
     // 重置store状态到初始值
     useAppStore.setState({
       sidebarCollapsed: false,
-      theme: 'light',
       language: 'zh-CN',
       preferences: {
         pageSize: 20,
@@ -493,13 +453,11 @@ describe('useAppStore - 边界情况', () => {
     const { result } = renderHook(() => useAppStore());
 
     act(() => {
-      result.current.setTheme('dark');
       result.current.setLanguage('en-US');
       result.current.setSidebarCollapsed(true);
       result.current.setPreferences({ pageSize: 50 });
     });
 
-    expect(result.current.theme).toBe('dark');
     expect(result.current.language).toBe('en-US');
     expect(result.current.sidebarCollapsed).toBe(true);
     expect(result.current.preferences.pageSize).toBe(50);

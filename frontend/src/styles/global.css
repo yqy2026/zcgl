@@ -8,35 +8,31 @@
   box-sizing: border-box;
 }
 
+/* 根字号保持浏览器默认 1rem：rem 系 token 全端按文档值渲染（见 DESIGN.md 间距档位） */
 html {
-  font-size: var(--font-size-lg); /* 移动端最小可读字号 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* 桌面端可稍小字体 */
-@media (min-width: var(--breakpoint-sm)) {
-  html {
-    font-size: var(--font-size-base);
-  }
-}
-
-/* 确保移动端不会缩放过小 */
-@media (max-width: calc(var(--breakpoint-sm) - var(--border-width-thin))) {
-  html {
-    font-size: var(--font-size-lg);
-  }
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg-layout);
   color: var(--color-text-primary);
   line-height: var(--line-height-base);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* 移动端保持最小可读字号 */
+@media (max-width: calc(48rem - 0.0625rem)) {
+  body {
+    font-size: var(--font-size-lg);
+  }
 }
 
 :root {
@@ -162,6 +158,65 @@ select:focus-visible {
 }
 
 /* Unified table rhythm */
+.ant-table {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.ant-statistic-content {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Tag 文字对比度修正：AntD 预置/状态 Tag 用 -6/-7 基色当文字，浅底上不足 WCAG AA（4.5:1） */
+.ant-tag.ant-tag-blue:not(.ant-tag-disabled) {
+  color: var(--color-blue-text);
+}
+
+.ant-tag.ant-tag-green:not(.ant-tag-disabled) {
+  color: var(--color-green-text);
+}
+
+.ant-tag.ant-tag-red:not(.ant-tag-disabled) {
+  color: var(--color-red-text);
+}
+
+.ant-tag.ant-tag-gold:not(.ant-tag-disabled) {
+  color: var(--color-gold-text);
+}
+
+.ant-tag.ant-tag-cyan:not(.ant-tag-disabled) {
+  color: var(--color-cyan-text);
+}
+
+.ant-tag.ant-tag-orange:not(.ant-tag-disabled) {
+  color: var(--color-orange-text);
+}
+
+.ant-tag.ant-tag-lime:not(.ant-tag-disabled) {
+  color: var(--color-lime-text);
+}
+
+.ant-tag.ant-tag-volcano:not(.ant-tag-disabled) {
+  color: var(--color-volcano-text);
+}
+
+.ant-tag.ant-tag-success:not(.ant-tag-disabled) {
+  color: var(--color-green-text);
+}
+
+.ant-tag.ant-tag-warning:not(.ant-tag-disabled) {
+  color: var(--color-gold-text);
+}
+
+.ant-tag.ant-tag-error:not(.ant-tag-disabled) {
+  color: var(--color-red-text);
+}
+
+.ant-tag.ant-tag-processing:not(.ant-tag-disabled) {
+  color: var(--color-blue-text);
+}
+
 .ant-table-thead > tr > th {
   padding-top: var(--table-cell-padding-sm);
   padding-bottom: var(--table-cell-padding-sm);
@@ -241,171 +296,11 @@ select:focus-visible {
   }
 }
 
-/* Theme Support */
-[data-theme='dark'] {
-  --color-primary: #3b82f6;
-  --color-primary-light: rgba(59, 130, 246, 0.15);
-  --color-primary-dark: #2563eb;
-  --color-success: #52c41a;
-  --color-warning: #faad14;
-  --color-error: #ff4d4f;
-  --color-info: #1677ff;
-
-  /* Text colors - high contrast for readability */
-  --color-text-primary: rgba(255, 255, 255, 0.85);
-  --color-text-secondary: rgba(255, 255, 255, 0.65);
-  --color-text-tertiary: rgba(255, 255, 255, 0.45);
-  --color-text-quaternary: rgba(255, 255, 255, 0.25);
-
-  /* Background colors - avoid pure black */
-  --color-bg-base: #141414;
-  --color-bg-secondary: #0f0f0f;
-  --color-bg-tertiary: #1a1a1a;
-  --color-bg-elevated: #1f1f1f;
-  --color-bg-layout: #000000;
-
-  /* Border colors - subtle but visible */
-  --color-border: #424242;
-  --color-border-light: #303030;
-  --color-border-secondary: #262626;
-}
-
-/* Enable transitions only for theme-related properties */
-body,
-.ant-layout,
-.ant-card,
-.ant-modal-content,
-.ant-dropdown-menu,
-.ant-select-dropdown,
-.ant-picker-dropdown {
-  transition-property: background-color, border-color, color;
-  transition-duration: 0.2s;
-  transition-timing-function: ease-in-out;
-}
-
-/* Dark mode specific adjustments */
-[data-theme='dark'] .ant-layout {
-  background: var(--color-bg-base);
-}
-
-[data-theme='dark'] .ant-layout-sider {
-  background: var(--color-bg-elevated) !important;
-  border-right: var(--border-width-thin) solid var(--color-border) !important;
-}
-
-[data-theme='dark'] .ant-layout-header {
-  background: var(--color-bg-elevated) !important;
-  border-bottom: var(--border-width-thin) solid var(--color-border) !important;
-}
-
-[data-theme='dark'] .ant-card {
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
-[data-theme='dark'] .ant-table {
-  background: var(--color-bg-base) !important;
-  color: var(--color-text-primary);
-}
-
-[data-theme='dark'] .ant-table-thead > tr > th {
-  background: var(--color-bg-tertiary) !important;
-  color: var(--color-text-primary);
-  border-bottom-color: var(--color-border) !important;
-}
-
-[data-theme='dark'] .ant-table-tbody > tr > td {
-  border-bottom-color: var(--color-border) !important;
-}
-
-[data-theme='dark'] .ant-table-tbody > tr:hover > td {
-  background: var(--color-bg-secondary) !important;
-}
-
-[data-theme='dark'] .ant-modal-content {
-  background: var(--color-bg-elevated) !important;
-}
-
-[data-theme='dark'] .ant-modal-header {
-  background: var(--color-bg-elevated) !important;
-  border-bottom-color: var(--color-border) !important;
-}
-
-[data-theme='dark'] .ant-modal-footer {
-  background: var(--color-bg-elevated) !important;
-  border-top-color: var(--color-border) !important;
-}
-
-[data-theme='dark'] .ant-form-item-label > label {
-  color: var(--color-text-primary) !important;
-}
-
-[data-theme='dark'] .ant-input,
-[data-theme='dark'] .ant-input-number,
-[data-theme='dark'] .ant-select-selector {
-  background: var(--color-bg-secondary) !important;
-  border-color: var(--color-border) !important;
-  color: var(--color-text-primary) !important;
-}
-
-[data-theme='dark'] .ant-input:focus,
-[data-theme='dark'] .ant-input-number:focus,
-[data-theme='dark'] .ant-select-focused .ant-select-selector {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 var(--focus-ring-width) rgba(59, 130, 246, 0.2) !important;
-}
-
-[data-theme='dark'] .ant-btn-primary {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-[data-theme='dark'] .ant-btn-primary:hover {
-  background: var(--color-primary-dark);
-  border-color: var(--color-primary-dark);
-}
-
-[data-theme='dark'] .ant-menu {
-  background: var(--color-bg-elevated) !important;
-}
-
-[data-theme='dark'] .ant-menu-item {
-  color: var(--color-text-secondary) !important;
-}
-
-[data-theme='dark'] .ant-menu-item-selected {
-  background: var(--color-primary-light) !important;
-  color: var(--color-primary) !important;
-}
-
-[data-theme='dark'] .ant-menu-item:hover {
-  color: var(--color-text-primary) !important;
-}
-
-[data-theme='dark'] .ant-breadcrumb-link {
-  color: var(--color-text-secondary) !important;
-}
-
-[data-theme='dark'] .ant-breadcrumb-separator {
-  color: var(--color-text-tertiary) !important;
-}
-
-/* Dark mode scrollbar */
-[data-theme='dark'] ::-webkit-scrollbar-track {
-  background: var(--color-bg-secondary);
-}
-
-[data-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--radius-sm);
-}
-
-[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-tertiary);
-}
+/* Theme Support removed: 暗色模式已下线（2026-08-13 design-token consolidation），
+   系统只保留亮色主题与 prefers-contrast / prefers-reduced-motion 适配 */
 
 /* Mobile Optimization */
-@media (max-width: calc(var(--breakpoint-sm) - var(--border-width-thin))) {
+@media (max-width: calc(48rem - 0.0625rem)) {
   /* 确保所有按钮足够大，便于触摸 */
   button,
   a[href],
@@ -504,14 +399,4 @@ body,
     outline: var(--focus-ring-width) solid var(--color-primary);
     outline-offset: var(--focus-ring-offset);
   }
-}
-
-/* Theme Toggle Button Styles */
-.theme-toggle-button {
-  background: transparent;
-  transition: background var(--transition-fast);
-}
-
-.theme-toggle-button:hover {
-  background: var(--color-bg-secondary);
 }

@@ -86,7 +86,7 @@ export function renderWithProviders(
             theme={{
               algorithm: antTheme.defaultAlgorithm,
               token: {
-                colorPrimary: '#1890ff',
+                colorPrimary: '#0e63e5',
               },
             }}
           >

@@ -172,7 +172,7 @@
   animation: fadeIn var(--transition-slow) ease-in-out;
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .pdfImportPage {
     animation: fadeIn var(--transition-slow) ease-in-out;
   }
@@ -183,12 +183,6 @@
 
   .initialLoading {
     min-height: var(--pdf-import-loading-min-height-mobile);
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .pdfImportPage :global(.ant-upload-drag:hover) {
-    background-color: var(--color-bg-tertiary);
   }
 }
 

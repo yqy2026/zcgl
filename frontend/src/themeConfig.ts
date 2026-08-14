@@ -3,8 +3,10 @@ import zhCN from 'antd/locale/zh_CN';
 
 export const baseThemeConfig: ThemeConfig = {
   token: {
-    colorPrimary: '#1677ff',
-    colorInfo: '#1677ff',
+    colorPrimary: '#0e63e5',
+    colorPrimaryHover: '#1169f0',
+    colorPrimaryActive: '#0958d9',
+    colorInfo: '#1890ff',
     colorSuccess: '#52c41a',
     colorWarning: '#faad14',
     colorError: '#ff4d4f',
@@ -13,9 +15,11 @@ export const baseThemeConfig: ThemeConfig = {
     fontFamily:
       "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
     fontSize: 14,
-    colorTextHeading: '#1e293b',
-    colorText: '#334155',
-    colorTextSecondary: '#475569',
+    colorTextHeading: '#262626',
+    colorText: '#262626',
+    colorTextSecondary: '#595959',
+    colorTextTertiary: '#717171',
+    colorTextQuaternary: '#bfbfbf',
     borderRadius: 8,
     wireframe: false,
   },
@@ -28,10 +32,10 @@ export const baseThemeConfig: ThemeConfig = {
     Menu: {
       itemBg: 'transparent',
       subMenuItemBg: 'transparent',
-      itemSelectedBg: 'rgba(22, 119, 255, 0.08)',
-      itemSelectedColor: '#1677ff',
-      itemColor: '#475569',
-      itemHoverColor: '#1677ff',
+      itemSelectedBg: 'rgba(14, 99, 229, 0.08)',
+      itemSelectedColor: '#0e63e5',
+      itemColor: '#595959',
+      itemHoverColor: '#0e63e5',
     },
     Card: {
       boxShadow:
@@ -40,7 +44,7 @@ export const baseThemeConfig: ThemeConfig = {
     },
     Table: {
       headerBg: '#f8fafc',
-      headerColor: '#475569',
+      headerColor: '#595959',
       headerSplitColor: 'transparent',
       rowHoverBg: '#f1f5f9',
     },

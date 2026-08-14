@@ -10,7 +10,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorHandlingProvider } from './contexts/ErrorHandlingContext';
 import { CapabilityGuard } from './components/System/CapabilityGuard';
 import { MessageManager } from './utils/messageManager';
-import { ThemeProvider } from './components/Common/ThemeProvider';
 import { useCapabilities } from './hooks/useCapabilities';
 import styles from './App.module.css';
 // App.css removed - classes were unused default React template styles
@@ -196,19 +195,17 @@ const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <ErrorHandlingProvider>
-          <AuthProvider>
-            <AntdApp>
-              <AppInitializer>
-                <BrowserRouter>
-                  <AppContent />
-                </BrowserRouter>
-              </AppInitializer>
-            </AntdApp>
-          </AuthProvider>
-        </ErrorHandlingProvider>
-      </ThemeProvider>
+      <ErrorHandlingProvider>
+        <AuthProvider>
+          <AntdApp>
+            <AppInitializer>
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
+            </AppInitializer>
+          </AntdApp>
+        </AuthProvider>
+      </ErrorHandlingProvider>
     </ErrorBoundary>
   );
 };

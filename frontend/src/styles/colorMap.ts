@@ -42,14 +42,16 @@ export const COLOR_MAP = {
   '#d9d9d9': 'var(--color-border)',
   '#e8e8e8': 'var(--color-border-light)',
   '#cccccc': 'var(--color-border-dark)',
+  '#666666': 'var(--color-text-secondary)',
+  '#1a1a1a': 'var(--color-text-primary)',
 
-  // Additional chart colors (mapped to semantic colors)
-  '#722ed1': 'var(--color-primary)', // purple → primary
-  '#13c2c2': 'var(--color-success)', // cyan → success
-  '#fa8c16': 'var(--color-warning)', // dark orange → warning
-  '#eb2f96': 'var(--color-error)', // pink → error
-  '#3f8600': 'var(--color-success)', // dark green → success
-  '#8884d8': 'var(--color-secondary)', // purple line → secondary
+  // Additional chart colors (mapped to chart tokens)
+  '#722ed1': 'var(--color-chart-purple)', // purple
+  '#13c2c2': 'var(--color-chart-cyan)', // cyan
+  '#fa8c16': 'var(--color-chart-gold)', // dark orange
+  '#eb2f96': 'var(--color-chart-magenta)', // pink
+  '#3f8600': 'var(--color-chart-green)', // dark green
+  '#8884d8': 'var(--color-chart-purple)', // purple line
 } as const;
 
 // Helper function to get CSS variable from color value
@@ -98,6 +100,26 @@ export const COLORS = {
   info: 'var(--color-info)',
   infoLight: 'var(--color-info-light)',
 
+  // Tag 状态文字深档（浅底上对比度 ≥4.5:1）
+  blueText: 'var(--color-blue-text)',
+  greenText: 'var(--color-green-text)',
+  goldText: 'var(--color-gold-text)',
+  redText: 'var(--color-red-text)',
+  cyanText: 'var(--color-cyan-text)',
+  orangeText: 'var(--color-orange-text)',
+  limeText: 'var(--color-lime-text)',
+  volcanoText: 'var(--color-volcano-text)',
+
+  // 图表序列色（冷色系谱，相邻色相距离 ≥30°）
+  chartBlue: 'var(--color-chart-blue)',
+  chartCyan: 'var(--color-chart-cyan)',
+  chartGreen: 'var(--color-chart-green)',
+  chartGold: 'var(--color-chart-gold)',
+  chartRed: 'var(--color-chart-red)',
+  chartMagenta: 'var(--color-chart-magenta)',
+  chartPurple: 'var(--color-chart-purple)',
+  chartGeekblue: 'var(--color-chart-geekblue)',
+
   textPrimary: 'var(--color-text-primary)',
   textSecondary: 'var(--color-text-secondary)',
   textTertiary: 'var(--color-text-tertiary)',
@@ -140,20 +162,18 @@ export function getTrendColor(value: number, trendType?: 'up' | 'down'): string 
 }
 
 /**
- * Chart color palette (using semantic colors)
- * Replaces hardcoded hex values like ['#1890ff', '#52c41a', '#faad14', '#f5222d', ...]
+ * Chart color palette (冷色系谱序列色)
+ * 相邻色相距离 ≥30°，保证多系列图表可区分；顺序由 contrastFloors 测试守护
  */
 export const CHART_COLORS = [
-  COLORS.primary, // #1677ff - blue
-  COLORS.success, // #52c41a - green
-  COLORS.warning, // #faad14 - orange/gold
-  COLORS.error, // #ff4d4f - red
-  COLORS.secondary, // #0ea5e9 - cyan/sky
-  COLORS.primaryHover, // #4096ff - lighter blue
-  COLORS.warning, // #fa8c16 - darker orange
-  COLORS.error, // #f5222d - darker red (pink-ish)
-  COLORS.secondary, // #13c2c2 - cyan
-  COLORS.success, // Duplicate for palette length
+  COLORS.chartBlue, // #1677ff - blue
+  COLORS.chartCyan, // #13c2c2 - cyan
+  COLORS.chartGreen, // #52c41a - green
+  COLORS.chartGold, // #faad14 - gold
+  COLORS.chartRed, // #f5222d - red
+  COLORS.chartGeekblue, // #2f54eb - geekblue
+  COLORS.chartMagenta, // #eb2f96 - magenta
+  COLORS.chartPurple, // #722ed1 - purple
 ] as const;
 
 /**
@@ -167,12 +187,16 @@ export const PERFORMANCE_COLORS = {
 } as const;
 
 /**
- * Chart label colors
+ * Chart label colors — 直接色值，与中性 token 严格对齐：
+ * light = --color-bg-primary (#ffffff)、medium = --color-text-secondary (#595959)、
+ * dark = --color-text-primary (#262626)。
+ * 例外说明：G2/AntD Charts 的 label.style.fill 走 SVG presentation attribute，
+ * 不支持 CSS var() 语法，因此此处必须使用字面值（值漂移由 contrastFloors 测试守护）。
  */
 export const CHART_LABEL_COLORS = {
-  light: '#ffffff', // For dark backgrounds
-  medium: '#666666', // For light backgrounds
-  dark: '#1a1a1a', // For high contrast
+  light: '#ffffff', // 深色切片内标签
+  medium: '#595959', // 浅色切片内标签
+  dark: '#262626', // 高对比标签
 } as const;
 
 /**

@@ -2,8 +2,8 @@
 name: 土地物业资产运营管理系统
 description: 资产、合同与协议、经营台账、客户与经营分析一体化的内部运营平台
 colors:
-  primary: "#1677ff"
-  primary-hover: "#4096ff"
+  primary: "#0e63e5"
+  primary-hover: "#1169f0"
   primary-active: "#0958d9"
   primary-light: "#e6f4ff"
   secondary: "#0ea5e9"
@@ -19,11 +19,9 @@ colors:
   info-light: "#e6f7ff"
   text-primary: "#262626"
   text-secondary: "#595959"
-  text-tertiary: "#8c8c8c"
+  text-tertiary: "#717171"
   text-quaternary: "#bfbfbf"
   text-inverse: "#ffffff"
-  text-heading: "#1e293b"
-  text-slate: "#475569"
   bg-primary: "#ffffff"
   bg-secondary: "#fafafa"
   bg-tertiary: "#f5f5f5"
@@ -33,6 +31,22 @@ colors:
   border: "#d9d9d9"
   border-light: "#f0f0f0"
   border-dark: "#bfbfbf"
+  chart-blue: "#1677ff"
+  chart-cyan: "#13c2c2"
+  chart-green: "#52c41a"
+  chart-gold: "#faad14"
+  chart-red: "#f5222d"
+  chart-magenta: "#eb2f96"
+  chart-geekblue: "#2f54eb"
+  chart-purple: "#722ed1"
+  tag-blue-text: "#0958d9"
+  tag-green-text: "#237804"
+  tag-gold-text: "#874d00"
+  tag-red-text: "#cf1322"
+  tag-cyan-text: "#006d75"
+  tag-orange-text: "#ad4e00"
+  tag-lime-text: "#4f6900"
+  tag-volcano-text: "#a8071a"
 typography:
   display:
     fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Microsoft YaHei', sans-serif"
@@ -103,9 +117,9 @@ components:
     padding: "{spacing.lg}"
   table-header:
     backgroundColor: "{colors.bg-layout}"
-    textColor: "{colors.text-slate}"
+    textColor: "{colors.text-secondary}"
   nav-item-selected:
-    backgroundColor: "rgba(22, 119, 255, 0.08)"
+    backgroundColor: "rgba(14, 99, 229, 0.08)"
     textColor: "{colors.primary}"
 ---
 
@@ -119,9 +133,11 @@ components:
 
 组件哲学是「精确而克制」：紧凑的控制高度（32–40px）、细边框、轻阴影、统一的 8px 圆角语言，一切以「一眼看清、快速操作」为目标。颜色极少承担装饰职责——主色资产蓝只出现在可交互与选中态；成功、警告、错误三档语义色承载全部状态表达。
 
+**单一真相源**：颜色/间距/圆角 token 唯一来源是 `frontend/src/styles/variables.css`（CSS 变量层），AntD 组件 token 由 `themeConfig.ts` 对齐到同一组值；二者一致，不存在第三套覆盖层。主色为满足 WCAG AA（白字 ≥4.5:1）由 AntD 默认 `#1677ff` 加深至 `#0e63e5`。**暗色模式已下线**（2026-08-13 收口）：内网桌面工具无暗色驱动需求，原四机制三调色板的半成品暗色（系统媒体查询、`[data-theme]` 覆盖、死掉的 JS 内联注入层、AntD 静态 algorithm）全部移除，只保留 `prefers-contrast: high` 与 `prefers-reduced-motion` 适配。
+
 **Key Characteristics:**
 - 页面底为灰蓝色（`#f8fafc`），内容全部浮在白色纸面容器上，层次靠底色与细边框而非阴影
-- 主色资产蓝（`#1677ff`）只用于交互与选中态，从不用于展示性填充
+- 主色资产蓝（`#0e63e5`）只用于交互与选中态，从不用于展示性填充
 - 全中文界面；业务对象以「合同与协议」「经营台账」等中文名出现，不引入英文页面对象名
 - 表格是高频主视图：统一表头底色、悬停行色与 6px 圆角控制件
 - 桌面优先（Chrome/Edge），触屏与窄屏以 44px 触控目标与表格转卡片兜底
@@ -131,31 +147,35 @@ components:
 调性是一组冷静的「蓝色 + 中性灰」：暖度趋零、明度分层清晰，任何颜色在页面上都不喧宾夺主。
 
 ### Primary
-- **资产蓝 Asset Blue** (#1677ff)：所有主交互——主按钮、链接、选中菜单项、焦点环、行聚焦底色。亮一档为悬停（#4096ff），深一档为按下（#0958d9）。
+- **资产蓝 Asset Blue** (#0e63e5)：所有主交互——主按钮、链接、选中菜单项、焦点环、行聚焦底色。**为满足 WCAG AA（白字 ≥4.5:1）由 AntD 默认 #1677ff 加深**；悬停 #1169f0、按下 #0958d9（悬停档亦达 AA）。
 - **资产蓝浅底** (#e6f4ff)：选中/聚焦的软底色与文本选区，配资产蓝文字。
 
 ### Secondary
 - **天光蓝 Sky Blue** (#0ea5e9)：次要强调——图表第二序列、信息类点缀。悬停 #38bdf8、按下 #0284c7。
 
 ### Tertiary
-- 无独立第三强调色；图表与状态全部由语义色承担。
+- 无独立第三强调色；图表与状态全部由语义色与图表序列色承担。
+
+### Chart Colors（冷色系谱）
+图表序列色独立于主色，相邻色相距离 ≥30°（由 `contrastFloors` 测试守护），顺序：蓝 `#1677ff` → 青 `#13c2c2` → 绿 `#52c41a` → 金 `#faad14` → 红 `#f5222d` → 靛 `#2f54eb` → 品红 `#eb2f96` → 紫 `#722ed1`。冷色在前（蓝/青/绿），暖色（金/红/品红）只用于深序列，守住冷静调性。
+
+### Tag Text Colors（状态标签文字深档）
+AntD 预置/状态 Tag 默认拿 -6/-7 基色当文字，浅底上不足 AA；本项目用 `*-text` token 覆盖到达标深档（global.css 高特异性 `.ant-tag.ant-tag-*:not(.ant-tag-disabled)`）：蓝 #0958d9、绿 #237804、金 #874d00、红 #cf1322、青 #006d75、橙 #ad4e00、青柠 #4f6900、火山 #a8071a。
 
 ### Neutral
-- **墨色 Ink** (#262626)：主文本，正文与表格内容。
-- **铅灰 Lead** (#595959)：次级文本，描述与说明。
-- **灰岩 Rock** (#8c8c8c)：三级文本，占位与弱化信息。
+- **墨色 Ink** (#262626)：主文本，正文与表格内容、标题（`colorTextHeading` 已合流到此值）。
+- **铅灰 Lead** (#595959)：次级文本，描述与说明、表头文字、菜单项（themeConfig 已合流）。
+- **灰岩 Rock** (#717171)：三级文本，占位与弱化信息（**为达 AA 由 #8c8c8c 加深**）。
 - **淡灰 Ash** (#bfbfbf)：四级文本，禁用占位符。
-- **石板 Slate** (#475569)：表头文字、菜单项、AntD 次级文本（themeConfig 侧）。
-- **深石板** (#1e293b)：标题文字（`colorTextHeading`）。
 - **纸白** (#ffffff)：容器底。
 - **微灰** (#fafafa)：次级容器底（悬停工具栏、禁用输入底）。
-- **浅灰** (#f5f5f5)：三级容器底（表头替换底、暗色组件底）。
+- **浅灰** (#f5f5f5)：三级容器底。
 - **雾灰** (#f0f0f0)：四级容器底与细分隔线。
-- **布局灰蓝** (#f8fafc)：页面布局底（body、表头、Sider 白上的区块）。
+- **布局灰蓝** (#f8fafc)：页面布局底（body、表头）。
 - **悬停淡蓝灰** (#f1f5f9)：表格行悬停、卡片悬停底。
 - **边框**：常规 #d9d9d9、浅 #f0f0f0（表格内部分隔）、深 #bfbfbf（强调边框）。
 
-**暗色模式**：系统支持 `prefers-color-scheme: dark` 与 `[data-theme='dark']` 两套 remap——文本转白系透明度（85/65/45/25%），背景转近黑灰（#000/#141414/#1f1f1f/#262626），边框转 #434343/#262626/#595959，主色转 `#3b82f6`。默认界面为亮色，暗色作为用户可切换选项存在。
+**暗色模式**：已下线（2026-08-13）。内网桌面工具无暗色驱动需求；原四机制三调色板的半成品暗色（CSS 媒体查询、`[data-theme]` 覆盖、零消费的 JS 内联注入层、AntD 静态 algorithm）全部移除。仅保留 `prefers-contrast: high` 与 `prefers-reduced-motion` 适配。
 
 ### Named Rules
 **The 克制主色 Rule.** 资产蓝只出现在可交互元素与选中态上。任何展示性数据——统计数字、图表、摘要——不得使用主色填充；它们属于灰阶或语义色。
@@ -177,6 +197,8 @@ components:
 
 ### Named Rules
 **The 层级靠字号 Rule.** 标题与正文之间优先用字号 + 字重区分，不靠颜色深浅制造层级——颜色留给状态语义。
+
+**The 数字对齐 Rule.** 台账类界面数字密集，body、`.ant-table`、`.ant-statistic-content` 全局启用 `font-variant-numeric: tabular-nums`（Inter 支持），金额与编码列等宽对齐、不跳动。
 
 ## Layout
 
@@ -202,18 +224,18 @@ components:
 
 ## Shapes
 
-圆角语言统一且克制：基础圆角 8px（卡片、模态框），控制件 6px（按钮、输入框、选择器——比容器略锐，强化工具感），4px 用于小元素（滚动条、标签角），胶囊形（999px）只用于 Tag/Badge 类。边框默认 1px 细线；焦点环为 2px 资产蓝 + 2px 偏移 + 外圈淡蓝光晕（`0 0 0 4px rgba(22,119,255,0.1)`），暗色模式光晕改用 `rgba(59,130,246,0.2)`。
+圆角语言统一且克制：基础圆角 8px（卡片、模态框），控制件 6px（按钮、输入框、选择器——比容器略锐，强化工具感），4px 用于小元素（滚动条、标签角），胶囊形（999px）只用于 Tag/Badge 类。边框默认 1px 细线；焦点环为 2px 资产蓝 + 2px 偏移 + 外圈淡蓝光晕（`0 0 0 4px rgba(14,99,229,0.1)`）。
 
 ## Components
 
 ### Buttons
 - **Shape:** 6px 圆角，高 32/36/40px（sm/md/lg），字重 500，14px。
-- **Primary:** 资产蓝底 + 白字，8px×20px 内边距（md），基础微影；悬停亮一档 #4096ff，按下深一档 #0958d9。
+- **Primary:** 资产蓝底（#0e63e5）+ 白字（对比度 5.34:1 达 AA），8px×20px 内边距（md），基础微影；悬停 #1169f0（4.88:1 亦达 AA）、按下 #0958d9。
 - **Hover / Focus:** 150ms 标准缓动过渡背景与阴影；`:focus-visible` 显示 2px 资产蓝焦点环 + 偏移。
 - **Default:** 纸白底 + 1px 常规边框 + 墨色文字；悬停资产蓝边框与文字。Danger 变体用错误红 `#ff4d4f`。
 
 ### Chips / Tags
-- **Style:** 胶囊形（999px），浅色底 + 语义色文字：成功 `#f6ffed`/#52c41a、警告 `#fffbe6`/#faad14、错误 `#fff2f0`/#ff4d4f、信息 `#e6f7ff`/#1890ff；中性标签用微灰底 + 次级灰文字。
+- **Style:** 胶囊形（999px），浅色底 + 语义色文字。**文字色用 `*-text` 深档 token**（global.css 覆盖 AntD 默认 -6/-7 基色以满足 AA）：成功 #237804、警告 #874d00、错误 #cf1322、信息 #0958d9；中性标签用微灰底 + 次级灰文字。背景浅底保持 AntD 默认（#f6ffed/#fffbe6/#fff2f0/#e6f7ff）。
 - **State:** 状态 Tag 无交互态；可筛选的 Tag 选中时切资产蓝浅底 + 资产蓝文字。
 
 ### Cards / Containers
@@ -229,7 +251,7 @@ components:
 - **Density:** 表单项垂直间距 12px，标签与控件 4px。
 
 ### Table
-- **Style:** 表头底 `#f8fafc` + 石板文字（#475569）+ 透明分割线；单元格 12px 垂直内边距、1px `#f0f0f0` 行分隔；行悬停 `#f1f5f9`。
+- **Style:** 表头底 `#f8fafc` + 铅灰文字（#595959）+ 透明分割线；单元格 12px 垂直内边距、1px `#f0f0f0` 行分隔；行悬停 `#f1f5f9`。
 - **Focus:** 键盘导航行聚焦为资产蓝浅底 + 2px 资产蓝 outline。
 
 ### Navigation
@@ -245,11 +267,13 @@ components:
 
 ### Do:
 - **Do** 走 token：颜色、间距、圆角一律用 `variables.css` 的 CSS 变量（遗留硬编码经 `colorMap.ts` 收敛），禁止新写裸色值。
+- **Do** 守护单一真相源：token 唯一在 `variables.css`（CSS 层）+ `themeConfig.ts`（AntD 层，与 CSS 层同值）；新增主题机制前先问能否复用既有 token。
 - **Do** 让主色只出现在交互与选中态——按钮、链接、选中、焦点环、行聚焦；展示数据用灰阶与语义色。
+- **Do** 保证文本对比度 ≥4.5:1（WCAG AA）；`contrastFloors` 测试是回归防线，改色后必跑。
 - **Do** 保持 rest 态表面平实，阴影只随状态（hover / 浮层 / 焦点）出现。
-- **Do** 维持统一密度：控制件 32–40px 高、表格单元 12px 垂直内边距、表单项 12px 间距。
+- **Do** 维持统一密度：控制件 32–40px 高、表格单元 12px 垂直内边距、表单项 12px 间距；台账数字启用 `tabular-nums`。
 - **Do** 为所有 `:focus-visible` 元素提供 2px 资产蓝焦点环；尊重 `prefers-reduced-motion` 与 `prefers-contrast: high`（全局样式已实现，新代码不得破坏）。
-- **Do** 使用语义色表达状态：成功绿 / 警告琥珀 / 错误红，配对应浅底 Tag。
+- **Do** 使用语义色表达状态：成功绿 / 警告琥珀 / 错误红，配对应浅底 Tag（文字用 `*-text` 深档）。
 - **Do** 移动与触屏场景保证 44px 触控目标，窄屏表格转卡片视图。
 
 ### Don't:
@@ -258,4 +282,6 @@ components:
 - **Don't** 绕过既有档位发明新尺寸——新断点、新模态宽度、新间距档位都需要先复用现有 token。
 - **Don't** 让界面出现英文业务对象名（用户侧统一「合同与协议」「经营台账」等中文名）。
 - **Don't** 用颜色深浅替代字号层级来表达标题/正文差异。
+- **Don't** 重新引入暗色模式或多套主题真相源——暗色已下线，复引入需先定义单一真相源与 AntD algorithm 切换，不得再走半成品覆盖层。
+- **Don't** 给图表序列用主色/语义色混排——图表走 `CHART_COLORS` 冷色系谱（8 色，相邻色相 ≥30°）。
 - **Don't** 为一次性场景新造色板——图表与状态色复用 `CHART_COLORS` / 语义色。

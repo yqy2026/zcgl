@@ -8,7 +8,7 @@
 
 ### 设计系统
 
-- [design-system.md](./design-system.md) — 设计规范：颜色、字体、间距、组件规范、深色模式
+- [design-system.md](./design-system.md) — 设计规范：颜色、字体、间距、组件规范、浅色主题策略
 - [ui-style-guide.md](./ui-style-guide.md) — UI 风格指南
 - [animation-guide.md](./animation-guide.md) — 动画使用指南
 

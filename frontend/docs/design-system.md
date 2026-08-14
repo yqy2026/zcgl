@@ -1,7 +1,7 @@
 # 设计系统规范
 
 **版本**: 1.0.0
-**最后更新**: 2026-02-06
+**最后更新**: 2026-08-13
 **状态**: ✅ 活跃维护
 
 ---
@@ -28,8 +28,8 @@
 
 | Token | 值 | 用途 |
 |-------|---|------|
-| `--color-primary` | `#1677ff` | 主按钮、链接、强调元素 |
-| `--color-primary-hover` | `#4096ff` | 主按钮悬停状态 |
+| `--color-primary` | `#0e63e5` | 主按钮、链接、强调元素 |
+| `--color-primary-hover` | `#1169f0` | 主按钮悬停状态 |
 | `--color-primary-active` | `#0958d9` | 主按钮激活状态 |
 | `--color-primary-light` | `#e6f4ff` | 浅色背景、徽章背景 |
 
@@ -73,7 +73,7 @@
 |-------|---|------|--------|
 | `--color-text-primary` | `#262626` | 主要文本（标题、正文） | 12.6:1 ✅ |
 | `--color-text-secondary` | `#595959` | 次要文本（描述、说明） | 7:1 ✅ |
-| `--color-text-tertiary` | `#8c8c8c` | 辅助文本（占位符、禁用） | 4.6:1 ✅ |
+| `--color-text-tertiary` | `#717171` | 辅助文本（占位符、禁用） | 4.88:1 ✅ |
 | `--color-text-quaternary` | `#bfbfbf` | 占位符文本 | 2.8:1 ⚠️ 仅用于纯装饰 |
 
 **背景色**:
@@ -160,7 +160,7 @@ body {
   font-size: 16px; /* 移动端最小可读字号 */
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
   body {
     font-size: 14px; /* 桌面端可稍小 */
   }
@@ -385,12 +385,14 @@ body {
 
 | Token | 值 | 设备 | 目标 |
 |-------|---|------|------|
-| `--breakpoint-xs` | `576px` | 小型手机 | 竖屏手机 |
-| `--breakpoint-sm` | `768px` | 平板 | 横屏手机/小平板 |
-| `--breakpoint-md` | `992px` | 桌面 | 平板/小桌面 |
-| `--breakpoint-lg` | `1200px` | 大桌面 | 标准桌面 |
-| `--breakpoint-xl` | `1400px` | 超大桌面 | 大屏幕 |
-| `--breakpoint-xxl` | `1600px` | 4K 屏幕 | 超大屏幕 |
+| `--breakpoint-xs` | `36rem` | 小型手机 | 竖屏手机 |
+| `--breakpoint-sm` | `48rem` | 平板 | 横屏手机/小平板 |
+| `--breakpoint-md` | `62rem` | 桌面 | 平板/小桌面 |
+| `--breakpoint-lg` | `75rem` | 大桌面 | 标准桌面 |
+| `--breakpoint-xl` | `87.5rem` | 超大桌面 | 大屏幕 |
+| `--breakpoint-xxl` | `100rem` | 4K 屏幕 | 超大屏幕 |
+
+这些 token 用于记录断点 SSOT 和供 JavaScript/文档对照；原生 CSS 自定义属性不能参与 `@media` 条件求值，因此媒体查询必须写与 token 对应的 `rem` 字面量。`src/styles/__tests__/mediaQueryBreakpoints.test.ts` 会阻止 `@media` 条件重新引入 `var(...)`。
 
 ### 5.2 响应式策略
 
@@ -400,7 +402,7 @@ body {
 <div className="card">...</div>
 
 // 桌面端覆盖
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
   .card {
     padding: var(--spacing-lg);
   }
@@ -590,30 +592,17 @@ cubic-bezier(0.4, 0, 0.2, 1)
 
 ---
 
-## 10. 深色模式
+## 10. 主题策略
 
-### 10.1 深色模式颜色
+### 10.1 仅支持浅色主题
 
-系统已支持深色模式，颜色自动适配：
+系统仅维护浅色主题。暗色模式已于 2026-08-13 下线；不得通过 `prefers-color-scheme`、`[data-theme]` 或独立 JavaScript token 层重新引入并行主题真相源。
 
-```css
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-text-primary: #ffffff;
-    --color-text-secondary: rgba(255, 255, 255, 0.85);
-    --color-bg-primary: #000000;
-    --color-bg-secondary: #141414;
-    --color-border: #434343;
-  }
-}
-```
+颜色、间距和圆角以 `frontend/src/styles/variables.css` 为唯一 token 来源，`frontend/src/themeConfig.ts` 中与 AntD 重叠的 token 必须保持同值。高对比度与减少动态效果仍分别通过 `prefers-contrast: high` 和 `prefers-reduced-motion` 适配。
 
-### 10.2 注意事项
+### 10.2 重新引入条件
 
-- 保持足够对比度（4.5:1）
-- 避免纯黑色（#000000）作为大面积背景
-- 调整阴影效果（深色模式下阴影更明显）
-- 优化图片显示（降低亮度）
+如产品后续明确需要暗色模式，应先定义完整的浅色/暗色 token 契约和 AntD algorithm 切换方案，并为关键页面补齐对比度测试与视觉回归；不得恢复已删除的局部覆盖机制。
 
 ---
 
@@ -674,6 +663,7 @@ A: 使用 `clamp(min, preferred, max)` 函数实现流畅响应式。
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.1.0 | 2026-08-13 | 设计 token 单一真相源收口：移除 JS 主题层（`src/theme/*`、`ThemeProvider`、`ThemeToggle`）与暗色模式（仅保留 `prefers-contrast: high` / `prefers-reduced-motion`）；WCAG AA 对比度加固（主色/悬停/三级文本、状态 Tag 文字）；rem 根字号恢复 16px；图表色板重建为 8 冷色；tabular-nums 对齐数字 |
 | 1.0.0 | 2026-02-06 | 初始版本，基于 Ant Design 6 |
 
 ---
