@@ -172,9 +172,6 @@ class IncompleteCertificateInfoResult:
     warnings: tuple[PropertyCertificateDataQualityWarning, ...]
 
 
-
-
-
 def _field_is_missing(value: object | None) -> bool:
     return value is None or str(value).strip() == ""
 
@@ -210,16 +207,12 @@ def calculate_incomplete_certificate_info(
         if _field_is_missing(field_values[field_key])
     )
     if not missing_field_keys:
-        return IncompleteCertificateInfoResult(
-            missing_field_keys=(), warnings=()
-        )
+        return IncompleteCertificateInfoResult(missing_field_keys=(), warnings=())
 
     missing_labels = "、".join(
         _INCOMPLETE_FIELD_LABELS[field_key] for field_key in missing_field_keys
     )
-    certificate_label = (
-        _normalized_id(certificate_number) or normalized_certificate_id
-    )
+    certificate_label = _normalized_id(certificate_number) or normalized_certificate_id
     warnings: list[PropertyCertificateDataQualityWarning] = []
     for asset in sorted(assets, key=lambda item: _normalized_id(item.asset_id)):
         asset_id = _normalized_id(asset.asset_id)

@@ -201,9 +201,7 @@ async def _confirm_property_certificate_extraction_session(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception(
-            "property certificate confirmation failed: %s", exc
-        )
+        logger.exception("property certificate confirmation failed: %s", exc)
         raise internal_error(
             "property certificate confirmation failed", original_error=exc
         ) from exc

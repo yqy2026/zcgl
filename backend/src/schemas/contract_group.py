@@ -267,7 +267,10 @@ class ContractCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_payment_cycle(self) -> "ContractCreate":
-        if self.payment_cycle is not None and self.payment_cycle not in _VALID_PAYMENT_CYCLES:
+        if (
+            self.payment_cycle is not None
+            and self.payment_cycle not in _VALID_PAYMENT_CYCLES
+        ):
             raise PydanticCustomError(
                 "invalid_payment_cycle",
                 f"付款周期必须为 {sorted(_VALID_PAYMENT_CYCLES)} 之一",

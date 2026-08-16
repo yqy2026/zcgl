@@ -537,7 +537,9 @@ class ProjectService:
             # 客户端自带 project_code 路径：manager_party_id 必须指向既有主体，否则外键
             # 失败会变成 500；自动生成路径已在 _resolve_operator_party_for_code 校验过存在性。
             if client_provided_code:
-                manager_party = await party_crud.get_party(db, party_id=manager_party_id)
+                manager_party = await party_crud.get_party(
+                    db, party_id=manager_party_id
+                )
                 if manager_party is None:
                     raise ResourceNotFoundError("运营方主体", manager_party_id)
 

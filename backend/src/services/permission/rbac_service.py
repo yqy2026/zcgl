@@ -226,9 +226,7 @@ class RBACService:
             # Historical (revoked) assignment rows still reference the role
             # through a NOT NULL FK; drop them or the delete violates it.
             await self.db.execute(
-                delete(UserRoleAssignment).where(
-                    UserRoleAssignment.role_id == role_id
-                )
+                delete(UserRoleAssignment).where(UserRoleAssignment.role_id == role_id)
             )
             await role_crud.remove(self.db, id=role_id)
         except Exception as exc:  # pragma: no cover - defensive for DB layer errors
