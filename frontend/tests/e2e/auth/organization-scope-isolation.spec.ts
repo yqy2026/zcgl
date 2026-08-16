@@ -46,6 +46,12 @@ interface AssetItem {
   owner_party_id?: string | null;
 }
 
+interface OrganizationItem {
+  id: string;
+  code?: string;
+  name?: string;
+}
+
 interface RoleListItem {
   id: string;
   name: string;
@@ -269,14 +275,66 @@ const approvePartyForScope = async ({
 };
 
 /**
- * API 建出的用户默认 is_active=False（后端契约），必须由 admin 激活后才能登录；
- * 否则隔离测试的登录前置永远失败（issue #92 复核发现，此前静默 skip 掩盖）。
+ * API 建出的用户默认 is_active=False，且激活要求有效组织链（后端契约，
+ * issue #92 复核发现）——先做 organization transfer（挂到种子组织
+ * E2E-ORG-ROOT，本地 fallback 第一个 active 组织）再 activate，缺一不可。
  */
 const activateCreatedUser = async (
   page: Page,
   userId: string,
-  mutationHeaders: Record<string, string>
+  mutationHeaders: Record<string, string>,
+  suffix: number
 ): Promise<boolean> => {
+  const organizationsResponse = await page.request.get(
+    '/api/v1/organizations?page=1&page_size=100'
+  );
+  if (organizationsResponse.status() !== 200) {
+    return false;
+  }
+  const organizationsPayload = (await organizationsResponse.json()) as unknown;
+  const organizationCandidates = Array.isArray(organizationsPayload)
+    ? (organizationsPayload as OrganizationItem[])
+    : parsePaginatedItems<OrganizationItem>(organizationsPayload);
+  const organization =
+    organizationCandidates.find(item => item.code === 'E2E-ORG-ROOT') ??
+    organizationCandidates[0];
+  if (organization == null) {
+    return false;
+  }
+
+  const previewResponse = await page.request.post(
+    `/api/v1/auth/users/${userId}/organization/preview`,
+    {
+      headers: mutationHeaders,
+      data: { organization_id: organization.id },
+    }
+  );
+  if (previewResponse.status() !== 200) {
+    return false;
+  }
+  const previewPayload = (await previewResponse.json()) as {
+    preview_token?: string;
+  };
+  const previewToken = normalizeNonEmpty(previewPayload.preview_token);
+  if (previewToken == null) {
+    return false;
+  }
+
+  const commitResponse = await page.request.put(
+    `/api/v1/auth/users/${userId}/organization`,
+    {
+      headers: mutationHeaders,
+      data: {
+        preview_token: previewToken,
+        reason: 'org-scope-isolation e2e',
+        idempotency_key: `e2e-org-${userId}`,
+      },
+    }
+  );
+  if (commitResponse.status() !== 200) {
+    return false;
+  }
+
   const activateResponse = await page.request.post(
     `/api/v1/auth/users/${userId}/activate`,
     { headers: mutationHeaders }
@@ -465,8 +523,10 @@ const tryCreateAssetForParty = async (
   const response = await page.request.post('/api/v1/assets', {
     headers: mutationHeaders,
     data: {
-      property_name: `E2E Scope Asset ${label} ${suffix}`,
-      address: `E2E Scope Address ${label} ${suffix}`,
+      // AssetCreate 字段名是 asset_name/address_detail（issue #92 复核发现：
+      // 旧的 property_name/address 会被忽略 → 422 → 造数恒失败）。
+      asset_name: `E2E Scope Asset ${label} ${suffix}`,
+      address_detail: `E2E Scope Address ${label} ${suffix}`,
       ownership_status: FALLBACK_OWNERSHIP_STATUS,
       property_nature: FALLBACK_PROPERTY_NATURE,
       usage_status: FALLBACK_USAGE_STATUS,
@@ -682,7 +742,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         );
       }
       // API 建的用户默认停用，需 admin 激活后才能登录（issue #92）。
-      if (!(await activateCreatedUser(page, userA.id, mutationHeaders))) {
+      if (!(await activateCreatedUser(page, userA.id, mutationHeaders, suffix))) {
         throw new Error(
           '[org-scope-isolation] Precondition failure: cannot activate scoped user A.'
         );
@@ -710,7 +770,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       const userBId = normalizeNonEmpty(userB.id);
       if (userBId != null) {
         createdUserIds.push(userBId);
-        if (!(await activateCreatedUser(page, userBId, mutationHeaders))) {
+        if (!(await activateCreatedUser(page, userBId, mutationHeaders, suffix))) {
           throw new Error(
             '[org-scope-isolation] Precondition failure: cannot activate scoped user B.'
           );
@@ -897,7 +957,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         );
       }
 
-      if (!(await activateCreatedUser(page, createdUser.id, mutationHeaders))) {
+      if (!(await activateCreatedUser(page, createdUser.id, mutationHeaders, suffix))) {
         throw new Error(
           '[org-scope-isolation] Precondition failure: cannot activate unbound user.'
         );
