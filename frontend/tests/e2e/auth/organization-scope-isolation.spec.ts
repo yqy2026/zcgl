@@ -825,7 +825,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         expect(loginOk).toBe(true);
 
         const ownResponse = await page.request.get(
-          `/api/v1/assets?page=1&page_size=100&ownership_id=${encodeURIComponent(ownPartyId)}`
+          `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(ownPartyId)}`
         );
         expect(ownResponse.status()).toBe(200);
         const ownPayload = (await ownResponse.json()) as unknown;
@@ -837,7 +837,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         }
 
         const otherResponse = await page.request.get(
-          `/api/v1/assets?page=1&page_size=100&ownership_id=${encodeURIComponent(otherPartyId)}`
+          `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(otherPartyId)}`
         );
         expect(otherResponse.status()).toBe(200);
         const otherPayload = (await otherResponse.json()) as unknown;
@@ -972,6 +972,45 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         );
       }
 
+      // 用 admin 会话自建一个 approved party 并挂资产（在切换登录之前），
+      // unbound 用户（无显式绑定）必须看不到该 party 的资产——组织默认范围
+      // 只含种子 party，与此无关，断言不受其他 spec 数据影响。
+      const probePartyResponse = await page.request.post('/api/v1/parties', {
+        headers: mutationHeaders,
+        data: { party_type: 'legal_entity', name: `E2E Unbound Party ${suffix}` },
+      });
+      expect(probePartyResponse.status()).toBe(200);
+      const probeParty = (await probePartyResponse.json()) as { id?: string };
+      const probePartyId = normalizeNonEmpty(probeParty.id);
+      if (probePartyId == null) {
+        throw new Error(
+          '[org-scope-isolation] Precondition failure: cannot create unbound probe party.'
+        );
+      }
+      expect(
+        await approvePartyForScope({
+          page,
+          partyId: probePartyId,
+          mutationHeaders,
+        })
+      ).toBe(true);
+      const probeAssetResponse = await page.request.post('/api/v1/assets', {
+        headers: mutationHeaders,
+        data: {
+          asset_name: `E2E Unbound Asset ${suffix}`,
+          address_detail: `E2E Unbound Address ${suffix}`,
+          ownership_status: FALLBACK_OWNERSHIP_STATUS,
+          property_nature: FALLBACK_PROPERTY_NATURE,
+          usage_status: FALLBACK_USAGE_STATUS,
+          owner_party_id: probePartyId,
+          manager_party_id: probePartyId,
+        },
+      });
+      expect(
+        probeAssetResponse.status(),
+        `probe asset create failed: ${await probeAssetResponse.text()}`
+      ).toBe(201);
+
       await clearAuthState(page);
       const loginOk = await loginWithCredentialRetry(
         page,
@@ -983,37 +1022,16 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       );
       expect(loginOk).toBe(true);
 
-      const unfilteredResponse = await page.request.get('/api/v1/assets?page=1&page_size=100');
-      expect([200, 403]).toContain(unfilteredResponse.status());
-      if (unfilteredResponse.status() === 200) {
-        const unfilteredPayload = (await unfilteredResponse.json()) as unknown;
-        const unfilteredTotal = parsePaginatedTotal(unfilteredPayload);
-        const unfilteredItems = parsePaginatedItems<AssetItem>(unfilteredPayload);
-        expect(unfilteredTotal).toBe(0);
-        expect(unfilteredItems).toHaveLength(0);
-      }
-
-      const partiesResponse = await page.request.get('/api/v1/parties?limit=5');
-      if (partiesResponse.status() === 200) {
-        const partiesPayload = (await partiesResponse.json()) as unknown;
-        const parties = extractData<PartyItem[] | unknown>(partiesPayload);
-        const firstPartyId =
-          Array.isArray(parties) && parties.length > 0
-            ? normalizeNonEmpty((parties[0] as PartyItem).id)
-            : null;
-        if (firstPartyId != null) {
-          const filteredResponse = await page.request.get(
-            `/api/v1/assets?page=1&page_size=100&ownership_id=${encodeURIComponent(firstPartyId)}`
-          );
-          expect([200, 403]).toContain(filteredResponse.status());
-          if (filteredResponse.status() === 200) {
-            const filteredPayload = (await filteredResponse.json()) as unknown;
-            const filteredTotal = parsePaginatedTotal(filteredPayload);
-            const filteredItems = parsePaginatedItems<AssetItem>(filteredPayload);
-            expect(filteredTotal).toBe(0);
-            expect(filteredItems).toHaveLength(0);
-          }
-        }
+      const filteredResponse = await page.request.get(
+        `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(probePartyId)}`
+      );
+      expect([200, 403]).toContain(filteredResponse.status());
+      if (filteredResponse.status() === 200) {
+        const filteredPayload = (await filteredResponse.json()) as unknown;
+        const filteredTotal = parsePaginatedTotal(filteredPayload);
+        const filteredItems = parsePaginatedItems<AssetItem>(filteredPayload);
+        expect(filteredTotal).toBe(0);
+        expect(filteredItems).toHaveLength(0);
       }
     } finally {
       if (createdUserIds.length === 0) {
