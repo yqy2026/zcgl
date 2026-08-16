@@ -5,19 +5,33 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const DEFAULT_THRESHOLD_PERCENT = 10;
-const DEFAULT_REPORT_PATH = path.join(
-  process.cwd(),
-  '..',
-  'test-results',
-  'frontend',
-  'playwright',
-  'reports',
-  'test-results.json'
-);
+// json reporter 在配置路径（playwright.config reportRoot）与 CLI
+// --reporter=dot,json 的 cwd 输出之间都可能出现，按存在性取第一个。
+const DEFAULT_REPORT_CANDIDATES = [
+  path.join(
+    process.cwd(),
+    '..',
+    'test-results',
+    'frontend',
+    'playwright',
+    'reports',
+    'test-results.json'
+  ),
+  path.join(process.cwd(), 'test-results.json'),
+];
 
 const readReportPath = () => {
   const raw = process.env.E2E_RETRY_REPORT_PATH?.trim();
-  return raw && raw !== '' ? raw : DEFAULT_REPORT_PATH;
+  if (raw && raw !== '') {
+    return raw;
+  }
+  const found = DEFAULT_REPORT_CANDIDATES.find(candidate =>
+    fs.existsSync(candidate)
+  );
+  if (found != null) {
+    return found;
+  }
+  return DEFAULT_REPORT_CANDIDATES[0];
 };
 
 const readThresholdPercent = () => {
