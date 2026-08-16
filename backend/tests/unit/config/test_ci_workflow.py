@@ -185,6 +185,31 @@ def test_ci_job_dependencies_should_not_reference_retired_jobs() -> None:
     assert "import-e2e" not in workflow_text
 
 
+def test_backend_e2e_job_should_provision_real_redis() -> None:
+    """Backend E2E must run against real Redis (REDIS_ENABLED=false is not allowed).
+
+    tests/e2e/conftest.py require_redis 会拒绝降级运行，CI 必须提供 Redis
+    service 与 env；移除该要求会让本地 false 降级悄悄回到 CI。
+    """
+    workflow = _load_ci_workflow()
+    backend_e2e_job = workflow["jobs"]["backend-e2e"]
+    env = backend_e2e_job.get("env")
+    services = backend_e2e_job.get("services")
+
+    assert isinstance(env, dict)
+    assert env.get("REDIS_ENABLED") == "true"
+    assert env.get("REDIS_HOST") == "localhost"
+    assert env.get("REDIS_PORT") == "6379"
+    # e2e conftest 默认使用专用 DB 15（与开发共享 db0 隔离），CI 必须一致
+    assert env.get("REDIS_DB") == "15"
+
+    assert isinstance(services, dict)
+    redis_service = services.get("redis")
+    assert isinstance(redis_service, dict)
+    assert str(redis_service.get("image", "")).startswith("redis:8")
+    assert "redis-cli ping" in str(redis_service.get("options", ""))
+
+
 def test_frontend_e2e_job_should_install_full_browser_matrix() -> None:
     workflow = _load_ci_workflow()
     frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
@@ -239,6 +264,32 @@ def test_frontend_e2e_party_seed_should_only_use_party_model_fields() -> None:
 
     assert "created_by=" not in party_fields
     assert "updated_by=" not in party_fields
+
+
+def test_frontend_e2e_seed_should_provision_extraction_project() -> None:
+    """contract-session.spec.ts 引用的项目必须由种子显式创建（issue #92/Q14）。"""
+    workflow = _load_ci_workflow()
+    frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
+    seed_step = _step_by_name(frontend_e2e_job, "Seed admin user for E2E")
+    seed_script = str(seed_step.get("run", ""))
+    env = frontend_e2e_job.get("env")
+
+    assert "ensure_extraction_project" in seed_script
+    assert "E2E_EXTRACTION_PROJECT_NAME" in seed_script
+    assert "from src.models.project import Project" in seed_script
+    # job env 与种子默认值必须一致，spec 读同名变量精确引用。
+    assert isinstance(env, dict)
+    assert env.get("E2E_EXTRACTION_PROJECT_NAME") == "E2E抽取项目"
+
+
+def test_frontend_e2e_should_not_carry_dangling_auth_state_env() -> None:
+    """E2E_REQUIRE_AUTH_STATE 无任何消费方，不得回流（issue #92/Q12）。"""
+    workflow = _load_ci_workflow()
+    frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
+    env = frontend_e2e_job.get("env")
+
+    assert isinstance(env, dict)
+    assert "E2E_REQUIRE_AUTH_STATE" not in env
 
 
 def test_workflows_should_not_pin_deprecated_node20_action_majors() -> None:

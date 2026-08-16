@@ -236,6 +236,11 @@ jobs:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
       E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
+      # E2E 强制真实 Redis（tests/e2e/conftest.py require_redis 校验）；不允许 REDIS_ENABLED=false
+      REDIS_ENABLED: "true"
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      REDIS_DB: "15"
     services:
       postgres:
         image: postgres:16
@@ -247,6 +252,15 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d zcgl_e2e_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -509,7 +523,7 @@ jobs:
       E2E_LOGOUT_USERNAME: e2e_logout_admin
       E2E_LOGOUT_PASSWORD: Logout123!@#
       E2E_ORG_CODE: E2E-ORG-ROOT
-      E2E_REQUIRE_AUTH_STATE: "true"
+      E2E_EXTRACTION_PROJECT_NAME: E2E抽取项目
       E2E_FULL_MATRIX: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.e2e_full_matrix) }}
       BASE_URL: http://127.0.0.1:5173
       VITE_API_BASE_URL: http://127.0.0.1:8002/api/v1
@@ -612,6 +626,7 @@ jobs:
         from src.models.auth import User
         from src.models.organization import Organization
         from src.models.party import Party, PartyType
+        from src.models.project import Project
         from src.models.rbac import Permission, Role, UserRoleAssignment, role_permissions
         from src.models.user_party_binding import RelationType, UserPartyBinding
         from src.services.core.password_service import PasswordService
@@ -621,6 +636,9 @@ jobs:
         LOGOUT_USERNAME = os.getenv("E2E_LOGOUT_USERNAME", "e2e_logout_admin")
         LOGOUT_PASSWORD = os.getenv("E2E_LOGOUT_PASSWORD", "Logout123!@#")
         ORG_CODE = os.getenv("E2E_ORG_CODE", "E2E-ORG-ROOT")
+        EXTRACTION_PROJECT_NAME = os.getenv(
+            "E2E_EXTRACTION_PROJECT_NAME", "E2E抽取项目"
+        )
         PARTY_CODE = "LE-000001"  # 满足 ck_parties_code_format：legal_entity 需匹配 ^LE-[0-9]{6}$
 
         async def ensure_organization(db):
@@ -809,6 +827,26 @@ jobs:
                 await db.commit()
             return party
 
+        async def ensure_extraction_project(db, manager_party_id):
+            # contract-session.spec.ts 依赖该显式种子项目做实体选择（issue #92 / Q14），
+            # 不再依赖「e2e-project」关键字模糊命中的巧合。
+            result = await db.execute(
+                select(Project).where(
+                    Project.project_name == EXTRACTION_PROJECT_NAME
+                )
+            )
+            project = result.scalars().first()
+            if project is None:
+                project = Project(
+                    project_name=EXTRACTION_PROJECT_NAME,
+                    project_code="PRJ-E2E-000001",
+                    status="planning",
+                    manager_party_id=manager_party_id,
+                    data_status="正常",
+                )
+                db.add(project)
+                await db.commit()
+
         async def ensure_owner_binding(db, user_id, party_id):
             binding_result = await db.execute(
                 select(UserPartyBinding).where(
@@ -929,6 +967,7 @@ jobs:
                 await ensure_user_role_assignment(db, logout_user.id, admin_role.id)
                 await ensure_owner_binding(db, admin_user.id, e2e_party.id)
                 await ensure_owner_binding(db, logout_user.id, e2e_party.id)
+                await ensure_extraction_project(db, e2e_party.id)
 
         asyncio.run(main())
         PY

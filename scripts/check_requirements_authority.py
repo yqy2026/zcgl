@@ -445,6 +445,77 @@ def check_document_filenames(docs_dir: Path = DOCS) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Check 11: critical-domain REQ rows must carry backend e2e evidence
+# ---------------------------------------------------------------------------
+
+# REQs whose behavior is money-flow, state-machine, or data-scope critical:
+# their traceability rows must reference at least one backend/tests/e2e path
+# (docs/guides/testing-standards.md admission rule).
+#
+# 维护责任：这是准入规则的**强制最小清单**（规则文本更宽——「凡涉及资金流/
+# 状态机/数据范围的需求」）。新增此类 REQ 时必须同步把编号加进本清单；
+# 列序依赖 trace 表格的第 2/5 列（产品状态/测试证据），列结构变更时需同步。
+_CRITICAL_E2E_REQS: frozenset[str] = frozenset(
+    {
+        "REQ-RNT-001",
+        "REQ-RNT-005",
+        "REQ-RNT-006",
+        "REQ-AST-003",
+        "REQ-AST-005",
+        "REQ-PTY-001",
+        "REQ-PTY-002",
+        "REQ-AUTH-001",
+        "REQ-AUTH-002",
+        "REQ-AUTH-003",
+        "REQ-SYS-001",
+        "REQ-PRJ-001",
+        "REQ-PRJ-002",
+        "REQ-PRJ-003",
+        "REQ-DOC-001",
+        "REQ-ANA-001",
+    }
+)
+
+
+def check_critical_reqs_have_e2e_evidence() -> list[str]:
+    if not TRACEABILITY.exists():
+        return [f"{to_rel(TRACEABILITY)}: required document missing"]
+
+    issues: list[str] = []
+    seen: set[str] = set()
+    for line in TRACEABILITY.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if not cells or not cells[0].startswith("REQ-"):
+            continue
+        req_id = cells[0]
+        if req_id not in _CRITICAL_E2E_REQS:
+            continue
+        seen.add(req_id)
+        # Removed REQs (产品状态 col shows 已移除) are out of scope.
+        product_status = cells[1] if len(cells) > 1 else ""
+        if product_status == "已移除":
+            continue
+        evidence = cells[4] if len(cells) > 4 else ""
+        if "backend/tests/e2e/" not in evidence:
+            issues.append(
+                f"{to_rel(TRACEABILITY)}: {req_id} is a critical-domain REQ "
+                f"(money flow / state machine / data scope) but its test "
+                f"evidence cites no backend/tests/e2e path"
+            )
+
+    missing_rows = sorted(_CRITICAL_E2E_REQS - seen)
+    for req_id in missing_rows:
+        issues.append(
+            f"{to_rel(TRACEABILITY)}: {req_id} is listed as a critical-domain "
+            f"REQ but has no traceability row at all"
+        )
+    return issues
+
+
 def main() -> int:
     all_issues: list[str] = []
 
@@ -531,6 +602,15 @@ def main() -> int:
 
     print("=== Check 10: documentation filename convention ===")
     issues = check_document_filenames()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 11: critical-domain REQ e2e evidence ===")
+    issues = check_critical_reqs_have_e2e_evidence()
     if issues:
         all_issues.extend(issues)
         for i in issues:

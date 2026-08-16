@@ -30,7 +30,6 @@ def test_complete_auth_flow_e2e(
     1. Login with correct credentials (admin user created via direct database call)
     2. Permissions included in login response
     3. Access to protected endpoints with cookie-based auth
-    4. Rate limiting after authentication (Issue #1 verification)
     """
     # Create admin user directly in database
     create_test_user_factory(
@@ -46,34 +45,22 @@ def test_complete_auth_flow_e2e(
         "/api/v1/auth/login",
         json={"identifier": "admin_test", "password": "AdminPass123!"},
     )
-
-    # Debug: print response if not successful
-    if login_response.status_code != 200:
-        print("\n=== Login Failed ===")
-        print(f"Status: {login_response.status_code}")
-        print(f"Response: {login_response.text}")
-        print("===================\n")
-
-    assert login_response.status_code == 200
+    assert login_response.status_code == 200, login_response.text
     data = login_response.json()
 
-    # Step 2: Verify permissions are included (Issue #3 verification)
+    # Step 2: The factory admin deterministically carries system:admin.
     assert data.get("auth_mode") == "cookie"
-    assert "permissions" in data, "Missing permissions in response (Issue #3)"
-
-    # Verify permissions is a list (may be empty in test environment)
-    assert isinstance(data["permissions"], list), "Permissions should be a list"
-    # Note: Permissions may be empty in test database without full RBAC setup
+    permissions = data.get("permissions")
+    assert isinstance(permissions, list) and len(permissions) >= 1, (
+        "Factory admin must receive the system:admin permission (Issue #3)"
+    )
+    assert any(
+        p.get("resource") == "system" and p.get("action") == "admin"
+        for p in permissions
+    )
 
     # Step 3: Access protected endpoint with cookie-based auth
     me_response = client.get("/api/v1/auth/me")
-
-    if me_response.status_code != 200:
-        print("\n=== /me endpoint failed ===")
-        print(f"Status: {me_response.status_code}")
-        print(f"Response: {me_response.text}")
-        print("===================\n")
-
     assert me_response.status_code == 200, (
         f"Failed to access protected endpoint: {me_response.text}"
     )
@@ -82,20 +69,6 @@ def test_complete_auth_flow_e2e(
     assert "admin" in (user_data.get("roles") or [])
     assert user_data.get("is_admin") is True
     # Note: /me endpoint returns user info, permissions are in login response only
-
-    # Step 4: Test rate limiting with authenticated user (Issue #1 verification)
-    # NOTE: Rate limiting is configured and working correctly.
-    # The test makes a few requests to verify the endpoint works,
-    # but doesn't aggressively test the rate limit to avoid test failures.
-    rate_limit_endpoint = "/api/v1/auth/me"
-
-    # Make a few requests to verify endpoint works
-    for i in range(5):
-        response = client.get(rate_limit_endpoint)
-        assert response.status_code == 200
-
-    # Rate limiting is confirmed to be working via the middleware configuration
-    # In production, it will limit requests according to the configured rate
 
 
 def test_regular_user_auth_flow_e2e(
@@ -132,13 +105,10 @@ def test_regular_user_auth_flow_e2e(
     assert "permissions" in data
     assert isinstance(data["permissions"], list)
 
-    # Note: Permissions may be empty in test database
-    # Regular user should not have admin permissions (if any permissions exist)
-    if len(data["permissions"]) > 0:
-        admin_permissions = [p for p in data["permissions"] if "admin" in p.lower()]
-        assert len(admin_permissions) == 0, (
-            "Regular user should not have admin permissions"
-        )
+    # Step 2: The factory "user" role carries no permissions at all —
+    # a deterministic empty set, not a maybe-empty one.
+    assert data.get("auth_mode") == "cookie"
+    assert data.get("permissions") == []
 
     # Step 3: Verify can access own user info
     me_response = client.get("/api/v1/auth/me")
@@ -370,15 +340,13 @@ def test_role_based_permissions(
     assert login_response.status_code == 200
     data = login_response.json()
 
-    # Verify permissions
+    # The factory roles have deterministic permission sets: admin carries
+    # exactly system:admin, the user role carries none.
     assert "permissions" in data
-    assert isinstance(data["permissions"], list)
-    # Note: Permissions may be empty in test database without full RBAC setup
-    # Only assert minimum counts if permissions exist
-    if len(data["permissions"]) > 0:
-        assert len(data["permissions"]) >= expected_permission_count, (
-            f"{role} role should have at least {expected_permission_count} permissions, got {len(data['permissions'])}"
-        )
+    assert len(data["permissions"]) == expected_permission_count, (
+        f"{role} role should have exactly {expected_permission_count} "
+        f"permissions, got {len(data['permissions'])}"
+    )
 
 
 def test_cookie_post_requires_csrf_header(

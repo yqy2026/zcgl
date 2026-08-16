@@ -295,8 +295,9 @@ os.environ["DEBUG"] = "False"
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["PYDANTIC_SETTINGS_IGNORE_DOT_ENV"] = "1"
 # Unit tests must not depend on a developer's Redis process. Redis-specific
-# tests enable or mock it explicitly.
-os.environ["REDIS_ENABLED"] = "false"
+# tests enable or mock it explicitly. E2E runs pass REDIS_ENABLED=true from
+# the environment (see tests/e2e/conftest.py), which must not be clobbered.
+os.environ.setdefault("REDIS_ENABLED", "false")
 # Keep Phase 4 migration deterministic in tests unless explicitly overridden.
 os.environ.setdefault("PHASE4_TENANT_NOT_NULL_DECISION", "B")
 

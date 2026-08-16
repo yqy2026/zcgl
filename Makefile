@@ -115,7 +115,9 @@ test-frontend-ci:
 test-e2e: test-e2e-backend test-e2e-frontend
 
 test-e2e-backend:
-	cd backend && E2E_TEST_DATABASE_URL="$${E2E_TEST_DATABASE_URL:-$${TEST_DATABASE_URL:-}}" $(PYTHON) -m pytest tests/e2e -m e2e --no-cov
+	cd backend && E2E_TEST_DATABASE_URL="$${E2E_TEST_DATABASE_URL:-$${TEST_DATABASE_URL:-}}" \
+		REDIS_ENABLED="$${REDIS_ENABLED:-true}" REDIS_HOST="$${REDIS_HOST:-127.0.0.1}" REDIS_PORT="$${REDIS_PORT:-16379}" REDIS_DB="$${REDIS_DB:-15}" \
+		$(PYTHON) -m pytest tests/e2e -m e2e --no-cov
 
 test-e2e-frontend:
 	cd frontend && pnpm e2e

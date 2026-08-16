@@ -584,6 +584,16 @@ describe('assetService', () => {
 
 ## Coverage Targets
 
+### E2E Admission Standard（e2e 准入标准）
+
+后端 e2e（`backend/tests/e2e/`，真实 PostgreSQL + 真实 Redis）承载跨层完整工作流验证。自 2026-08-15 起执行以下准入规则：
+
+1. **关键域 REQ 必须有 e2e 证据**：凡行为属于资金流（台账/收付流水/凭证）、状态机流转（审核/纠错/终止/作废/锁定/停用）或数据范围（主体绑定/数据策略/视角）的需求，其 `docs/traceability/requirements-trace.md` 行的测试证据必须引用至少一个 `backend/tests/e2e/` 路径。该规则由 `make docs-lint` 的 Check 11（`scripts/check_requirements_authority.py`）强制执行——Check 11 落地的是**强制最小清单**（新增关键域 REQ 时须同步维护该清单），规则文本按上述语义从宽解释。
+2. **错误分支必须覆盖**：每个 e2e 工作流至少包含一个业务异常分支（4xx + `error.code` 断言）与一个权限/CSRF 负向分支（403），不允许只测正向链路。
+3. **断言强度**：金额类断言用 `Decimal` 比较（如 `Decimal(str(paid_amount)) == Decimal("5000")`），状态机断言到转移链（`from_status`/`to_status`），禁止「条件跳过式」断言（如 `if len(x) > 0:` 才断言）。
+4. **会话切换**：同一测试需要多用户身份时，使用 cookie 属性快照（name/value/domain/path）保存与恢复会话；登录前必须 `client.cookies.clear()`；不要在共享 app 上创建第二个 `TestClient`（Windows event-loop 拆卸会死锁）。
+5. **文件类用例**：上传校验走真实文件头/解析（`fitz` 生成最小 PDF；文字层 ≥20 字符可绕过 OCR，`DOCUMENT_LLM_ENABLED` 默认关闭不发起外部调用）。
+
 ### Current CI Gates (Baseline)
 
 #### Backend (pytest)

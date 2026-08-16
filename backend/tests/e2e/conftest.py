@@ -22,6 +22,10 @@ from tests.shared.conftest_utils import (
 # E2E tests use file database (not memory)
 TEST_DATABASE_URL = os.getenv("E2E_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
 
+# E2E 使用专用 Redis DB（默认 15），与开发共享 db0 隔离，避免缓存键互相污染；
+# 显式设置 REDIS_DB 时尊重外部值（例如连已有数据、或 CI 独立 Redis）。
+os.environ.setdefault("REDIS_DB", "15")
+
 # 组织 code 与 CI seed / 前端 E2E spec 共用 E2E_ORG_CODE 环境变量（默认值保持一致，避免字面量漂移）
 E2E_ORG_CODE = os.getenv("E2E_ORG_CODE", "E2E-ORG-ROOT")
 
@@ -130,12 +134,78 @@ def test_database_url():
 
 
 @pytest.fixture(scope="session")
-def engine(test_database_url):
+def require_redis(test_database_url):
+    """E2E must run against a real Redis; REDIS_ENABLED=false is not allowed.
+
+    与根 conftest 的 unit 默认（setdefault false）不同，E2E 是分布式行为验证：
+    - REDIS_ENABLED 未显式开启 → 直接失败（fail loud），而不是静默降级内存缓存；
+    - Redis 客户端创建后必须真实 ping 通，防止配置指向不可达实例。
+    """
+    if not test_database_url:
+        pytest.skip(
+            "E2E_TEST_DATABASE_URL or TEST_DATABASE_URL is required",
+        )
+
+    from src.core.config import settings
+
+    if not settings.REDIS_ENABLED or not settings.REDIS_HOST:
+        pytest.fail(
+            "E2E 测试要求真实 Redis（REDIS_ENABLED=true 且 REDIS_HOST 已配置）；"
+            "不允许以 REDIS_ENABLED=false 降级运行"
+        )
+
+    import redis as redis_sync
+
+    client = redis_sync.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        password=settings.REDIS_PASSWORD,
+        socket_connect_timeout=3,
+        socket_timeout=3,
+    )
+    try:
+        pong = client.ping()
+    except Exception as exc:  # noqa: BLE001 - 探测连接失败统一失败
+        pytest.fail(
+            f"E2E Redis 连接失败 {settings.REDIS_HOST}:{settings.REDIS_PORT}: {exc}"
+        )
+    if pong is not True:
+        pytest.fail("E2E Redis ping 未返回 PONG")
+
+    # 会话开始前清空专用 DB，保证可重复运行且不残留上一轮键；
+    # db0 可能是开发共享库，禁止 flush，仅提示。
+    if settings.REDIS_DB != 0:
+        try:
+            client.flushdb()
+        except Exception as exc:  # noqa: BLE001 - 清理失败统一失败
+            pytest.fail(f"E2E Redis flushdb 失败 (db={settings.REDIS_DB}): {exc}")
+    else:
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "E2E Redis 使用 db0（开发共享库）：跳过 flushdb，测试可能残留键；"
+            "建议设置 REDIS_DB=15 使用专用库"
+        )
+    client.close()
+
+    # cache_manager 模块级单例在 import 时即创建后端（Redis 不可达会抛
+    # ConfigurationError），因此必须放在 ping 成功之后导入。
+    from src.core.cache_manager import cache_manager
+
+    if type(cache_manager.backend).__name__ != "RedisCache":
+        pytest.fail(
+            f"E2E 缓存后端未使用 Redis（backend={type(cache_manager.backend).__name__}），拒绝运行"
+        )
+    yield
+
+
+@pytest.fixture(scope="session")
+def engine(test_database_url, require_redis):
     """Create database engine for tests."""
     if not test_database_url:
         pytest.skip(
             "E2E_TEST_DATABASE_URL or TEST_DATABASE_URL is required",
-            allow_module_level=True,
         )
 
     if not test_database_url.startswith("postgresql"):
@@ -151,6 +221,26 @@ def db_tables(engine):
     """Reuse the root test DB bootstrap to avoid duplicate Alembic/setup work."""
     _ = engine
     yield
+
+
+@pytest.fixture(autouse=True)
+def reset_global_redis_clients_for_test():
+    """每个测试重建全局 async Redis 客户端与权限缓存服务。
+
+    TestClient 每个测试持有独立 event loop；全局单例 Redis 客户端绑定首个
+    loop，后续测试复用会抛 "Event loop is closed" 并使权限缓存静默降级回 DB
+    （REDIS_ENABLED=false 时无此问题，因为 get_redis() 直接返回 None）。
+    每测试重置两个模块级单例，让客户端在测试自己的 loop 内创建，权限缓存
+    在真实 Redis 上真正生效。
+    """
+    import src.database as database_module
+    from src.services.permission import permission_cache_service as pcs_module
+
+    database_module._redis_client = None
+    pcs_module._permission_cache_service = None
+    yield
+    database_module._redis_client = None
+    pcs_module._permission_cache_service = None
 
 
 @pytest.fixture(scope="function")
@@ -249,9 +339,7 @@ def ensure_test_organization(db_session):
     from src.models.organization import Organization
 
     organization = (
-        db_session.query(Organization)
-        .filter(Organization.code == E2E_ORG_CODE)
-        .first()
+        db_session.query(Organization).filter(Organization.code == E2E_ORG_CODE).first()
     )
     if organization is None:
         organization = Organization(

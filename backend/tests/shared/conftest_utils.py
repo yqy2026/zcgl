@@ -77,13 +77,23 @@ def create_transactional_session(
     """
     Create a transactional sync SQLAlchemy session for tests.
 
+    The session joins the external transaction in savepoint mode so that
+    application-level ``commit()``/``rollback()`` calls (e.g. error paths in
+    services) only release/roll back a savepoint instead of tearing down the
+    outer test transaction — otherwise one business exception wipes every
+    row the test seeded (including the logged-in user) and all subsequent
+    requests fail with 401.
+
     Returns:
         (session, connection, transaction)
     """
     connection = engine.connect()
     transaction = connection.begin()
     test_session_local = sessionmaker(
-        autocommit=False, autoflush=False, bind=connection
+        autocommit=False,
+        autoflush=False,
+        bind=connection,
+        join_transaction_mode="create_savepoint",
     )
     session = test_session_local()
     return session, connection, transaction
