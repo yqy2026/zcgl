@@ -146,7 +146,11 @@ class User(Base):
         return f"<User(id={self.id}, username={self.username})>"
 
     def is_locked_now(self) -> bool:
-        """检查当前是否被锁定"""
+        """检查当前是否被锁定（纯判定，不回写状态）。
+
+        - ``is_locked=True`` 且 ``locked_until`` 为空：管理端永久锁定；
+        - ``locked_until`` 已过期：视为自动解锁（重置由成功登录路径显式完成）。
+        """
         if TYPE_CHECKING:
             # 在类型检查时，返回明确的bool值
             return False
@@ -164,29 +168,18 @@ class User(Base):
                     bool(is_locked) if is_locked is not None else False
                 )  # pragma: no cover
 
-            if not is_locked:  # pragma: no cover
-                return False  # pragma: no cover
+            if not is_locked:
+                return False
 
-            # 检查锁定时间
-            locked_until_value = cast("datetime", self.locked_until)  # pragma: no cover
-            if locked_until_value is not None:
-                if locked_until_value.tzinfo is None:
-                    locked_until_value = locked_until_value.replace(tzinfo=UTC)
-                else:
-                    locked_until_value = locked_until_value.astimezone(UTC)
-                if locked_until_value > datetime.now(UTC):
-                    return True
-
-            # 如果锁定时间已过，自动解锁（安全地设置字段）
-            try:  # pragma: no cover
-                self.is_locked = False  # pragma: no cover
-                self.locked_until = None  # pragma: no cover
-                self.failed_login_attempts = 0  # pragma: no cover
-            except Exception:  # pragma: no cover  # nosec - B110: Intentional graceful degradation for optional field updates
-                # 如果无法设置字段，忽略错误，只返回结果
-                pass  # pragma: no cover
-
-            return False  # pragma: no cover
+            # 检查锁定时间（以下判定矩阵由 tests/unit/models/test_auth.py 覆盖）
+            locked_until_value = cast("datetime", self.locked_until)
+            if locked_until_value is None:
+                return True
+            if locked_until_value.tzinfo is None:
+                locked_until_value = locked_until_value.replace(tzinfo=UTC)
+            else:
+                locked_until_value = locked_until_value.astimezone(UTC)
+            return locked_until_value > datetime.now(UTC)
 
 
 class UserSession(Base):

@@ -5,11 +5,59 @@ Tests for User model - authentication and authorization core.
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from src.models.auth import AccountType, User
+
+
+class TestUserLockSemantics:
+    """is_locked_now 是纯判定（2026-08-15 修复：读路径不再回写自动解锁）。
+
+    语义：管理端锁定（无 locked_until）= 永久锁定；限时锁定过期视为已解锁。
+    这些分支由 backend e2e 的 lock/unlock 流程整体覆盖，这里钉住判定矩阵。
+    """
+
+    @pytest.fixture
+    def user(self):
+        return User(
+            id=str(uuid.uuid4()),
+            username="lockuser",
+            email="lock@example.com",
+            full_name="Lock User",
+            password_hash="hashed_password_123",
+            is_active=True,
+            is_locked=False,
+        )
+
+    def test_unlocked_user_is_not_locked(self, user):
+        assert user.is_locked_now() is False
+
+    def test_admin_lock_without_expiry_is_permanent(self, user):
+        user.is_locked = True
+        user.locked_until = None
+        assert user.is_locked_now() is True
+
+    def test_timed_lock_in_window_is_locked(self, user):
+        user.is_locked = True
+        user.locked_until = datetime.now(UTC) + timedelta(minutes=5)
+        assert user.is_locked_now() is True
+
+    def test_expired_timed_lock_is_unlocked(self, user):
+        user.is_locked = True
+        user.locked_until = datetime.now(UTC) - timedelta(minutes=5)
+        assert user.is_locked_now() is False
+
+    def test_predicate_does_not_mutate_state(self, user):
+        user.is_locked = True
+        user.locked_until = None
+        user.failed_login_attempts = 3
+        user.is_locked_now()
+        # 读路径不得回写（否则管理端锁定会被用户下一次请求静默解除）。
+        assert user.is_locked is True
+        assert user.locked_until is None
+        assert user.failed_login_attempts == 3
 
 
 class TestUserCreation:

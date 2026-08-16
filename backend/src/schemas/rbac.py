@@ -8,6 +8,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.schemas.auth import UserResponse
+
 
 # Permission相关模式
 class PermissionBase(BaseModel):
@@ -119,7 +121,7 @@ class UserRoleAssignmentResponse(BaseModel):
     reason: str | None
     notes: str | None
     context: dict[str, Any] | None
-    user: dict[str, Any] | None
+    user: UserResponse | None
     role: RoleResponse | None
 
     model_config = ConfigDict(from_attributes=True)

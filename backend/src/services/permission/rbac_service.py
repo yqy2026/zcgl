@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from inspect import isawaitable
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
@@ -223,6 +223,13 @@ class RBACService:
             )
 
         try:
+            # Historical (revoked) assignment rows still reference the role
+            # through a NOT NULL FK; drop them or the delete violates it.
+            await self.db.execute(
+                delete(UserRoleAssignment).where(
+                    UserRoleAssignment.role_id == role_id
+                )
+            )
             await role_crud.remove(self.db, id=role_id)
         except Exception as exc:  # pragma: no cover - defensive for DB layer errors
             raise InternalServerError("删除角色失败", original_error=exc) from exc
