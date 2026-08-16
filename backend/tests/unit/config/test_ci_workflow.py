@@ -248,6 +248,13 @@ def test_frontend_e2e_seed_should_provision_non_admin_role() -> None:
 
     assert "ensure_regular_role" in seed_script
     assert 'Role.name == "user"' in seed_script
+    # org-scope-isolation 角色候选前置（issue #92/Q10）：user 角色必须带 asset read，
+    # 否则 fail-loud 会在 CI 上显式失败。
+    assert "asset_read_permission" in seed_script
+    assert (
+        "ensure_role_permission(db, regular_role.id, asset_read_permission.id)"
+        in seed_script
+    )
 
 
 def test_frontend_e2e_party_seed_should_only_use_party_model_fields() -> None:

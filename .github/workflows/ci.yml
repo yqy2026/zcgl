@@ -869,7 +869,7 @@ jobs:
             async with async_session_scope() as db:
                 organization = await ensure_organization(db)
                 admin_role = await ensure_admin_role(db)
-                await ensure_regular_role(db)
+                regular_role = await ensure_regular_role(db)
                 required_permissions = [
                     await ensure_permission(
                         db,
@@ -937,6 +937,15 @@ jobs:
                 ]
                 for permission in required_permissions:
                     await ensure_role_permission(db, admin_role.id, permission.id)
+                # org-scope-isolation 前置（issue #92 / Q10）：角色候选要求「非 admin
+                # 且带 asset read」——user 角色挂上 asset read，否则 fail-loud 会在 CI
+                # 上显式失败（此前静默 skip 掩盖了这个缺口）。
+                asset_read_permission = next(
+                    p
+                    for p in required_permissions
+                    if p.resource == "asset" and p.action == "read"
+                )
+                await ensure_role_permission(db, regular_role.id, asset_read_permission.id)
                 e2e_party = await ensure_e2e_party(db)
                 # 组织需代表一个 Party 才能解析出有效 Party scope（user organization transfer 前提）
                 if organization.represented_party_id is None:
