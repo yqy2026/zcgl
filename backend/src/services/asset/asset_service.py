@@ -722,7 +722,7 @@ class AssetService:
                     operator=operator,
                 )
                 await self.db.flush()
-                return asset
+                return await self._with_projection(asset)
         except StaleDataError as exc:
             raise conflict(
                 "资产已被其他人更新，请刷新后重试",
@@ -754,7 +754,7 @@ class AssetService:
                     operator=reviewer,
                 )
                 await self.db.flush()
-                return asset
+                return await self._with_projection(asset)
         except StaleDataError as exc:
             raise conflict(
                 "资产已被其他人更新，请刷新后重试",
@@ -922,7 +922,7 @@ class AssetService:
                     reason=normalized_reason,
                 )
                 await self.db.flush()
-                return asset
+                return await self._with_projection(asset)
         except StaleDataError as exc:
             raise conflict(
                 "资产已被其他人更新，请刷新后重试",
@@ -965,7 +965,7 @@ class AssetService:
                     context={"active_contract_count": active_contract_count},
                 )
                 await self.db.flush()
-                return asset
+                return await self._with_projection(asset)
         except StaleDataError as exc:
             raise conflict(
                 "资产已被其他人更新，请刷新后重试",
@@ -997,7 +997,7 @@ class AssetService:
                     operator=operator,
                 )
                 await self.db.flush()
-                return asset
+                return await self._with_projection(asset)
         except StaleDataError as exc:
             raise conflict(
                 "资产已被其他人更新，请刷新后重试",
@@ -1036,7 +1036,7 @@ class AssetService:
                     reason=normalized_reason,
                 )
                 await self.db.flush()
-                return asset
+                return await self._with_projection(asset)
         except StaleDataError as exc:
             raise conflict(
                 "资产已被其他人更新，请刷新后重试",
@@ -1102,6 +1102,17 @@ class AssetService:
             ownership_name=ownership_name,
         )
         return _normalize_optional_str(resolved_party_id)
+
+    async def _with_projection(self, asset: Asset) -> Asset:
+        """响应序列化需要投影关系（AssetResponse.project 等）；
+        create/review 返回的裸对象未加载这些关系，直接 model_validate 会
+        触发 MissingGreenlet（真实 uvicorn 下暴露，见前端 e2e）。
+        用 refresh(attribute_names) 原地加载，返回同一对象。"""
+        await self.db.refresh(
+            asset,
+            attribute_names=["project", "owner_party", "manager_party"],
+        )
+        return asset
 
     async def create_asset(
         self,
@@ -1194,7 +1205,7 @@ class AssetService:
                     session_id=session_id,
                 ),
             )
-            return asset
+            return await self._with_projection(asset)
 
     async def update_asset(
         self,
