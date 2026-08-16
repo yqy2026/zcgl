@@ -54,6 +54,9 @@ const baseProjects: Project[] = [
   },
 ];
 
+// 只有 admin 角色目录有真实用例（issue #92 / Q13：原 asset-manager /
+// asset-viewer projects 指向不存在的目录与空 storageState，已删除；
+// 需要角色矩阵时按此结构补充目录与登录态）。
 const roleProjects: Project[] = [
   {
     name: 'admin-user',
@@ -62,22 +65,6 @@ const roleProjects: Project[] = [
       storageState: './tests/e2e/storage/admin-state.json',
     },
     testMatch: '**/admin/**/*.spec.ts',
-  },
-  {
-    name: 'asset-manager',
-    use: {
-      ...devices['Desktop Chrome'],
-      storageState: './tests/e2e/storage/asset-manager-state.json',
-    },
-    testMatch: '**/asset-manager/**/*.spec.ts',
-  },
-  {
-    name: 'asset-viewer',
-    use: {
-      ...devices['Desktop Chrome'],
-      storageState: './tests/e2e/storage/asset-viewer-state.json',
-    },
-    testMatch: '**/asset-viewer/**/*.spec.ts',
   },
 ];
 

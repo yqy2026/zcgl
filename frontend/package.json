@@ -100,7 +100,7 @@
     "test:related": "vitest related",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
-    "e2e:ci": "playwright test --reporter=dot",
+    "e2e:ci": "playwright test --reporter=dot && node scripts/check-e2e-retry-rate.mjs",
     "e2e:report": "playwright show-report ../test-results/frontend/playwright/reports/html",
     "lint": "oxlint --config .oxlintrc.json --deny-warnings --max-warnings=0 --disable-unicorn-plugin --react-plugin --import-plugin --jsx-a11y-plugin src",
     "lint:fix": "oxlint --config .oxlintrc.json --fix --deny-warnings --max-warnings=0 --disable-unicorn-plugin --react-plugin --import-plugin --jsx-a11y-plugin src",

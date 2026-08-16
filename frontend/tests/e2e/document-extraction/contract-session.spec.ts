@@ -29,9 +29,14 @@ const ensureAuthenticatedStable = async (page: Page): Promise<void> => {
   throw new Error('failed to authenticate in contract-session spec');
 };
 
+// CI 种子显式创建该项目（E2E_EXTRACTION_PROJECT_NAME，见 ci.yml frontend-e2e seed），
+// 不再依赖「e2e-project」关键字模糊命中的巧合（issue #92 / Q14）。
+const EXTRACTION_PROJECT_NAME =
+  process.env.E2E_EXTRACTION_PROJECT_NAME?.trim() || 'E2E抽取项目';
+
 const completeContractContext = async (page: Page): Promise<void> => {
-  // 所属项目为 ProjectSelect 选择器：输入关键字后回车选中第一个匹配项目
-  await page.getByLabel('所属项目').fill('e2e-project');
+  // 所属项目为 ProjectSelect 选择器：输入种子项目名后回车精确选中
+  await page.getByLabel('所属项目').fill(EXTRACTION_PROJECT_NAME);
   await page.keyboard.press('Enter');
   await page.getByLabel('合同方向').press('ArrowDown');
   await page.getByLabel('合同方向').press('Enter');

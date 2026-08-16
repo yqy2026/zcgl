@@ -18,11 +18,9 @@ const globalTeardown = async (_config: FullConfig): Promise<void> => {
     return;
   }
 
-  const filesToDelete = [
-    'admin-state.json',
-    'asset-manager-state.json',
-    'asset-viewer-state.json',
-  ].map(fileName => path.join(STORAGE_DIR, fileName));
+  const filesToDelete = ['admin-state.json'].map(fileName =>
+    path.join(STORAGE_DIR, fileName)
+  );
 
   await Promise.all(
     filesToDelete.map(async filePath => {

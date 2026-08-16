@@ -270,3 +270,30 @@ export const clearAuthState = async (page: Page): Promise<void> => {
     }
   }
 };
+
+interface PartyListItem {
+  id: string;
+  code?: string;
+  name?: string;
+}
+
+/**
+ * 定位 CI 种子的代表主体（LE-000001 / E2E Legal Entity）。
+ * 页面业务流 spec（产权证列表、经营台账）用它做 API 造数锚点；
+ * 种子缺失时显式报错而不是静默降级（与 org-scope 的 fail-loud 原则一致）。
+ */
+export const resolveSeedPartyId = async (page: Page): Promise<string> => {
+  // GET /parties 返回裸数组（list[PartyResponse]），分页参数为 skip/limit。
+  const response = await page.request.get('/api/v1/parties?limit=20');
+  expect(response.status()).toBe(200);
+  const items = (await response.json()) as PartyListItem[];
+  const party = items.find(
+    item => item.code === 'LE-000001' || item.name === 'E2E Legal Entity'
+  );
+  if (party == null) {
+    throw new Error(
+      '[e2e helpers] seed party (LE-000001 / E2E Legal Entity) missing; run the E2E seed first.'
+    );
+  }
+  return party.id;
+};

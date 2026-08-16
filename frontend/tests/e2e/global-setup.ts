@@ -56,14 +56,8 @@ const globalSetup = async (_config: FullConfig): Promise<void> => {
   await fs.mkdir(STORAGE_DIR, { recursive: true });
 
   const adminStatePath = path.join(STORAGE_DIR, 'admin-state.json');
-  const assetManagerStatePath = path.join(STORAGE_DIR, 'asset-manager-state.json');
-  const assetViewerStatePath = path.join(STORAGE_DIR, 'asset-viewer-state.json');
 
-  await Promise.all([
-    writeEmptyState(adminStatePath),
-    writeEmptyState(assetManagerStatePath),
-    writeEmptyState(assetViewerStatePath),
-  ]);
+  await writeEmptyState(adminStatePath);
 
   if (!shouldSkipBrowserPreflight()) {
     await validateBrowserDependencies();

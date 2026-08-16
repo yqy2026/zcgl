@@ -7,6 +7,25 @@ import {
   resolveCsrfHeaders,
 } from '../helpers/auth';
 
+// 前置条件缺失必须显式失败（issue #92 / Q10）：静默 skip 会让核心隔离用例
+// 在种子环境退化时空转而不被察觉。CI 种子保证这些前置成立；本地未起种子
+// 环境时跑到本文件应当报错，而不是悄悄跳过。
+const rejectPreconditionFailure = (failed: boolean, message: string): void => {
+  if (failed) {
+    throw new Error(`[org-scope-isolation] Precondition failure: ${message}`);
+  }
+};
+
+const requirePrecondition = <T>(
+  value: T | null | undefined,
+  message: string
+): T => {
+  if (value == null) {
+    throw new Error(`[org-scope-isolation] Precondition failure: ${message}`);
+  }
+  return value;
+};
+
 interface PermissionItem {
   id: string;
   resource: string;
@@ -457,44 +476,33 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       normalizeNonEmpty(readNodeEnv('E2E_SCOPE_PARTY_A_ID')) != null &&
       normalizeNonEmpty(readNodeEnv('E2E_SCOPE_PARTY_B_ID')) != null;
 
-    test.skip(
+    rejectPreconditionFailure(
       Object.keys(mutationHeaders).length === 0,
       'Authenticated session has no csrf_token cookie; cannot run mutation setup.'
     );
-    if (Object.keys(mutationHeaders).length === 0) {
-      return;
-    }
 
     const roleCandidateIds = await resolveRoleCandidateIds(page);
-    test.skip(
+    rejectPreconditionFailure(
       roleCandidateIds.length === 0,
       'No available role candidates. Set E2E_SCOPE_ROLE_ID for deterministic run.'
     );
-    if (roleCandidateIds.length === 0) {
-      return;
-    }
 
-    const partyPair = await resolvePartyPair(page, suffix, mutationHeaders);
-    test.skip(
-      partyPair == null,
+    const partyPair = requirePrecondition(
+      await resolvePartyPair(page, suffix, mutationHeaders),
       'No available party pair. Set E2E_SCOPE_PARTY_A_ID and E2E_SCOPE_PARTY_B_ID.'
     );
-    if (partyPair == null) {
-      return;
-    }
 
     let scopedPartyAId = partyPair.partyAId;
     let scopedPartyBId = partyPair.partyBId;
 
-    let adminAssetsForPartyA = await fetchAssetsByOwnership(page, scopedPartyAId);
-    let adminAssetsForPartyB = await fetchAssetsByOwnership(page, scopedPartyBId);
-    test.skip(
-      adminAssetsForPartyA == null || adminAssetsForPartyB == null,
-      'Current session cannot read assets list for configured parties.'
+    let adminAssetsForPartyA = requirePrecondition(
+      await fetchAssetsByOwnership(page, scopedPartyAId),
+      'Current session cannot read assets list for configured parties (A).'
     );
-    if (adminAssetsForPartyA == null || adminAssetsForPartyB == null) {
-      return;
-    }
+    let adminAssetsForPartyB = requirePrecondition(
+      await fetchAssetsByOwnership(page, scopedPartyBId),
+      'Current session cannot read assets list for configured parties (B).'
+    );
 
     if (adminAssetsForPartyA.total === 0) {
       await tryCreateAssetForParty(page, scopedPartyAId, suffix, 'A', mutationHeaders);
@@ -503,15 +511,14 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       await tryCreateAssetForParty(page, scopedPartyBId, suffix, 'B', mutationHeaders);
     }
 
-    let refreshedAdminAssetsForPartyA = await fetchAssetsByOwnership(page, scopedPartyAId);
-    let refreshedAdminAssetsForPartyB = await fetchAssetsByOwnership(page, scopedPartyBId);
-    test.skip(
-      refreshedAdminAssetsForPartyA == null || refreshedAdminAssetsForPartyB == null,
-      'Cannot confirm post-setup asset totals for configured parties.'
+    let refreshedAdminAssetsForPartyA = requirePrecondition(
+      await fetchAssetsByOwnership(page, scopedPartyAId),
+      'Cannot confirm post-setup asset totals for configured parties (A).'
     );
-    if (refreshedAdminAssetsForPartyA == null || refreshedAdminAssetsForPartyB == null) {
-      return;
-    }
+    let refreshedAdminAssetsForPartyB = requirePrecondition(
+      await fetchAssetsByOwnership(page, scopedPartyBId),
+      'Cannot confirm post-setup asset totals for configured parties (B).'
+    );
 
     if (
       refreshedAdminAssetsForPartyA.total === 0 &&
@@ -537,9 +544,15 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
             scopedPartyAId = fallbackPartyAId;
             scopedPartyBId = fallbackPartyBId;
 
-            adminAssetsForPartyA = await fetchAssetsByOwnership(page, scopedPartyAId);
-            adminAssetsForPartyB = await fetchAssetsByOwnership(page, scopedPartyBId);
-            if (adminAssetsForPartyA != null && adminAssetsForPartyA.total === 0) {
+            adminAssetsForPartyA = requirePrecondition(
+              await fetchAssetsByOwnership(page, scopedPartyAId),
+              'Fallback asset read failed for party A.'
+            );
+            adminAssetsForPartyB = requirePrecondition(
+              await fetchAssetsByOwnership(page, scopedPartyBId),
+              'Fallback asset read failed for party B.'
+            );
+            if (adminAssetsForPartyA.total === 0) {
               await tryCreateAssetForParty(
                 page,
                 scopedPartyAId,
@@ -548,7 +561,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
                 mutationHeaders
               );
             }
-            if (adminAssetsForPartyB != null && adminAssetsForPartyB.total === 0) {
+            if (adminAssetsForPartyB.total === 0) {
               await tryCreateAssetForParty(
                 page,
                 scopedPartyBId,
@@ -557,13 +570,13 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
                 mutationHeaders
               );
             }
-            refreshedAdminAssetsForPartyA = await fetchAssetsByOwnership(
-              page,
-              scopedPartyAId
+            refreshedAdminAssetsForPartyA = requirePrecondition(
+              await fetchAssetsByOwnership(page, scopedPartyAId),
+              'Fallback refreshed asset read failed for party A.'
             );
-            refreshedAdminAssetsForPartyB = await fetchAssetsByOwnership(
-              page,
-              scopedPartyBId
+            refreshedAdminAssetsForPartyB = requirePrecondition(
+              await fetchAssetsByOwnership(page, scopedPartyBId),
+              'Fallback refreshed asset read failed for party B.'
             );
           }
         }
@@ -574,8 +587,9 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       refreshedAdminAssetsForPartyA == null ||
       refreshedAdminAssetsForPartyB == null
     ) {
-      test.skip(true, 'Cannot confirm post-fallback asset totals for party scopes.');
-      return;
+      throw new Error(
+        '[org-scope-isolation] Precondition failure: Cannot confirm post-fallback asset totals for party scopes.'
+      );
     }
 
     if (
@@ -590,11 +604,10 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
           ].join(' ')
         );
       }
-      test.skip(
+      rejectPreconditionFailure(
         true,
         'Both party scopes have zero assets and setup cannot seed data in this environment.'
       );
-      return;
     }
 
     try {
@@ -643,19 +656,13 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       }
 
       if (userA == null || selectedRoleId == null) {
-        if (explicitRoleId != null) {
-          throw new Error(
-            [
-              `E2E_SCOPE_ROLE_ID=${explicitRoleId} cannot create scoped user.`,
-              `Errors: ${createUserErrors.join(' | ')}`,
-            ].join(' ')
-          );
-        }
-        test.skip(
-          true,
-          `No role candidate can create scoped users. ${createUserErrors.join(' | ')}`
+        throw new Error(
+          `[org-scope-isolation] Precondition failure: ${
+            explicitRoleId != null
+              ? `E2E_SCOPE_ROLE_ID=${explicitRoleId} cannot create scoped user. Errors: ${createUserErrors.join(' | ')}`
+              : `No role candidate can create scoped users. ${createUserErrors.join(' | ')}`
+          }`
         );
-        return;
       }
 
       const userBResponse = await page.request.post('/api/v1/auth/users', {
@@ -802,22 +809,16 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
     const sharedPassword = `Aa!${suffix}`;
     const mutationHeaders = await resolveCsrfHeaders(page);
 
-    test.skip(
+    rejectPreconditionFailure(
       Object.keys(mutationHeaders).length === 0,
       'Authenticated session has no csrf_token cookie; cannot run mutation setup.'
     );
-    if (Object.keys(mutationHeaders).length === 0) {
-      return;
-    }
 
     const roleCandidateIds = await resolveRoleCandidateIds(page);
-    test.skip(
+    rejectPreconditionFailure(
       roleCandidateIds.length === 0,
       'No available role candidates to create non-admin scoped user.'
     );
-    if (roleCandidateIds.length === 0) {
-      return;
-    }
 
     try {
       let createdUser: UserItem | null = null;
@@ -862,12 +863,10 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         break;
       }
 
-      test.skip(
-        createdUser == null,
-        `Unable to create unbound non-admin user. ${createUserErrors.join(' | ')}`
-      );
       if (createdUser == null) {
-        return;
+        throw new Error(
+          `[org-scope-isolation] Precondition failure: Unable to create unbound non-admin user. ${createUserErrors.join(' | ')}`
+        );
       }
 
       await clearAuthState(page);
