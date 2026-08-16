@@ -251,6 +251,10 @@ def test_frontend_e2e_seed_should_provision_non_admin_role() -> None:
     # org-scope-isolation 角色候选前置（issue #92/Q10）：user 角色必须带 asset read，
     # 否则 fail-loud 会在 CI 上显式失败。
     assert "asset_read_permission" in seed_script
+    # 资产枚举字典前置：ENVIRONMENT=testing 下 main 跳过 init_enum_data，种子必须显式补，
+    # 否则资产创建/列表 422「枚举类型未配置或未激活」。
+    assert "from src.services.enum_data_init import init_enum_data" in seed_script
+    assert 'init_enum_data(db, created_by="ci-e2e")' in seed_script
     assert (
         "ensure_role_permission(db, regular_role.id, asset_read_permission.id)"
         in seed_script

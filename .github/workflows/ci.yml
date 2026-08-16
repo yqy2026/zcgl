@@ -629,6 +629,7 @@ jobs:
         from src.models.project import Project
         from src.models.rbac import Permission, Role, UserRoleAssignment, role_permissions
         from src.models.user_party_binding import RelationType, UserPartyBinding
+        from src.services.enum_data_init import init_enum_data
         from src.services.core.password_service import PasswordService
 
         ADMIN_USERNAME = os.getenv("E2E_ADMIN_USERNAME", "admin")
@@ -867,6 +868,10 @@ jobs:
 
         async def main():
             async with async_session_scope() as db:
+                # ENVIRONMENT=testing 下 main 启动会跳过枚举初始化（init_enum_data
+                # 仅在非测试模式自动跑），而资产创建/列表依赖 ownership_status /
+                # usage_status / property_nature / data_status 字典——种子必须显式补。
+                await init_enum_data(db, created_by="ci-e2e")
                 organization = await ensure_organization(db)
                 admin_role = await ensure_admin_role(db)
                 regular_role = await ensure_regular_role(db)
