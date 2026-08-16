@@ -54,9 +54,7 @@ const certificates = [
 describe('PropertyCertificateList（全中文化，#78）', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(propertyCertificateService.listCertificates).mockResolvedValue(
-      certificates as never
-    );
+    vi.mocked(propertyCertificateService.listCertificates).mockResolvedValue(certificates as never);
   });
 
   it('渲染中文标题、列头与按钮', async () => {

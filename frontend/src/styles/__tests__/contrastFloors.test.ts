@@ -155,7 +155,10 @@ describe('图表色板感知距离', () => {
     const hues = values.map(hue);
     for (let i = 0; i < hues.length; i += 1) {
       const distance = hueDistance(hues[i], hues[(i + 1) % hues.length]);
-      expect(distance, `相邻色相距离 ${i}→${(i + 1) % hues.length} 为 ${distance.toFixed(1)}°`).toBeGreaterThanOrEqual(30);
+      expect(
+        distance,
+        `相邻色相距离 ${i}→${(i + 1) % hues.length} 为 ${distance.toFixed(1)}°`
+      ).toBeGreaterThanOrEqual(30);
     }
   });
 });

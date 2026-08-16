@@ -108,9 +108,7 @@ describe('menuConfig perspective grouping', () => {
     expect(getSelectedKeys('/contract-groups/group-1')).toEqual([
       MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
     ]);
-    expect(getSelectedKeys('/property-certificates/cert-1')).toEqual([
-      '/property-certificates',
-    ]);
+    expect(getSelectedKeys('/property-certificates/cert-1')).toEqual(['/property-certificates']);
     expect(getSelectedKeys('/project/project-1')).toEqual([MENU_ACTION_KEYS.PROJECT_LIST]);
     expect(getSelectedKeys('/project/project-1/edit')).toEqual([MENU_ACTION_KEYS.PROJECT_LIST]);
 

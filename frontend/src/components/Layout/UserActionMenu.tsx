@@ -77,12 +77,7 @@ const UserActionMenu: React.FC<UserActionMenuProps> = ({
       placement="bottomRight"
       trigger={['click']}
     >
-      <Button
-        type="text"
-        className={buttonClassName}
-        aria-label="用户菜单"
-        aria-haspopup="menu"
-      >
+      <Button type="text" className={buttonClassName} aria-label="用户菜单" aria-haspopup="menu">
         <Avatar size="small" icon={<UserOutlined />} className={avatarClassName} />
         {shouldShowName ? (
           <Typography.Text strong className={userTextClassName}>

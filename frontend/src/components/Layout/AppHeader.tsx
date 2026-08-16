@@ -1,10 +1,6 @@
 import React from 'react';
 import { Layout, Button, Space, Tooltip, Typography } from 'antd';
-import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
+import { MenuFoldOutlined, MenuUnfoldOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { NotificationCenter } from '@/components/Notification';
 import { SEARCH_ROUTES } from '@/constants/routes';

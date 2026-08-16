@@ -24,11 +24,7 @@ const MonthRangeProbe: React.FC = () => {
 
 const renderWithProvider = (onFiltersChange = vi.fn()) =>
   render(
-    <AnalyticsFiltersProvider
-      filters={{}}
-      onFiltersChange={onFiltersChange}
-      realTimeUpdate={false}
-    >
+    <AnalyticsFiltersProvider filters={{}} onFiltersChange={onFiltersChange} realTimeUpdate={false}>
       <BasicFiltersSection />
       <MonthRangeProbe />
     </AnalyticsFiltersProvider>

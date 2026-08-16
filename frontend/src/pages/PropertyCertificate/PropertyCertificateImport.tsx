@@ -56,9 +56,11 @@ export const isCertificateNumberConflict = (error: unknown): boolean => {
   if (typeof error !== 'object' || error == null || !('response' in error)) {
     return false;
   }
-  const response = (error as {
-    response?: { status?: unknown; data?: { detail?: unknown } };
-  }).response;
+  const response = (
+    error as {
+      response?: { status?: unknown; data?: { detail?: unknown } };
+    }
+  ).response;
   return (
     response?.status === 409 &&
     typeof response.data?.detail === 'string' &&

@@ -135,11 +135,7 @@ export const renderWithProviders = (
   }
 
   function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <AllInOneProvider queryClient={queryClient}>
-        {children}
-      </AllInOneProvider>
-    );
+    return <AllInOneProvider queryClient={queryClient}>{children}</AllInOneProvider>;
   }
 
   return {
@@ -173,11 +169,7 @@ export const renderHookWithProviders = <TProps, TResult>(
   const { queryClient, ...renderOptions } = options || {};
 
   function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <AllInOneProvider queryClient={queryClient}>
-        {children}
-      </AllInOneProvider>
-    );
+    return <AllInOneProvider queryClient={queryClient}>{children}</AllInOneProvider>;
   }
 
   return renderHook(callback, { wrapper: Wrapper, ...renderOptions });

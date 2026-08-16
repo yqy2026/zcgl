@@ -722,7 +722,10 @@ describe('AssetDetailPage', () => {
       fireEvent.click(within(dialog).getByRole('button', { name: /确\s*认/ }));
 
       await waitFor(() => {
-        expect(assetService.withdrawAssetReview).toHaveBeenCalledWith('asset_review_3', '发起人撤回');
+        expect(assetService.withdrawAssetReview).toHaveBeenCalledWith(
+          'asset_review_3',
+          '发起人撤回'
+        );
       });
     });
   });

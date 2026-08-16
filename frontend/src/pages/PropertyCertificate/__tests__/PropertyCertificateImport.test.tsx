@@ -74,9 +74,8 @@ describe('PropertyCertificateImport', () => {
 
   it('guides duplicate certificate numbers into the existing-certificate linkage flow (#78)', async () => {
     const { fireEvent, waitFor } = await import('@testing-library/react');
-    const {
-      propertyCertificateExtractionService,
-    } = await import('@/services/documentExtractionService');
+    const { propertyCertificateExtractionService } =
+      await import('@/services/documentExtractionService');
     const certificateNumber = '粤(2026)重复号';
 
     vi.mocked(propertyCertificateExtractionService.createSession).mockResolvedValue({
@@ -125,7 +124,9 @@ describe('PropertyCertificateImport', () => {
     await waitFor(() => {
       expect(screen.getByText('证书编号已存在')).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByLabelText('已有产权证 ID'), { target: { value: 'cert-existing' } });
+    fireEvent.change(screen.getByLabelText('已有产权证 ID'), {
+      target: { value: 'cert-existing' },
+    });
     fireEvent.click(screen.getByRole('button', { name: '保存产权证' }));
 
     await waitFor(() => {

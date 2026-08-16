@@ -31,9 +31,7 @@ const ViewModeSegment: React.FC = () => {
           setCurrentViewMode(value === 'manager' ? 'manager' : 'owner');
         }}
       />
-      {currentViewMode == null && (
-        <Text type="secondary">请选择产权方或运营方口径后查看数据</Text>
-      )}
+      {currentViewMode == null && <Text type="secondary">请选择产权方或运营方口径后查看数据</Text>}
     </Space>
   );
 };

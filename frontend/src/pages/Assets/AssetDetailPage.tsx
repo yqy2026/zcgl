@@ -114,9 +114,7 @@ const AssetDetailPage: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   // 审核原因弹窗（驳回/反审核/撤回共用）：正式表单替代 window.prompt（D10）
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
-  const [reasonAction, setReasonAction] = useState<'reject' | 'reverse' | 'withdraw' | null>(
-    null
-  );
+  const [reasonAction, setReasonAction] = useState<'reject' | 'reverse' | 'withdraw' | null>(null);
   const [reasonForm] = Form.useForm();
   const hasAssetId = id != null && id !== '';
   const canQuery = hasAssetId;

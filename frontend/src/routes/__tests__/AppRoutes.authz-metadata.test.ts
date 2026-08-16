@@ -54,11 +54,7 @@ describe('AppRoutes authz metadata', () => {
     const protectedRoutePaths = protectedRoutes.map(route => route.path);
 
     expect(protectedRoutePaths).not.toEqual(
-      expect.arrayContaining([
-        '/ownership',
-        '/ownership/:id',
-        '/ownership/:id/edit',
-      ])
+      expect.arrayContaining(['/ownership', '/ownership/:id', '/ownership/:id/edit'])
     );
   });
 

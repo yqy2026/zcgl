@@ -149,9 +149,7 @@ describe('OrganizationPartyScopeBatchModal', () => {
 
 describe('fetchEligibleRepresentedParties（#82 服务端过滤）', () => {
   it('请求携带 review_status=approved 且结果透传不再客户端过滤', async () => {
-    const { fetchEligibleRepresentedParties } = await import(
-      '../OrganizationPartyScopeBatchModal'
-    );
+    const { fetchEligibleRepresentedParties } = await import('../OrganizationPartyScopeBatchModal');
     const { partyService } = await import('@/services/partyService');
     vi.mocked(partyService.searchParties).mockResolvedValue({
       items: [

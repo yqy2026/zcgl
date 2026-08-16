@@ -15,9 +15,7 @@ export const propertyCertificateService = {
   /**
    * List certificates
    */
-  async listCertificates(
-    params?: PropertyCertificateListParams
-  ): Promise<PropertyCertificate[]> {
+  async listCertificates(params?: PropertyCertificateListParams): Promise<PropertyCertificate[]> {
     const result = await apiClient.get<PropertyCertificate[]>('/property-certificates', {
       params: params,
     });
@@ -39,10 +37,7 @@ export const propertyCertificateService = {
    * Create certificate manually
    */
   async createCertificate(certificate: PropertyCertificateCreate): Promise<PropertyCertificate> {
-    const result = await apiClient.post<PropertyCertificate>(
-      '/property-certificates',
-      certificate
-    );
+    const result = await apiClient.post<PropertyCertificate>('/property-certificates', certificate);
     if (result.data == null) {
       throw new Error('Failed to create certificate');
     }

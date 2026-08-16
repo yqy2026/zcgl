@@ -20,8 +20,7 @@ const DashboardPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   // 使用统一的Analytics hook，避免重复请求
-  const { data: analyticsData, isLoading, error, refetch, needsViewModeSelection } =
-    useAnalytics();
+  const { data: analyticsData, isLoading, error, refetch, needsViewModeSelection } = useAnalytics();
 
   // 从综合分析数据中提取面积汇总信息
   const areaSummary = analyticsData?.data?.area_summary;

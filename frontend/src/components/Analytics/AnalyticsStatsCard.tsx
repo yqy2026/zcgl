@@ -17,10 +17,7 @@ import {
 } from '@ant-design/icons';
 import { getTrendColor, getOccupancyRateColor, COLORS } from '@/styles/colorMap';
 import { formatCurrency } from '@/utils/format';
-import type {
-  OperationalMetricGroup,
-  OperationalMetricGroups,
-} from '@/types/analytics';
+import type { OperationalMetricGroup, OperationalMetricGroups } from '@/types/analytics';
 import styles from './AnalyticsStatsCard.module.css';
 
 interface StatCardProps {
@@ -440,10 +437,7 @@ export const OperationalGroupsGrid: React.FC<OperationalGroupsGridProps> = ({
     return null;
   }
 
-  const groupLabel = (
-    group: OperationalMetricGroup,
-    key: keyof OperationalMetricGroups
-  ): string =>
+  const groupLabel = (group: OperationalMetricGroup, key: keyof OperationalMetricGroups): string =>
     group.label != null && group.label.trim() !== '' ? group.label : GROUP_FALLBACK_LABELS[key];
 
   const incomeDetail = (group: OperationalMetricGroup): string =>

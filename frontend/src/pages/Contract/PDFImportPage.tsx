@@ -138,8 +138,7 @@ const PDFImportPage: React.FC = () => {
   });
   const [assetIds, setAssetIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const revenueMode =
-    Form.useWatch('revenue_mode', { form, preserve: true }) ?? 'lease';
+  const revenueMode = Form.useWatch('revenue_mode', { form, preserve: true }) ?? 'lease';
   const selectedProjectId = Form.useWatch('project_id', { form, preserve: true });
   const relationTypeOptions = relationTypeOptionsForRevenueMode(revenueMode);
   const projectLocked = projectIdFromUrl != null && projectIdFromUrl !== '';
@@ -221,9 +220,7 @@ const PDFImportPage: React.FC = () => {
     }
     const missingDecision = fields.find(fieldKey => decisions[fieldKey]?.action == null);
     if (missingDecision != null) {
-      message.error(
-        `请为字段「${fieldLabels[missingDecision] ?? missingDecision}」选择处理方式。`
-      );
+      message.error(`请为字段「${fieldLabels[missingDecision] ?? missingDecision}」选择处理方式。`);
       return;
     }
     if (Object.values(partyIds).some(value => value.trim() === '')) {
@@ -366,11 +363,7 @@ const PDFImportPage: React.FC = () => {
             return (
               <Card key={fieldKey} size="small" title={fieldLabels[fieldKey] ?? fieldKey}>
                 {field?.conflict === true && (
-                  <Alert
-                    type="warning"
-                    showIcon
-                    message="候选存在冲突，请显式选择处理方式。"
-                  />
+                  <Alert type="warning" showIcon message="候选存在冲突，请显式选择处理方式。" />
                 )}
                 <Form layout="vertical">
                   <Form.Item label="处理方式" required>
@@ -381,9 +374,7 @@ const PDFImportPage: React.FC = () => {
                         { value: 'accept_candidate', label: '采用候选' },
                         { value: 'correct_candidate', label: '修正候选' },
                         { value: 'manual', label: '手工录入' },
-                        ...(isOptional
-                          ? [{ value: 'clear_optional', label: '清空可选字段' }]
-                          : []),
+                        ...(isOptional ? [{ value: 'clear_optional', label: '清空可选字段' }] : []),
                       ]}
                     />
                   </Form.Item>
@@ -448,9 +439,7 @@ const PDFImportPage: React.FC = () => {
               <Form.Item label={PARTY_FIELD_LABELS[key]}>
                 <PartySelector
                   value={partyIds[key] !== '' ? partyIds[key] : undefined}
-                  onChange={value =>
-                    setPartyIds(current => ({ ...current, [key]: value ?? '' }))
-                  }
+                  onChange={value => setPartyIds(current => ({ ...current, [key]: value ?? '' }))}
                   fetcher={approvedPartyFetcher}
                 />
               </Form.Item>

@@ -95,9 +95,7 @@ const AssetDistributionGrid: React.FC<AssetDistributionGridProps> = ({
           title={`业态类别分布 (${dimension === 'count' ? '数量' : '面积'})`}
           data={
             dimension === 'count'
-              ? chartDataUtils.toBusinessCategoryData(
-                  analyticsData.business_category_distribution
-                )
+              ? chartDataUtils.toBusinessCategoryData(analyticsData.business_category_distribution)
               : chartDataUtils.toBusinessCategoryAreaData(
                   analyticsData.business_category_area_distribution
                 )
