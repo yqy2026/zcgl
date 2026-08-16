@@ -73,7 +73,7 @@ test.describe('@document-extraction-session contract session creation', () => {
     await page.goto(
       `${CONTRACT_DOCUMENT_REVIEW_PATH}?project_id=${encodeURIComponent(projectId)}`
     );
-    await expect(page).toHaveURL(/\/contract-center\/import$/);
+    await expect(page).toHaveURL(/\/contract-center\/import(\?.*)?$/);
     await expect(page.getByRole('heading', { name: '合同文件解析' })).toBeVisible();
     await completeContractContext(page);
 

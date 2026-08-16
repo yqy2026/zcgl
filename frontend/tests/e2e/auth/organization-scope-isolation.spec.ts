@@ -504,6 +504,9 @@ const fetchAssetsByOwnership = async (
     `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(partyId)}`
   );
   if (response.status() !== 200) {
+    console.error(
+      `[org-scope-isolation] asset fetch failed: ${response.status()} ${await response.text()}`
+    );
     return null;
   }
 
@@ -536,6 +539,11 @@ const tryCreateAssetForParty = async (
     },
   });
 
+  if (response.status() !== 201) {
+    console.error(
+      `[org-scope-isolation] asset create failed (${label}): ${await response.text()}`
+    );
+  }
   return response.status() === 201;
 };
 
