@@ -267,6 +267,22 @@ const approvePartyForScope = async ({
   });
   return approveResponse.status() === 200;
 };
+
+/**
+ * API 建出的用户默认 is_active=False（后端契约），必须由 admin 激活后才能登录；
+ * 否则隔离测试的登录前置永远失败（issue #92 复核发现，此前静默 skip 掩盖）。
+ */
+const activateCreatedUser = async (
+  page: Page,
+  userId: string,
+  mutationHeaders: Record<string, string>
+): Promise<boolean> => {
+  const activateResponse = await page.request.post(
+    `/api/v1/auth/users/${userId}/activate`,
+    { headers: mutationHeaders }
+  );
+  return activateResponse.status() === 200;
+};
 const resolveRoleCandidateIds = async (page: Page): Promise<string[]> => {
   const explicitRoleId = normalizeNonEmpty(readNodeEnv('E2E_SCOPE_ROLE_ID'));
   if (explicitRoleId != null) {
@@ -357,9 +373,10 @@ const resolvePartyPair = async (
       const createPartyResponse = await page.request.post('/api/v1/parties', {
         headers: mutationHeaders,
         data: {
+          // PartyCreate 是 extra=forbid，status 由服务端默认（active）；
+          // 传 status 会让兜底建 party 恒 422（issue #92 复核发现）。
           party_type: 'legal_entity',
           name: `E2E Scope Party ${suffix}-${i + 1}`,
-          status: 'active',
         },
       });
       if (createPartyResponse.status() !== 200 && createPartyResponse.status() !== 201) {
@@ -664,6 +681,12 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
           }`
         );
       }
+      // API 建的用户默认停用，需 admin 激活后才能登录（issue #92）。
+      if (!(await activateCreatedUser(page, userA.id, mutationHeaders))) {
+        throw new Error(
+          '[org-scope-isolation] Precondition failure: cannot activate scoped user A.'
+        );
+      }
 
       const userBResponse = await page.request.post('/api/v1/auth/users', {
         headers: mutationHeaders,
@@ -687,6 +710,11 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       const userBId = normalizeNonEmpty(userB.id);
       if (userBId != null) {
         createdUserIds.push(userBId);
+        if (!(await activateCreatedUser(page, userBId, mutationHeaders))) {
+          throw new Error(
+            '[org-scope-isolation] Precondition failure: cannot activate scoped user B.'
+          );
+        }
       }
 
       await commitUserPartyBinding({
@@ -866,6 +894,12 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       if (createdUser == null) {
         throw new Error(
           `[org-scope-isolation] Precondition failure: Unable to create unbound non-admin user. ${createUserErrors.join(' | ')}`
+        );
+      }
+
+      if (!(await activateCreatedUser(page, createdUser.id, mutationHeaders))) {
+        throw new Error(
+          '[org-scope-isolation] Precondition failure: cannot activate unbound user.'
         );
       }
 
