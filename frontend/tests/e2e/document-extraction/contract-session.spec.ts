@@ -34,10 +34,29 @@ const ensureAuthenticatedStable = async (page: Page): Promise<void> => {
 const EXTRACTION_PROJECT_NAME =
   process.env.E2E_EXTRACTION_PROJECT_NAME?.trim() || 'E2E抽取项目';
 
+// 页面支持 ?project_id= 预填锁定（PDFImportPage），比 ProjectSelect 交互稳定：
+// 直接查种子项目 id 并带进 URL（issue #92 / Q14 复核：UI 选择在 CI 上偶发超时）。
+const resolveExtractionProjectId = async (page: Page): Promise<string> => {
+  const response = await page.request.get(
+    `/api/v1/projects?page=1&page_size=50&search=${encodeURIComponent(EXTRACTION_PROJECT_NAME)}`
+  );
+  expect(response.status()).toBe(200);
+  const payload = (await response.json()) as {
+    data?: { items?: Array<{ id?: string; project_name?: string }> };
+  };
+  const items = payload.data?.items ?? [];
+  const project = items.find(
+    item => item.project_name === EXTRACTION_PROJECT_NAME
+  );
+  if (project?.id == null) {
+    throw new Error(
+      `[contract-session] seed project '${EXTRACTION_PROJECT_NAME}' missing; run the E2E seed first.`
+    );
+  }
+  return project.id;
+};
+
 const completeContractContext = async (page: Page): Promise<void> => {
-  // 所属项目为 ProjectSelect 选择器：输入种子项目名后回车精确选中
-  await page.getByLabel('所属项目').fill(EXTRACTION_PROJECT_NAME);
-  await page.keyboard.press('Enter');
   await page.getByLabel('合同方向').press('ArrowDown');
   await page.getByLabel('合同方向').press('Enter');
   await page.getByLabel('合同角色').press('ArrowDown');
@@ -50,7 +69,10 @@ test.describe('@document-extraction-session contract session creation', () => {
   });
 
   test('creates a review session for a valid contract PDF', async ({ page }) => {
-    await page.goto(CONTRACT_DOCUMENT_REVIEW_PATH);
+    const projectId = await resolveExtractionProjectId(page);
+    await page.goto(
+      `${CONTRACT_DOCUMENT_REVIEW_PATH}?project_id=${encodeURIComponent(projectId)}`
+    );
     await expect(page).toHaveURL(/\/contract-center\/import$/);
     await expect(page.getByRole('heading', { name: '合同文件解析' })).toBeVisible();
     await completeContractContext(page);

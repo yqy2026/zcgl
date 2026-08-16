@@ -96,11 +96,15 @@ test.describe('@operations-ledger operations ledger page', () => {
     );
     expect(contractResponse.status()).toBe(201);
 
+    const contractId = (await contractResponse.json()) as { contract_id?: string };
+    expect(contractId.contract_id).toBeTruthy();
+
     await page.goto(OPERATIONS_LEDGER_PATH);
     await expect(page).toHaveURL(/\/operations\/ledger$/);
-    // 台账页按合同组/合同维度展示数据：新组码出现即证明业务链路打通。
+    // 默认视图（终端租户收缴）表格的「合同/协议」列渲染完整 contract_id，
+    // 用唯一 UUID 断言业务链路打通（group_code 只在服务费视图的选择器出现）。
     await expect(
-      page.getByText(group.group_code as string).first()
+      page.getByText(contractId.contract_id as string).first()
     ).toBeVisible({ timeout: 15_000 });
   });
 });

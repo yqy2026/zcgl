@@ -35,7 +35,10 @@ test.describe('@property-certificate-list certificate list page', () => {
         manager_party_id: partyId,
       },
     });
-    expect(assetResponse.status()).toBe(201);
+    expect(
+      assetResponse.status(),
+      `asset create failed: ${await assetResponse.text()}`
+    ).toBe(201);
     const assetPayload = (await assetResponse.json()) as { id?: string };
     expect(assetPayload.id).toBeTruthy();
 
@@ -53,7 +56,10 @@ test.describe('@property-certificate-list certificate list page', () => {
         },
       }
     );
-    expect(certificateResponse.status()).toBe(200);
+    expect(
+      certificateResponse.status(),
+      `certificate create failed: ${await certificateResponse.text()}`
+    ).toBe(200);
 
     await page.goto(CERTIFICATE_LIST_PATH);
     await expect(page).toHaveURL(/\/property-certificates$/);

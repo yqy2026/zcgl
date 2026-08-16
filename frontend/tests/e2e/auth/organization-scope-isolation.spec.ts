@@ -500,7 +500,8 @@ const fetchAssetsByOwnership = async (
   partyId: string
 ): Promise<AssetListResult | null> => {
   const response = await page.request.get(
-    `/api/v1/assets?page=1&page_size=100&ownership_id=${encodeURIComponent(partyId)}`
+    // 资产列表产权方筛选已统一为 owner_party_id（ownership_id 已废弃）
+    `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(partyId)}`
   );
   if (response.status() !== 200) {
     return null;
