@@ -1,6 +1,8 @@
 # Frontend CLAUDE.md
 
-前端开发专用指南。通用信息请参阅根目录 `CLAUDE.md`。
+前端开发专用指南。通用信息见根目录 `AGENTS.md`；本文件只保留前端专属、`AGENTS.md` 未覆盖的补充。
+
+**Last Updated**: 2026-08-16
 
 ---
 
@@ -12,219 +14,79 @@ pnpm install            # 安装依赖
 pnpm dev                # 启动开发服务器 (port 5173)
 pnpm test               # 运行测试
 pnpm lint               # Oxlint 检查
-pnpm type-check         # Tsgo 类型检查
+pnpm type-check         # 类型检查
 ```
 
 ---
 
-## 导入路径规范 (重要!)
+## 导入路径
 
 ```typescript
-// ✅ 正确 - 使用新路径 (2025-12-24)
+// ✅ 使用 @/ 别名
 import { apiClient } from '@/api/client';
 import { API_CONFIG } from '@/api/config';
-import { AssetForm, OwnershipForm } from '@/components/Forms';
+import { AssetForm, ProjectForm } from '@/components/Forms';
 
-// ❌ 已废弃 - 不推荐使用
-import { apiClient } from '@/services';
-import { AssetForm } from '@/components/Asset';
+// ❌ 深层相对路径 ../../../；@/services 桶仅 re-export 兼容，权威导入源是 @/api/client
 ```
 
 ---
 
-## TypeScript 编码规范 (重要!)
+## TypeScript 规范
 
-本项目使用严格的 TypeScript 规则以确保类型安全。
-
-**核心要点**:
-- 使用 `??` 代替 `||` 提供默认值（避免 `0`、`''` 被误判）
-- 使用 `!= null` 显式检查空值
-- 使用 `?.` 可选链安全访问属性
-- 数字比较: `if (num != null && num > 0)` 而非 `if (num)`
-- 字符串检查: `if (str?.trim() !== '')` 而非 `if (str)`
-
-**快速示例**:
-```typescript
-// ✅ 正确
-const items = response.data?.items ?? [];
-const total = response.data?.total ?? 0;
-
-// ❌ 错误 - || 会把 0 当作假值
-const total = response.data?.total || 0;
-```
-
-**详细规范**: 参见 [`docs/guides/typescript-conventions.md`](../../docs/guides/typescript-conventions.md)
+严格布尔表达式（`??` / `!= null` / `?.` / `trim()` 字符串检查）规则见 `AGENTS.md` §前端开发要点；详细规范见 [`docs/guides/typescript-conventions.md`](../../docs/guides/typescript-conventions.md)。
 
 ---
 
-## Decimal/Number 转换规范 (重要!)
+## Decimal/Number 转换
 
-后端常以 `Decimal` 字符串返回金额/面积字段，前端业务默认使用 `number`。
+后端常以 `Decimal` 字符串返回金额/面积字段，前端业务默认用 `number`。
 
-- **统一入口**：服务层在返回数据前统一调用 `convertBackendToFrontend`（`src/utils/dataConversion.ts`）。
-- **页面约束**：页面/组件层禁止用 `parseFloat` 临时兜底金额或面积字段。
-- **提交约束**：提交到后端时按字段需要使用 `convertFrontendToBackend`。
-- **字段范围**：优先覆盖高频字段（`land_area`、`actual_property_area`、`rentable_area`、`monthly_rent`、`deposit/total_deposit` 等）。
-- **测试要求**：新增或改造服务时，补充对应转换链路测试（至少覆盖一个字符串 Decimal -> number 场景）。
+- **统一入口**：服务层返回前调用 `convertBackendToFrontend`（`src/utils/dataConversion.ts`）
+- **页面约束**：页面/组件层禁止用 `parseFloat` 临时兜底金额/面积字段
+- **提交约束**：提交后端时按字段需要调用 `convertFrontendToBackend`
+- **字段范围**：优先覆盖高频字段（`land_area`、`actual_property_area`、`rentable_area`、`monthly_rent`、`deposit/total_deposit` 等）
+- **测试要求**：新增或改造服务时补转换链路测试（至少覆盖一个 Decimal 字符串 → number 场景）
 
 ---
 
-## 状态管理策略
+## 状态管理与数据获取
 
-| 状态类型 | 使用工具 | 适用场景 |
-|---------|---------|---------|
-| **全局 UI** | Zustand | 主题、侧边栏、用户信息、通知 |
-| **服务器数据** | React Query | API 数据获取、缓存、同步 |
-| **表单状态** | React Hook Form | 表单验证、提交 |
-| **局部 UI** | useState | 模态框开关、loading 状态 |
-
-### React Query 示例
+状态分工（Zustand / AuthContext / React Query / React Hook Form / useState）见 `AGENTS.md` §前端状态管理。
 
 ```typescript
-// ✅ 正确 - 服务器数据用 React Query
+// ✅ 服务器数据用 React Query
 const { data: assets, isLoading } = useQuery({
   queryKey: ['assets'],
   queryFn: () => apiClient.get('/assets'),
-  staleTime: 5 * 60 * 1000,  // 5 分钟缓存
+  staleTime: 5 * 60 * 1000,
 });
 
-// ❌ 错误 - 不要用 useState 管理服务器数据
-const [assets, setAssets] = useState([]);
-useEffect(() => { fetch(...) }, []);
+// ❌ 不要用 useState + useEffect 管理服务器数据
 ```
 
 ---
 
-## 目录结构
+## 路由与权限
 
-```
-src/
-├── api/            # API 客户端
-├── components/     # 可复用组件
-│   ├── Forms/      # 统一表单组件 (AssetForm, etc.)
-│   ├── Asset/      # 资产相关组件
-│   ├── Charts/     # 图表组件
-│   ├── Router/     # 路由管理 (动态加载、性能监控)
-│   └── Layout/     # 布局组件
-├── pages/          # 页面组件 (按模块划分)
-├── services/       # API 服务封装
-├── hooks/          # 自定义 Hook
-├── store/          # Zustand 状态管理
-├── types/          # TypeScript 类型定义
-└── utils/          # 工具函数
-```
+路由常量统一定义在 `src/constants/routes.ts`；受保护路由在 `src/routes/AppRoutes.tsx` 用 `React.lazy` + 权限声明（`permissions` / `adminOnly` / `capabilityGuardBypass`）注册，渲染层由 `App.tsx` 用 `CapabilityGuard`（`src/components/System/CapabilityGuard.tsx`）统一包裹。新增页面按既有条目模式注册；`PermissionGuard` 是迁移期兼容壳，新代码一律用 `CapabilityGuard`。
 
 ---
 
-## 添加新功能
+## 环境变量
 
-### 1. 类型定义 (`types/myFeature.ts`)
-### 2. API 服务 (`services/myFeatureService.ts`)
-### 3. 自定义 Hook (`hooks/useMyFeature.ts`)
-### 4. 页面组件 (`pages/MyFeature/MyFeatureListPage.tsx`)
-
-详细模式参考: `docs/guides/frontend.md`
+`VITE_API_BASE_URL` - API 后端地址（默认 `http://localhost:8002/api/v1`，见 `frontend/.env.example`）。
 
 ---
 
-## 路由系统
+## 性能相关约定
 
-```
-/dashboard              # 工作台
-/assets/list            # 资产列表
-/assets/new             # 创建资产
-/rental/contracts       # 合同列表
-/system/users           # 用户管理 (需权限)
-```
-
-**权限控制**: 使用 `PermissionGuard` 组件
+图片懒加载用 `components/Common/LazyImage`。
 
 ---
 
-## 构建与部署
+## 测试与代码风格
 
-```bash
-# 生产构建
-pnpm build
-
-# 预览构建结果
-pnpm preview
-
-# 分析包大小
-pnpm build --report
-
-# Docker 构建
-docker build -t zcgl-frontend .
-
-# 类型检查（CI/CD）
-pnpm type-check
-```
-
-**环境变量**:
-- `VITE_API_BASE_URL` - API 后端地址（默认: `http://localhost:8002`）
-- `VITE_ENVIRONMENT` - 环境标识（development, staging, production）
-
----
-
-## 性能优化检查清单
-
-开发新功能时，确保遵循以下性能最佳实践：
-
-- [ ] **路由懒加载** - 使用 `React.lazy()` 延迟加载页面组件
-- [ ] **图片优化** - 使用 `<LazyImage>` 组件进行懒加载
-- [ ] **大列表虚拟化** - 超过 100 项使用虚拟滚动（`react-window`）
-- [ ] **API 请求缓存** - 使用 React Query 的 `staleTime` 和 `cacheTime`
-- [ ] **避免重复渲染** - 使用 `React.memo`、`useMemo`、`useCallback`
-- [ ] **代码分割** - 使用动态 `import()` 拆分大型依赖
-- [ ] **Tree-shaking** - 确保导入时只引入需要的模块（如 `import { Button } from 'antd'`）
-
-**性能监控**:
-```typescript
-// 使用 React DevTools Profiler
-// 检查组件渲染次数和耗时
-```
-
----
-
-## 测试
-
-```bash
-pnpm test                   # 运行测试
-pnpm test:coverage          # 覆盖率报告
-pnpm test:watch             # 监听模式
-pnpm test:ui                # Vitest UI
-```
-
-测试文件位置: `src/**/__tests__/*.test.tsx`
-
----
-
-## 代码风格
-
-| 类型 | 命名规范 | 示例 |
-|------|---------|------|
-| 组件 | PascalCase | `AssetCard.tsx` |
-| 服务 | camelCase | `assetService.ts` |
-| Hook | use* | `useAssets.ts` |
-| 常量 | UPPER_SNAKE | `API_BASE_URL` |
-
----
-
-## 常见问题
-
-| 问题 | 解决方案 |
-|------|---------|
-| Port 5173 被占用 | 修改 `vite.config.ts` 中的 `server.port` |
-| API 请求失败 | 确保后端运行在 8002 端口，检查 `VITE_API_BASE_URL` |
-| TypeScript 错误 | `pnpm type-check` 查看详情 |
-| 构建失败 | 清理缓存: `rm -rf node_modules/.vite` 后重新构建 |
-| Oxlint 问题较多 | `pnpm lint --fix` 自动修复部分问题 |
-
-
-<claude-mem-context>
-# Recent Activity
-
-<!-- This section is auto-generated by claude-mem. Edit content outside the tags. -->
-
-*No recent activity*
-</claude-mem-context>
+- 测试命令与规范：[`docs/guides/testing-standards.md`](../../docs/guides/testing-standards.md)；默认 `pnpm test`
+- 命名规范：[`docs/guides/naming-conventions.md`](../../docs/guides/naming-conventions.md)
+- 前端指南总入口：[`docs/guides/frontend.md`](../../docs/guides/frontend.md)

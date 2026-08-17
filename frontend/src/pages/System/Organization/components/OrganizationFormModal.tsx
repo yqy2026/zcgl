@@ -55,6 +55,7 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
     <Modal
       title={editingOrganization != null ? '编辑组织' : '新建组织'}
       open={open}
+      forceRender
       onCancel={onCancel}
       footer={null}
       width={800}

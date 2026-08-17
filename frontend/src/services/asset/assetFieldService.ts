@@ -254,7 +254,7 @@ export class AssetFieldService {
   async getFieldOptions(fieldType: string, category?: string): Promise<FieldOption[]> {
     try {
       const result = await apiClient.get<{ field_types: FieldOption[] }>(
-        '/asset-custom-fields/types/list',
+        '/asset-custom-fields/types',
         {
           params:
             category != null && category.trim() !== ''

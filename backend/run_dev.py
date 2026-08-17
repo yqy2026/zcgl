@@ -11,6 +11,10 @@ from pathlib import Path
 if sys.platform == "win32":
     import io
 
+    # uvicorn reload 的 multiprocessing.spawn worker 不继承下面的 stdout/stderr 包装，
+    # 需经 PYTHONIOENCODING 让子进程解释器启动即用 UTF-8，否则 GBK 控制台写 emoji 日志会抛 UnicodeEncodeError
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 

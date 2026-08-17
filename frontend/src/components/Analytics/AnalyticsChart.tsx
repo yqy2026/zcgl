@@ -72,9 +72,13 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     radius: outerRadius / 100,
     innerRadius: innerRadius / 100,
     label: {
-      type: innerRadius > 0 ? 'inner' : 'outer',
-      offset: innerRadius > 0 ? '-50%' : undefined,
-      content: innerRadius > 0 ? '{percentage}%' : '{name} {percentage}',
+      position: innerRadius > 0 ? ('inside' as const) : ('spider' as const),
+      text: (d: ChartDatum) => {
+        const total = chartData.reduce((sum, item) => sum + item.value, 0);
+        const value = typeof d.value === 'number' ? d.value : 0;
+        const percentage = total > 0 ? `${((value / total) * 100).toFixed(1)}%` : '0%';
+        return innerRadius > 0 ? percentage : `${d.type ?? ''} ${percentage}`;
+      },
       style: {
         fontSize: 12,
         fill: CHART_LABEL_COLORS.light,

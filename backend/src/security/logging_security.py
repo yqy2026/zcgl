@@ -34,7 +34,12 @@ def setup_logging_security() -> logging.Logger:
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
+        # FileHandler 必须显式 utf-8：默认 locale 编码（Windows cp936, strict）写 emoji 日志行
+        # 会抛 UnicodeEncodeError 丢行（2026-08-17 缺陷 2.5 复核补修；PYTHONIOENCODING 只影响 std 流）。
+        handlers=[
+            logging.FileHandler(log_file, encoding="utf-8"),
+            logging.StreamHandler(),
+        ],
     )
 
     for handler in logging.getLogger().handlers:

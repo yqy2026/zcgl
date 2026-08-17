@@ -115,7 +115,7 @@ describe('AssetFieldService', () => {
 
     expect(result).toEqual([{ value: 'number', label: '数字' }]);
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/asset-custom-fields/types/list',
+      '/asset-custom-fields/types',
       expect.any(Object)
     );
   });

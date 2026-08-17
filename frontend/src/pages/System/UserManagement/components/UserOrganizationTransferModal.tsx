@@ -149,6 +149,7 @@ const UserOrganizationTransferModal: React.FC<UserOrganizationTransferModalProps
     <Modal
       title={user != null ? `调动组织 - ${user.full_name}` : '调动组织'}
       open={open}
+      forceRender
       onCancel={() => {
         if (!committing) {
           onClose();

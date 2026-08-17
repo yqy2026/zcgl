@@ -89,6 +89,40 @@ async def get_custom_fields(
         raise internal_error(f"获取自定义字段列表失败: {str(e)}")
 
 
+@router.get("/types", summary="获取字段类型列表")
+def get_field_types(
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
+) -> dict[str, Any]:
+    """
+    获取支持的字段类型列表
+    """
+    try:
+        field_types = [
+            {"value": "text", "label": "文本"},
+            {"value": "number", "label": "数字"},
+            {"value": "decimal", "label": "小数"},
+            {"value": "boolean", "label": "布尔值"},
+            {"value": "date", "label": "日期"},
+            {"value": "datetime", "label": "日期时间"},
+            {"value": "select", "label": "单选"},
+            {"value": "multiselect", "label": "多选"},
+            {"value": "textarea", "label": "多行文本"},
+            {"value": "url", "label": "链接"},
+            {"value": "email", "label": "邮箱"},
+            {"value": "phone", "label": "电话"},
+        ]
+        return {"field_types": field_types}
+
+    except Exception as e:
+        raise internal_error(f"获取字段类型失败: {str(e)}")
+
+
 @router.get(
     "/{field_id}", response_model=AssetCustomFieldResponse, summary="获取自定义字段详情"
 )
@@ -266,41 +300,6 @@ async def validate_custom_field_value(
         if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"验证字段值失败: {str(e)}")
-
-
-@router.get("/types", summary="获取字段类型列表")
-@router.get("/types/list[Any]", include_in_schema=False)
-def get_field_types(
-    current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="read",
-            resource_type="asset",
-        )
-    ),
-) -> dict[str, Any]:
-    """
-    获取支持的字段类型列表
-    """
-    try:
-        field_types = [
-            {"value": "text", "label": "文本"},
-            {"value": "number", "label": "数字"},
-            {"value": "decimal", "label": "小数"},
-            {"value": "boolean", "label": "布尔值"},
-            {"value": "date", "label": "日期"},
-            {"value": "datetime", "label": "日期时间"},
-            {"value": "select", "label": "单选"},
-            {"value": "multiselect", "label": "多选"},
-            {"value": "textarea", "label": "多行文本"},
-            {"value": "url", "label": "链接"},
-            {"value": "email", "label": "邮箱"},
-            {"value": "phone", "label": "电话"},
-        ]
-        return {"field_types": field_types}
-
-    except Exception as e:
-        raise internal_error(f"获取字段类型失败: {str(e)}")
 
 
 # 资产自定义字段值相关接口

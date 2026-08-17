@@ -44,8 +44,13 @@ const AnalyticsPieChart: React.FC<PieChartProps> = ({
       color: CHART_COLORS,
       radius: outerRadius / 100,
       label: {
-        type: 'outer' as const,
-        content: '{name} {percentage}',
+        position: 'spider' as const,
+        text: (d: ChartDatum) => {
+          const total = chartData.reduce((sum, item) => sum + item.value, 0);
+          const value = d.value ?? 0;
+          const percentage = total > 0 ? `${((value / total) * 100).toFixed(1)}%` : '0%';
+          return `${d.type ?? ''} ${percentage}`;
+        },
       },
       legend: showLegend
         ? {

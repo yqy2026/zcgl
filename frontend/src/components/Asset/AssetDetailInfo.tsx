@@ -105,7 +105,6 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                 所在地址
               </span>
             }
-            span={2}
           >
             {asset.address ?? '-'}
           </Descriptions.Item>
@@ -326,7 +325,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                 : '-'}
             </Descriptions.Item>
 
-            <Descriptions.Item label="接收协议文件" span={2}>
+            <Descriptions.Item label="接收协议文件">
               {asset.operation_agreement_attachments !== undefined &&
               asset.operation_agreement_attachments !== '' &&
               asset.operation_agreement_attachments !== null ? (

@@ -92,11 +92,11 @@ const OrganizationMoveModal: React.FC<OrganizationMoveModalProps> = ({
   }, [organization, organizationTree]);
 
   useEffect(() => {
-    form.resetFields();
+    // destroyOnHidden 关闭即卸载表单，重开按 initialValues 重建，无需 resetFields
     setReason('');
     setReasonError(false);
     setPendingMove(null);
-  }, [form, open, organization?.id]);
+  }, [open, organization?.id]);
 
   const handlePreview = useCallback(async () => {
     if (organization == null) {

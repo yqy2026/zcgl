@@ -163,6 +163,119 @@ async def get_tasks(
         raise internal_error(f"获取任务列表失败: {str(e)}")
 
 
+@router.get("/statistics", response_model=TaskStatistics, summary="获取任务统计")
+async def get_task_statistics(
+    user_id: str | None = Query(None, description="用户ID筛选"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+        )
+    ),
+    service: TaskService = Depends(get_task_service),
+) -> TaskStatistics:
+    """
+    获取任务统计信息
+    """
+
+    try:
+        effective_user_id = await resolve_task_user_filter(user_id, current_user, db)
+        resolved_service = _resolve_service(service)
+        stats = await resolved_service.get_statistics(db=db, user_id=effective_user_id)
+        return TaskStatistics.model_validate(stats)
+    except Exception as e:
+        raise internal_error(f"获取任务统计失败: {str(e)}")
+
+
+@router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
+async def get_running_tasks(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+        )
+    ),
+    service: TaskService = Depends(get_task_service),
+) -> list[TaskResponse]:
+    """
+    获取当前正在运行的所有任务
+    """
+
+    try:
+        effective_user_id = await resolve_task_user_filter(None, current_user, db)
+        resolved_service = _resolve_service(service)
+        tasks = await resolved_service.get_running_tasks(
+            db=db,
+            limit=100,
+            user_id=effective_user_id,
+        )
+        return [TaskResponse.model_validate(task) for task in tasks]
+    except Exception as e:
+        raise internal_error(f"获取运行任务失败: {str(e)}")
+
+
+@router.get("/recent", response_model=list[TaskResponse], summary="获取最近任务")
+async def get_recent_tasks(
+    page_size: int = Query(10, ge=1, le=50, description="返回数量"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+        )
+    ),
+    service: TaskService = Depends(get_task_service),
+) -> list[TaskResponse]:
+    """
+    获取最近的任务
+    """
+
+    try:
+        resolved_service = _resolve_service(service)
+        tasks = await resolved_service.get_recent_tasks(
+            db=db,
+            limit=page_size,
+            user_id=await resolve_task_user_filter(None, current_user, db),
+        )
+        return [TaskResponse.model_validate(task) for task in tasks]
+    except Exception as e:
+        raise internal_error(f"获取最近任务失败: {str(e)}")
+
+
+@router.get("/cleanup", summary="清理过期任务")
+async def cleanup_old_tasks(
+    days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
+    is_dry_run: bool = Query(False, description="是否为试运行"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_any_role(_SYSTEM_ADMIN_ROLE_CODES)),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="task",
+            resource_context=_TASK_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
+    service: TaskService = Depends(get_task_service),
+) -> dict[str, Any]:
+    """
+    清理过期的任务记录
+    """
+
+    try:
+        _ = current_user
+        resolved_service = _resolve_service(service)
+        return await resolved_service.cleanup_old_tasks(
+            db=db, days=days, dry_run=is_dry_run
+        )
+    except Exception as e:
+        raise internal_error(f"清理任务失败: {str(e)}")
+
+
 @router.get("/{task_id}", response_model=TaskResponse, summary="获取任务详情")
 async def get_task(
     task_id: str = Path(..., description="任务ID"),
@@ -326,90 +439,6 @@ async def get_task_history(
         return result
     except Exception as e:
         raise internal_error(f"获取任务历史失败: {str(e)}")
-
-
-@router.get("/statistics", response_model=TaskStatistics, summary="获取任务统计")
-async def get_task_statistics(
-    user_id: str | None = Query(None, description="用户ID筛选"),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="read",
-            resource_type="task",
-        )
-    ),
-    service: TaskService = Depends(get_task_service),
-) -> TaskStatistics:
-    """
-    获取任务统计信息
-    """
-
-    try:
-        effective_user_id = await resolve_task_user_filter(user_id, current_user, db)
-        resolved_service = _resolve_service(service)
-        stats = await resolved_service.get_statistics(db=db, user_id=effective_user_id)
-        return TaskStatistics.model_validate(stats)
-    except Exception as e:
-        raise internal_error(f"获取任务统计失败: {str(e)}")
-
-
-@router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
-async def get_running_tasks(
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="read",
-            resource_type="task",
-        )
-    ),
-    service: TaskService = Depends(get_task_service),
-) -> list[TaskResponse]:
-    """
-    获取当前正在运行的所有任务
-    """
-
-    try:
-        effective_user_id = await resolve_task_user_filter(None, current_user, db)
-        resolved_service = _resolve_service(service)
-        tasks = await resolved_service.get_running_tasks(
-            db=db,
-            limit=100,
-            user_id=effective_user_id,
-        )
-        return [TaskResponse.model_validate(task) for task in tasks]
-    except Exception as e:
-        raise internal_error(f"获取运行任务失败: {str(e)}")
-
-
-@router.get("/recent", response_model=list[TaskResponse], summary="获取最近任务")
-async def get_recent_tasks(
-    page_size: int = Query(10, ge=1, le=50, description="返回数量"),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="read",
-            resource_type="task",
-        )
-    ),
-    service: TaskService = Depends(get_task_service),
-) -> list[TaskResponse]:
-    """
-    获取最近的任务
-    """
-
-    try:
-        resolved_service = _resolve_service(service)
-        tasks = await resolved_service.get_recent_tasks(
-            db=db,
-            limit=page_size,
-            user_id=await resolve_task_user_filter(None, current_user, db),
-        )
-        return [TaskResponse.model_validate(task) for task in tasks]
-    except Exception as e:
-        raise internal_error(f"获取最近任务失败: {str(e)}")
 
 
 @router.post(
@@ -622,32 +651,3 @@ async def delete_excel_config(
         raise
     except Exception as e:
         raise internal_error(f"删除Excel配置失败: {str(e)}")
-
-
-@router.get("/cleanup", summary="清理过期任务")
-async def cleanup_old_tasks(
-    days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
-    is_dry_run: bool = Query(False, description="是否为试运行"),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_role(_SYSTEM_ADMIN_ROLE_CODES)),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="delete",
-            resource_type="task",
-            resource_context=_TASK_DELETE_RESOURCE_CONTEXT,
-        )
-    ),
-    service: TaskService = Depends(get_task_service),
-) -> dict[str, Any]:
-    """
-    清理过期的任务记录
-    """
-
-    try:
-        _ = current_user
-        resolved_service = _resolve_service(service)
-        return await resolved_service.cleanup_old_tasks(
-            db=db, days=days, dry_run=is_dry_run
-        )
-    except Exception as e:
-        raise internal_error(f"清理任务失败: {str(e)}")

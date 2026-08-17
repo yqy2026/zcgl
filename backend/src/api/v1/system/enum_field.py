@@ -226,7 +226,7 @@ async def delete_enum_field_type(
     )
 
 
-@router.get("/types/categories/list[Any]")
+@router.get("/types/categories/list")
 async def get_enum_field_categories(
     db: AsyncSession = Depends(get_async_db),
     _authz_ctx: AuthzContext = Depends(

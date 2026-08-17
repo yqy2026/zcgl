@@ -80,11 +80,11 @@ const OrganizationPartyScopeBatchModal: React.FC<OrganizationPartyScopeBatchModa
 
   useEffect(() => {
     if (!open) {
-      form.resetFields();
+      // destroyOnHidden 关闭即卸载表单，重开按 initialValues 重建，无需 resetFields
       setPreview(null);
       setReason('');
     }
-  }, [form, open, organizationIds]);
+  }, [open, organizationIds]);
 
   const previewColumns = useMemo<ColumnsType<OrganizationPartyScopeBatchPreviewItem>>(
     () => [
