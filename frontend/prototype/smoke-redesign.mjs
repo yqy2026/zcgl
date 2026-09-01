@@ -74,7 +74,7 @@ const renewBtn = await page.locator('.kc:has-text("已接受") .kcard:has-text("
 ok(renewBtn === 1, '已接受的回民饭店卡带「拟定合同」直达 entry');
 
 /* 吕巨建 paused：无决议按钮 */
-ok(await page.locator('.kcard:has-text("吕巨建") [data-kanact]').count() === 0, '受限空间意向不出决议按钮（红线保留）');
+ok(await page.locator('.kcard:has-text("吕巨建") [data-kanact]').count() === 0, '受限物业意向不出决议按钮（红线保留）');
 
 /* 新登记低于底价意向（谢先生二次来访）→ 开始条件审议 → 接受不禁用，模态明示例外审批与生效阻断（阻断在生效门） */
 await page.click('[data-modal="opp"]');
@@ -207,7 +207,7 @@ ok(await page.locator('#mw-tasks [data-toast*="退款复核工作面原型未展
 await page.locator('.navi[data-target="stmts"]').click();
 await page.waitForTimeout(60);
 const hint = await page.locator('#stmt-hint').innerText();
-ok(!hint.includes('回到「终端到账确认」') && hint.includes('财务复核岗不直接修改到账明细'), '路线⑥更正指引不再指向无权页');
+ok(!hint.includes('回到「租客到账确认」') && hint.includes('财务复核岗不直接修改到账明细'), '路线⑥更正指引不再指向无权页');
 /* ISS-02：盖章定案应收成立 → 开票轨/资金轨按真实时序独立登记，互不前置 */
 await page.click('[data-stmtstep="1"]');
 await page.waitForTimeout(40);
@@ -237,15 +237,15 @@ await page.waitForTimeout(60);
 /* ISS-03：自动匹配 → 待复核队列 / 人工异常池（不再逐笔走满五步） */
 ok(await page.locator('[data-page="recon"] .steps').count() === 0, 'recon 不再是逐笔五步状态机');
 const m1Why = await page.locator('#match-m1 .why').innerText();
-ok(m1Why.includes('MATCH-RULES v5') && m1Why.includes('分配候选'), '拟分配卡留存命中规则、规则集版本与候选集合');
+ok(m1Why.includes('MATCH-RULES v5') && m1Why.includes('分配候选'), '拟分配卡留存命中规则、规则中文名与代号、候选集合');
 ok(m1Why.includes('待复核拟分配'), '自动唯一匹配形成待复核拟分配（复核生效前不改变账单）');
-ok((await page.locator('#match-m1 .slab').innerText()).includes('已到账待核销'), '已到账待核销语义：不减少应收 + SLA 内暂停催缴');
+ok((await page.locator('#match-m1 .slab').innerText()).includes('已到账待核销'), '已到账待核销语义：不减少应收 + 规定时限内暂停催缴');
 ok((await page.locator('[data-page="recon"]').innerText()).includes('已到账待核销 ≠ 已核销'), '已到账待核销与已核销两层语义并列展示');
 ok(await page.locator('#diff-card .diff:has-text("代付")').count() === 1, '异常池含代付风险行（第三方代付须留证明）');
 /* 批量复核：勾选多笔一次生效（高置信唯一匹配批量复核） */
 await page.click('#ck-all');
 await page.waitForTimeout(30);
-ok((await page.locator('#ck-count').innerText()).includes('3 笔'), '全选 3 笔待复核拟分配（含金额守恒集合）');
+ok((await page.locator('#ck-count').innerText()).includes('3 笔'), '全选 3 笔待复核拟分配（含 1 组金额正好对得上的账单）');
 await page.click('#btn-batch');
 await page.waitForTimeout(60);
 ok((await page.locator('#stmt-tag-m1').innerText()) === '已核销', 'm1 批量复核生效 → 已核销（仅复核生效派生）');

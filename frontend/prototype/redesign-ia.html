@@ -9,7 +9,7 @@
   问题：v4.0 冻结裁决（docs/plans/2026-08-26-land-property-v4-implementation.md §5 P0）下，
         原型先展示承租转租完整主链，再展示委托代理差异链；重点验证岗位入口、页面任务、
         状态文案、阻断原因、产权方协作边界和账款操作顺序。不含数据库或业务代码设计。
-  红线：无正式报价对象、无空间锁定、无“补录即生效”、无代理费自动派生、无永久单一催收案件
+  红线：无正式报价对象、无物业锁定、无“补录即生效”、无代理费自动派生、无永久单一催收案件
        （docs/archive/reviews/2026-08-26-land-property-review-final-disposition.md §5）。
   运行：双击本文件即可，无依赖、无持久化，所有数据为内置演示数据。
 -->
@@ -389,7 +389,7 @@ button.kc-h:hover{color:var(--jade-d)}
 /* 340px 侧栏内风险项动作过长时换行，避免标题被挤成竖排 */
 .entry-grid .gate{flex-wrap:wrap}
 .entry-grid .gate .gt{min-width:170px}
-/* P0 修订（ISS-05）：检查结果六态芯片 + 通过项折叠头；（ISS-02）双轨行；（ISS-03）SLA/池标签 */
+/* P0 修订（ISS-05）：检查结果六态芯片 + 通过项折叠头；（ISS-02）双轨行；（ISS-03）规定时限 / 人工异常池标签 */
 .gate .gst{display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;font-size:11.5px;font-weight:700;vertical-align:1px}
 .gate.ok .gst{background:var(--ok-t);color:var(--ok)}
 .gate.no .gst{background:var(--block-t);color:var(--block)}
@@ -403,7 +403,7 @@ button.kc-h:hover{color:var(--jade-d)}
 /* 目检修复：合同号与说明分行，避免「HT-xxx上游承租合同」连排与断字 */
 .tbl td.pri small{display:block;line-height:1.5}
 #contracts-rows td:last-child{white-space:nowrap}
-/* 目检修复：可招商空间表「当前合同 / 下一日期」单行省略（悬停看全文），不再逐字换行、也不把操作列挤出视口 */
+/* 目检修复：可招商物业表「当前合同 / 下一日期」单行省略（悬停看全文），不再逐字换行、也不把操作列挤出视口 */
 .vacancy-table td:nth-child(5),.vacancy-table td:nth-child(6){white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis}
 /* 目检修复：看板例外行的降级职责说明独占一行，不再挤压主文本逐字换行 */
 .exc .row{flex-wrap:wrap}
@@ -527,7 +527,7 @@ button.kc-h:hover{color:var(--jade-d)}
   .stat .vl{font-size:20px}
   .pane{overflow:hidden auto;max-width:100%}
   .rcpt-table td:nth-child(1)::before{content:"日期"}.rcpt-table td:nth-child(2)::before{content:"金额"}.rcpt-table td:nth-child(3)::before{content:"附言"}.rcpt-table td:nth-child(4)::before{content:"状态"}
-  .reg-table td:nth-child(1)::before{content:"编码"}.reg-table td:nth-child(2)::before{content:"空间"}.reg-table td:nth-child(3)::before{content:"类型"}.reg-table td:nth-child(4)::before{content:"面积"}.reg-table td:nth-child(5)::before{content:"位置"}.reg-table td:nth-child(6)::before{content:"资产组"}.reg-table td:nth-child(7)::before{content:"运营项目"}.reg-table td:nth-child(8)::before{content:"状态"}
+  .reg-table td:nth-child(1)::before{content:"编码"}.reg-table td:nth-child(2)::before{content:"物业"}.reg-table td:nth-child(3)::before{content:"类型"}.reg-table td:nth-child(4)::before{content:"面积"}.reg-table td:nth-child(5)::before{content:"位置"}.reg-table td:nth-child(6)::before{content:"资产组"}.reg-table td:nth-child(7)::before{content:"运营项目"}.reg-table td:nth-child(8)::before{content:"状态"}
   .job{flex-wrap:wrap}
   .job .meta{flex:1 1 100%;order:3;gap:12px}
   .job .btn{flex:1 1 100%;order:4;padding:11px;font-size:14px}
@@ -545,7 +545,7 @@ button.kc-h:hover{color:var(--jade-d)}
   .mobile-cards,.mobile-cards tbody,.mobile-cards tr,.mobile-cards td,.mobile-table-page .tbl,.mobile-table-page .tbl tbody,.mobile-table-page .tbl tr,.mobile-table-page .tbl td{display:block;width:100%}
   .mobile-cards thead,.mobile-table-page .tbl thead{display:none}.mobile-cards tr,.mobile-table-page .tbl tr{padding:12px 14px;border-bottom:1px solid var(--line)}
   .mobile-cards td,.mobile-table-page .tbl td{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px 14px;padding:6px 0!important;border:0!important;text-align:right!important;overflow-wrap:anywhere}.mobile-cards td>*,.mobile-table-page .tbl td>*{min-width:0;max-width:100%}.mobile-cards td::before,.mobile-table-page .tbl td::before{color:var(--mut);font-size:11.5px;text-align:left;flex:0 0 76px}
-  .vacancy-table td:nth-child(1)::before{content:"空间"}.vacancy-table td:nth-child(2)::before{content:"面积"}.vacancy-table td:nth-child(3)::before{content:"状态"}.vacancy-table td:nth-child(4)::before{content:"底价"}.vacancy-table td:nth-child(5)::before{content:"当前合同"}.vacancy-table td:nth-child(6)::before{content:"下一日期"}.vacancy-table td:nth-child(7)::before{content:"操作"}
+  .vacancy-table td:nth-child(1)::before{content:"物业"}.vacancy-table td:nth-child(2)::before{content:"面积"}.vacancy-table td:nth-child(3)::before{content:"状态"}.vacancy-table td:nth-child(4)::before{content:"底价"}.vacancy-table td:nth-child(5)::before{content:"当前合同"}.vacancy-table td:nth-child(6)::before{content:"下一日期"}.vacancy-table td:nth-child(7)::before{content:"操作"}
   [data-page="contracts"] .tbl td:nth-child(1)::before{content:"合同 / 协议"}[data-page="contracts"] .tbl td:nth-child(2)::before{content:"模式"}[data-page="contracts"] .tbl td:nth-child(3)::before{content:"对方主体"}[data-page="contracts"] .tbl td:nth-child(4)::before{content:"项目"}[data-page="contracts"] .tbl td:nth-child(5)::before{content:"期间"}[data-page="contracts"] .tbl td:nth-child(6)::before{content:"月度金额"}[data-page="contracts"] .tbl td:nth-child(7)::before{content:"账款状态"}[data-page="contracts"] .tbl td:nth-child(8)::before{content:"经营状态"}[data-page="contracts"] .tbl td:nth-child(9)::before{content:"操作"}
   [data-page="parties"] .tbl td:nth-child(1)::before{content:"主体"}[data-page="parties"] .tbl td:nth-child(2)::before{content:"角色"}[data-page="parties"] .tbl td:nth-child(3)::before{content:"联系人"}[data-page="parties"] .tbl td:nth-child(4)::before{content:"审核"}[data-page="parties"] .tbl td:nth-child(5)::before{content:"欠费"}[data-page="parties"] .tbl td:nth-child(6)::before{content:"操作"}
   .card-h{gap:8px;flex-wrap:wrap}.card-h .note{margin-left:0}.proto-badge{display:none}
@@ -569,7 +569,7 @@ button.kc-h:hover{color:var(--jade-d)}
       <button class="msearch" id="msearch" aria-label="打开全局搜索" data-icon="search"></button>
 
       <span class="searchwrap" id="gsearchwrap">
-        <label class="search"><span data-icon="search" class="si"></span><input id="gsearch" placeholder="搜索空间、合同、客户、流水号" aria-label="全局搜索"></label>
+        <label class="search"><span data-icon="search" class="si"></span><input id="gsearch" placeholder="搜索物业、合同、客户、流水号" aria-label="全局搜索"></label>
         <span class="searchhits" id="search-hits" aria-label="全局搜索命中结果"></span>
       </span>
       <span class="sp"></span>
@@ -580,7 +580,7 @@ button.kc-h:hover{color:var(--jade-d)}
     <div class="backdrop" id="backdrop"></div>
     <div class="scenario-bar" aria-label="原型岗位与走查路线">
       <span><b>体验视角</b><small>身份在登录页选择 · 此处只驱动走查路线</small></span>
-      <label>走查路线 <select class="sel" id="scenario-sel"><option value="home" selected>选择走查步骤…</option><optgroup label="承租转租主链（先行）"><option value="intent">① 登记意向与条件审议</option><option value="effective">② 拟定合同并生效</option><option value="cash">③ 到账认领与分配</option><option value="collect">④ 欠费催收</option></optgroup><optgroup label="委托代理差异链"><option value="receipt">⑤ 产权方逐笔确认到账</option><option value="stmt">⑥ 代理费对账单定案</option><option value="portal">⑦ 产权方协同门户</option></optgroup><optgroup label="治理与上游"><option value="rights">权属与授权复核门</option><option value="pay">上游付款确认</option></optgroup></select></label>
+      <label>走查路线 <select class="sel" id="scenario-sel"><option value="home" selected>选择走查步骤…</option><optgroup label="承租转租主链（先行）"><option value="intent">① 登记意向与条件审议</option><option value="effective">② 拟定合同并生效</option><option value="cash">③ 银行到账核对</option><option value="collect">④ 欠费催收</option></optgroup><optgroup label="委托代理差异链"><option value="receipt">⑤ 产权方逐笔确认到账</option><option value="stmt">⑥ 代理费对账单定案</option><option value="portal">⑦ 产权方协同门户</option></optgroup><optgroup label="治理与上游"><option value="rights">权属与授权复核门</option><option value="pay">上游付款确认</option></optgroup></select></label>
       <span class="scenario-question">走查问题：岗位能否找到下一步？阻断原因能否看懂？账款操作顺序是否正确？产权方边界是否清晰？</span>
       <span class="proto-badge"><b>原型</b> · 岗位化信息架构 · 数据为演示，双击文件即可预览</span>
     </div>
@@ -592,7 +592,7 @@ button.kc-h:hover{color:var(--jade-d)}
       <span class="ptab-ext">外部协同账号 · 仅委托范围内数据可见 · <button type="button" class="linkbtn" data-logout style="font-size:12px">切换身份</button></span>
     </nav>
 
-	<!-- 新建租赁意向（v4.0 §3.2.1 最小字段集；无正式报价对象、无空间锁定） -->
+	<!-- 新建租赁意向（v4.0 §3.2.1 最小字段集；无正式报价对象、无物业锁定） -->
     <div class="mask" id="opp-mask">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="opp-title">
         <div class="modal-h"><b id="opp-title">登记租赁意向</b><button class="x" data-close="opp" aria-label="关闭" data-icon="x"></button></div>
@@ -606,7 +606,7 @@ button.kc-h:hover{color:var(--jade-d)}
             <div class="fld"><label for="opp-date">拟租期起止</label><input id="opp-date" name="lease_term" placeholder="例如：2026-10-01 起 36 个月"></div>
             <div class="fld"><label for="opp-free">免租与递增</label><input id="opp-free" name="free_rent_escalation" placeholder="例如：免租 45 天 · 次年起递增 3%"></div>
             <div class="fld"><label for="opp-dep">保证金条件</label><input id="opp-dep" name="deposit_term" placeholder="例如：三个月租金"></div>
-            <div class="fld full"><label>候选空间（可多选 · 并行洽谈不锁定空间）</label><div class="cand" id="opp-cand"></div></div>
+            <div class="fld full"><label>候选物业（可多选 · 并行洽谈不锁定物业）</label><div class="cand" id="opp-cand"></div></div>
             <div class="fld full"><label for="opp-duty">水电物业等费用责任</label><input id="opp-duty" name="cost_bearing" placeholder="例如：水电自理 · 物业费由承租方承担"></div>
             <div class="fld full"><label for="opp-precond">物业前置条件</label><input id="opp-precond" name="preconditions" placeholder="例如：漏水修复完成后方可签约生效"></div>
             <div class="fld full"><label for="opp-next">下一次联系安排</label><input id="opp-next" name="next_contact" placeholder="例如：08-28 14:00 电话回访"></div>
@@ -672,7 +672,7 @@ button.kc-h:hover{color:var(--jade-d)}
   </div>
   <div class="dash-grid">
     <div class="card">
-      <div class="card-h"><b>空间热力</b><button type="button" class="linkbtn heat-link" data-go="page" data-id="rentcontrol">打开租控图（楼层大墙）→</button><span class="note">颜色和文字共同表示空间状态 · 点击空间查看依据</span></div>
+      <div class="card-h"><b>物业热力</b><button type="button" class="linkbtn heat-link" data-go="page" data-id="rentcontrol">打开租控图（楼层大墙）→</button><span class="note">颜色和文字共同表示物业状态 · 点击物业查看依据</span></div>
       <div class="card-b" id="dash-heat"></div>
     </div>
     <div class="card">
@@ -680,7 +680,7 @@ button.kc-h:hover{color:var(--jade-d)}
       <div class="exc">
         <div class="row"><span class="k"><span class="tag st-verify">权利待核实</span></span><span class="t">广州大道北550号 · 无证土地 17,250㎡<small>土地台账 GOAM-TD-002 · 责任人 周庆銮 · 权属清理承诺 09-30</small></span><button type="button" class="linkbtn" data-go="space" data-id="DDB-550">处理 →</button></div>
         <div class="row"><span class="k"><span class="tag st-blocked">大额欠款</span></span><span class="t">明察企业 × 一德路<small>11 期挂账 · 账龄最长 24 个月 · 责任人 于冠增 · 旧系统欠费查询实测</small></span><span class="amt num">¥2,250,884</span><button type="button" class="linkbtn" data-go="page" data-id="collections">处理 →</button></div>
-        <div class="row"><span class="k"><span class="tag st-soon">无证空间接洽</span></span><span class="t">晓南花园车场（XN-TCC）无证<small>吕巨建拟签 20 车位 → 权属审查将阻断生效，需先办证或调整范围</small></span><span id="exc-rights-link"></span></div>
+        <div class="row"><span class="k"><span class="tag st-soon">无证物业接洽</span></span><span class="t">晓南花园车场（XN-TCC）无证<small>吕巨建拟签 20 车位 → 权属审查将阻断生效，需先办证或调整范围</small></span><span id="exc-rights-link"></span></div>
         <div class="row"><span class="k"><span class="tag st-soon">临期合同</span></span><span class="t">锦洲 308 · 家和集团 · 244 天后到期<small>202608 期应收 ¥36,266 未收（账期内）· 续租意向未确认</small></span><button type="button" class="linkbtn" data-go="space" data-id="JZ-308">安排 →</button></div>
         <div class="row"><span class="k"><span class="tag st-blocked">长期空置</span></span><span class="t">锦洲 JZ-401-404 · 空置 241 天<small>租控图 2026-08-29 实况 · 回民饭店接洽中</small></span><button type="button" class="linkbtn" data-go="space" data-id="JZ-401-404">查看 →</button></div>
       </div>
@@ -697,23 +697,23 @@ button.kc-h:hover{color:var(--jade-d)}
   </div>
 </section>
 
-<!-- ============ 空置全景（评审 §2.4 空间列表） ============ -->
+<!-- ============ 空置全景（评审 §2.4 物业列表） ============ -->
 <section class="page" data-page="vacancy">
   <div class="h1">
-    <div><h1>可招商空间</h1><div class="sub">供给视角的空间工作面 · 判定、原因与主动作同源 · <button type="button" class="linkbtn" data-go="page" data-id="register">查看空间档案（基础资料）→</button></div></div>
-    <div class="acts"><button class="btn" data-toast="导出可招商空间（原型示意）">导出</button></div>
+    <div><h1>可招商物业</h1><div class="sub">供给视角的物业工作面 · 判定、原因与主动作同源 · <button type="button" class="linkbtn" data-go="page" data-id="register">查看物业档案（基础资料）→</button></div></div>
+    <div class="acts"><button class="btn" data-toast="导出可招商物业（原型示意）">导出</button></div>
   </div>
   <div class="chips" id="vc-chips"></div>
   <div class="layout3">
     <div class="pane"><div class="pane-h">位置目录</div><div class="tree" id="vc-tree"></div></div>
     <div class="pane">
-      <div class="pane-h">空间 <span class="note" id="vc-count"></span></div>
+      <div class="pane-h">物业 <span class="note" id="vc-count"></span></div>
       <table class="tbl mobile-cards vacancy-table"><thead><tr>
-        <th>空间</th><th class="r">面积 ㎡</th><th>当前状态</th><th class="r">底价 元/㎡·天</th><th>当前合同</th><th>下一日期</th><th>主要动作</th>
+        <th>物业</th><th class="r">面积 ㎡</th><th>当前状态</th><th class="r">底价 元/㎡·天</th><th>当前合同</th><th>下一日期</th><th>主要动作</th>
       </tr></thead><tbody id="vc-rows"></tbody></table>
     </div>
     <div class="pane">
-      <div class="pane-h">空间概况</div>
+      <div class="pane-h">物业概况</div>
       <div id="vc-insp"></div>
     </div>
   </div>
@@ -722,7 +722,7 @@ button.kc-h:hover{color:var(--jade-d)}
 <!-- ============ 租控图 ============ -->
 <section class="page" data-page="rentcontrol">
   <div class="h1">
-    <div><h1>租控图</h1><div class="sub">可操作楼层大墙：格内含判定、面积与下一日期，每层带可租小计 · 点击格子打开空间详情</div></div>
+    <div><h1>租控图</h1><div class="sub">可操作楼层大墙：格内含判定、面积与下一日期，每层带可租小计 · 点击格子打开物业详情</div></div>
     <div class="acts"><button class="btn" data-toast="打印租控墙图（原型示意）">打印墙图</button></div>
   </div>
   <div class="card"><div class="card-b" id="rc-heat"></div></div>
@@ -737,15 +737,15 @@ button.kc-h:hover{color:var(--jade-d)}
     <div class="pane"><div class="pane-h">权属与出租依据<span class="note">只显示影响当前业务判断的信息</span></div><div class="kv" id="sd-rights"></div></div>
   </div>
 </section>
-<!-- ============ 租赁意向与条件审议（v4.0 §3.2：无正式报价对象、无空间锁定） ============ -->
+<!-- ============ 租赁意向与条件审议（v4.0 §3.2：无正式报价对象、无物业锁定） ============ -->
 <section class="page" data-page="intents">
   <div class="h1">
-    <div><h1>租赁意向</h1><div class="sub">接洽与拟租条件审议 · 形成「接受 / 反提 / 拒绝」正式结论后才能进入合同拟定 · 多家可并行在谈，不锁定空间</div></div>
+    <div><h1>租赁意向</h1><div class="sub">接洽与拟租条件审议 · 形成「接受 / 反提 / 拒绝」正式结论后才能进入合同拟定 · 多家可并行在谈，不锁定物业</div></div>
     <div class="acts"><button class="btn p" data-modal="opp">＋ 登记租赁意向</button></div>
   </div>
   <div class="gatebar">审议门槛：权属、底价或国资材料缺失时可以接洽和收意向；<b>合同拟定与生效</b>必须通过权属授权复核、外部审批证据与生效前置。 <span id="gate-rights-link"></span></div>
   <div class="kan" id="kan"></div>
-  <div class="note" style="margin-top:12px">同一空间的多家意向互不排斥；只有生效的终端合同产生排他占用——同一时间只允许一份期间与用途不冲突的生效终端合同，两名经办同时提交时仅一份成功。</div>
+  <div class="note" style="margin-top:12px">同一物业的多家意向互不排斥；只有生效的终端合同产生排他占用——同一时间只允许一份期间与用途不冲突的生效终端合同，两名经办同时提交时仅一份成功。</div>
 </section>
 
 <!-- ============ 合同拟定与生效（v4.0 §3.2：风险优先生效检查，无「补录即生效」） ============ -->
@@ -764,12 +764,12 @@ button.kc-h:hover{color:var(--jade-d)}
   </div>
   <div class="entry-grid">
     <div class="pane">
-      <div class="pane-h">关键商业字段 <span class="note">冲突字段须二选一修正事实源 · 修正后系统自动重检生效条件</span></div>
+      <div class="pane-h">关键商业字段 <span class="note">冲突字段须二选一，确定以哪一份材料为准 · 修正后系统自动重检生效条件</span></div>
       <div class="fgroup" id="entry-fields">
         <div class="gt">对象与主体</div>
-        <div class="f ok" id="f-space"><span class="lb">出租空间</span><span class="vl">锦洲国际中心 / 商务中心 / 4层 / JZ-401-404<small>计租面积 369.39㎡（401-404 合并计租 · 旧系统租控图：已空置 241 天）</small></span><span class="st">✓ 已确认</span></div>
+        <div class="f ok" id="f-space"><span class="lb">出租物业</span><span class="vl">锦洲国际中心 / 商务中心 / 4层 / JZ-401-404<small>计租面积 369.39㎡（401-404 合并计租 · 旧系统租控图：已空置 241 天）</small></span><span class="st">✓ 已确认</span></div>
         <div class="f ok"><span class="lb">出租方</span><span class="vl">广州五羊产城投资有限公司（受托运营方为出租方 · 快照将于生效时固化）</span><span class="st">✓ 已确认</span></div>
-        <div class="f bad" id="f-party"><span class="lb">承租方</span><span class="vl">原件「广州市回民饭店有限公司」与主体库既有「回民饭店」不一致（旧系统统一客户库两条档案并存）<span class="resolve"><button class="ropt" data-resolve="f-party" data-val="匹配既有主体：回民饭店">用主体库既有主体</button><button class="ropt" data-resolve="f-party" data-val="新建主体：广州市回民饭店有限公司（先查重）">确为新主体</button></span></span><span class="st">需逐项确认</span></div>
+        <div class="f bad" id="f-party"><span class="lb">承租方</span><span class="vl">原件「广州市回民饭店有限公司」与主体库既有「回民饭店」不一致（旧系统统一客户库两条档案并存）<span class="resolve"><button class="ropt" data-resolve="f-party" data-val="匹配既有主体：回民饭店">按已有档案处理</button><button class="ropt" data-resolve="f-party" data-val="新建主体：广州市回民饭店有限公司（先查重）">确为另一家单位</button></span></span><span class="st">需逐项确认</span></div>
         <div class="gt">期间与租金</div>
         <div class="f ok" id="f-term"><span class="lb">合同期间</span><span class="vl num">2026-10-01 → 2029-09-30 · 36 个月<small>计租起点：固定日期（交付延迟不自动顺延）</small></span><span class="st">✓ 已确认</span></div>
         <div class="f ok" id="f-rent"><span class="lb">租金口径</span><span class="vl num">单价 ¥0.40/㎡·天 × 计租 369.39㎡ ≈ 月总额 ¥4,492 · 两口径一致<small>含税口径：含税 · 税率 5%（首期不做税务核算）· 单价参照锦洲 2026 年 1-8 月应收折算水平 0.32 元/㎡·天 上浮</small></span><span class="st">✓ 已确认</span></div>
@@ -790,17 +790,17 @@ button.kc-h:hover{color:var(--jade-d)}
           <button type="button" class="passfold" id="gate-pass-fold" aria-expanded="false"></button>
           <div id="gate-pass" class="hidden"></div>
         </div>
-        <div class="gate no" id="g-appr"><span class="gic">✕</span><span class="gt"><b>外部审批证据</b><span class="gst">阻断</span><small>未检得绑定本合同版本（内容哈希 a3f2…c91）的已确认审批证据。合同在既有独立审批系统完成审批后，由任一方上传单号与证据；核心条款变化即失效，本系统不做第二套审批。</small></span><span class="gact"><button class="btn s" data-toast="打开独立审批系统单号回填与证据上传（原型示意）">打开审批系统回填</button><button class="btn s p" data-gatesolve="g-appr" data-done="已绑定：审批系统 OASystem · 单号 HTSP-2026-0912 · 通过 08-26 · 版本哈希 a3f2…c91 · 确认人 运营审批责任岗 · 自动重检通过">模拟：绑定审批证据</button></span></div>
+        <div class="gate no" id="g-appr"><span class="gic">✕</span><span class="gt"><b>外部审批证据</b><span class="gst">阻断</span><small>未检得与本版合同文件内容绑定的已确认审批证据（文件内容指纹 a3f2…c91）。合同在既有独立审批系统完成审批后，由任一方上传单号与证据；核心条款变化即失效，本系统不做第二套审批。</small></span><span class="gact"><button class="btn s" data-toast="打开独立审批系统单号回填与证据上传（原型示意）">打开审批系统回填</button><button class="btn s p" data-gatesolve="g-appr" data-done="已绑定：审批系统 OASystem · 单号 HTSP-2026-0912 · 通过 08-26 · 文件内容指纹 a3f2…c91 · 确认人 运营审批责任岗 · 自动重检通过">模拟：绑定审批证据</button></span></div>
         <div class="gate no" id="g-gz"><span class="gic">✕</span><span class="gt"><b>国资出租材料</b><span class="gst">阻断</span><small>本次出租适用国资程序：备案表与底价审批层级材料缺失——可接洽收意向，但不得完成正式合同生效。</small></span><span class="gact"><button class="btn s" data-toast="查看国资材料清单与缺项（原型示意）">查看缺项</button><button class="btn s p" data-gatesolve="g-gz" data-done="已归档：国资出租备案表 DZ-2026-118 · 底价审批层级证明 · 复核人 章培德 · 自动重检通过">模拟：归档国资材料</button></span></div>
         <div class="gate no" id="g-precond"><span class="gic">✕</span><span class="gt"><b>生效前置条件</b><span class="gst">阻断</span><small>交付整改（物业工单 WO-2207 · 演示工单）未完成：锦洲 401-404 空置 241 天，交付检查 12 项通过前不得生效。完成复验后本项自动转绿；授权人员可留痕豁免（原因、人员、时间、附件），豁免不得暗改核心条款——涉及核心条款变化须重新取得外部审批。</small></span><span class="gact"><button class="btn s" data-toast="跳转物业工单 WO-2207（原型示意）：验收通过后此门自动转绿">查看工单</button><button class="btn s p" data-gatesolve="g-precond" data-done="已留痕豁免：原因「承租方自担整改并先行进场」· 豁免人 运营授权岗 章培德 · 08-26 · 附件 1 份 · 自动重检通过">模拟：授权岗留痕豁免</button></span></div>
-        <div class="gate no" id="g-dep"><span class="gic">✕</span><span class="gt"><b>金额一致性</b><span class="gst">阻断</span><small>保证金计算规则「三个月租金 ¥13,477」与原件固定金额「¥13,500」不一致——单价与总额双口径不一致时阻止生效。在左侧「保证金」字段二选一修正事实源后自动重检转绿。</small></span></div>
+        <div class="gate no" id="g-dep"><span class="gic">✕</span><span class="gt"><b>金额一致性</b><span class="gst">阻断</span><small>保证金计算规则「三个月租金 ¥13,477」与原件固定金额「¥13,500」不一致——单价与总额双口径不一致时阻止生效。在左侧「保证金」字段二选一、确定以哪份材料为准后自动重检转绿。</small></span></div>
         <div class="gate no" id="g-file"><span class="gic">✕</span><span class="gt"><b>最终盖章文件</b><span class="gst">阻断</span><small>双方盖章扫描件待任一方上传，并由出租方确认为生效版本；合法电子签署原始文件可标记为电子原件，扫描件始终是副本。</small></span><span class="gact"><button class="btn s p" data-gatesolve="g-file" data-done="已上传并经出租方确认：租赁合同_回民饭店_JZ-401-404_盖章.pdf · 确认人 出租方授权岗 · 08-26 · 自动重检通过">模拟：上传盖章件</button></span></div>
         <div class="gate ok" id="g-auth"><span class="gic">✓</span><span class="gt"><b>出租授权快照</b><span class="gst">通过</span><small>集团自有产权（旧系统权属台账：锦洲国际中心 权属清晰）· 广州国资集团对五羊产城的受托运营授权覆盖 JZ-401-404 × 2026-10-01~2029-09-30 × 商业用途且允许出租（自动校验通过）；生效时冻结当时的授权版本、证据与验证结果。若授权期短于拟签租期，本项自动转为阻断。</small></span></div>
         <div class="gate ok" id="g-price"><span class="gic">✓</span><span class="gt"><b>底价与例外</b><span class="gst">通过</span><small>拟定条件 ¥0.40 ≥ 有效底价 ¥0.38（系统自动比对 · 单价参照锦洲 2026 年 1-8 月应收折算 0.32 元/㎡·天 · 至 2026-12-31）。低于底价时必须关联针对本次条件的例外审批，一般性授权无效。</small></span></div>
-        <div class="gate ok" id="g-conflict"><span class="gic">✓</span><span class="gt"><b>空间占用排斥</b><span class="gst">通过</span><small>JZ-401-404 无其他生效终端合同重叠（系统实时校验）。同一空间同期只允许一份生效终端合同：即使两名经办同时提交，系统也会在保存瞬间再次校验占用，仅一人成功。</small></span></div>
+        <div class="gate ok" id="g-conflict"><span class="gic">✓</span><span class="gt"><b>物业占用排斥</b><span class="gst">通过</span><small>JZ-401-404 无其他生效终端合同重叠（系统实时校验）。同一物业同期只允许一份生效终端合同：即使两名经办同时提交，系统也会在保存瞬间再次校验占用，仅一人成功。</small></span></div>
       </div>
       <div class="bigok hidden" id="entry-all-ok">✓ 阻断与无法判定项已清零 · 可以提交生效确认</div>
-      <div style="padding:12px 14px" class="note">确定性条件（空间占用、授权覆盖、金额公式、底价比对等）由系统按规则集自动检查，无需逐项点击确认；结果区分通过 / 警告 / 阻断 / 无法判定 / 不适用 / 已批准例外——缺少必要输入一律「无法判定」，不静默视为通过。合同核心字段、内容哈希或例外状态变化后自动重检。提交生效后一次保存全部结果：合同生效、授权快照冻结、外部审批证据绑定版本、首批账单生成在同一事务内完成；任一步失败整体不生效。</div>
+      <div style="padding:12px 14px" class="note">确定性条件（物业占用、授权覆盖、金额公式、底价比对等）由系统按规则集自动检查，无需逐项点击确认；结果区分通过 / 警告 / 阻断 / 无法判定 / 不适用 / 已批准例外——缺少必要输入一律「无法判定」，不静默视为通过。合同核心字段、文件内容或例外状态变化后自动重检。提交生效后一次保存全部结果：合同生效、授权快照冻结、外部审批证据绑定版本、首批账单生成在同一事务内完成；任一步失败整体不生效。</div>
     </div>
   </div>
   <div class="fixedbar">
@@ -832,7 +832,7 @@ button.kc-h:hover{color:var(--jade-d)}
   </div>
   <div class="card">
     <table class="tbl"><thead><tr>
-      <th>合同 / 协议</th><th>模式 · 方向</th><th>对方主体</th><th>项目</th><th>期间</th><th class="r">月度金额</th><th>账款状态</th><th>经营状态</th><th></th>
+      <th>合同 / 协议</th><th>业务类型 · 收付方向</th><th>对方主体</th><th>项目</th><th>期间</th><th class="r">月度金额</th><th>账款状态</th><th>经营状态</th><th></th>
     </tr></thead><tbody id="contracts-rows">
       <tr data-mode="up"><td class="pri">上游租约 · 北京路249号前座<small class="note">我方租入 · 房管局租约 · 文书 授权附件包（演示）</small></td><td><span class="mtag up">上游租入</span></td><td>广州市房地产管理局（权属人）<br><span class="note">出租方 → 我方租入运营</span></td><td>北京路</td><td class="num">租约履行中（旧系统资产台账：租入 · 待办证）<small class="note">旧系统房屋台账 GOAM-FW-19 · 381.12㎡</small></td><td class="r num">应付 ¥96,300<small class="note">演示金额</small></td><td><span class="tag st-rentable">本期应付 08-31</span></td><td><span class="tag st-rented">生效中</span></td><td><button type="button" class="linkbtn" data-toast="上游租约详情：授权范围 Space×期间×用途 与快照（原型示意）">详情</button> <button type="button" class="linkbtn" data-go="page" data-id="payables">付款</button></td></tr>
       <tr data-mode="cz"><td class="pri">五羊司合字[2024]156号<small class="note">下游租赁合同 · 明察企业 × 一德路后座（编号按旧系统规律补全）</small></td><td><span class="mtag">承转 · 下游</span></td><td>广州市明察企业管理有限公司</td><td>一德路</td><td class="num">履行中（2024-09 起计租）</td><td class="r num">应收 ¥203,598</td><td><span class="tag st-blocked">逾期 ¥1,342,158（8 期）</span></td><td><span class="tag st-rented">生效中</span></td><td><button type="button" class="linkbtn" data-toast="打开合同详情（原型示意）">详情</button> <button type="button" class="linkbtn" data-go="page" data-id="lifecycle">变更</button></td></tr>
@@ -927,7 +927,7 @@ button.kc-h:hover{color:var(--jade-d)}
     <div class="meta"><span>事实 1 <b>合同终止 / 到期（法律）</b></span><span>事实 2 <b>实际交还（现场）</b></span><span>事实 3 <b>整改评估</b></span><span>事实 4 <b>重新可租（系统判定）</b></span></div>
     <span class="nxact">合同终止不自动改变实际占有：交接须双方签字或盖章的交接单，附现场照片；未交接期间占用事实照常记录</span>
     <div class="ins-act"><button class="btn s p" data-lc="lc-handover">模拟：登记退租交接单（双方签字 · 现场照片 6 张）</button></div>
-    <div class="note hidden" id="lc-handover-note" style="margin-top:8px">交接单已归档：空间进入整改评估；验收通过后由系统判定重新可租，判定前招商侧显示为「受限 · 交接整改中」。</div>
+    <div class="note hidden" id="lc-handover-note" style="margin-top:8px">交接单已归档：物业进入整改评估；验收通过后由系统判定重新可租，判定前招商侧显示为「受限 · 交接整改中」。</div>
   </div>
 
   <div class="case">
@@ -1023,22 +1023,22 @@ button.kc-h:hover{color:var(--jade-d)}
   </div>
 </section>
 
-<!-- ============ 收款认领与分配（v4.0 §3.5 · ISS-03：确定性规则自动匹配 → 批量复核 / 人工异常池，不再逐笔走满五步） ============ -->
+<!-- ============ 银行到账核对（UI 文案）· v4.0 §3.5「银行到账核对」 · ISS-03：确定性规则自动匹配 → 批量复核 / 人工异常池，不再逐笔走满五步） ============ -->
 <section class="page" data-page="recon">
   <div class="h1">
-    <div><h1>收款认领与分配</h1><div class="sub">银行原始行不可改写 · 确定性规则自动匹配：高置信唯一 → 待复核拟分配，命中风险条件 → 人工异常池 · 财务批量复核生效后才改变经营账款</div></div>
+    <div><h1>银行到账核对</h1><div class="sub">银行流水原始记录不可改写 · 系统按固定规则自动比对：能唯一对上的 → 待复核的拟分配；存在风险的 → 转人工处理 · 财务批量复核生效后才改变经营账款</div></div>
     <div class="acts">
       <select class="sel" id="batch-sel" aria-label="导入批次"><option value="live">IMP-0822 · 进行中</option><option value="done">IMP-0817 · 已完成</option></select>
-      <button class="btn p" id="import-btn" data-toast="选择 Excel / CSV 银行流水文件（原型示意）：导入仅生成原始行证据 · 幂等键去重，重试不重复生成">⭱ 导入银行文件</button>
-      <button class="btn" data-toast="手工登记为异常工具，需非空范围锚点（原型示意）">手工登记（异常工具）</button>
+      <button class="btn p" id="import-btn" data-toast="选择 Excel / CSV 银行流水文件（原型示意）：导入只生成银行流水原始记录；同一份文件重复导入不会产生重复记录（按文件内容指纹去重），重试可放心重来">⭱ 导入银行文件</button>
+      <button class="btn" data-toast="手工登记仅用于特殊情况，需非空范围锚点（原型示意）">手工登记（特殊情况）</button>
     </div>
   </div>
   <div id="batch-live">
   <div class="stats">
-    <div class="stat"><div class="lb">本批导入</div><div class="vl num">47<small>笔</small></div><div class="dl">批次 IMP-0822 · 招行 1109××8821 · 幂等键拦截重复 1 笔</div></div>
+    <div class="stat"><div class="lb">本批导入</div><div class="vl num">47<small>笔</small></div><div class="dl">批次 IMP-0822 · 招行 1109××8821 · 重复导入已拦截 1 笔</div></div>
     <div class="stat"><div class="lb">自动唯一匹配</div><div class="vl num">38<small>笔</small></div><div class="dl">命中确定性规则 · 已形成<b>待复核拟分配</b>（复核生效前不改变任何账单）</div></div>
     <button type="button" class="stat go" data-drill="diff"><div class="lb">人工异常池</div><div class="vl num" style="color:var(--soon)">6</div><div class="dl">无附言 2 · 多候选 1 · 超额 1 · 代付 1 · 主体不明 1 · <span class="note">见下方异常池 ↓</span></div></button>
-    <div class="stat"><div class="lb">抽样展示</div><div class="vl num">5<small>笔</small></div><div class="dl">待复核队列 3 笔（含 1 笔金额守恒集合）· 异常池 2 笔 · 每笔留存匹配解释</div></div>
+    <div class="stat"><div class="lb">抽样展示</div><div class="vl num">5<small>笔</small></div><div class="dl">待复核队列 3 笔（含 1 组金额正好对得上的账单）· 异常池 2 笔 · 每笔留存匹配解释</div></div>
   </div>
   <div class="batchbar">
     <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" class="ck" id="ck-all"> 全选待复核行</label>
@@ -1056,33 +1056,33 @@ button.kc-h:hover{color:var(--jade-d)}
         <tr><td class="num">08-22</td><td>个人（房**）</td><td class="r num pri">12,000.00</td><td>—</td><td><span class="diff-tag">异常 · 无附言</span></td></tr>
         <tr><td class="num">08-22</td><td>池玉銮（个人）</td><td class="r num pri">2,340.00</td><td>车位押金</td><td><span class="diff-tag">异常 · 多候选</span></td></tr>
       </tbody></table>
-      <div class="note" style="margin-top:8px">规则优先级（规则集 MATCH-RULES v5 · 可版本化）：① 虚拟子账号唯一 ② 备案银行账号唯一 ③ 合同号/附言 + 币种 + 金额 + 账期共同唯一；户名与金额相同不得单独触发自动分配。</div>
+      <div class="note" style="margin-top:8px">规则优先级（到账匹配规则 第 5 版 · 代号 MATCH-RULES v5 · 版本留痕可追溯）：① 虚拟子账号唯一 ② 备案银行账号唯一 ③ 合同号/附言 + 币种 + 金额 + 账期共同唯一；户名与金额相同不得单独触发自动分配。</div>
     </div>
     <div>
-      <div class="match done"><div class="head"><span class="tx"><b>¥86,000 · 凤凰创意</b> <span class="arrow">→</span> 五羊司合字[2026]77号 · 202608 期账单 <b class="num">¥86,000</b></span></div><div class="why">自动唯一匹配（R3「附言+金额+账期」· MATCH-RULES v5）· 财务批量复核生效（复核 章培德）· 金额守恒 ✓</div><span class="cf">已核销 08-22 10:41 · 可追溯至导入行、候选集合与命中规则 · 撤销留链</span></div>
+      <div class="match done"><div class="head"><span class="tx"><b>¥86,000 · 凤凰创意</b> <span class="arrow">→</span> 五羊司合字[2026]77号 · 202608 期账单 <b class="num">¥86,000</b></span></div><div class="why">自动唯一匹配（R3「附言+金额+账期」· 到账匹配规则 第 5 版 · 代号 MATCH-RULES v5）· 财务批量复核生效（复核 章培德）· 金额正好对得上 ✓</div><span class="cf">已核销 08-22 10:41 · 可追溯至导入行、候选集合与命中规则 · 撤销留链</span></div>
       <div class="match pickable" id="match-m1" data-bill="m1">
-        <div class="head"><input type="checkbox" class="ck ck-m" data-m="m1" aria-label="选择该行"><span class="tx"><b>¥66,100 · 广美设计研究院</b> <span class="arrow">→</span> 唯一结算项：五羊司合字[2026]92号 · 2026-07 期 <b class="num">¥66,100</b>（金额守恒 · 演示金额）</span></div>
-        <div class="why">主体认领：备案银行账号唯一 → 广美设计研究院 · 分配候选 1/1 · 命中规则 R3「附言+币种+金额+账期唯一」（MATCH-RULES v5）· 已形成<b>待复核拟分配</b>，未生效</div>
-        <div class="slab">已到账待核销：不减少应收未结 · 唯一结算项 → SLA 内暂停自动催缴升级（至 08-26 · 超时恢复提醒并升级内部异常任务）</div>
+        <div class="head"><input type="checkbox" class="ck ck-m" data-m="m1" aria-label="选择该行"><span class="tx"><b>¥66,100 · 广美设计研究院</b> <span class="arrow">→</span> 唯一结算项：五羊司合字[2026]92号 · 2026-07 期 <b class="num">¥66,100</b>（金额正好对得上 · 演示金额）</span></div>
+        <div class="why">主体认领：备案银行账号唯一 → 广美设计研究院 · 分配候选 1/1 · 命中规则 R3「附言+币种+金额+账期唯一」（到账匹配规则 第 5 版 · 代号 MATCH-RULES v5）· 已形成<b>待复核拟分配</b>，未生效</div>
+        <div class="slab">已到账待核销：不减少应收未结 · 唯一结算项 → 规定时限内暂停自动催缴升级（至 08-26 · 超时恢复提醒并转为内部待办，由专人跟进）</div>
         <div class="acts" id="acts-m1"><button class="btn s p" data-reviewline="m1">复核入账（复核岗 章培德）</button></div>
       </div>
       <div class="match pickable" id="match-m2" data-bill="m2">
         <div class="head"><input type="checkbox" class="ck ck-m" data-m="m2" aria-label="选择该行"><span class="tx"><b>¥55,200 · 西厨佳食品</b> <span class="arrow">→</span> 唯一结算项：五羊司合字[2026]92号 · 押金应收 <b class="num">¥55,200</b></span></div>
-        <div class="why">主体认领：备案银行账号唯一 → 西厨佳食品 · 分配候选 1/1 · 命中规则 R3「附言押金+金额+对方」（MATCH-RULES v5）· 币种 CNY ✓ · 待复核拟分配</div>
+        <div class="why">主体认领：备案银行账号唯一 → 西厨佳食品 · 分配候选 1/1 · 命中规则 R3「附言押金+金额+对方」（到账匹配规则 第 5 版 · 代号 MATCH-RULES v5）· 币种 CNY ✓ · 待复核拟分配</div>
         <div class="slab">已到账待核销：押金到账不涉催缴 · 记入押金持有台账前须经复核生效</div>
         <div class="acts" id="acts-m2"><button class="btn s p" data-reviewline="m2">复核入账（复核岗 章培德）</button></div>
       </div>
       <div class="match pickable" id="match-m3" data-bill="m3">
-        <div class="head"><input type="checkbox" class="ck ck-m" data-m="m3" aria-label="选择该行"><span class="tx"><b>¥73,600 · 西厨佳食品</b> <span class="arrow">→</span> 金额守恒集合：五羊司合字[2026]92号 · 季度 4 期 × <b class="num">¥18,400</b></span></div>
-        <div class="why">附言「房租」+ 明确金额守恒（4 × ¥18,400 = ¥73,600）→ 拟分配集合（待复核）· 任一期金额不守恒即整体退回人工池</div>
+        <div class="head"><input type="checkbox" class="ck ck-m" data-m="m3" aria-label="选择该行"><span class="tx"><b>¥73,600 · 西厨佳食品</b> <span class="arrow">→</span> 金额正好对得上的一组账单：五羊司合字[2026]92号 · 季度 4 期 × <b class="num">¥18,400</b></span></div>
+        <div class="why">附言「房租」+ 金额正好对得上（4 × ¥18,400 = ¥73,600）→ 整组拟分配（待复核）· 任一期金额对不上则整组退回人工池</div>
         <div class="acts" id="acts-m3"><button class="btn s p" data-reviewline="m3">复核入账（复核岗 章培德）</button></div>
       </div>
-      <div class="match"><div class="head"><span class="tx"><b>¥12,000 · 个人（房**）</b> <span class="arrow">→</span> <span class="diff-tag">异常池 · 无附言</span></span></div><div class="why">无附言且无法唯一确定付款主体——不自动认领，更不静默入账 · 转人工异常池指派排查</div><div class="acts"><button class="btn s" data-toast="已在人工异常池指派排查：出纳 于冠增 · 截止 08-26（原型示意）">转异常池处理</button></div></div>
+      <div class="match"><div class="head"><span class="tx"><b>¥12,000 · 个人（房**）</b> <span class="arrow">→</span> <span class="diff-tag">异常池 · 无附言</span></span></div><div class="why">无附言且无法唯一确定付款主体——不自动认领，更不静默入账 · 转人工异常池指派排查</div><div class="acts"><button class="btn s" data-toast="已在人工异常池指派排查：出纳 于冠增 · 截止 08-26（原型示意）">转人工处理</button></div></div>
       <div class="match"><div class="head"><span class="tx"><b>¥2,340 · 池玉銮（个人）</b> <span class="arrow">→</span> <span class="diff-tag">异常池 · 同额多候选</span> 车位押金 ¥2,340 ／ 车位租金 3 期 ¥780×3</span></div><div class="why">同额巧合多候选 · 系统不得自动选择，人工指定后另行提交复核</div><div class="acts"><button class="btn s" data-toast="打开人工指定（原型示意）：拟分配提交后须由他人复核，提交人不得自审">人工指定</button></div></div>
     </div>
     <div class="pane"><div class="pane-h">账单与凭证 <span class="note">随选中的拟分配联动</span></div>
       <div class="kv" id="recon-bill"></div>
-      <div class="ins-act"><button class="btn s" data-toast="查看账单全链（原型示意）">账单全链</button><button class="btn s" data-toast="查看银行原始行原文（原型示意）">原始行原文</button></div>
+      <div class="ins-act"><button class="btn s" data-toast="查看账单来龙去脉（原型示意）">账单来龙去脉</button><button class="btn s" data-toast="查看银行流水原文（原型示意）">银行流水原文</button></div>
     </div>
   </div>
   <div class="card" style="margin-top:14px" id="diff-card">
@@ -1091,7 +1091,7 @@ button.kc-h:hover{color:var(--jade-d)}
       <div class="diff"><span class="dtag none">无附言</span><span class="t"><b>个人（房**）¥12,000</b> · 无附言<small>可能为系统外收款或新意向方定金 · 不自动认领主体 · 建议联系对方补全信息</small></span><button class="btn s" data-toast="已指派排查：出纳 于冠增 · 截止 08-26（原型示意）">指派排查</button></div>
       <div class="diff"><span class="dtag oto">多候选</span><span class="t"><b>池玉銮（个人）¥2,340</b> · 同额巧合多候选<small>车位押金 ¥2,340 ／ 车位租金 3 期 ¥780 × 3 · 必须人工指定，指定后另行提交复核</small></span><button class="btn s" data-toast="打开人工指定（原型示意）">人工指定</button></div>
       <div class="diff"><span class="dtag over">超额</span><span class="t"><b>吴俊锋 ¥8,000</b> · 超出车位押金应收 ¥6,500<small>超额 ¥1,500 保留为未分配收款（未分配预收余额 = 到账 − 有效分配）或退回，需二选一 · 不自动冲抵未来账单</small></span><button class="btn s" data-toast="超额 ¥1,500 保留为未分配预收（原型示意）">转预收</button><button class="btn s" data-toast="超额 ¥1,500 安排退回（原型示意）">退回</button></div>
-      <div class="diff"><span class="dtag none">主体不明</span><span class="t"><b>「凤凰」（简写）¥9,800</b> · 户名简写无法唯一确定主体<small>户名与金额相同不得单独作为自动分配依据 · 需对方确认或银行回单补全</small></span><button class="btn s" data-toast="已发起主体确认（原型示意）">主体确认</button></div>
+      <div class="diff"><span class="dtag none">主体不明</span><span class="t"><b>「凤凰」（简写）¥9,800</b> · 户名简写无法唯一确定主体<small>户名与金额相同不得单独作为自动分配依据 · 需对方确认或银行回单补全</small></span><button class="btn s" data-toast="已发起确认：请对方确认是哪家单位（原型示意）">确认是哪家单位</button></div>
       <div class="diff"><span class="dtag none">无候选</span><span class="t"><b>个人（李**）¥3,500</b> · 附言「定金」<small>无匹配意向 · 关联租赁意向？</small></span><button class="btn s" data-toast="已关联租赁意向候选（原型示意）">关联意向</button></div>
       <div class="diff"><span class="dtag oto">代付</span><span class="t"><b>华信贸易 ¥27,000</b> · 附言「代优艺教育付租金」<small>第三方代付：须记录实际付款方、代付对象与证明材料 · 不能唯一确定代付对象时留在异常池</small></span><button class="btn s" data-toast="打开代付关系确认：付款方 华信贸易 · 代付对象 优艺教育 · 证明附件 1 份（原型示意）">确认代付关系</button></div>
     </div>
@@ -1099,7 +1099,7 @@ button.kc-h:hover{color:var(--jade-d)}
   <div class="card" style="margin-top:14px">
     <div class="card-h"><b>已到账待核销 ≠ 已核销</b><span class="note">资金事实与核销状态分两层，由有效事实派生</span></div>
     <div class="card-b">
-      <div class="diff"><span class="dtag oto">已到账待核销</span><span class="t"><b>资金已到账且付款主体已唯一认领，尚未形成生效收付分配</b><small>不减少应收未结金额；仅唯一结算项或明确金额守恒的集合可在限定 SLA 内暂停自动催缴升级，Party 认领或多候选只显示到账提示、不暂停催缴；SLA 超时恢复提醒并升级内部异常任务</small></span></div>
+      <div class="diff"><span class="dtag oto">已到账待核销</span><span class="t"><b>资金已到账且付款主体已唯一认领，尚未形成生效收付分配</b><small>不减少应收未结金额；只有单一账单、或金额正好对得上的一组账单，才可在规定时限内（至 08-26）暂停自动催缴升级；仅仅确认了付款方是哪一家、或存在多个候选账单时，只显示到账提示、不暂停催缴；超过规定时限则恢复提醒并转为内部待办，由专人跟进</small></span></div>
       <div class="diff"><span class="dtag oto">已核销</span><span class="t"><b>仅由复核生效的收付分配派生</b><small>未分配预收余额 = 已确认到账 − 有效收付分配，后续结算项成立后再按有效分配转入，不自动冲抵未来义务</small></span></div>
     </div>
   </div>
@@ -1114,7 +1114,7 @@ button.kc-h:hover{color:var(--jade-d)}
   <div id="batch-done" style="display:none">
     <div class="card"><div class="card-b" style="text-align:center;padding:40px">
       <div style="font-size:16px;font-weight:700">批次 IMP-0817 · 已完成收口</div>
-      <div class="note" style="margin-top:8px">43 笔：38 笔自动唯一匹配经财务批量复核生效 · 5 笔异常池人工处理并经他人复核 · 合计 ¥1,286,400 · 重复拦截 1 笔（幂等键）<br>出纳 于冠增 · 复核 章培德 · 2026-08-17 18:02 幂等收口 · 每笔可追溯至原始导入行、候选集合与命中规则（MATCH-RULES v4）</div>
+      <div class="note" style="margin-top:8px">43 笔：38 笔自动唯一匹配经财务批量复核生效 · 5 笔异常池人工处理并经他人复核 · 合计 ¥1,286,400 · 重复导入已拦截 1 笔<br>出纳 于冠增 · 复核 章培德 · 2026-08-17 18:02 重复导入去重后收口 · 每笔可追溯至原始导入行、候选集合与命中规则（到账匹配规则 第 4 版 · 代号 MATCH-RULES v4）</div>
       <div style="margin-top:16px"><button class="btn" data-toast="导出本批对账单（原型示意）">导出对账单</button></div>
     </div></div>
   </div>
@@ -1140,27 +1140,27 @@ button.kc-h:hover{color:var(--jade-d)}
     <div class="ins-act" style="padding:10px 0 0">
       <button class="btn s p" data-payappl>发起付款申请（2026-08 期 ¥96,300）</button>
       <span class="hidden" id="payappl-box"><span class="note">付款申请单 PAY-APPL-2026-0828-01 已生成 · 应付期次 2026-08 · 收款账户 房管局非税账户（演示账户 · 原型示意）</span> <button class="btn s p" data-payflow>登记银行付款流水（回执单号回填）并提交财务确认</button></span>
-      <button class="btn s" data-toast="查看上游租约、授权范围与本应付账单全链（原型示意）">查看依据</button>
+      <button class="btn s" data-toast="查看上游租约、授权范围与本应付账单的来龙去脉（原型示意）">查看依据</button>
     </div>
   </div>
   <div class="case">
     <div class="t"><b>广州国资集团 × 上游租约·北京路249号前座 · 2026-07 期租金</b><span class="tag st-rentable">已核销</span><span style="flex:1"></span><span class="amt num" style="color:var(--ink)">¥96,300<small style="font-size:11px">（演示金额）</small></span></div>
     <div class="meta"><span>付款流水 <b>PKG-20260731-011</b></span><span>财务复核 <b>章培德 · 07-31（≠经办）</b></span></div>
   </div>
-  <div class="note" style="margin-top:10px">委托代理模式下的终端租金属于产权方资金：既不是运营方应付也不是运营方应收，只在「终端到账确认」中逐笔确认为对账试算证据。上游付款金额为演示口径（旧系统未导出租入合同应付台账）。</div>
+  <div class="note" style="margin-top:10px">委托代理模式下的终端租金属于产权方资金：既不是运营方应付也不是运营方应收，只在「租客到账确认」中逐笔确认为对账试算证据。 <b>上游付款（我方付产权方）≠ 下游收款（终端租金属产权方资金）；两条现金链独立登记、各自按自身事实记录，不轧差、不互相冲抵。</b> 上游付款金额为演示口径（旧系统未导出租入合同应付台账）。</div>
 </section>
 
 <!-- ============ 权属与授权复核门（v4.0：录入与复核分离；生效前验证并冻结快照） ============ -->
 <section class="page" data-page="rights">
   <div class="h1">
-    <div><h1>权属与授权</h1><div class="sub">录入人与复核人分离：提交人不得自审 · 终端合同生效前验证 Space × 期间 × 用途并冻结授权快照</div></div>
+    <div><h1>权属与授权</h1><div class="sub">录入人与复核人分离：提交人不得自审 · 终端合同生效前核对物业 × 租期 × 用途，并把当时的授权版本固定存档</div></div>
     <div class="acts"><button class="btn p" data-toast="新建权利 / 授权 / 底价记录（提交后进入待复核队列）（原型示意）">＋ 登记 / 提交复核</button></div>
   </div>
   <div class="gatebar">生效门依赖：出租授权快照、有效底价与国资材料必须在本页<b>复核通过</b>后才能作为合同生效依据；复核驳回的记录在生效检查中显示为红色阻断。</div>
   <div class="stats">
     <div class="stat"><div class="lb">待我复核</div><div class="vl num">3<small>件</small></div><div class="dl">最早提交 08-24 · 超时自动提醒</div></div>
     <div class="stat"><div class="lb">本月已复核</div><div class="vl num">11<small>件</small></div><div class="dl">通过 9 · 驳回补证 2</div></div>
-    <div class="stat"><div class="lb">权利待核实空间</div><div class="vl num">1<small>处</small></div><div class="dl">广州大道北550号 · 17,250㎡ · 禁止签约</div></div>
+    <div class="stat"><div class="lb">权利待核实物业</div><div class="vl num">1<small>处</small></div><div class="dl">广州大道北550号 · 17,250㎡ · 禁止签约</div></div>
     <div class="stat"><div class="lb">底价例外审批中</div><div class="vl num">1<small>件</small></div><div class="dl">EX-2026-03 · 批准前不得生效</div></div>
   </div>
   <div class="case">
@@ -1203,10 +1203,10 @@ button.kc-h:hover{color:var(--jade-d)}
   </div>
 </section>
 
-<!-- ============ 终端到账确认（v4.0 §3.6：产权方逐笔确认，只用于试算，不形成运营方应收） ============ -->
+<!-- ============ 租客到账确认（UI 文案）· v4.0 §3.6「租客到账确认」：产权方逐笔确认，只用于试算，不形成运营方应收） ============ -->
 <section class="page" data-page="receipts">
   <div class="h1">
-    <div><h1>终端到账确认</h1><div class="sub">委托代理链路：终端租金进入产权方账户 · 运营方逐笔提请、产权方逐笔确认 · 只作为对账试算依据，不形成运营方应收</div></div>
+    <div><h1>租客到账确认</h1><div class="sub">委托代理链路：终端租金进入产权方账户 · 运营方逐笔提请、产权方逐笔确认 · 只作为对账试算依据，不形成运营方应收</div></div>
     <div class="acts"><button class="btn" data-go="page" data-id="stmts">前往代理费对账单 →</button></div>
   </div>
   <div class="ctxbar"><span class="path">委托代理 · 直租合同</span><span class="sid" style="font-size:16px">FC-ZL-2025-009（演示）</span><span class="ctx">园区承租户 × 芳村茶叶城 园区-01 · 月租 ¥72,000（演示口径）· 资金归属：产权方 广州国资集团</span><span class="sp"></span><span class="wm">运营方不经手该笔资金</span></div>
@@ -1249,7 +1249,7 @@ button.kc-h:hover{color:var(--jade-d)}
   <div class="case" id="stmt-card">
     <div class="t"><b>STMT-2026-Q2 · 芳村茶叶城（WT-2025-007 · 演示）</b><span class="tag st-soon" id="stmt-chip">运营方已确认 · 待产权方确认</span><span style="flex:1"></span><span class="amt num" style="color:var(--ink)" id="stmt-amt">试算 ¥48,600</span></div>
     <div class="meta"><span>周期 <b>2026-04-01 → 06-30</b></span><span>计费基数 <b>已确认实收 ¥2,160,000 × 2.25%</b></span><span>结算项 <b>服务费应收 STMT-2026-Q2（盖章后成立）</b></span><span>制表 <b>运营财务岗 于冠增</b></span></div>
-    <span class="nxact" id="stmt-hint">下一步：产权方在门户逐项核对后在线确认；确认前如需更正试算，由运营方重新提请并发起双方确认（产权方在「终端到账确认」逐笔重确认）——财务复核岗不直接修改到账明细</span>
+    <span class="nxact" id="stmt-hint">下一步：产权方在门户逐项核对后在线确认；确认前如需更正试算，由运营方重新提请并发起双方确认（产权方在「租客到账确认」逐笔重确认）——财务复核岗不直接修改到账明细</span>
     <div class="ins-act" style="padding:10px 0 0" id="stmt-actions"><button class="btn s p" data-stmtstep="1">模拟：产权方在线确认</button><button class="btn s" data-toast="打开试算明细：每一行对应一笔已确认到账（原型示意）">查看试算明细</button></div>
     <div id="stmt-tracks" class="hidden" style="margin-top:10px"></div>
   </div>
@@ -1258,7 +1258,7 @@ button.kc-h:hover{color:var(--jade-d)}
     <div class="card-b">
       <div class="doneline"><span><b>资金轨</b> · SF-PAY-2026-0218 · 02-18 到账 ¥15,400（按约定预收 · 收付分配 → Q1 结算项）</span><b><span class="tag st-rentable">已登记</span></b></div>
       <div class="doneline"><span><b>开票轨</b> · INV-2026-0301 · 03-01 按约定开票 ¥46,220（开票分摊 → Q1 结算项）</span><b><span class="tag st-verify">已登记</span></b></div>
-      <div class="note" style="margin-top:8px">该对账单先收款、后开票：没有全局状态机阻止记录真实到账；国企 / 外企租户凭票请款时则先开票、后分次收款（见上方 STMT-2026-Q2）。两种时序中，开票状态与收款状态分别可追溯，互不作为对方的登记前置——合同或制度对开票时点的要求形成待办或警告，而不是阻止记录事实。</div>
+      <div class="note" style="margin-top:8px">该对账单先收款、后开票：没有固定流程阻止记录真实到账；国企 / 外企租户凭票请款时则先开票、后分次收款（见上方 STMT-2026-Q2）。两种时序中，开票状态与收款状态分别可追溯，互不作为对方的登记前置——合同或制度对开票时点的要求形成待办或警告，而不是阻止记录事实。</div>
     </div>
   </div>
   <div class="card" style="margin-top:14px">
@@ -1288,7 +1288,7 @@ button.kc-h:hover{color:var(--jade-d)}
       <div class="task-list">
         <div class="task"><span class="rank" aria-hidden="true" style="background:var(--block)"></span><span class="copy"><b>7 月租金到账明细 · 3 笔 ¥216,000 待逐笔确认</b><small>确认后才会计入代理费试算基数 · 逾期将推迟 Q3 对账单出具</small></span><button class="btn s p" data-go="page" data-id="receipts">去逐笔确认</button></div>
         <div class="task"><span class="rank" aria-hidden="true"></span><span class="copy"><b>Q2 代理费对账单待您确认</b><small>试算 ¥48,600 · 双方确认后上传盖章件，应收才成立</small></span><button class="btn s" data-go="page" data-id="stmts">去确认</button></div>
-        <div class="task"><span class="rank" aria-hidden="true"></span><span class="copy"><b>直租合同生效证据待您补充</b><small>外部审批单 HTSP-2026-0912 的盖章回执 · 上传后生效检查自动放行</small></span><button class="btn s" data-toast="打开证据上传（绑定合同版本哈希）（原型示意）">去上传</button></div>
+        <div class="task"><span class="rank" aria-hidden="true"></span><span class="copy"><b>直租合同生效证据待您补充</b><small>外部审批单 HTSP-2026-0912 的盖章回执 · 上传后生效检查自动放行</small></span><button class="btn s" data-toast="打开证据上传（绑定本版合同文件内容）（原型示意）">去上传</button></div>
       </div>
     </div>
     <div class="card">
@@ -1315,7 +1315,7 @@ button.kc-h:hover{color:var(--jade-d)}
     <div class="acts"><button class="btn p" data-toast="报告问题（原型示意）">＋ 报告问题</button></div>
   </div>
   <div class="job"><span class="ic" style="background:var(--rent-t);color:var(--rent)" data-icon="clip"></span><span class="tt"><b>交付检查 · JZ-401-404（回民饭店入驻前）</b><small>锦洲国际商务中心 / 4层 · 按模板 12 项 · 拍照 ≥ 8 张（演示工单）</small></span><span class="meta"><span>截止<b>今天 10:00</b></span><span>验收人<b>周工</b></span></span><button class="btn p" data-toast="已打卡到场，开始检查（原型示意）">开始逐项检查</button></div>
-  <div class="job"><span class="ic" style="background:var(--block-t);color:var(--block)" data-icon="flame"></span><span class="tt"><b>现场核查 · 广州大道北550号（无证宗地固证）</b><small>集团直管土地 · 现状拍照固证 4 张 · 旧系统土地台账：无证（演示任务）</small></span><span class="meta"><span>截止<b>今天 16:00</b></span><span>验收人<b>安全部 赵磊</b></span></span><button class="btn p" data-toast="已打卡到场（原型示意）">固证并上传</button></div>
+  <div class="job"><span class="ic" style="background:var(--block-t);color:var(--block)" data-icon="flame"></span><span class="tt"><b>现场核查 · 广州大道北550号（无证宗地固证）</b><small>集团直管土地 · 现状拍照固证 4 张 · 旧系统土地台账：无证（演示任务）</small></span><span class="meta"><span>截止<b>今天 16:00</b></span><span>验收人<b>安全部 赵磊</b></span></span><button class="btn p" data-toast="已打卡到场（原型示意）">留存证据并上传</button></div>
   <div class="job"><span class="ic" style="background:var(--soon-t);color:var(--soon)" data-icon="tool"></span><span class="tt"><b>空调报修 · JZ-309A 广美设计研究院</b><small>锦洲国际商务中心 / 3层 · 处理中 · 外包：安信机电（已冻结服务方，演示）</small></span><span class="meta"><span>期限<b>明天 12:00</b></span><span>接手人<b>外包 李师傅</b></span></span><button class="btn" data-toast="提交验收（原型示意）">提交验收</button></div>
   <div class="job"><span class="ic" style="background:var(--ok-t);color:var(--ok)" data-icon="done"></span><span class="tt"><b>场地整治验收 · 晓南花园停车场</b><small>室外车场 2,130㎡（旧系统台账：无证）· 验收通过后具备运营条件，办证前仍不得签约</small></span><span class="meta"><span>截止<b>今天 17:30</b></span><span>验收人<b>周工</b></span></span><button class="btn" data-toast="验收通过将同步解除整治限制（原型示意）">提交整治验收</button></div>
   <div class="job"><span class="ic" style="background:var(--soon-t);color:var(--soon)" data-icon="drop"></span><span class="tt"><b>交付整改复验 · JZ-401-404（签约前置工单 WO-2207）</b><small>锦洲国际商务中心 / 4层 · 回民饭店签约前置条件 · 复验通过后《合同拟定与生效》的「生效前置条件」检查自动转绿</small></span><span class="meta"><span>期限<b>09-01 前</b></span><span>验收人<b>周工</b></span></span><button class="btn p" data-wo2207>提交整改复验</button></div>
@@ -1323,26 +1323,26 @@ button.kc-h:hover{color:var(--jade-d)}
   <div class="note">合同终止不会自动改变实际占有；驳回、重做、复发、证据过期都表现为同一事项时间线上的后继事件。</div>
 </section>
 
-<!-- ============ 空间档案（台账视角登记册） ============ -->
+<!-- ============ 物业档案（台账视角登记册） ============ -->
 <section class="page" data-page="register">
   <div class="h1">
-    <div><h1>空间档案</h1><div class="sub">物理身份登记册 · 治理岗位视角 · <button type="button" class="linkbtn" data-go="page" data-id="vacancy">查看可招商空间（业务视角）→</button></div></div>
-    <div class="acts"><button class="btn p" data-go="page" data-id="landreg">＋ 宗地登记</button><button class="btn" data-toast="批量导入进入历史数据核对页面（原型示意）">批量导入</button><button class="btn" data-toast="导出空间档案（原型示意）">导出</button></div>
+    <div><h1>物业档案</h1><div class="sub">物理身份登记册 · 治理岗位视角 · <button type="button" class="linkbtn" data-go="page" data-id="vacancy">查看可招商物业（业务视角）→</button></div></div>
+    <div class="acts"><button class="btn p" data-go="page" data-id="landreg">＋ 宗地登记</button><button class="btn" data-toast="批量导入进入历史数据核对页面（原型示意）">批量导入</button><button class="btn" data-toast="导出物业档案（原型示意）">导出</button></div>
   </div>
   <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <label class="search" style="flex:0 1 320px"><span data-icon="search" class="si"></span><input id="reg-q" placeholder="表内搜索：编码 / 空间 / 资产组" aria-label="表内搜索"></label>
+    <label class="search" style="flex:0 1 320px"><span data-icon="search" class="si"></span><input id="reg-q" placeholder="表内搜索：编码 / 物业 / 资产组" aria-label="表内搜索"></label>
     <span class="note num" id="reg-count">共 15 条</span>
   </div>
   <div class="card"><table class="tbl mobile-cards reg-table"><thead><tr>
-    <th>编码</th><th>空间</th><th>类型</th><th class="r">面积 ㎡</th><th>所在位置</th><th>所属资产组（财务核算）</th><th>当前运营项目</th><th>登记状态</th>
+    <th>编码</th><th>物业</th><th>类型</th><th class="r">面积 ㎡</th><th>所在位置</th><th>所属资产组（财务核算）</th><th>当前运营项目</th><th>登记状态</th>
   </tr></thead><tbody id="reg-rows"></tbody></table></div>
-  <div class="note" style="margin-top:10px">每个空间只有一个主要位置；跨宗地或组合使用等特殊关系需核实依据后登记，不改变空间所在位置。</div>
+  <div class="note" style="margin-top:10px">每个物业只有一个主要位置；跨宗地或组合使用等特殊关系需核实依据后登记，不改变物业所在位置。</div>
 </section>
 
 <!-- ============ 宗地登记（评审增补六 · 土地特有字段分组） ============ -->
 <section class="page" data-page="landreg">
   <div class="h1">
-    <div><h1>宗地登记</h1><div class="sub">土地特有字段分组示意 · 地籍与规划条件以权证和测绘资料为准，保存前完成校验 · <button type="button" class="linkbtn" data-go="page" data-id="register">← 空间档案</button></div></div>
+    <div><h1>宗地登记</h1><div class="sub">土地特有字段分组示意 · 地籍与规划条件以权证和测绘资料为准，保存前完成校验 · <button type="button" class="linkbtn" data-go="page" data-id="register">← 物业档案</button></div></div>
     <div class="acts"><button class="btn" data-toast="从历史数据核对导入宗地暂存记录（原型示意）">从核对清单导入</button></div>
   </div>
   <div class="card">
@@ -1375,7 +1375,7 @@ button.kc-h:hover{color:var(--jade-d)}
       <div class="ff">
         <div class="fld"><label for="lr-from">使用权起日 *</label><input id="lr-from" placeholder="如 2008-06-30"></div>
         <div class="fld"><label for="lr-to">使用权止日 *</label><input id="lr-to" placeholder="止日须晚于起日 · 剩余年限自动计算"></div>
-        <div class="fld full"><label for="lr-bld">地上建筑物覆盖</label><input id="lr-bld" value="自动带出：一德路前座 · 后座 · 锦洲国际商务中心（由空间所在位置关联，不手工维护）"></div>
+        <div class="fld full"><label for="lr-bld">地上建筑物覆盖</label><input id="lr-bld" value="自动带出：一德路前座 · 后座 · 锦洲国际商务中心（由物业所在位置关联，不手工维护）"></div>
       </div>
     </div>
   </div>
@@ -1386,7 +1386,7 @@ button.kc-h:hover{color:var(--jade-d)}
 <section class="page mobile-table-page" data-page="parties">
   <div class="h1">
     <div><h1>客户与合作方</h1><div class="sub">主体建档、查重、审核与维护 · 承担产权方 / 承租方 / 运营方 / 付款方等角色</div></div>
-    <div class="acts"><button class="btn p" data-toast="新建主体（先查重）（原型示意）">＋ 新建主体</button></div>
+    <div class="acts"><button class="btn p" data-toast="新建单位档案（先查重）（原型示意）">＋ 新建单位档案</button></div>
   </div>
   <div class="gatebar">建档先查重：「广州市回民饭店有限公司」与既有主体「回民饭店」相似度 91%（旧系统统一客户库 580 户中两条档案真实并存）· <button type="button" class="linkbtn" data-compare>去比对 →</button></div>
   <div class="card" id="cmp-card" style="display:none;margin-bottom:14px">
@@ -1427,10 +1427,10 @@ button.kc-h:hover{color:var(--jade-d)}
   </div>
   <div class="pcard"><div><div class="nm">一德路 <span class="mtag">承转 · 主链</span></div><div class="note">[ydl] · 旧系统项目实测</div></div><div class="meta"><span>责任人 <b>章培德</b></span><span>运营方 <b>五羊产城</b>（受托运营）</span><span>可租面积 <b class="num">16,087.33㎡</b></span><span>出租率 <b class="num">100%</b> · 满租</span><span>逾期暴露 <b class="num" style="color:var(--block)">¥2,640,884</b></span><span>年应收（1-8月） <b class="num">312.00 万</b></span></div><button class="btn s" data-scope-view="p1">经营视图</button><button class="btn s" data-toast="维护责任范围（原型示意）">维护范围</button></div>
   <div class="pcard"><div><div class="nm">锦洲国际中心 <span class="mtag">承转 · 主链</span></div><div class="note">旧系统项目实测</div></div><div class="meta"><span>责任人 <b>周庆銮</b></span><span>运营方 <b>五羊产城</b>（受托运营）</span><span>可租面积 <b class="num">11,436.42㎡</b></span><span>空置 <b class="num">668.28㎡</b> · 单间空置 241 天</span><span>到期释放 <b class="num">1,237.79㎡</b> · 244 天</span><span>年应收（1-8月） <b class="num">88.73 万</b></span></div><button class="btn s" data-scope-view="p2">经营视图</button><button class="btn s" data-toast="维护责任范围（原型示意）">维护范围</button></div>
-  <div class="pcard"><div><div class="nm">芳村茶叶城 <span class="mtag agy">委托代理（演示）</span></div><div class="note">[fc] · 旧系统项目实测</div></div><div class="meta"><span>责任人 <b>于冠增</b></span><span>运营方 <b>五羊产城</b>（受托运营）</span><span>覆盖空间 <b class="num">1</b></span><span>逾期暴露 <b class="num">¥0</b></span><span>在管面积 <b class="num">13,650 ㎡</b></span><span>经营口径 <b>终端租金归产权方 · 服务费按盖章对账单（演示链路）</b></span></div><button class="btn s" data-scope-view="p3">经营视图</button><button class="btn s" data-toast="维护责任范围（原型示意）">维护范围</button></div>
+  <div class="pcard"><div><div class="nm">芳村茶叶城 <span class="mtag agy">委托代理（演示）</span></div><div class="note">[fc] · 旧系统项目实测</div></div><div class="meta"><span>责任人 <b>于冠增</b></span><span>运营方 <b>五羊产城</b>（受托运营）</span><span>覆盖物业 <b class="num">1</b></span><span>逾期暴露 <b class="num">¥0</b></span><span>在管面积 <b class="num">13,650 ㎡</b></span><span>经营口径 <b>终端租金归产权方 · 服务费按盖章对账单（演示链路）</b></span></div><button class="btn s" data-scope-view="p3">经营视图</button><button class="btn s" data-toast="维护责任范围（原型示意）">维护范围</button></div>
   <div class="pcard"><div><div class="nm">江南苑车位 <span class="mtag">承转 · 小单矩阵</span></div><div class="note">旧系统项目实测（海珠宝业路宝业北街54-72号）</div></div><div class="meta"><span>责任人 <b>周庆銮</b></span><span>运营方 <b>五羊产城</b>（受托运营）</span><span>车位 <b class="num">23</b> 处 / 2,376.81㎡</span><span>月租 <b class="num">¥700-810/位</b></span><span>权证 <b class="num">粤房地证穗字第0850057275号起</b></span><span>逾期暴露 <b class="num">¥0</b></span></div><button class="btn s" data-scope-view="p4">经营视图</button><button class="btn s" data-toast="维护责任范围（原型示意）">维护范围</button></div>
   <div class="pcard"><div><div class="nm">集团直管土地 <span class="mtag">承转 · 在营+闲置</span></div><div class="note">旧系统土地台账实测</div></div><div class="meta"><span>责任人 <b>于冠增</b></span><span>管理单位 <b>鼎晟资产 / 集团总部</b></span><span>在营 <b class="num">广花工业城 87,680.95㎡</b> · 100%</span><span>无证闲置 <b class="num" style="color:var(--block)">利山铁矿 518,610㎡</b></span><span>无证待核 <b class="num">广州大道北550号 17,250.17㎡</b></span><span>年应收（1-8月） <b class="num">90.94 万</b></span></div><button class="btn s" data-scope-view="p5">经营视图</button><button class="btn s" data-toast="维护责任范围（原型示意）">维护范围</button></div>
-  <div class="note">旧系统实际在管 119 个项目（含广源公房、欧依尔公房、红棉产发公房等公房包），本页只展开演示主链相关的 5 个；同一空间同一时点只有一个当前运营项目。两种模式下资金归属不同：承租转租租金归运营方，委托代理终端租金归产权方。</div>
+  <div class="note">旧系统实际在管 119 个项目（含广源公房、欧依尔公房、红棉产发公房等公房包），本页只展开演示主链相关的 5 个；同一物业同一时点只有一个当前运营项目。两种模式下资金归属不同：承租转租租金归运营方，委托代理终端租金归产权方。</div>
 </section>
 
 <!-- ============ 数据工具（评审增补七 · 历史数据核对工作面） ============ -->
@@ -1442,10 +1442,10 @@ button.kc-h:hover{color:var(--jade-d)}
   <div class="tabstrip" id="tools-tabs">
     <button class="chip on" data-tooltab="已确认 12 条 · 已发布 206 条 · 待补资料 2 条">待核对<b class="num">3</b></button><button class="chip" data-tooltab="已确认 12 条">已确认<b class="num">12</b></button><button class="chip" data-tooltab="已发布 206 条">已发布<b class="num">206</b></button><button class="chip" data-tooltab="待补资料 2 条：责任人与缺失证据在列">待补资料<b class="num">2</b></button>
   </div>
-  <div class="diff"><span class="dtag oto">同名主体</span><span class="t"><b>导入行「广州欧依尔粮油食品进出口有限公司」</b> ↔ 主体库既有同名档案（旧系统统一客户库 580 户实测：同名主体在 8 个公房项目重复建档）<small>相似度 100% · 来源：旧系统统一客户管理导出</small></span><button class="btn s" data-toast="确认同一空间并发布映射（原型示意）">确认同一并发布</button><button class="btn s" data-toast="需补充区分证据（原型示意）">确为新空间</button></div>
+  <div class="diff"><span class="dtag oto">同名主体</span><span class="t"><b>导入行「广州欧依尔粮油食品进出口有限公司」</b> ↔ 主体库既有同名档案（旧系统统一客户库 580 户实测：同名主体在 8 个公房项目重复建档）<small>相似度 100% · 来源：旧系统统一客户管理导出</small></span><button class="btn s" data-toast="确认同一物业并发布映射（原型示意）">确认同一并发布</button><button class="btn s" data-toast="需补充区分证据（原型示意）">确为不同物业</button></div>
   <div class="diff"><span class="dtag over">面积口径不一致</span><span class="t"><b>「锦洲国际商务中心」管理面积 1,906.07㎡ &gt; 楼层明细合计 1,906.07㎡</b>（口径一致校验通过 · 示例展示校验规则）<small>来源：旧系统房间租控图 2026-08-29 · 3F 在租 1,237.79 + 4F 空置 668.28</small></span><button class="btn s" data-toast="退回修正并记录缺失证据（原型示意）">退回修正</button><button class="btn s" data-toast="按层合计冻结并标注来源（原型示意）">按层合计冻结</button></div>
   <div class="diff"><span class="dtag none">重复合同</span><span class="t"><b>「五羊司合字[2026]98号 曹瑞杰」出现 2 条</b>（编号相同，月租差 ¥200 · 示例）<small>来源：旧系统导出 + 手工 Excel · 需以盖章原件为准</small></span><button class="btn s" data-toast="合并保留一条并标注来源（原型示意）">合并留一条</button><button class="btn s" data-toast="两条保留并标注待证（原型示意）">两条都留</button></div>
-  <div class="note" style="margin-top:10px">无法确认的记录继续留在待补资料，显示具体责任人与缺失证据；映射重叠、面积不守恒和无法证明的历史匹配不得进入正式经营事实。</div>
+  <div class="note" style="margin-top:10px">无法确认的记录继续留在待补资料，显示具体责任人与缺失证据；映射重叠、面积对不上和无法证明的历史匹配不得进入正式经营事实。</div>
 </section>
 
 <!-- ============ 占位页（原型未展开的入口） ============ -->
@@ -1530,24 +1530,24 @@ function hydrateIcons(root){
 const NAV = [
   { t:'我的工作', ico:'check', page:'mywork' },
   { t:'经营看板', ico:'chart', page:'dashboard' },
-  { t:'盘活招商', ico:'target', items:[['可招商空间','vacancy'],['租赁意向','intents'],['租控图','rentcontrol']] },
+  { t:'盘活招商', ico:'target', items:[['可招商物业','vacancy'],['租赁意向','intents'],['租控图','rentcontrol']] },
   { t:'合同经营', ico:'doc', items:[['合同与协议','contracts'],['变更 · 续租 · 退场','lifecycle']] },
-  { t:'账款现金', ico:'cash', items:[['收款认领与分配','recon'],['上游付款','payables'],['欠费催收','collections']] },
-  { t:'代理协同', ico:'exchange', items:[['终端到账确认','receipts'],['代理费对账单','stmts'],['产权方门户','ownerportal']] },
-  { t:'物业作业', ico:'tool', items:[['我的作业','property'],['问题整改','ph:fix'],['交还交付','ph:handover']] },
-  { t:'资产与权属', ico:'shield', items:[['空间档案','register'],['宗地登记','landreg'],['权属与授权','rights'],['经营资产档案','ph:assets']] },
+  { t:'账款现金', ico:'cash', items:[['银行到账核对','recon'],['上游付款','payables'],['欠费催收','collections']] },
+  { t:'代理协同', ico:'exchange', items:[['租客到账确认','receipts'],['代理费对账单','stmts'],['产权方门户','ownerportal']] },
+  { t:'现场作业', ico:'tool', items:[['我的作业','property'],['问题整改','ph:fix'],['交还交付','ph:handover']] },
+  { t:'资产与权属', ico:'shield', items:[['物业档案','register'],['宗地登记','landreg'],['权属与授权','rights'],['经营资产档案','ph:assets']] },
   { t:'客户与合作方', ico:'users', page:'parties' },
   { t:'运营项目', ico:'grid', page:'projects' },
   { t:'管理', ico:'sliders', items:[['组织权限','ph:org'],['历史数据核对','tools'],['操作记录','ph:audit']] },
 ];
 const ROLE_CONFIG = {
-  leasing:{name:'招商运营',team:'资产运营部',sub:'登记租赁意向、组织条件审议，审议接受后拟定合同并推动生效。',scope:'一德路 · 锦洲 · 招商范围',pages:['mywork','vacancy','space','intents','rentcontrol','entry','contracts','lifecycle','parties'],action:'＋ 登记租赁意向',target:'intents',metrics:[['今日待联系','6','2 项已逾期'],['并行洽谈意向','9 家','同一空间允许多家在谈'],['待审议结论','3 件','最早今天 18:00']],tasks:[['回民饭店反提条件待复审','JZ-401-404 · 反提 ¥0.38/㎡·天','intents','去审议',1,'今天 18:00','soon',null],['吴俊锋车位意向已接受','JNY-A05 · 可进入合同拟定 · 签约前须通过主体审核','entry','拟定合同',0,null,null,null],['池玉銮低于底价','例外审批 EX-2026-03 审批中 · 批准人 集团经营层','intents','查看例外',0,null,null,'EX-2026-03 批准前合同不得生效 · 生效检查将持续显示红色阻断']],range:[['锦洲国际中心','2 处可招商（668㎡）· 1 处在谈'],['江南苑车位','3 处生效中 · 1 处在谈']],bell:'2 条未读：回民饭店反提待复审 · 池玉銮例外审批已受理（原型示意）'},
-  cashier:{name:'出纳（资金经办）',team:'财务共享组',sub:'导入银行文件、处理人工异常池；高置信自动拟分配提交财务批量复核。',scope:'演示账户 · 当前批次',pages:['mywork','recon','payables','contracts','space','parties'],action:'⭱ 导入银行流水',target:'recon',metrics:[['本批原始行','47 笔','不可改写外部证据 · 幂等导入'],['人工异常池','6 笔','无附言 / 多候选 / 超额 / 代付'],['已到账待核销','2 笔 · ¥121,300','唯一匹配 · SLA 内暂停催缴']],tasks:[['异常池 6 笔待处理','无附言 ¥12,000 · 多候选 ¥2,340 · 超额 / 代付 / 主体不明','recon','去处理',1,'今天批次收口前','soon',null],['自动拟分配 3 笔待财务复核','¥194,900 已到账待核销 · 复核岗 章培德','recon','查看队列',0,null,null,'复核生效前不改变任何账单 · 已到账待核销不减少应收未结'],['上游租金应付待付','房管局租约（北京路249号前座）2026-08 期 ¥96,300（演示金额）· 须关联付款流水','payables','发起付款',0,'08-31 到期',null,null]],range:[['当前银行账户','演示账户（旧系统未导出）'],['当前导入批次','IMP-0822 · 47 行']],bell:'2 条未读：异常池 6 笔待处理 · 自动拟分配 3 笔待财务复核（原型示意）'},
-  finreview:{name:'财务复核',team:'财务共享组',sub:'对自动拟分配、退款、核销等关键资金动作执行经办与复核分离。',scope:'集团 · 财务复核职责',pages:['mywork','recon','payables','collections','contracts','stmts','space'],action:'进入复核队列',target:'recon',metrics:[['待我复核','3 笔','¥194,900 · 自动拟分配'],['今日已复核','7 笔','¥286,900'],['驳回','1 笔','附件不全']],tasks:[['批量复核 3 笔自动拟分配','¥194,900 · 唯一匹配 / 金额守恒 · 规则集 MATCH-RULES v5','recon','批量复核',1,'今日入账前','soon',null],['凤凰创意退款申请待复核','¥12,400 · 须关联原收款与审批依据 · 退款复核工作面原型未展开','recon','查看说明',1,null,null,null,'退款复核工作面原型未展开 · 已列入 S0 规格：退款须关联原收款流水与审批依据，财务复核岗确认后执行（原型示意）'],['坏账核销申请待复核','责任岗提交 · 分配链完整','collections','去复核',0,null,null,'押金可抵扣部分必须先抵扣，余额方可进入核销审批']],range:[['复核范围','全部运营项目'],['制审分离','经办人不能自审']],bell:'2 条未读：3 笔自动拟分配待批量复核 · 凤凰创意退款申请待复核（原型示意）'},
+  leasing:{name:'招商运营',team:'资产运营部',sub:'登记租赁意向、组织条件审议，审议接受后拟定合同并推动生效。',scope:'一德路 · 锦洲 · 招商范围',pages:['mywork','vacancy','space','intents','rentcontrol','entry','contracts','lifecycle','parties'],action:'＋ 登记租赁意向',target:'intents',metrics:[['今日待联系','6','2 项已逾期'],['并行洽谈意向','9 家','同一物业允许多家在谈'],['待审议结论','3 件','最早今天 18:00']],tasks:[['回民饭店反提条件待复审','JZ-401-404 · 反提 ¥0.38/㎡·天','intents','去审议',1,'今天 18:00','soon',null],['吴俊锋车位意向已接受','JNY-A05 · 可进入合同拟定 · 签约前须通过主体审核','entry','拟定合同',0,null,null,null],['池玉銮低于底价','例外审批 EX-2026-03 审批中 · 批准人 集团经营层','intents','查看例外',0,null,null,'EX-2026-03 批准前合同不得生效 · 生效检查将持续显示红色阻断']],range:[['锦洲国际中心','2 处可招商（668㎡）· 1 处在谈'],['江南苑车位','3 处生效中 · 1 处在谈']],bell:'2 条未读：回民饭店反提待复审 · 池玉銮例外审批已受理（原型示意）'},
+  cashier:{name:'出纳（资金经办）',team:'财务共享组',sub:'导入银行文件、处理人工异常池；高置信自动拟分配提交财务批量复核。',scope:'演示账户 · 当前批次',pages:['mywork','recon','payables','contracts','space','parties'],action:'⭱ 导入银行流水',target:'recon',metrics:[['本批原始行','47 笔','不可改写的外部证据 · 重复导入不会产生重复记录'],['人工异常池','6 笔','无附言 / 多候选 / 超额 / 代付'],['已到账待核销','3 笔 · ¥194,900','2 笔唯一结算项（¥121,300）+ 1 组金额正好对得上的账单 ¥73,600 · 与队列一致 · 规定时限内暂停催缴']],tasks:[['异常池 6 笔待处理','无附言 ¥12,000 · 多候选 ¥2,340 · 超额 / 代付 / 主体不明','recon','去处理',1,'今天批次收口前','soon',null],['自动拟分配 3 笔待财务复核','¥194,900 已到账待核销 · 复核岗 章培德','recon','查看队列',0,null,null,'复核生效前不改变任何账单 · 已到账待核销不减少应收未结'],['上游租金应付待付','房管局租约（北京路249号前座）2026-08 期 ¥96,300（演示金额）· 须关联付款流水','payables','发起付款',0,'08-31 到期',null,null]],range:[['当前银行账户','演示账户（旧系统未导出）'],['当前导入批次','IMP-0822 · 47 行']],bell:'2 条未读：异常池 6 笔待处理 · 自动拟分配 3 笔待财务复核（原型示意）'},
+  finreview:{name:'财务复核',team:'财务共享组',sub:'对自动拟分配、退款、核销等关键资金动作执行经办与复核分离。',scope:'集团 · 财务复核职责',pages:['mywork','recon','payables','collections','contracts','stmts','space'],action:'进入复核队列',target:'recon',metrics:[['待我复核','3 笔','¥194,900 · 自动拟分配'],['今日已复核','7 笔','¥286,900'],['驳回','1 笔','附件不全']],tasks:[['批量复核 3 笔自动拟分配','¥194,900 · 唯一匹配 / 金额正好对得上 · 到账匹配规则（第 5 版 · 代号 MATCH-RULES v5）','recon','批量复核',1,'今日入账前','soon',null],['凤凰创意退款申请待复核','¥12,400 · 须关联原收款与审批依据 · 退款复核工作面原型未展开','recon','查看说明',1,null,null,null,'退款复核工作面原型未展开 · 已列入 S0 规格：退款须关联原收款流水与审批依据，财务复核岗确认后执行（原型示意）'],['坏账核销申请待复核','责任岗提交 · 分配链完整','collections','去复核',0,null,null,'押金可抵扣部分必须先抵扣，余额方可进入核销审批']],range:[['复核范围','全部运营项目'],['制审分离','经办人不能自审']],bell:'2 条未读：3 笔自动拟分配待批量复核 · 凤凰创意退款申请待复核（原型示意）'},
   collections:{name:'催收运营',team:'物业运维部',sub:'按欠费账户与催收案件安排责任人、承诺与下一次跟进。',scope:'一德路 · 催收范围',pages:['mywork','collections','contracts','space','parties'],action:'记录催收进展',target:'collections',metrics:[['逾期金额','¥2,640,884','13 笔账单（旧系统欠费查询实测）'],['进行中案件','3 件','新周期建新案'],['承诺违约','0','违约金计算停滞 20 个月']],tasks:[['明察企业 8 期挂账待跟进','欠费 ¥1,342,158 · 一德路后座 · 账龄最长 24 个月','collections','记录跟进',1,'旧系统欠费查询实测','hot',null],['凤凰创意新欠案件未分派','¥390,000 · 202608 期 · 待明确责任人','collections','立即分派',1,'今日内分派','hot','责任人未定前下一动作无法启动 · 从页面右侧选择分派'],['明察企业前座退场欠款','¥908,726 · 已移交法务关联','collections','查看关联',0,'09-15 回执归档',null,null]],range:[['本人负责','2 件 · ¥1,732,158'],['团队未分派','1 件 · ¥908,726']],bell:'2 条未读：明察企业挂账待跟进 · 凤凰创意案件今日内分派（原型示意）'},
   property:{name:'现场物业',team:'园区物业组',sub:'按地点和截止时间完成检查、整改、签约前置工单与交付。',scope:'在管物业 · 现场作业范围',pages:['mywork','property','ph:fix','ph:handover','vacancy','space'],action:'＋ 报告现场问题',target:'property',metrics:[['今天到期','3','1 项高风险'],['签约前置工单','1','JZ-401-404 交付整改'],['重新检查','1','旧证据已过期']],tasks:[['广州大道北550号今天固证','无证宗地现状拍照 · 旧系统土地台账实测','property','去固证',1,'今天 16:00','hot',null],['JZ-401-404 交付整改（签约前置）','工单 WO-2207（演示）· 验收通过后此门自动转绿','property','去处理',1,null,null,'未完成前 回民饭店 租赁合同不得生效，阻断招商'],['芳村档口交还检查需重新发起','原验收证据已过期 · 同一时间线重检轮次','property','重新检查',0,'原证据已超期','',null]],range:[['锦洲国际中心','3 项现场作业'],['集团直管土地','1 项现场作业']],bell:'2 条未读：大道北固证今天 16:00 · JZ-401-404 整改工单阻塞签约（原型示意）'},
-  asset:{name:'资产权属',team:'资产管理部',sub:'录入权属与出租授权并交叉复核；维护底价与国资材料复核门。',scope:'广州国资集团 · 权属范围',pages:['mywork','register','landreg','rights','vacancy','space','tools'],action:'进入权属与授权',target:'rights',metrics:[['待我复核','3 件','提交人不得自审'],['权利待核实','1 处','广州大道北550号 17,250㎡'],['底价例外审批中','1 件','EX-2026-03']],tasks:[['受托运营授权快照待复核','集团 → 五羊产城 · 提交人 于冠增','rights','去复核',1,'08-24 提交 · 队列最早','soon','通过后冻结为可引用版本，下游合同生效依赖此项'],['广州大道北550号 无证土地','旧系统台账：无证 · 责任人 周庆銮','rights','查看证据',1,'权属清理承诺 09-30',null,'核实通过前禁止签约与生效'],['欧依尔同名主体重复建档','统一客户库 580 户实测 · 8 个公房项目并存','tools','核对资料',0,null,null,null]],range:[['产权与证照','集团权属单位 6 家 · 权证 307 本'],['空间基础资料','集团在管资产 711 处 / 82.03 万㎡']],bell:'2 条未读：受托运营授权快照待复核 · 大道北权属清理承诺 09-30（原型示意）'},
-  project:{name:'项目负责人',team:'一德路',sub:'关注项目经营结果、生效阻断和责任落实。',scope:'一德路',pages:['mywork','dashboard','vacancy','space','contracts','lifecycle','collections','recon','property','projects','entry'],action:'查看经营看板',target:'dashboard',metrics:[['可招商面积','0 ㎡','满租 · 出租率 100%','vacancy'],['逾期暴露','¥2,640,884','13 期 · 明察占 85%','collections'],['年应收（1-8月）','312.00 万','旧系统经营项目排行','dashboard']],tasks:[['明察企业欠费 24 个月','¥1,342,158 · 后座 8 期 · 旧系统欠费查询实测','collections','去催收',1,'本周内上门催缴函','hot','次生风险：违约金 2024-12 后未再重算'],['凤凰创意新欠未分派','¥390,000 · 202608 期 · 责任人未定','collections','去分派',0,'今日内分派','hot',null],['锦洲 401-404 空置 241 天','回民饭店在谈 · 交付整改是签约前置','property','查看作业',0,'09-01 前','hot',null]],range:[['当前项目','一德路 [ydl]'],['经营口径','权责发生 + 现金收付双口径']],bell:'2 条未读：明察欠费 24 个月 · 凤凰创意今日分派（原型示意）'},
+  asset:{name:'资产权属',team:'资产管理部',sub:'录入权属与出租授权并交叉复核；维护底价与国资材料复核门。',scope:'广州国资集团 · 权属范围',pages:['mywork','register','landreg','rights','vacancy','space','tools'],action:'进入权属与授权',target:'rights',metrics:[['待我复核','3 件','提交人不得自审'],['权利待核实','1 处','广州大道北550号 17,250㎡'],['底价例外审批中','1 件','EX-2026-03']],tasks:[['受托运营授权快照待复核','集团 → 五羊产城 · 提交人 于冠增','rights','去复核',1,'08-24 提交 · 队列最早','soon','通过后冻结为可引用版本，下游合同生效依赖此项'],['广州大道北550号 无证土地','旧系统台账：无证 · 责任人 周庆銮','rights','查看证据',1,'权属清理承诺 09-30',null,'核实通过前禁止签约与生效'],['欧依尔同名主体重复建档','统一客户库 580 户实测 · 8 个公房项目并存','tools','核对资料',0,null,null,null]],range:[['产权与证照','集团权属单位 6 家 · 权证 307 本'],['物业基础资料','集团在管资产 711 处 / 82.03 万㎡']],bell:'2 条未读：受托运营授权快照待复核 · 大道北权属清理承诺 09-30（原型示意）'},
+  project:{name:'项目负责人',team:'一德路',sub:'关注项目经营结果、生效阻断和责任落实。',scope:'一德路',pages:['mywork','dashboard','vacancy','space','contracts','lifecycle','collections','recon','property','projects','entry'],action:'查看经营看板',target:'dashboard',metrics:[['可招商面积','0 ㎡','满租 · 出租率 100%','vacancy'],['逾期暴露','¥2,640,884','13 期 · 明察占 85%','collections'],['年应收（1-8月）','312.00 万','旧系统经营项目排行','dashboard']],tasks:[['明察企业欠费 24 个月','¥1,342,158 · 后座 8 期 · 旧系统欠费查询实测','collections','去催收',1,'本周内上门催缴函','hot','次生风险：违约金 2024-12 后未再重算'],['凤凰创意新欠未分派','¥390,000 · 202608 期 · 责任人未定','collections','去分派',0,'今日内分派','hot',null],['锦洲 401-404 空置 241 天','回民饭店在谈 · 交付整改是签约前置','property','查看作业',0,'09-01 前','hot',null]],range:[['当前项目','一德路 [ydl]'],['经营口径','按账期算 + 按实际收付款算（两个口径并列）']],bell:'2 条未读：明察欠费 24 个月 · 凤凰创意今日分派（原型示意）'},
   executive:{name:'管理层',team:'集团经营管理',sub:'只看经营结果、趋势和需要决策的例外。',scope:'广州国资集团',pages:['mywork','dashboard','vacancy','space','projects','collections','stmts','rights','contracts','lifecycle'],action:'查看经营看板',target:'dashboard',metrics:[['待租面积','6,545.73 ㎡','15 处 · 集团口径（旧系统 2026-08 实测）'],['逾期暴露','¥2,640,884','13 期 · 明察占 85% · 一德路集中','collections'],['权属受限','2 处 · 520,740 ㎡','利山铁矿 / 晓南车场无证 · 下钻看构成','vacancy']],tasks:[['一德路欠费集中暴露','明察企业 11 期 ¥2,250,884 · 违约金停滞 20 个月','collections','查看趋势',1,'本周经营例会前','soon','需决策：是否对明察启用法务程序并为催收线增派人力'],['权属受限土地盘活','利山铁矿 51.86 万㎡ 无证 · 集团暂无权属 110 处','rights','审阅专案',1,null,null,'确权与办证前不得排期招商；先解决权属再谈盘活'],['代理费对账单待双方盖章','STMT-2026-Q2 · 试算 ¥48,600 · 盖章后应收才成立','stmts','查看进度',0,null,null,null]],range:[['集团总览','5 个演示项目 · 两种模式 · 在管可租 86,239.57㎡ / 出租率 92.41%'],['本周需决策','2 项 · 明察欠费处置 / 无证土地盘活']],bell:'2 条未读：一德路欠费集中 · 无证土地盘活专案（原型示意）'},
   ownerparty:{name:'产权方协同',team:'广州国资集团',sub:'受限账号：只处理贵方范围内的确认与材料，看不到运营方内部成本利润。',scope:'贵方范围内合同 · 到账 · 对账单',pages:['mywork','ownerportal','receipts','stmts'],action:'进入产权方门户',target:'ownerportal',metrics:[['待我确认','4 项','到账 3 · 对账单 1 · 另有 1 份证据待上传'],['待您上传的生效证据','1 份','上传并绑定版本前合同不得生效'],['可见数据','仅限贵方委托范围内','合同 · 到账明细 · 对账单与确认留痕']],tasks:[['7 月租金到账明细待逐笔确认','3 笔 · ¥216,000 · 确认后才计入代理费试算基数','receipts','逐笔确认',1,'请于 09-05 前确认','soon','未确认将推迟 Q3 对账单出具'],['Q2 代理费对账单待您确认','试算 ¥48,600 · 双方确认后上传盖章件，应收才成立','stmts','去确认',0,null,null,null],['直租合同生效证据待您上传','外部审批单 HTSP-2026-0912 的盖章回执','ownerportal','去上传',1,null,null,'上传并绑定合同版本前合同不得生效；您只能看到与贵方委托范围相关的字段']],range:[['委托协议','WT-2025-007 · 芳村茶叶城（演示）'],['数据边界','不含运营方成本与完整利润']],bell:'2 条未读：7 月到账 3 笔待逐笔确认 · Q2 对账单待确认（原型示意）'}
 };
@@ -1580,13 +1580,13 @@ const TASK_LIVE = {};
 const PH = {
   fix:['tool','问题整改','集中查看巡查、报修与复发问题，并沿同一事项记录处理过程。'],
   handover:['box','交还交付','合同终止、实际交还、现场整改、重新可租与新租户交付是四个独立事实，按时间线推进；实际交付须有双方签字或盖章的交接单。合同终止与退场结算等法律侧事实已在「合同经营 → 变更 · 续租 · 退场」演示，本页聚焦物业侧现场事实。'],
-  assets:['chart','经营资产档案','记录经营核算所需的编码、分类、核算字段和空间对应关系。'],
+  assets:['chart','经营资产档案','记录经营核算所需的编码、分类、核算字段和物业对应关系。'],
   org:['users','组织权限','组织、角色与数据范围。撤权后列表、搜索、附件、导出与命令回执下一请求立即拒绝。'],
   audit:['doc','操作记录','人工决定、命令回执与历史版本的完整追溯；资金与合同高后果动作全量留痕。'],
 };
 const PACT = {};
 
-/* ================= 空间数据（演示）· 可租状态由有效合同/维修封闭/有效限制推导，不手工翻状态；并行意向不锁定空间 ================= */
+/* ================= 物业数据（演示）· 可租状态由有效合同/维修封闭/有效限制推导，不手工翻状态；并行意向不锁定物业 ================= */
 const STATUS = {
   rentable:['可租','st-rentable','c-rentable'], rented:['在租','st-rented','c-rented'],
   soon:['即将释放','st-soon','c-soon'], blocked:['受限','st-blocked','c-blocked'],
@@ -1624,7 +1624,7 @@ function reasonOf(sp){
   const rich = REASON[sp.id];
   if (rich != null) return rich;
   if (sp.st === 'rentable'){
-    if (sp.ctx != null && sp.ctx !== '—' && sp.ctx.indexOf('在谈') >= 0) return {code:'NONE',details:['无阻断原因 · 并行洽谈中（' + sp.ctx + '）','多家在谈不锁定空间，仅生效合同产生排他占用'],actions:['登记租赁意向','拟定合同'],key:'—'};
+    if (sp.ctx != null && sp.ctx !== '—' && sp.ctx.indexOf('在谈') >= 0) return {code:'NONE',details:['无阻断原因 · 并行洽谈中（' + sp.ctx + '）','多家在谈不锁定物业，仅生效合同产生排他占用'],actions:['登记租赁意向','拟定合同'],key:'—'};
     return {code:'NONE',details:['无阻断原因'],actions:['登记租赁意向','拟定合同'],key:'—'};
   }
   if (sp.st === 'rented') return {code:'OCCUPIED',details:['终端合同履约中'],actions:['查看履约'],key:sp.next};
@@ -1639,11 +1639,11 @@ function codeOf(sp){ return sp.id; }
 const DETAIL = {
   'JZ-401-404':{
     act:'查看意向', sub:['条件审议','拟定合同'],
-    loc:[['编码','JZ-401-404'],['所在位置','锦洲国际中心 → 商务中心 → 4层（唯一父级）'],['面积','计租 369.39㎡（401-404 合并 · 旧系统租控图实测）'],['空置时长','已空置 241 天（租控图 2026-08-29）'],['当前运营项目','锦洲国际中心 · 责任人 周庆銮'],['并行洽谈','回民饭店（接洽中）· 不锁定空间']],
+    loc:[['编码','JZ-401-404'],['所在位置','锦洲国际中心 → 商务中心 → 4层（唯一父级）'],['面积','计租 369.39㎡（401-404 合并 · 旧系统租控图实测）'],['空置时长','已空置 241 天（租控图 2026-08-29）'],['当前运营项目','锦洲国际中心 · 责任人 周庆銮'],['并行洽谈','回民饭店（接洽中）· 不锁定物业']],
     tl:[['08-26','意向','回民饭店接洽 401-404 · 意向登记（演示）','拟租 ¥0.40/㎡·天 起 · 36 个月'],
         ['08-23','物业','交付整改验收通过（演示）','重新进入可租 · 签约前仍有前置工单 WO-2207'],
         ['2025-12-31','合同','原租约到期（广州老字号投资控股 · 11,082 元/月 · 押金 0）· 未续签','合同台账「即将到期」页签实测 · 已逾期 241 天'],
-        ['2025-05','合同','原租约起租（401-404）','到期未续后空间空置至今']],
+        ['2025-05','合同','原租约起租（401-404）','到期未续后物业空置至今']],
     rights:[['产权','广州国资集团 · 国有产权自持（旧系统权属台账：权属清晰）'],['经营授权','广州国资集团 → 五羊产城 · 受托运营 · 快照可冻结'],['有效底价','0.38 元/㎡·天（演示口径 · 旧系统无底价模块）'],['签约前置','交付整改 WO-2207 未完成（可豁免但须留痕）'],['当前合同','无 · 前租约 2025-12-31 到期未续 · 空置 241 天 · 生效时冻结授权快照并做占用重叠校验'],['限制','无阻断 · 前置条件未完成前合同不得生效'],['证据','租控图快照 2026-08-29 · 合同台账即将到期页签 · 现场照片 4 张']],
   },
   'YDL-HZ':{
@@ -1660,7 +1660,7 @@ const DETAIL = {
     loc:[['编码','GOAM-TD-002'],['所在位置','集团直管土地 → 广州大道北550号（宗地）'],['面积','17,250.17 ㎡（旧系统土地台账实测）'],['管理单位','广州国资管理集团（总部）'],['当前运营项目','集团直管土地 · 责任人 于冠增'],['接管日期','2021-08-20（旧系统台账）']],
     tl:[['08-20','确权','权属清理专案分派责任人 周庆銮','承诺 09-30 前给出结论'],
         ['08-14','确权','土地台账字段核实：权证 = 无证','进入权利待核实 · 禁止签约'],
-        ['08-12','招商','该宗地上的意向推进被系统拦截','权利待核实空间可接洽收意向，不得进入合同拟定']],
+        ['08-12','招商','该宗地上的意向推进被系统拦截','权利待核实物业可接洽收意向，不得进入合同拟定']],
     rights:[['权证','⚠ 无证（旧系统土地台账：无证 · 权属是否清晰字段未载）'],['土地使用权','未记载（旧系统台账）'],['经营授权','五羊产城 · 受托运营'],['当前合同','无'],['未清义务','无'],['限制','权利待核实 · 禁止签约'],['证据','土地台账导出 1 份 · 现场照片 2 张']],
   },
   'JNY-A01':{
@@ -1676,7 +1676,7 @@ const DETAIL = {
     act:'查看整改', sub:['报告问题','查看限制'],
     loc:[['编码','01003890-000015'],['所在位置','集团直管土地 → 利山铁矿（宗地 · 惠州博罗）'],['面积','518,610 ㎡（旧系统土地台账实测）'],['管理单位','广州市利山铁矿（非五羊管理）'],['当前运营项目','集团直管土地 · 责任人 于冠增'],['待核关系','无']],
     tl:[['08-21','确权','确权专班登记 · 权属不清晰（旧系统台账字段：不清晰）','阻断招商排期'],
-        ['08-15','招商','该宗地招商排期被系统拦截','权利受限空间不得进入合同拟定'],
+        ['08-15','招商','该宗地招商排期被系统拦截','权利受限物业不得进入合同拟定'],
         ['2023-04','权属','旧系统建账：土地类型未记载 · 权证无证','占集团土地总面积 84%']],
     rights:[['权证','⚠ 无证（旧系统土地台账实测）'],['权属是否清晰','⚠ 不清晰（旧系统台账字段）'],['经营授权','五羊产城 · 受托运营'],['当前合同','无'],['未清义务','无'],['限制','权属不清 · 禁止签约 · 确权专班跟进中'],['证据','土地台账导出 1 份']],
   },
@@ -1775,7 +1775,7 @@ function renderTree(){
   const pool = scoped();
   const blds = {};
   pool.forEach(sp => { (blds[sp.bld] = blds[sp.bld] ?? {})[sp.fl] = (blds[sp.bld] ?? {})[sp.fl] ?? []; (blds[sp.bld])[sp.fl].push(sp); });
-  const rootLabel = scope === 'all' ? '全部运营项目' : (SCOPE_DATA[scope]?.label ?? '空间目录');
+  const rootLabel = scope === 'all' ? '全部运营项目' : (SCOPE_DATA[scope]?.label ?? '物业目录');
   let html = '<button type="button" class="tn' + (vc.node == null ? ' sel' : '') + '" data-node="root">' + rootLabel + '<span class="cnt num">' + pool.length + '</span></button>';
   Object.keys(blds).forEach(b => {
     const total = Object.values(blds[b]).reduce((n, arr) => n + arr.length, 0);
@@ -1791,7 +1791,7 @@ function renderRows(){
   const rows = scoped().filter(vcFilter);
   el('vc-count').textContent = rows.length + ' / ' + scoped().length + ' 处';
   if (rows.length === 0){
-    el('vc-rows').innerHTML = '<tr class="empty-row"><td colspan="7">当前筛选没有匹配的空间 · <button type="button" class="linkbtn" data-clearfilter>清除筛选条件</button></td></tr>';
+    el('vc-rows').innerHTML = '<tr class="empty-row"><td colspan="7">当前筛选没有匹配的物业 · <button type="button" class="linkbtn" data-clearfilter>清除筛选条件</button></td></tr>';
     renderInsp();
     return;
   }
@@ -1815,7 +1815,7 @@ function renderInsp(){
   const st = STATUS[sp.st];
   el('vc-insp').innerHTML =
     '<div class="kv">' +
-    '<div class="row"><span class="k">空间</span><span class="v"><b>' + sp.id + '</b> · ' + pathOf(sp) + '</span></div>' +
+    '<div class="row"><span class="k">物业</span><span class="v"><b>' + sp.id + '</b> · ' + pathOf(sp) + '</span></div>' +
     '<div class="row"><span class="k">当前状态</span><span class="v"><span class="tag ' + st[1] + '">' + st[0] + '</span></span></div>' +
     '<div class="row"><span class="k">主要原因</span><span class="v">' + r.details.join('<br>') + '</span></div>' +
     '<div class="row"><span class="k">下一关键日期</span><span class="v num">' + r.key + '</span></div>' +
@@ -1823,7 +1823,7 @@ function renderInsp(){
     '<div class="row"><span class="k">出租授权</span><span class="v">五羊产城 · 受托运营 · 至 2027-12</span></div>' +
     '<div class="row"><span class="k">证据</span><span class="v">扫描件 3 份</span></div>' +
     '</div>' +
-    '<div class="ins-act"><button type="button" class="linkbtn" data-go="space" data-id="' + sp.id + '">打开空间详情 →</button><span class="note">与工作台/租控图同一判定服务</span></div>';
+    '<div class="ins-act"><button type="button" class="linkbtn" data-go="space" data-id="' + sp.id + '">打开物业详情 →</button><span class="note">与工作台/租控图同一判定服务</span></div>';
 }
 
 /* ================= 热力图（工作台摘要 / 租控图大墙，同一判定源） ================= */
@@ -1849,12 +1849,12 @@ function heatHtml(rich){
 
 /* ================= 租赁意向看板（接洽 → 条件审议 → 接受/反提/拒绝 → 拟定；无报价对象、无锁定） ================= */
 const KAN = [
-  ['接洽中',[['高乃特科技','陈经理 · 计租 300–400㎡ 商办 · 拟租 ¥0.42','候选 JZ-401-404 / JZ-409 · 免租 30 天 · 保证金三个月租金','下次联系 08-30','于冠增'],['房银广','选址 · 计租 1 个车位 · 拟租 ¥700/月','候选 JNY-A01 / JNY-A02 · 与在谈方并行，不锁定空间','下次联系 08-29','于冠增']]],
-  ['条件审议中',[['回民饭店（反提 v2）','JZ-401-404 · 反提 ¥0.38/㎡·天 · 免租 45 天 · 次年递增 3%','我方上一轮条件 ¥0.40 · 底价 0.38（演示口径）· 物业前置：交付整改 WO-2207','待决议：接受 / 反提 / 拒绝 · 今天 18:00','于冠增'],['吕巨建','晓南花园车场 · 计租 20 车位 · 拟租 ¥350/位','⚠ 空间受限中（无证）：可接洽，不得进入合同拟定','待限制解除后继续审议','章培德','paused'],['郭莉琳','东华东路653-657号 · 续租条件审议（现合同 2026-04 起 · 五羊司合字[2026]53号）','旧系统合同台账实测：46.60㎡ · 60 期 · 月租 ¥14,484','待决议：接受 / 反提 / 拒绝','章培德']]],
+  ['接洽中',[['高乃特科技','陈经理 · 计租 300–400㎡ 商办 · 拟租 ¥0.42','候选 JZ-401-404 / JZ-409 · 免租 30 天 · 保证金三个月租金','下次联系 08-30','于冠增'],['房银广','选址 · 计租 1 个车位 · 拟租 ¥700/月','候选 JNY-A01 / JNY-A02 · 与在谈方并行，不锁定物业','下次联系 08-29','于冠增']]],
+  ['条件审议中',[['回民饭店（反提 v2）','JZ-401-404 · 反提 ¥0.38/㎡·天 · 免租 45 天 · 次年递增 3%','我方上一轮条件 ¥0.40 · 底价 0.38（演示口径）· 物业前置：交付整改 WO-2207','待决议：接受 / 反提 / 拒绝 · 今天 18:00','于冠增'],['吕巨建','晓南花园车场 · 计租 20 车位 · 拟租 ¥350/位','⚠ 物业受限中（无证）：可接洽，不得进入合同拟定','待限制解除后继续审议','章培德','paused'],['郭莉琳','东华东路653-657号 · 续租条件审议（现合同 2026-04 起 · 五羊司合字[2026]53号）','旧系统合同台账实测：46.60㎡ · 60 期 · 月租 ¥14,484','待决议：接受 / 反提 / 拒绝','章培德']]],
   ['已接受 · 待拟定',[['吴俊锋','JNY-A05 车位 · 接受 ¥700/月 · 12 个月','主体审核中：签约前必须通过 · 可先拟定合同草稿','下一步：进入合同拟定','章培德'],['池玉銮','JZ-409 · 接受 ¥0.37/㎡·天（低于底价约 3%，演示口径）','附本案例外审批 EX-2026-03：批准人 集团经营层 · 有效期至 09-30 · 仅限本次条件','下一步：进入合同拟定（生效须审批完成）','于冠增']]],
   ['已拒绝 / 暂缓',[['谢先生（个人意向）','预算 ¥0.20 低于有效底价 ¥0.38 且不申请例外','08-15 正式拒绝 · 原因与依据已记录','6 个月内不再跟进','章培德']]],
 ];
-/* 卡片结构：[名称, 需求, 条件/备注, 下一步文案, 责任人, 可选标记]；标记 'paused' = 受限空间暂缓决议，不提供决议按钮 */
+/* 卡片结构：[名称, 需求, 条件/备注, 下一步文案, 责任人, 可选标记]；标记 'paused' = 受限物业暂缓决议，不提供决议按钮 */
 /* 拒绝列默认折叠（低频冷数据让位给三个活列）；审议列卡片只留一个「去决议」主按钮，
    接受 / 反提 / 拒绝 三选一收敛进决议模态，防止行内误触 */
 let kanRejectedFolded = true;
@@ -1867,7 +1867,7 @@ function renderKan(){
     const acts = c => {
       if (ci === 0) return '<button type="button" class="btn s p" data-kanact="review" data-card="' + c[0] + '">开始条件审议 →</button>';
       if (ci === 1){
-        if (c[5] === 'paused') return '<span class="note">⏸ 审议暂停 · 待空间限制解除后决议</span>';
+        if (c[5] === 'paused') return '<span class="note">⏸ 审议暂停 · 待物业限制解除后决议</span>';
         return '<span class="kdecision"><button type="button" class="btn s p" data-kanact="decide" data-card="' + c[0] + '">去决议 →</button></span>';
       }
       if (ci === 2){
@@ -1920,7 +1920,7 @@ function handleKanAct(kind, name, reason){
     card[3] = '拒绝结论与依据已留痕（08-27）· 本轮不再跟进';
     KAN[3][1].unshift(card);
     renderKan();
-    toast('拒绝结论已留痕：理由与依据可追溯，同一空间仍可服务其他意向方（原型示意）');
+    toast('拒绝结论已留痕：理由与依据可追溯，同一物业仍可服务其他意向方（原型示意）');
   }
 }
 /* 决议模态（三选一）：看板卡片只留「去决议」主按钮防行内误触；
@@ -1935,7 +1935,7 @@ function impactFor(kind, card){
   }
   if (kind === 'accept') return '接受结论将留痕并进入「已接受 · 待拟定」；进入拟定不代表生效，仍须生效检查的阻断与无法判定项清零。';
   if (kind === 'counter') return '反提将记录为新一行条件并通知意向方；原条件与本轮反提全程留痕，卡片停留在「条件审议中」等待对方回复。';
-  return '拒绝结论与理由留痕后本轮不再跟进；同一空间仍可服务其他意向方，不受影响。';
+  return '拒绝结论与理由留痕后本轮不再跟进；同一物业仍可服务其他意向方，不受影响。';
 }
 function setDecKind(kind){
   if (DEC_KINDS[kind] == null || decPending == null) return;
@@ -2030,7 +2030,7 @@ function saveOpp(){
   KAN[0][1].unshift([
     name,
     (contact !== '' ? contact : '联系人待补') + (area !== '' ? ' · 计租 ' + area + '㎡' : '') + (biz !== '' ? ' · ' + biz : '') + (budget !== '' ? ' · 拟租 ¥' + budget : ''),
-    '候选 ' + (cands.length > 0 ? cands.join(' / ') : '待定') + (free !== '' ? ' · ' + free : '') + (dep !== '' ? ' · 保证金 ' + dep : '') + ' · 并行洽谈不锁定空间',
+    '候选 ' + (cands.length > 0 ? cands.join(' / ') : '待定') + (free !== '' ? ' · ' + free : '') + (dep !== '' ? ' · 保证金 ' + dep : '') + ' · 并行洽谈不锁定物业',
     precond !== '' ? '物业前置：' + precond : (next !== '' ? '下次联系 ' + next : '待条件审议'),
     '于冠增'
   ]);
@@ -2070,7 +2070,7 @@ function layoutGates(){
   if (wrap != null) wrap.classList.toggle('hidden', n === 0);
   const fold = el('gate-pass-fold');
   if (fold != null){
-    fold.innerHTML = '✓ <b class="num">' + n + '</b> 项通过 / 不适用（已折叠，点击展开证据）<small>规则集 EFFECT-RULES-2026-08 v3 · 打开页面时自动检查（演示时间 08-28 09:12）· 核心字段、内容哈希或例外状态变化后自动重检</small>';
+    fold.innerHTML = '✓ <b class="num">' + n + '</b> 项通过 / 不适用（已折叠，点击展开证据）<small>生效检查规则（2026-08 第 3 版 · 代号 EFFECT-RULES-2026-08 v3） · 打开页面时自动检查（演示时间 08-28 09:12）· 核心字段、文件内容或例外状态变化后自动重检</small>';
     fold.setAttribute('aria-expanded', el('gate-pass').classList.contains('hidden') ? 'false' : 'true');
   }
   gates.forEach(g => {
@@ -2092,7 +2092,7 @@ function updateEntryBar(){
     if (blockers > 0) parts.push(blockers + ' 项阻断 / 无法判定');
     if (warns > 0) parts.push(warns + ' 项警告');
     if (entryRemain > 0) parts.push(entryRemain + ' 个冲突字段待修正');
-    bar.textContent = ready ? '阻断与无法判定已清零，可以提交生效确认 ✓' : '还剩 ' + parts.join(' · ') + '；每项阻断原因均须修正事实源、完成前置或合规豁免';
+    bar.textContent = ready ? '阻断与无法判定已清零，可以提交生效确认 ✓' : '还剩 ' + parts.join(' · ') + '；每项阻断原因均须确定以哪份材料为准、完成前置或申请合规豁免';
   }
   const okBox = el('entry-all-ok');
   if (okBox != null) okBox.classList.toggle('hidden', !ready);
@@ -2159,10 +2159,10 @@ function setGate(g){
 }
 const ENTRY_CASES = {
   ruihe:{ label:'回民饭店 × JZ-401-404（IN-2026-041）', remain:2,
-    src:'来源：租赁意向 IN-2026-041（审议结论：接受 08-26）· 回民饭店 × 锦洲 JZ-401-404', ev:'外部审批证据绑定本合同版本（哈希 a3f2…c91）', fields:null, gates:null,
+    src:'来源：租赁意向 IN-2026-041（审议结论：接受 08-26）· 回民饭店 × 锦洲 JZ-401-404', ev:'外部审批证据绑定本版合同文件内容（指纹 a3f2…c91）', fields:null, gates:null,
     live:['JZ-401-404 合同已生效','回民饭店 × 锦洲 401-404 · 授权快照冻结 · 外部审批证据已绑定 · 首批账单已生成','contracts','查看合同',0,'生效 08-27','',null] },
   xingchen:{ label:'池玉銮 × JZ-409（低于底价红线案例）', remain:0,
-    src:'来源：租赁意向 IN-2026-038（审议结论：接受 08-25 · 低于底价，已关联例外审批）· 池玉銮 × 锦洲 JZ-409', ev:'外部审批证据绑定本合同版本（审批单号 HTSP-2026-0904 · 哈希 b7e1…4da）',
+    src:'来源：租赁意向 IN-2026-038（审议结论：接受 08-25 · 低于底价，已关联例外审批）· 池玉銮 × 锦洲 JZ-409', ev:'外部审批证据绑定本合同版本（审批单号 HTSP-2026-0904 · 指纹 b7e1…4da）',
     fields: () => {
       setField('f-space','ok','锦洲国际中心 / 商务中心 / 4层 / JZ-409<small>计租面积 298.89㎡（旧系统租控图实测 · 已空置 241 天）</small>','✓ 已确认');
       setField('f-term','ok','2026-10-15 → 2028-10-14 · 24 个月<small>计租起点：固定日期（交付延迟不自动顺延）</small>','✓ 已确认');
@@ -2175,7 +2175,7 @@ const ENTRY_CASES = {
       {id:'g-gz',cls:'na',icon:'–',small:'本次出租不适用国资程序（市场化租金短租），无需备案材料。',gact:null},
       {id:'g-precond',cls:'ok',icon:'✓',small:'无物业前置条件。',gact:null},
       {id:'g-auth',cls:'ok',icon:'✓',small:'集团自有产权 · 广州国资集团对五羊产城的受托运营授权覆盖 JZ-409 × 拟租期 × 商业用途且允许出租（自动校验通过）；生效时冻结当时的授权版本、证据与验证结果。'},
-      {id:'g-conflict',cls:'ok',icon:'✓',small:'JZ-409 无其他生效终端合同重叠（系统实时校验）。同一空间同期只允许一份生效终端合同：即使两名经办同时提交，系统也会在保存瞬间再次校验占用，仅一人成功。'},
+      {id:'g-conflict',cls:'ok',icon:'✓',small:'JZ-409 无其他生效终端合同重叠（系统实时校验）。同一物业同期只允许一份生效终端合同：即使两名经办同时提交，系统也会在保存瞬间再次校验占用，仅一人成功。'},
       {id:'g-price',cls:'no',icon:'✕',small:'拟定 <b>¥0.37 &lt; 有效底价 ¥0.38</b>（JZ-409 · 系统自动比对）。低于底价必须关联<b>针对本次条件</b>的例外审批（范围、原因、批准人、证据、有效期），一般性授权无效。当前关联 <b>EX-2026-03 · 待批准</b>——批准前阻断生效，批准后本项转为「已批准例外」；例外到期、撤销或核心条款变化后自动失效重检。',gact:'<span id="entry-ex-link"></span>'},
     ],
     live:['JZ-409 合同已生效','池玉銮 × JZ-409 · 例外 EX-2026-03 已关联 · 授权快照冻结 · 首批账单已生成','contracts','查看合同',0,'生效 08-27','',null] },
@@ -2185,11 +2185,11 @@ const ENTRY_CASES = {
       setField('f-space','ok','江南苑车位 / 负一层 / JNY-A05<small>编号车位 · 计租 11㎡（车位按月计租 · 演示沿用面积口径 · 旧系统车场台账实测口径）</small>','✓ 已确认');
       setField('f-term','ok','2026-09-01 → 2027-08-31 · 12 个月<small>计租起点：固定日期（交付延迟不自动顺延）</small>','✓ 已确认');
       setField('f-rent','ok','月租 ¥700（旧系统实测车位月租口径 ¥700-810）· 两口径一致<small>车位有效底价 ¥680（演示口径）· 高于底价，无需例外审批</small>','✓ 已确认');
-      setField('f-party','bad','原件「吴俊锋」与主体库「吴俊锋（统一客户 22564210）」待确认 · <b>主体审核通过前不得提交生效</b><span class="resolve"><button class="ropt" data-resolve="f-party" data-val="主体审核已通过 · 使用主体库「吴俊锋」">模拟：外部主体审核已通过</button></span>','需修正事实源');
+      setField('f-party','bad','原件「吴俊锋」与主体库「吴俊锋（统一客户 22564210）」待确认 · <b>主体审核通过前不得提交生效</b><span class="resolve"><button class="ropt" data-resolve="f-party" data-val="主体审核已通过 · 使用主体库「吴俊锋」">模拟：外部主体审核已通过</button></span>','需确定以哪份材料为准');
       setField('f-deposit','bad','计算规则「三个月租金 ¥2,100」与原件固定金额「¥2,000」不一致 · 不一致时阻止生效<span class="resolve"><button class="ropt" data-resolve="f-deposit" data-val="按规则：三个月租金 ¥2,100">按规则 ¥2,100</button><button class="ropt" data-resolve="f-deposit" data-val="按约定固定 ¥2,000 并修订规则为固定金额">按固定 ¥2,000</button></span>','不一致 · 阻止生效');
     },
     gates:[
-      {id:'g-dep',cls:'no',icon:'✕',small:'保证金计算规则与最终金额不一致时阻止生效：请在左侧「保证金」字段二选一修正事实源，系统自动重检转绿。'},
+      {id:'g-dep',cls:'no',icon:'✕',small:'保证金计算规则与最终金额不一致时阻止生效：请在左侧「保证金」字段二选一、确定以哪份材料为准，系统自动重检转绿。'},
       {id:'g-gz',cls:'na',icon:'–',small:'本次出租不适用国资程序（车位短期出租），无需备案材料。',gact:null},
       {id:'g-precond',cls:'ok',icon:'✓',small:'无物业前置条件。',gact:null},
       {id:'g-auth',cls:'nd',icon:'?',small:'<b>无法判定</b>：授权记录缺少 JNY-A05（车位区分户）的授权期限字段——缺少必要输入时不视为通过，也不静默放行。下一动作：由资产权属岗补全授权期限，系统自动重检。',gact:'<button class="btn s p" data-gatesolve="g-auth" data-done="已补全：JNY-A05 车位授权期限至 2027-12-31 · 权属岗 章培德 · 自动重检通过">模拟：权属岗补全授权期限</button>'},
@@ -2229,16 +2229,16 @@ function applyEntryCase(cid, silent){
   if (silent !== true) toast('已载入意向上下文：' + cfg.label);
 }
 
-/* ================= 收款认领与分配（ISS-03）：自动匹配 → 待复核队列 / 人工异常池；复核生效才核销 ================= */
+/* ================= 银行到账核对（ISS-03）：自动匹配 → 待复核队列 / 人工异常池；复核生效才核销 ================= */
 const BILLS = {
-  m1:[['结算项','五羊司合字[2026]92号 · 广美设计研究院 · 江南苑车位 · 2026-07 期（演示金额）'],['应收','¥66,100（租金 ¥57,000 + 物业费 ¥9,100）· 演示金额'],['未结','¥66,100 · 逾期 21 天'],['主体认领','备案银行账号唯一 → 广美设计研究院'],['匹配解释','候选集合 1/1 · 命中 R3「附言+币种+金额+账期唯一」（MATCH-RULES v5）· 金额守恒'],['复核生效后','生成经营收付流水并全额核销该结算项 · 可追溯至导入行、候选集合与命中规则 · 撤销留链']],
-  m2:[['结算项','五羊司合字[2026]92号 · 西厨佳食品 · 押金应收'],['金额','¥55,200（三个月租金押金）· 演示金额'],['未结','¥55,200 · 未逾期'],['主体认领','备案银行账号唯一 → 西厨佳食品'],['匹配解释','候选集合 1/1 · 命中 R3「附言押金+金额+对方」（MATCH-RULES v5）· 币种 CNY ✓'],['复核生效后','生成押金收付流水并记入押金持有台账 · 押金可抵扣前坏账核销必须失败']],
-  m3:[['结算项集合','五羊司合字[2026]92号 · 季度 4 期'],['金额','¥18,400 × 4 = ¥73,600（金额守恒 · 演示金额）'],['匹配解释','附言「房租」+ 明确金额守恒集合 → 自动形成拟分配（待复核）'],['复核生效后','4 期分别核销 · 任一期金额不守恒即整体退回人工池']],
+  m1:[['结算项','五羊司合字[2026]92号 · 广美设计研究院 · 江南苑车位 · 2026-07 期（演示金额）'],['应收','¥66,100（租金 ¥57,000 + 物业费 ¥9,100）· 演示金额'],['未结','¥66,100 · 逾期 21 天'],['主体认领','备案银行账号唯一 → 广美设计研究院'],['匹配解释','候选集合 1/1 · 命中 R3「附言+币种+金额+账期唯一」（到账匹配规则 第 5 版 · 代号 MATCH-RULES v5）· 金额正好对得上'],['复核生效后','生成经营收付流水并全额核销该结算项 · 可追溯至导入行、候选集合与命中规则 · 撤销留链']],
+  m2:[['结算项','五羊司合字[2026]92号 · 西厨佳食品 · 押金应收'],['金额','¥55,200（三个月租金押金）· 演示金额'],['未结','¥55,200 · 未逾期'],['主体认领','备案银行账号唯一 → 西厨佳食品'],['匹配解释','候选集合 1/1 · 命中 R3「附言押金+金额+对方」（到账匹配规则 第 5 版 · 代号 MATCH-RULES v5）· 币种 CNY ✓'],['复核生效后','生成押金收付流水并记入押金持有台账 · 押金可抵扣前坏账核销必须失败']],
+  m3:[['结算项集合','五羊司合字[2026]92号 · 季度 4 期'],['金额','¥18,400 × 4 = ¥73,600（金额正好对得上 · 演示金额）'],['匹配解释','附言「房租」+ 金额正好对得上的一组账单 → 自动形成拟分配（待复核）'],['复核生效后','4 期分别核销 · 任一期金额对不上则整组退回人工池']],
 };
 const REV = {
   m1:{ amt:66100, rowTag:'stmt-tag-m1', line:'广美设计研究院 → 五羊司合字[2026]92号 · 江南苑车位 · 2026-07 期（演示金额）（全额核销）' },
   m2:{ amt:55200, rowTag:'stmt-tag-m2', line:'西厨佳食品 → 五羊司合字[2026]92号 · 押金应收（记入押金持有台账）' },
-  m3:{ amt:73600, rowTag:null, line:'西厨佳食品 → 五羊司合字[2026]92号 · 季度 4 期（4 × ¥18,400 · 金额守恒）' },
+  m3:{ amt:73600, rowTag:null, line:'西厨佳食品 → 五羊司合字[2026]92号 · 季度 4 期（4 × ¥18,400 · 金额正好对得上）' },
 };
 let doneCount = 11, doneSum = 400300;
 function renderBill(m){
@@ -2337,7 +2337,7 @@ function renderStmtState(){
     if (!stmtOwnerOk){
       chip.className = 'tag st-soon';
       chip.textContent = '运营方已确认 · 待产权方确认';
-      if (hint != null) hint.textContent = '下一步：产权方在门户逐项核对后在线确认；确认前如需更正试算，由运营方重新提请并发起双方确认（产权方在「终端到账确认」逐笔重确认）——财务复核岗不直接修改到账明细';
+      if (hint != null) hint.textContent = '下一步：产权方在门户逐项核对后在线确认；确认前如需更正试算，由运营方重新提请并发起双方确认（产权方在「租客到账确认」逐笔重确认）——财务复核岗不直接修改到账明细';
       acts.innerHTML = '<button class="btn s p" data-stmtstep="1">模拟：产权方在线确认</button><button class="btn s" data-toast="打开试算明细：每一行对应一笔已确认到账（原型示意）">查看试算明细</button>';
     } else {
       chip.className = 'tag st-verify';
@@ -2353,7 +2353,7 @@ function renderStmtState(){
   if (stmtTracks.inv && stmtTracks.pay){
     chip.className = 'tag st-rentable';
     chip.textContent = '两轨均已登记 · INV-2026-0712 · SF-PAY-2026-0819'; chip.dataset.orig = chip.textContent;
-    if (hint != null) hint.textContent = '对账单只聚合三类事实与两类分配：开票状态与收款状态分别可追溯，未结金额由有效收付分配派生为 ¥0。本例为先票后款（凭票请款）；先款后票见下方 STMT-2026-Q1 对照——两种时序均不被全局状态机阻止。';
+    if (hint != null) hint.textContent = '对账单只聚合三类事实与两类分配：开票状态与收款状态分别可追溯，未结金额由有效收付分配派生为 ¥0。本例为先票后款（凭票请款）；先款后票见下方 STMT-2026-Q1 对照——两种时序都不会被固定流程卡住。';
     acts.innerHTML = '<span class="note">✓ 开票轨与资金轨均已登记 · 全程留痕可追溯（原型示意 · 先票后款）</span>';
   } else if (stmtTracks.inv){
     chip.className = 'tag st-verify';
@@ -2363,7 +2363,7 @@ function renderStmtState(){
   } else if (stmtTracks.pay){
     chip.className = 'tag st-verify';
     chip.textContent = '资金轨已登记 · SF-PAY-2026-0819（先款后票 · 开票轨待登记）'; chip.dataset.orig = chip.textContent;
-    if (hint != null) hint.textContent = '收款经收付分配关联本结算项——先收款后开票同样可流转：按约定开票时点登记发票即可，无全局状态机阻止。';
+    if (hint != null) hint.textContent = '收款经收付分配关联本结算项——先收款后开票同样可流转：按约定开票时点登记发票即可，不会被任一固定流程卡住。';
     acts.innerHTML = '<button class="btn s p" data-stmtstep="3">登记服务费发票（开票轨）</button><button class="btn s" data-toast="打开试算明细：每一行对应一笔已确认到账（原型示意）">查看试算明细</button>';
   } else {
     chip.className = 'tag st-rentable';
@@ -2394,7 +2394,7 @@ function confirmReceipt(id){
   toast(rcptConfirmedN === 3 ? '3 笔全部确认 · 试算更新为 ¥48,600 · 请前往「代理费对账单」定案（原型示意）' : '该笔到账已由产权方确认并留痕（原型示意）');
 }
 
-/* ================= 空间档案 ================= */
+/* ================= 物业档案 ================= */
 function renderRegister(){
   const q = (el('reg-q') != null ? el('reg-q').value : '').trim().toLowerCase();
   const rows = SPACES.filter(sp => {
@@ -2415,9 +2415,9 @@ function renderRegister(){
 
 /* ================= 全局搜索（命中结果随角色权限过滤：无权页面不出现在结果里） ================= */
 const SEARCH_POOL = [
-  { t:'空间 JZ-401-404 · 可租 · 369.39㎡ · 空置 241 天', go:'space', id:'JZ-401-404', pg:'space' },
-  { t:'空间 广州大道北550号 · 权利待核实 · 无证', go:'space', id:'DDB-550', pg:'space' },
-  { t:'空间 利山铁矿 · 受限 · 权属不清晰', go:'space', id:'LSTK', pg:'space' },
+  { t:'物业 JZ-401-404 · 可租 · 369.39㎡ · 空置 241 天', go:'space', id:'JZ-401-404', pg:'space' },
+  { t:'物业 广州大道北550号 · 权利待核实 · 无证', go:'space', id:'DDB-550', pg:'space' },
+  { t:'物业 利山铁矿 · 受限 · 权属不清晰', go:'space', id:'LSTK', pg:'space' },
   { t:'明察企业 · 终端承租方 · 欠费 ¥2,250,884', go:'page', id:'parties', pg:'parties' },
   { t:'回民饭店 · 意向方 · 待审核', go:'page', id:'parties', pg:'parties' },
   { t:'合同 五羊司合字[2024]156号 · 明察企业 · 逾期', go:'page', id:'contracts', pg:'contracts' },
@@ -2980,7 +2980,7 @@ el('msearch').addEventListener('click', () => {
 el('gsearch').addEventListener('blur', () => setTimeout(() => el('search-hits').classList.remove('on'), 180));
 
 /* ================= 初始化 ================= */
-/* 生效页初始 DOM 快照（默认回民案例）：切换来源意向时先恢复快照再按案例覆盖，状态机不串案例 */
+/* 生效页初始 DOM 快照（默认回民案例）：切换来源意向时先恢复快照再按案例覆盖，状态切换不串案例 */
 const ENTRY_SNAP = { gates: el('gate-list').innerHTML, fields: el('entry-fields').innerHTML };
 hydrateIcons();
 renderRole();
