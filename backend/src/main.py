@@ -394,7 +394,7 @@ safe_print("版本化API架构已配置完成")
 setup_exception_handlers(app)
 
 
-# 健康检查端点已迁移到 /api/v1/monitoring/health
+# 健康检查端点位于 /api/v1/system/health（system.py，统一 ABAC 保护）
 # 原有的 /api/health 路由已移除，统一使用路由注册器管理
 
 
@@ -407,7 +407,7 @@ async def root_endpoint() -> JSONResponse:
             "service": "土地物业资产管理系统 API",
             "version": "2.0.0",
             "docs_url": "/docs",
-            "health_check": "/api/v1/monitoring/health",
+            "health_check": "/api/v1/system/health",
             "api_root": "/api/v1",
         },
         message="欢迎使用土地物业资产管理系统API",

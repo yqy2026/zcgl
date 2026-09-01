@@ -194,11 +194,19 @@ Playwright 20 个路由（工作台/资产列表与详情/项目列表与详情/
 - **useForm 悬挂告警**：触发条件是 form 方法在 Form 未挂载时被调用（`@rc-component/form` 每个方法入口的 `warningUnhooked`）。修复：`UserOrganizationTransferModal`、`OrganizationFormModal` 补 `forceRender`（沿用同页 `UserFormModal`/`UserPartyBindingModal` 既有先例，Form 常驻挂载）；`OrganizationMoveModal`、`OrganizationPartyScopeBatchModal` 删除关闭态 effect 里的 `form.resetFields()`（两弹窗均 `destroyOnHidden`，关闭即卸载表单、重开按 initialValues 重建，重置冗余），组件级 state 重置保留。
 - 登录页外部资源超时非本仓资源，未处理。
 
-### 9.8 复核补充发现（登记备查，未在本轮修复）
+### 9.8 复核补充发现（✅ 2026-08-17 已收口清理，处置记录附后）
 
 1. **`monitoring.py` 整个模块未挂载**：全仓无任何 `include_router`/`register_router` 引用（`api/v1/__init__.py` 与 `system.py` 均无），522 行 mock 数据/性能端点全部为死代码。本轮仅按 §2.3 建议清理了其中 `[Any]` mock 键；模块去留建议单独立项。
 2. **前端 `assetDictionaryService` 指向未挂载旧域**：7 个方法全部调 `/system-dictionaries*`（对应 `system_dictionaries.py`，该模块被 `api/v1/__init__.py:74-77` `REMOVED CONFLICTING ROUTER` 注释下线；实际挂载的是 `dictionaries.py`，前缀 `/system/dictionaries` 且路由面不同）。当前无页面消费（`assetService` 的 7 个包装方法无调用方），属潜在死代码/契约错位，与 2.1 同族但影响面为零，建议随 monitoring.py 一并立项清理。
 3. **`system_monitoring/` 包同样未挂载（复核补充，2026-08-17）**：`backend/src/api/v1/system/system_monitoring/`（`endpoints.py` + `database_endpoints.py`，路由前缀 `/monitoring`）全仓无任何 import/include——与 `monitoring.py` 同类死代码，且两个模块路径前缀相同（均 `/monitoring`），清理时需一并决策去留，避免将来重复挂载冲突。
+
+**处置记录（2026-08-17 晚间执行）**：决策口径为「监控功能不立项 → 全部删除、不挂载」。依据：PRD 无监控需求条目；`docs/specs/api-contract.md` 系统基础行明确「MVP 仅保留最小健康检查和系统信息；复杂 monitoring API 不作为产品能力暴露」；字典功能已由 `dictionaries.py`（enum_field 表）+ 前端 `services/dictionary` 全量承接。
+
+- **后端删除**：`api/v1/system/monitoring.py`（522 行）、`api/v1/system/system_monitoring/` 包（6 文件）、`api/v1/system/system_dictionaries.py`（从未挂载的旧字典路由，`api/v1/__init__.py` 的 `REMOVED CONFLICTING ROUTER` 注释块一并移除）；直接 import 死模块的测试 `tests/unit/api/v1/test_monitoring.py`、`test_monitoring_layering.py`、`test_system_monitoring_layering.py`、`tests/unit/api/v1/system/system_monitoring/`（test_endpoints + test_health）；零消费的 `SystemPaths.MONITORING` 常量（`constants/api_paths.py`）；`main.py` 根路由 payload 中指向 404 的 `health_check: /api/v1/monitoring/health` 更正为实际挂载的 `/api/v1/system/health`。
+- **前端删除（同族扩展发现，逐项核实零引用后删）**：`components/Monitoring/`（SystemMonitoringDashboard 六组件 + ApiMonitor + 测试 + 类型，无任何路由/页面引用）、`services/monitoringService.ts`（仅被 Monitoring 组件消费，端点全部未挂载）、`RoutePerformanceMonitor.tsx`（向不存在的 `/api/monitoring/route-performance` 发请求且 URL 缺 `/v1` 前缀，无挂载点）、`utils/routeCache.ts` 及其测试（默认导出与 `RoutePerformanceMonitor` 类全仓零消费）、`services/asset/assetDictionaryService.ts` + `assetService.ts` 的 13 个字典包装方法 + `services/asset/index.ts` 再导出；`vitest.config.ts` 指向不存在目录的 `@/monitoring` 别名；`.github/config/coverage_exceptions.yml` 两条指向从未存在路径 `src/monitoring/*` 的豁免条目。
+- **核实为活代码、明确保留**：`system.py` 的 `/system/health`（挂载中）及守卫测试 `test_system.py`（`/api/v1/monitoring/health` 404 冻结断言继续有效）、`test_system_layering.py`；RBAC 种子 `init_rbac_data.py` 与 alembic 回填中的 `system_monitoring` 权限（health 端点消费）；`services/system_dictionary/` + `crud/system_dictionary.py` + `models/system_dictionary.py`（被 `cache_warmup_service` / `common_dictionary_service` 消费，与已删 API 路由分层无关）；`middleware/performance_monitoring.py` 与 `error_recovery_config.py` 的 `MONITORING_CONFIG`（错误恢复域）。
+- **SSOT**：`docs/traceability/requirements-trace.md` REQ-SYS-003 证据移除死路径；`docs/guides/components.md` 移除系统监控行。
+- **验证**：见 §9.10。
 
 ### 9.9 验证记录
 
@@ -206,3 +214,10 @@ Playwright 20 个路由（工作台/资产列表与详情/项目列表与详情/
 - 前端：oxlint 0 warnings / 0 errors；type-check 通过；定向 vitest 128 passed（assetFieldService / AssetDetailInfo / Analytics 4 套件 / Organization 2 套件）；**复核追加：assetFieldService+AssetDetailInfo 52、Analytics+components 169 passed；浏览器层 /analytics 复验 ExpressionError 清零（修复前 8 console error + 4 pageerror → 修复后 0 图表错误，唯一残留为登录页外部资源超时）**。
 - SSOT：`docs/specs/api-contract.md` 从未收录上述端点路径（修复前后均无条目），无契约文档差异；修复状态登记于本节与 CHANGELOG。
 - 未做：全量 `make check`（修复已由运行时路由探针 + 单测 + 浏览器复验锁定；建议下次例行点检对 20 路由做全量回归复测）。
+
+### 9.10 §9.8 死代码清理验证（2026-08-17 晚间）
+
+- 后端：`ruff check src tests` 全绿；`mypy src` 380 文件 0 issue（较清理前少 8 个文件 = 删除的 8 个模块）；应用导入冒烟 + 路由断言通过（346 条路由中无任何 `/monitoring`、`/system-dictionaries` 路径，`/api/v1/system/health` 在位）；定向套件 `test_system_layering` + `test_static_route_shadowing` + `test_dictionaries_layering` + `test_phase1_security` 38 passed / 1 skipped（skip 为 encryption-status 端点未注册的既有守卫分支，清理前同样 skip）；`test_system.py` 含新增根路由 payload 回归 `test_root_payload_advertises_live_health_check` 共 9 passed；全量后端单测 `-m "unit and not slow"` **3916 passed / 287 skipped / 0 failed**（skip 较历史基线多为本 shell 未设 `TEST_DATABASE_URL` 的 db-backed 用例环境性跳过；passed 下降 = 删除的死测试 + 该环境性跳过）。
+- 前端：oxlint 0 warnings / 0 errors；type-check 通过（过程中抓出一处漏网引用 `components/index.ts` 的 `export * as Monitoring`，已修复——相对路径再导出不在此前符号 grep 覆盖内）；定向 vitest `src/services` 全部通过；生产构建通过。
+- 门禁：docs-lint（requirements-authority 11 项检查 + field-drift 基线不变）通过；query-param-drift 7 契约 0 漂移。
+- 残留扫尾：全仓 grep 已删符号零残留（保留项均为活代码：`system_monitoring` 作为 authz resource_type、`models/system_dictionary.py` 表模型）；Makefile / `backend/pyproject.toml` / CI workflows 无已删文件引用；扫尾另抓出首轮删除清单遗漏的 `test_system_dictionaries_layering.py`（import 已删模块，已补删并重启全量套件复验）。

@@ -2,9 +2,9 @@
 
 ## 1. 文档定位
 
-本文档描述当前目标态的业务对象、字段、状态、枚举和统计口径。产品叙事见 `docs/prd.md`，API 契约见 `docs/specs/api-contract.md`，实现追踪见 `docs/traceability/requirements-trace.md`。
+本文档暂时描述 **v3.13 现有实现及迁移基线** 的业务对象、字段、状态、枚举和统计口径，**不是 v4.0 目标模型**。v4.0 的产品事实以 `docs/prd.md`、`CONTEXT.md`、ADR-0023～ADR-0027 和 `docs/plans/2026-08-26-land-property-v4-implementation.md` 为准。
 
-本文档只保留当前目标态，不记录历史字段清理过程、访谈过程或实现证据。
+在 v4.0 原型经业务决策人确认前，本文件冻结为只读迁移基线，不得据此新增 v4 功能。原型确认后在 S0 阶段整体重写目标模型，并同步 API 契约、追踪矩阵和迁移方案。
 
 ## 2. 跨对象规则
 

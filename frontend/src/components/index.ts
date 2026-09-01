@@ -12,7 +12,6 @@ export * as Feedback from './Feedback';
 export * as Forms from './Forms';
 export * as Layout from './Layout';
 export * as Loading from './Loading';
-export * as Monitoring from './Monitoring';
 export * as Notification from './Notification';
 export * as Ownership from './Ownership';
 export * as Project from './Project';

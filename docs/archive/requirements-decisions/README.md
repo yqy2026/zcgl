@@ -21,6 +21,7 @@
 
 ## 归档记录
 
+- [2026-08-29-legacy-system-research.md](./2026-08-29-legacy-system-research.md) — 旧系统「土地物业运营管理平台」两轮实地调研快照：12 数据域实测底座 + 8 模块深挖，含锦洲三层口径勘误；§6 借鉴之处（22 步国资招租链/管理层工作台/账单双列/柜面收租/口径分层）、§7 教训反面清单十条（违约金停摆/欠费无案件化/权属治理债/重复建档/子系统口径孤岛/通知轰炸/无复核分离/无生效检查/长流程不推动/到期不闭环）。
 - [2026-04-27-requirements-specification-process-archive.md](./2026-04-27-requirements-specification-process-archive.md) — 旧需求规格降级为兼容跳转页前的过程信息归档摘要。
 - [2026-04-27-requirements-appendices-process-archive.md](./2026-04-27-requirements-appendices-process-archive.md) — 旧字段与模块附录降级为兼容跳转页前的过程信息归档摘要。
 - [2026-04-05-role-design-clarification.md](./2026-04-05-role-design-clarification.md) — 角色、主体和权限设计的历史访谈记录。

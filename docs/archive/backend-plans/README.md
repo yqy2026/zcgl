@@ -4,6 +4,7 @@
 
 | 文档 | 主题 |
 |------|------|
+| [2026-08-17-land-property-system-redesign.md](./2026-08-17-land-property-system-redesign.md) | 土地物业系统重设计 v3.13（已由 v4.0 取代，仅保留作迁移对照与历史设计来源） |
 | [2026-08-03-organization-party-scope-cutover.md](./2026-08-03-organization-party-scope-cutover.md) | Organization-Party 正交与主体范围单一解析一次切换（已完成，ADR-0022 已实施） |
 | [2026-07-29-party-business-role-slices.md](./2026-07-29-party-business-role-slices.md) | Party 主体业务角色实时派生切片（已完成） |
 | [2026-07-15-rapidocr-deepseek-document-extraction-plan.md](./2026-07-15-rapidocr-deepseek-document-extraction-plan.md) | RapidOCR 本地 OCR + DeepSeek 单一 LLM 文档解析收口（已完成） |

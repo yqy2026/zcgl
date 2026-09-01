@@ -53,7 +53,6 @@ import { AssetForm } from '@/components/Forms';
 | 错误处理 | `frontend/src/components/ErrorHandling` | `index.ts` | ErrorBoundary/UX |
 | 通知中心 | `frontend/src/components/Notification` | `index.ts` | 站内通知 |
 | 系统管理 | `frontend/src/components/System` | `index.ts` | 权限守卫、面包屑、提示编辑 |
-| 系统监控 | `frontend/src/components/Monitoring` | `index.ts` | 监控看板与健康状态 |
 | 项目管理 | `frontend/src/components/Project` | `index.ts` | 项目列表与选择 |
 | 租赁管理 | `frontend/src/components/Rental` | `index.ts` | 合同、台账与导入 |
 | 数据字典 | `frontend/src/components/Dictionary` | `index.ts` | 字典选择与预览 |

@@ -2,9 +2,9 @@
 
 ## 1. 文档定位
 
-本文档描述当前目标态 API、权限和请求契约。产品需求见 `docs/prd.md`，领域对象见 `docs/specs/domain-model.md`，实现追踪见 `docs/traceability/requirements-trace.md`。
+本文档暂时描述 **v3.13 现有实现及迁移基线** 的 API、权限和请求契约，**不是 v4.0 目标 API**。v4.0 的产品事实以 `docs/prd.md`、`CONTEXT.md`、ADR-0023～ADR-0027 和 `docs/plans/2026-08-26-land-property-v4-implementation.md` 为准。
 
-本文档只描述对外契约，不记录实现文件、测试文件或历史迁移过程。
+在 v4.0 原型经业务决策人确认前，本文件冻结为只读迁移基线，不得据此新增 v4 端点。原型确认后在 S0 阶段按确认后的页面任务与领域边界重写本契约。
 
 ## 2. 全局 API 规则
 

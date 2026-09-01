@@ -11,5 +11,4 @@ export { AssetCoreService, assetCoreService } from './assetCoreService';
 export { AssetHistoryService, assetHistoryService } from './assetHistoryService';
 export { AssetStatisticsService, assetStatisticsService } from './assetStatisticsService';
 export { AssetImportExportService, assetImportExportService } from './assetImportExportService';
-export { AssetDictionaryService, assetDictionaryService } from './assetDictionaryService';
 export { AssetFieldService, assetFieldService } from './assetFieldService';

@@ -54,24 +54,8 @@ exceptions:
   # ===========================
   # Frontend Exceptions
   # ===========================
-
-  - module: "src/monitoring/ApiMonitor.tsx"
-    current_coverage: 40
-    target_coverage: 60
-    reason: "API monitoring component requires complex mocking of fetch and WebSocket (API监控组件需要复杂Mock fetch和WebSocket)"
-    improvement_plan: "Refactor to use dependency injection for better testability (重构以使用依赖注入提高可测试性)"
-    expires: "2026-02-28"
-    owner: "@team-frontend"
-    status: "active"
-
-  - module: "src/monitoring/SmartErrorHandler.tsx"
-    current_coverage: 50
-    target_coverage: 70
-    reason: "Error boundary testing requires specialized React testing utilities (错误边界测试需要专用React测试工具)"
-    improvement_plan: "Implement tests with react-error-boundary library (使用react-error-boundary库实现测试)"
-    expires: "2026-02-15"
-    owner: "@team-frontend"
-    status: "active"
+  # （2026-08-17）删除两条 src/monitoring/* 豁免条目：路径从未存在
+  # （组件实际位于 src/components/Monitoring，该目录已随监控死代码清理整体下线）
 
 # ===========================
 # Validation Rules

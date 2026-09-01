@@ -183,7 +183,6 @@ class SystemPaths:
     DICTIONARIES = "/system/dictionaries"
     TEMPLATES = "/system/templates"
     LOGS = "/system/logs"
-    MONITORING = "/system/monitoring"
     HEALTH = "/system/health"
 
 

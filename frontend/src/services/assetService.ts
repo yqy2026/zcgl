@@ -26,8 +26,6 @@ export {
   assetStatisticsService,
   AssetImportExportService,
   assetImportExportService,
-  AssetDictionaryService,
-  assetDictionaryService,
   AssetFieldService,
   assetFieldService,
 } from './asset';
@@ -37,7 +35,6 @@ import { assetCoreService } from './asset/assetCoreService';
 import { assetHistoryService } from './asset/assetHistoryService';
 import { assetStatisticsService } from './asset/assetStatisticsService';
 import { assetImportExportService } from './asset/assetImportExportService';
-import { assetDictionaryService } from './asset/assetDictionaryService';
 import { assetFieldService } from './asset/assetFieldService';
 
 import type {
@@ -50,7 +47,6 @@ import type {
   AssetCreateRequest,
   AssetUpdateRequest,
   AssetHistory,
-  SystemDictionary,
   AssetCustomField,
   CustomFieldValue,
   NormalizedPaginatedResponse,
@@ -279,67 +275,6 @@ export class AssetService {
 
   async deleteImportRecord(id: string): Promise<void> {
     return assetImportExportService.deleteImportRecord(id);
-  }
-
-  // ===== Dictionary Operations =====
-
-  async getSystemDictionaries(dict_type?: string): Promise<SystemDictionary[]> {
-    return assetDictionaryService.getSystemDictionaries(dict_type);
-  }
-
-  async getSystemDictionary(id: string): Promise<SystemDictionary> {
-    return assetDictionaryService.getSystemDictionary(id);
-  }
-
-  async createSystemDictionary(
-    data: Omit<SystemDictionary, 'id' | 'created_at' | 'updated_at'>
-  ): Promise<SystemDictionary> {
-    return assetDictionaryService.createSystemDictionary(data);
-  }
-
-  async updateSystemDictionary(
-    id: string,
-    data: Partial<SystemDictionary>
-  ): Promise<SystemDictionary> {
-    return assetDictionaryService.updateSystemDictionary(id, data);
-  }
-
-  async deleteSystemDictionary(id: string): Promise<void> {
-    return assetDictionaryService.deleteSystemDictionary(id);
-  }
-
-  async batchUpdateSystemDictionaries(
-    updates: Array<{ id: string; data: Partial<SystemDictionary> }>
-  ): Promise<SystemDictionary[]> {
-    return assetDictionaryService.batchUpdateSystemDictionaries(updates);
-  }
-
-  async getDictionaryTypes(): Promise<{ types: string[] }> {
-    return assetDictionaryService.getDictionaryTypes();
-  }
-
-  async getOwnershipEntitiesFromDict(): Promise<SystemDictionary[]> {
-    return assetDictionaryService.getOwnershipEntitiesFromDict();
-  }
-
-  async getManagementEntitiesFromDict(): Promise<SystemDictionary[]> {
-    return assetDictionaryService.getManagementEntitiesFromDict();
-  }
-
-  async getBusinessCategoriesFromDict(): Promise<SystemDictionary[]> {
-    return assetDictionaryService.getBusinessCategoriesFromDict();
-  }
-
-  async getAssetStatusFromDict(): Promise<SystemDictionary[]> {
-    return assetDictionaryService.getAssetStatusFromDict();
-  }
-
-  async getOwnershipNatureFromDict(): Promise<SystemDictionary[]> {
-    return assetDictionaryService.getOwnershipNatureFromDict();
-  }
-
-  async getLeaseStatusFromDict(): Promise<SystemDictionary[]> {
-    return assetDictionaryService.getLeaseStatusFromDict();
   }
 
   // ===== Custom Field Operations =====

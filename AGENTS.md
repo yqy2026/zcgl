@@ -226,7 +226,8 @@ docs-lint 覆盖：旧文档引用守卫、代码证据死链检测、`plans/` �
 1. AI 任务报告（summary/report/fix-summary）→ `docs/archive/`，**禁止放 `docs/guides/`**
 2. 方案标记 ✅ → 立即移入 `docs/archive/backend-plans/`；`plans/` 只保留 🔄 和 ⏸
 3. 文件命名：全小写 + 连字符；方案 `YYYY-MM-DD-<slug>.md`；复盘 `YYYY-MM-<slug>.md`；ADR `ADR-NNNN-<slug>.md`
-4. 单文档 >800 行须拆分；新建子目录必须同时创建 `README.md`
+4. 单文档 >2000 行须拆分；新建子目录必须同时创建 `README.md`
+5. 设计红线：派生投影不得反向成为事实源；禁止以“兼容期”让新旧写入口长期双写；内部模型词不得进入前端导航、按钮、URL 参数或空态。
 
 ---
 

@@ -70,3 +70,12 @@ class TestSystemAPI:
         """复杂 monitoring 暴露面冻结后不再提供旧健康路径。"""
         response = client.get("/api/v1/monitoring/health", headers=admin_user_headers)
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_root_payload_advertises_live_health_check(self, client):
+        """根路由 payload 的 health_check 必须指向实际挂载的健康检查端点。"""
+        response = client.get("/")
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        advertised = payload["data"]["health_check"]
+        assert advertised == "/api/v1/system/health"
+        assert "/monitoring" not in advertised

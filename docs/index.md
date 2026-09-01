@@ -104,4 +104,4 @@
 - AI 任务执行报告（summary/report 类）直接进 `archive/`，不放 `guides/`
 - 已完结方案（plans/ 中 ✅ 状态）须移入 `archive/backend-plans/`
 - 历史版本通过 Git 追溯
-- 单个文档超过 800 行需考虑拆分
+- 单个文档超过 2000 行须拆分

@@ -71,11 +71,6 @@ api_router.include_router(
 api_router.include_router(occupancy_router, prefix="/occupancy", tags=["出租率计算"])
 api_router.include_router(admin_router, tags=["系统管理"])
 
-# REMOVED CONFLICTING ROUTER
-# api_router.include_router(
-#     system_dictionaries_router, prefix="/system/dictionaries", tags=["系统字典管理"]
-# )
-
 api_router.include_router(
     custom_fields_router, prefix="/asset-custom-fields", tags=["自定义字段管理"]
 )

@@ -12,6 +12,7 @@ import { CapabilityGuard } from './components/System/CapabilityGuard';
 import { MessageManager } from './utils/messageManager';
 import { useCapabilities } from './hooks/useCapabilities';
 import styles from './App.module.css';
+import { PROTOTYPE_ROUTES } from './constants/routes';
 // App.css removed - classes were unused default React template styles
 
 /**
@@ -29,6 +30,11 @@ interface LocationState {
 
 import { AnimatePresence } from 'framer-motion';
 import PageTransition from './components/Layout/PageTransition';
+
+const AssetOperationsPrototypePage =
+  import.meta.env.DEV === true
+    ? React.lazy(() => import('./pages/Prototype/AssetOperations/AssetOperationsPrototypePage'))
+    : null;
 
 const InlineForbidden: React.FC = () => {
   return (
@@ -144,6 +150,18 @@ const ProtectedRoutes: React.FC = () => {
 const AppContent: React.FC = () => {
   const { isAuthenticated, initializing } = useAuth();
   const location = useLocation();
+
+  if (import.meta.env.DEV === true && location.pathname === PROTOTYPE_ROUTES.ASSET_OPERATIONS) {
+    const PrototypePage = AssetOperationsPrototypePage;
+    if (PrototypePage == null) {
+      return null;
+    }
+    return (
+      <Suspense fallback={<Spin size="large" className={styles.suspenseFallbackSpin} />}>
+        <PrototypePage />
+      </Suspense>
+    );
+  }
 
   if (initializing === true) {
     return (

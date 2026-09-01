@@ -25,6 +25,10 @@ export const OPERATIONS_ROUTES = {
   LEDGER: '/operations/ledger',
 } as const;
 
+export const PROTOTYPE_ROUTES = {
+  ASSET_OPERATIONS: '/prototype/asset-operations',
+} as const;
+
 // 资产资源路由
 export const ASSET_ROUTES = {
   LIST: '/assets/list',
@@ -319,6 +323,7 @@ export const ROUTES = {
   SEARCH_ROUTES,
   ANALYTICS_ROUTES,
   OPERATIONS_ROUTES,
+  PROTOTYPE_ROUTES,
   CUSTOMER_ROUTES,
   SYSTEM_ROUTES,
   OTHER_ROUTES,
