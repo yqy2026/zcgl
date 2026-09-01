@@ -10,6 +10,7 @@
 
 | 文档 | 内容 |
 |------|------|
+| [2026-09-01-p0-walkthrough-preflight-review.md](./2026-09-01-p0-walkthrough-preflight-review.md) | P0 原型预走查记录（技术侧预演）：按走查单 9 条路线脚本化复演 61 项预期证据全过、8 关键帧视觉复核、零页面错误；发现并修复生效页粘底条遮挡（sticky 负底边距）、修正走查单②页底案例与⑤按钮名两处口径；结论为可交运营管理方正式走查，不替代业务确认 |
 | [2026-08-26-land-property-review-final-disposition.md](./2026-08-26-land-property-review-final-disposition.md) | **最终处置表**：明确毁灭性评审哪些接受、调整后接受或否决，并确认 v3.13 已归档、v4.0 是唯一活跃产品方案 |
 | [2026-08-25-land-property-redesign-adjudication-review.md](./2026-08-25-land-property-redesign-adjudication-review.md) | 过程裁决记录；已由 2026-08-26 最终处置表收口，仅保留 93 项决策过程和证据门历史 |
 | [2026-08-24-land-property-redesign-first-principles-destructive-review.md](./2026-08-24-land-property-redesign-first-principles-destructive-review.md) | 对 v3.13 目标方案完成三轮对抗复核和业务裁决；金额、历史、权限与并发保护有条件通过，产品 IA 与范围退回修订；保留 Asset 经营核算身份、Project 日常运营单元、客户与合作方及运营项目独立入口、专业权益写模型和 `ReinspectDeliveryRun`，撤销 LegalInstrument、AgreementScope、动态定价、项目预算与 Asset 账面价值等无证据扩项；补最小招商机会、Party × Project 催收事项和银行流水导入，以产权方直租完整路径优先，再扩代理与转租；不修改现行 SSOT 或业务代码 |
