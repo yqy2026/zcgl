@@ -20,18 +20,21 @@ await page.waitForTimeout(120);
 /* ---------- 全局健康 ---------- */
 ok(errors.length === 0, '加载无 pageerror/console.error' + (errors.length ? ` :: ${errors[0]}` : ''));
 
-/* ---------- 登录页：体验身份入口（角色选择自场景条迁入） ---------- */
+/* ---------- 登录页：体验身份入口（角色选择自登录页） ---------- */
 ok(await page.locator('#login-view.on').count() === 1, '首屏落在登录页');
 ok(await page.locator('#role-grid .rolecard').count() === 9, '登录页提供 9 个体验身份卡片');
-ok(await page.locator('.scenario-bar #role-sel').count() === 0, '场景条不再包含岗位下拉（身份只在登录页选择）');
+ok(await page.locator('#scenario-sel').count() === 0, '产品形态：无走查路线脚手架（走查驱动已移除）');
 await page.click('[data-rolelogin="leasing"]');
 await page.waitForTimeout(80);
 ok(await page.locator('#login-view.on').count() === 0, '选择身份卡片后进入系统');
+ok(await page.locator('#burger').isHidden(), '桌面宽度不显示移动端汉堡按钮（data-icon 规则不得覆盖隐藏）');
+ok(await page.locator('#msearch').isHidden(), '桌面宽度不显示移动端搜索按钮（同源缺陷）');
 
 /* ---------- 批1 · F1.2 权限作用域链接 + 越权示例 ---------- */
 ok(await page.locator('#gate-rights-link .note').count() === 1,
   'leasing 视角 intents 门槛条显示职责说明而非跳转按钮');
 ok(await page.locator('#gate-rights-link [data-go]').count() === 0, 'leasing 无权不渲染 rights 链接');
+ok((await page.locator('#gate-rights-link .note').innerText()).includes('「资产管理」'), '门槛条职责说明随岗位更名（资产权属 → 资产管理）');
 
 await page.evaluate(v => window.switchRole(v), 'asset');
 await page.waitForTimeout(80);
@@ -41,13 +44,13 @@ await page.evaluate(() => { window.showPage('intents'); });
 await page.waitForTimeout(60);
 ok(await page.locator('[data-page="denied"].on').count() === 1, 'asset 深链 intents 落入拒绝视图');
 
-/* 直达 denied 视图路径二：mywork 越权示例钮（ leasing ） */
+/* 直达 denied 视图路径二：leasing 越权深链（银行到账核对页不在授权范围） */
 await page.evaluate(v => window.switchRole(v), 'leasing');
 await page.waitForTimeout(80);
-ok(await page.locator('[data-denydemo]').isVisible(), '我的工作提供越权演示按钮');
-await page.click('[data-denydemo]');
+ok(await page.locator('[data-denydemo]').count() === 0, '产品形态：我的工作不再提供越权演示按钮（走查脚手架已移除）');
+await page.evaluate(() => window.showPage('recon'));
 await page.waitForTimeout(60);
-ok(await page.locator('[data-page="denied"].on').count() === 1, '点击越权示例落入拒绝视图');
+ok(await page.locator('[data-page="denied"].on').count() === 1, 'leasing 越权深链 recon 落入拒绝视图（内容整体隐藏）');
 
 /* ---------- 批1 · F1.1 意向看板状态机 ---------- */
 await page.locator('.navi[data-target="intents"]').first().click();
@@ -111,6 +114,7 @@ ok((await page.locator('#entry-src').innerText()).includes('池玉銮'), '生效
 const priceGateCls = await page.locator('#g-price').getAttribute('class');
 ok(priceGateCls.includes('no') && (await page.locator('#g-price').innerText()).includes('EX-2026-03'), '低于底价红线案例：底价门红色阻断并关联 EX-2026-03');
 ok(await page.locator('#entry-ex-link .perm-note').count() === 1, 'leasing 无权 rights 时例外链接降级为职责说明');
+ok((await page.locator('#entry-ex-link .perm-note').innerText()).includes('「资产管理」'), '例外链接职责说明同步岗位更名');
 /* EX-2026-03 批准联动：底价门「批准后自动转绿」承诺接线 */
 await page.evaluate(v => window.switchRole(v), 'executive');
 await page.waitForTimeout(80);
@@ -154,7 +158,7 @@ ok(await page.locator('.job:has-text("WO-2207")').count() === 1, 'property 页�
 await page.click('[data-wo2207]');
 await page.waitForTimeout(60);
 ok((await page.locator('[data-page="property"]').innerText()).includes('复验通过'), 'WO-2207 复验完成并留痕');
-await page.selectOption('#scenario-sel', 'effective');
+await page.evaluate(() => { window.switchRole('leasing'); window.showPage('entry'); window.applyEntryCase('ruihe', true); });
 await page.waitForTimeout(100);
 const precondCls = await page.locator('#g-precond').getAttribute('class');
 ok(precondCls.includes('ok') && (await page.locator('#g-precond').innerText()).includes('复验通过'), '物业复验联动解除生效前置门（不再只能靠豁免点亮）');
@@ -198,12 +202,90 @@ ok(await page.locator('#depo2:not(.hidden)').count() === 1, '核销申请经确�
 
 await page.evaluate(v => window.switchRole(v), 'asset');
 await page.waitForTimeout(80);
-ok((await page.locator('#mw-summary').innerText()).includes('待我复核'), 'asset 指标渲染正常');
-ok((await page.locator('#mw-summary').innerText()).includes('3 件'), 'asset 待我复核口径对齐 3 件');
+const mwSumTxt = await page.locator('#mw-summary').innerText();
+ok(mwSumTxt.includes('今日已办') && mwSumTxt.includes('本年已办'), 'asset 指标条渲染进度卡（今日/本年已办，实时派生）');
+ok(!mwSumTxt.includes('待我复核') && mwSumTxt.includes('权属受限'), '指标条不再重复待办计数 · 只留盘子状态（去重裁决）');
+
+/* 岗位合并裁决：「资产权属」扩展并更名「资产管理」，承接资产接收（上游合同/代理协议）业务侧职责 */
+ok((await page.locator('#role-foot').innerText()).includes('资产管理 · 资产管理部'), '身份卡更名「资产管理」（部门落款不变）');
+ok(mwSumTxt.includes('12 件'), '本年已办计数与工作记录一致（13 条中 2026 年 12 条；接收/催办类工作由任务清单与工作记录承载）');
+
+/* 待办清单三层分列：行动项 / 等待项（等谁·等到何时）/ 不用我动手 */
+const secLabels = await page.$$eval('#mw-tasks .task-sec b', els => els.map(e => e.textContent));
+ok(secLabels.join('|') === '要动手的|等外部的|不用我动手', '待办清单三层分列（行动/等待/无需动作）');
+const todoTxt2 = await page.locator('#mw-tasks').innerText();
+ok(todoTxt2.includes('等责任人 周庆銮') && todoTxt2.includes('承诺 09-30'), '等待项明示等谁与等到何时（权属清理 · 周庆銮 · 09-30）');
+ok(todoTxt2.includes('Q3 代理费对账单自动试算'), '系统自动推进项归入「不用我动手」层（无操作按钮）');
+ok(await page.locator('#mw-tasks .task').count() === 7, 'asset 待办共 7 项（行动 5 · 等待 1 · 自动 1）');
+ok((await page.locator('#mw-todo-n').innerText()) === '5', '待办徽标只计行动项（5），等待与自动项不计入');
+ok(await page.locator('#mw-tasks .task.urgent').count() === 2, '紧急样式只落在行动项上（受托复核 · 租金核对）');
+
+/* 节点日历 + 门禁阻塞面（待办右列，与队列同屏） */
+ok(await page.locator('#mw-nodes:not(.hide)').count() === 1, '节点日历卡渲染（未来 90 天）');
+const nodesTxt = await page.locator('#mw-nodes').innerText();
+ok(nodesTxt.includes('余 3 天') && nodesTxt.includes('上游租约续签窗口开启'), '30 天内节点红显剩余天数；上游续签窗口节点在列');
+ok(await page.locator('#mw-nodes .noderow').count() === 6, '节点日历 6 项（对账截止/权属承诺/续签窗口/对账出具/报送/年度确认）');
+ok(await page.locator('#mw-gates:not(.hide)').count() === 1
+  && (await page.locator('#mw-gates').innerText()).includes('吴俊锋')
+  && (await page.locator('#mw-gates').innerText()).includes('WO-2207'), '门禁阻塞面：授权缺失/底价例外/无证/整改门禁正阻塞的下游在列');
+ok((await page.locator('#mw-summary').innerText()).includes('授权临期'), '指标条补「授权临期」盘子卡（可下钻 rights）');
+ok(await page.locator('.gaterow:has-text("WO-2207") .btn').count() === 0, '门禁行目标页（property）不在资产管理白名单时不渲染「查看」——职责边界而非落拒绝视图');
+const hotCol = await page.$eval('#mw-nodes .due.hot', e => getComputedStyle(e).color);
+ok(hotCol === 'rgb(207, 19, 34)', '30 天内剩余天数红显命中（.noderow 作用域样式 · #cf1322）');
+ok(nodesTxt.includes('每月 1 日报送上月'), '报送节点与工作记录口径一致（每月 1 日报送上月）');
+ok((await page.locator('#mw-tasks').innerText()).includes('上游租金核算待核对'), '上游租金核算核对任务指向 payables（业务核对视角）');
+ok((await page.locator('#mw-tasks').innerText()).includes('待催确认') && (await page.locator('#mw-tasks').innerText()).includes('评估委托资料待归档'), '对账催确认与评估归档任务在列（评估不建流程页面）');
+ok(await page.locator('.navi[data-target="contracts"]').count() === 1
+  && await page.locator('.navi[data-target="payables"]').count() === 1
+  && await page.locator('.navi[data-target="stmts"]').count() === 1, '资产管理导航新增 合同与协议/上游付款/代理费对账单');
+await page.evaluate(() => { window.showPage('payables'); });
+await page.waitForTimeout(60);
+ok(await page.locator('[data-page="payables"].on').count() === 1 && await page.locator('[data-page="denied"].on').count() === 0, '资产管理深链 payables 不再落入拒绝视图');
+
+/* 工作台 待办/已办：工作记录按业务+年度+月份检索（复盘与总结） */
+await page.evaluate(() => { window.showPage('mywork'); });
+await page.waitForTimeout(50);
+ok(await page.locator('#mw-tabs [data-wtab="done"]').count() === 1, '工作台提供 待办/已办·工作记录 页签');
+await page.click('#mw-tabs [data-wtab="done"]');
+await page.waitForTimeout(50);
+ok(await page.locator('#mw-done:not(.hide)').count() === 1 && await page.locator('#mw-todo.hide').count() === 1, '切换到已办（工作记录）视图');
+ok(await page.locator('#wl-rows tr').count() === 13, 'asset 工作记录默认全部展示（13 条，含今日 1 条）');
+ok((await page.locator('#wl-count').innerText()).includes('今日新增 1 件') && (await page.locator('#wl-rows').innerText()).includes('今天'), '今日种子记录置顶并带「今天」徽标');
+const wlTxt = await page.locator('#mw-done').innerText();
+ok(wlTxt.includes('台账与报送') && wlTxt.includes('评估') && wlTxt.includes('资产接收与协议'), '工作记录覆盖接收/台账报送/评估等业务分类');
+await page.click('#wl-year .chip[data-v="2025"]');
+await page.waitForTimeout(40);
+ok((await page.locator('#wl-rows tr').count()) === 1 && (await page.locator('#wl-rows').innerText()).includes('2025-'), '年度筛选生效（2025 年 1 条）');
+await page.click('#wl-year .chip[data-v="2026"]');
+await page.waitForTimeout(40);
+await page.click('#wl-cat .chip[data-v="评估"]');
+await page.waitForTimeout(40);
+ok((await page.locator('#wl-rows tr').count()) === 2, '业务筛选生效（2026 年评估类 2 条）');
+await page.click('#wl-month .chip[data-v="08"]');
+await page.waitForTimeout(40);
+const wlAug = await page.locator('#wl-rows').innerText();
+ok(wlAug.includes('08-') && !wlAug.includes('07-'), '月份筛选生效（仅 8 月记录）');
+await page.click('#wl-cat .chip[data-v="全部"]');
+await page.waitForTimeout(40);
+await page.click('#mw-tabs [data-wtab="todo"]');
+await page.waitForTimeout(40);
+ok(await page.locator('#mw-tasks').isVisible(), '切回待办视图任务清单恢复');
+await page.locator('.work-metric.go[data-gowlog]').first().click();
+await page.waitForTimeout(50);
+ok(await page.locator('#mw-done:not(.hide)').count() === 1, '进度卡（今日/本年已办）直达已办·工作记录页签');
+
+/* 月度小结：随年月筛选联动，选中月份给环比 */
+await page.click('#wl-month .chip[data-v="06"]');
+await page.waitForTimeout(40);
+const sumTxt = await page.locator('#wl-sum').innerText();
+ok(sumTxt.includes('完成 3 件') && sumTxt.includes('较上月（5 月 · 0 件）+3 件'), '月度小结：2026-06 完成 3 件并给出环比 +3');
+await page.evaluate(() => { window.switchRole('leasing'); });
+await page.waitForTimeout(60);
+ok(await page.locator('#mw-nodes.hide').count() === 1 && await page.locator('#mw-gates.hide').count() === 1, '未配置节点/门禁数据的岗位整卡隐藏');
 
 await page.evaluate(v => window.switchRole(v), 'finreview');
 await page.waitForTimeout(80);
-ok(await page.locator('#mw-tasks [data-toast*="退款复核工作面原型未展开"]').count() === 1, '退款复核任务改为诚实占位（不再跳转无落点页面）');
+ok(await page.locator('#mw-tasks [data-toast*="退款复核须关联原收款流水"]').count() === 1, '退款复核任务为说明型占位（不再跳转无落点页面）');
 await page.locator('.navi[data-target="stmts"]').click();
 await page.waitForTimeout(60);
 const hint = await page.locator('#stmt-hint').innerText();
@@ -251,7 +333,16 @@ await page.waitForTimeout(60);
 ok((await page.locator('#stmt-tag-m1').innerText()) === '已核销', 'm1 批量复核生效 → 已核销（仅复核生效派生）');
 ok((await page.locator('#stmt-tag-m2').innerText()) === '已核销', 'm2 批量复核生效 → 已核销');
 ok((await page.locator('#done-total').innerText()).includes('14 笔'), '今日已核销累计 11+3=14 笔');
-ok((await page.locator('.batchbar .note').innerText()).includes('按岗位鉴权放行'), '制审边界补注到位');
+ok((await page.locator('.batchbar .note').innerText()).includes('制审分离'), '制审边界说明到位');
+
+/* 批量复核实时写入工作记录（岗位归属财务复核 · 原型代为点亮） */
+await page.evaluate(v => window.switchRole(v), 'finreview');
+await page.waitForTimeout(60);
+await page.click('#mw-tabs [data-wtab="done"]');
+await page.waitForTimeout(50);
+ok((await page.locator('#wl-rows').innerText()).includes('今天') && (await page.locator('#wl-rows').innerText()).includes('批量复核通过自动拟分配 3 笔'), '批量复核实时写入今日工作记录（财务复核岗）');
+const frSum = await page.locator('#mw-summary').innerText();
+ok(frSum.includes('今日已办') && frSum.includes('2 件'), '批量复核后「今日已办」计数实时增长（1 → 2 件）');
 
 /* ---------- 批3 CL-03 合同 chips 真筛选 ---------- */
 await page.evaluate(v => window.switchRole(v), 'leasing');
@@ -279,6 +370,7 @@ ok(await page.locator('[data-page="parties"].on, [data-page="collections"].on').
 /* Esc 关抽屉（≤760 视口下打开后 Esc 应关闭） */
 await page.setViewportSize({ width: 390, height: 760 });
 await page.waitForTimeout(120);
+ok(await page.locator('#burger').isVisible(), '移动端保留汉堡按钮（抽屉导航入口）');
 await page.click('#burger');
 await page.waitForTimeout(60);
 ok(await page.$eval('.sidebar', s => s.classList.contains('open')), '移动端抽屉可开');
@@ -290,7 +382,7 @@ ok(!(await page.$eval('.sidebar', s => s.classList.contains('open'))), 'Esc 关�
 await page.setViewportSize({ width: 1280, height: 800 });
 await page.evaluate(v => window.switchRole(v), 'ownerparty');
 await page.waitForTimeout(100);
-ok((await page.locator('#mw-summary').innerText()).includes('另有 1 份证据待上传'), 'ownerparty 指标副文含证据计数说明');
+ok((await page.locator('#mw-tasks').innerText()).includes('待您上传'), 'ownerparty 上传证据待办由任务清单承载（指标条不再重复计数）');
 ok(await page.locator('[data-page="ownerportal"].on').count() === 1, '产权方切换直接落门户（回归不变）');
 ok(await page.locator('[data-page="ownerportal"] .card:has-text("不可见")').count() === 0, '门户不再对外枚举「不可见」清单（正向边界声明）');
 /* 走查⑤：到账明细主操作（确认本笔到账）在 1280 视口内直接可见，不靠 pane 横向滚动 */
@@ -325,9 +417,7 @@ const wordingProbe = await page.evaluate(() => {
 ok(wordingProbe.ownerTxt.indexOf('待贵方确认') >= 0 && wordingProbe.backTxt.indexOf('待产权方确认') >= 0, '产权方第一人称措辞切回内部岗位后恢复原文（不泄漏）');
 
 /* 生效全链（ISS-05）：系统自动检查风险优先呈现、通过项默认折叠；修正事实源 + 消阻断后提交（WO-2207 已联动转绿，无需豁免） */
-await page.evaluate(v => window.switchRole(v), 'leasing');
-await page.waitForTimeout(80);
-await page.selectOption('#scenario-sel', 'effective');
+await page.evaluate(() => { window.switchRole('leasing'); window.showPage('entry'); window.applyEntryCase('ruihe', true); });
 await page.waitForTimeout(80);
 ok(await page.locator('#gate-risk .gate').first().getAttribute('id') === 'g-appr', '风险区优先呈现（第一项为阻断）');
 ok(await page.locator('#gate-pass.hidden').count() === 1, '通过项默认折叠');
@@ -353,10 +443,25 @@ await page.click('#cm-ok');
 await page.waitForTimeout(60);
 ok((await page.locator('#entry-submit').innerText()).includes('已生效'), '确认后合同生效（一次保存全部结果）');
 
-/* 九条走查路由冒烟（scenario-sel 逐项触发） */
-const routes = ['intent','effective','cash','collect','receipt','stmt','portal','rights','pay'];
-for (const r of routes) {
-  await page.selectOption('#scenario-sel', r);
+/* 刷新时机回归：操作后不经切身份/页签、直接导航回工作台即呈现最新计数 */
+await page.evaluate(() => { window.showPage('mywork'); });
+await page.waitForTimeout(60);
+ok((await page.locator('#mw-summary').innerText()).includes('今日已办') && (await page.locator('#mw-summary').innerText()).includes('2 件'), 'showPage 直达工作台即重渲染（今日已办 1→2 实时可见）');
+
+/* 生效操作实时写入操作者今日工作记录 */
+await page.evaluate(() => { window.switchRole('leasing'); });
+await page.waitForTimeout(60);
+await page.click('#mw-tabs [data-wtab="done"]');
+await page.waitForTimeout(50);
+ok((await page.locator('#wl-rows').innerText()).includes('今天') && (await page.locator('#wl-rows').innerText()).includes('提交合同生效'), '生效操作实时写入今日工作记录（操作者归属）');
+
+/* 九条走查路由冒烟（产品导航直达驱动，等价原走查路线：岗位 → 目标页，effective 附带装 ruihe 案例） */
+const routes = [
+  ['leasing','intents'],['leasing','entry','ruihe'],['cashier','recon'],['collections','collections'],
+  ['ownerparty','receipts'],['finreview','stmts'],['ownerparty','ownerportal'],['asset','rights'],['cashier','payables'],
+];
+for (const [role, pg, c] of routes) {
+  await page.evaluate(([r, p, cc]) => { window.switchRole(r); window.showPage(p); if (cc) window.applyEntryCase(cc, true); }, [role, pg, c]);
   await page.waitForTimeout(70);
 }
 ok(true, '九条走查路由全部触发完毕');
