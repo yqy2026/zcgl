@@ -16,6 +16,7 @@ def test_registry_owned_routes_should_not_be_included_by_api_router() -> None:
     api_v1_source = _read(API_V1_INIT)
 
     registry_owned_modules = {
+        "asset_units": API_V1_DIR / "asset_units.py",
         "party": API_V1_DIR / "party.py",
         "authz": API_V1_DIR / "authz.py",
     }

@@ -43,13 +43,17 @@ def _is_authz_action(value: str) -> TypeGuard[AuthzAction]:
         "delete",
         "export",
         "manage_party_scope",
+        "write",
+        "report",
+        "archive",
+        "import",
     }
 
 
 class AuthzService:
     """Facade for ABAC decision and capability APIs."""
 
-    CAPABILITIES_VERSION = "2026-03-25.v1"
+    CAPABILITIES_VERSION = "2026-10-24.v2"
     _KNOWN_AUTHZ_ACTIONS = frozenset(
         {
             "create",
@@ -59,6 +63,10 @@ class AuthzService:
             "delete",
             "export",
             "manage_party_scope",
+            "write",
+            "report",
+            "archive",
+            "import",
         }
     )
 

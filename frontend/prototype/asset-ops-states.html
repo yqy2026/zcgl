@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><style>body{margin:0;background:#f6f7f9;color:#1f2329;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#0e63e5;text-decoration:none}a:hover{text-decoration:underline}*{box-sizing:border-box}button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}@keyframes sk{0%{opacity:.55}50%{opacity:1}100%{opacity:.55}}</style></helmet>
+<div style="max-width:1280px;margin:0 auto;padding:40px 32px 80px;display:flex;flex-direction:column;gap:32px">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <span style="font-size:13px;color:#646a73">交付补充 · 配合 资管运营原型.dc.html</span>
+    <b style="font-size:24px">列表与抽屉的四种状态</b>
+    <span style="font-size:14px;line-height:1.7;color:#3d434b;max-width:760px">所有“列表 + 右侧抽屉”页面统一使用下面四种状态。示例以终端合同页为准，其他页面只换表头和文案。列表和抽屉各自独立判断状态：列表正常、抽屉加载中是常见组合。</span>
+  </header>
+
+  <sc-for list="{{ states }}" as="st" hint-placeholder-count="4">
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font:600 13px ui-monospace,Menlo,monospace;color:#646a73">{{ st.no }}</span><b style="font-size:17px">{{ st.name }}</b><span style="font-size:13px;color:#646a73">{{ st.when }}</span></div>
+    <div style="display:flex;height:300px;border:1px solid #e4e6ea;border-radius:10px;overflow:hidden;background:#fff">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 56px minmax(0,1.1fr) 92px 92px;font-size:12px;color:#646a73;background:#fafbfc;border-bottom:1px solid #e4e6ea">
+          <div style="padding:10px 16px">终端租户 · 合同号</div><div style="padding:10px 8px">资产单元</div><div style="padding:10px 8px">模式</div><div style="padding:10px 8px">上游合同</div><div style="padding:10px 8px">租期至</div><div style="padding:10px 16px 10px 8px;text-align:right">月租金</div>
+        </div>
+        <sc-if value="{{ st.isLoad }}" hint-placeholder-val="{{ false }}">
+          <sc-for list="{{ skRows }}" as="k" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 56px minmax(0,1.1fr) 92px 92px;align-items:center;height:48px;border-bottom:1px solid #f2f3f5">
+            <div style="padding:0 16px;display:flex;flex-direction:column;gap:6px"><span style="{{ k.a }}"></span><span style="{{ k.b }}"></span></div>
+            <div style="padding:0 8px"><span style="{{ k.c }}"></span></div><div style="padding:0 8px"><span style="{{ k.d }}"></span></div><div style="padding:0 8px"><span style="{{ k.c }}"></span></div><div style="padding:0 8px"><span style="{{ k.d }}"></span></div><div style="padding:0 16px 0 8px;display:flex;justify-content:flex-end"><span style="{{ k.d }}"></span></div>
+          </div></sc-for>
+        </sc-if>
+        <sc-if value="{{ st.isMsg }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center">
+            <span style="{{ st.msgStyle }}">{{ st.msg }}</span>
+            <sc-if value="{{ st.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#6e757f;font-family:ui-monospace,Menlo,monospace">{{ st.sub }}</span></sc-if>
+            <sc-if value="{{ st.btn }}" hint-placeholder-val="{{ false }}"><button style="{{ st.btnStyle }}">{{ st.btn }}</button></sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <div style="width:320px;flex:none;border-left:1px solid #e4e6ea;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <sc-if value="{{ st.isLoad }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="{{ sk.s }}"></span><span style="{{ sk.l }}"></span><span style="{{ sk.m }}"></span></div>
+          <div style="border:1px solid #e4e6ea;border-radius:8px"><sc-for list="{{ skRows }}" as="k" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;padding:11px 12px;border-top:1px solid #f2f3f5"><span style="{{ k.d }}"></span><span style="{{ k.c }}"></span></div></sc-for></div>
+        </sc-if>
+        <sc-if value="{{ st.isMsg }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center"><span style="font-size:13px;color:#646a73;line-height:1.6">{{ st.drawer }}</span></div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 24px;font-size:13px;line-height:1.7;color:#3d434b">
+      <sc-for list="{{ st.rules }}" as="r" hint-placeholder-count="2"><span>· {{ r }}</span></sc-for>
+    </div>
+  </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const bar = (w, h) => ({ display:'block', width:w, height:h || 10, borderRadius:3, background:'#eef0f2', animation:'sk 1.4s ease-in-out infinite' });
+    const ghost = { height:32, padding:'0 14px', borderRadius:6, border:'1px solid #d0d3d8', background:'#fff', fontSize:13 };
+    const prim = { height:32, padding:'0 14px', borderRadius:6, background:'#0e63e5', color:'#fff', fontSize:13, fontWeight:600 };
+    const msg = c => ({ fontSize:14, color:c || '#3d434b', lineHeight:1.6, maxWidth:420 });
+    const skRows = [0,1,2,3,4,5].map(i => ({ a:bar(['60%','72%','52%','66%','58%','70%'][i]), b:bar('40%',8), c:bar('70%'), d:bar('48px') }));
+    return {
+      skRows, sk:{ s:bar('30%',8), l:bar('80%',16), m:bar('50%',8) },
+      states: [
+        { no:'S1', name:'加载', when:'首次进入、切换筛选、翻页', isLoad:true, isMsg:false,
+          rules:['骨架行数 = 可视区域能放下的行数，行高与正式行一致，加载完不跳动', '表头、筛选栏、主按钮照常显示且可用；只有数据区是骨架', '300ms 内返回的不显示骨架，避免闪烁', '抽屉独立加载：切换选中行时只有抽屉显示骨架'] },
+        { no:'S2', name:'空', when:'没有任何数据 / 筛选后无结果', isLoad:false, isMsg:true, msg:'还没有终端合同', msgStyle:msg(), btn:'＋ 录入已签合同', btnStyle:prim, drawer:'选中左侧一行查看详情',
+          rules:['一句说明 + 一个下一步按钮，不放插图', '筛选后无结果时文案改为“没有符合条件的终端合同”，按钮改为“查看全部”（描边样式）', '本月页卡片为空时用绿字“没有待处理的××”，不出按钮'] },
+        { no:'S3', name:'无权限', when:'岗位没有这个范围的数据', isLoad:false, isMsg:true, msg:'你的岗位没有此范围的数据，请联系管理员', msgStyle:msg(), sub:'资产管理 · 无“芳村茶叶城项目”数据权限', drawer:'—',
+          rules:['必须和“空”区分：后端返回 403 时显示本状态，不能返回空列表伪装成功（PRODUCT.md 原则 3）', '第二行写明当前岗位和缺的范围，方便报给管理员', '不出重试按钮', '部分无权限时（能看 5 个项目中的 4 个），列表正常显示，表头上方加一条灰色提示“另有 1 个项目无权限查看”'] },
+        { no:'S4', name:'出错', when:'网络或服务异常', isLoad:false, isMsg:true, msg:'加载失败：服务暂时不可用', msgStyle:msg('#cf1322'), sub:'错误编号 5xx-20261021-0912', btn:'重试', btnStyle:ghost, drawer:'详情加载失败 · 重试',
+          rules:['一句简短原因 + “重试”（描边样式），不展示堆栈', '附错误编号，方便报障', '已经显示过的数据不清空：刷新失败时保留旧数据，顶部出一条红色提示条', '保存类操作失败用弹窗内红色提示，不关闭弹窗、不丢已填内容'] } ]
+    };
+  }
+}
+</script>
+</body>
+</html>

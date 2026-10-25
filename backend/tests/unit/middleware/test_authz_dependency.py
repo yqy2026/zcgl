@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
+from src.core.exception_handler import BaseBusinessError
 from src.middleware.auth import require_authz
 from src.services.authz.context_builder import SubjectContext
 from src.services.authz.engine import AuthzDecision
@@ -195,6 +196,44 @@ async def test_require_authz_denied_write_maps_to_forbidden() -> None:
 
     error = exc_info.value
     assert getattr(error, "status_code", None) == 403
+
+
+@pytest.mark.asyncio
+async def test_require_authz_can_raise_a_domain_specific_denial() -> None:
+    checker = require_authz(
+        action="write",
+        resource_type="asset_ops",
+        resource_id="{unit_id}",
+        denial_error_factory=lambda: BaseBusinessError(
+            message="asset operations denied",
+            code="ASSET_OPS_PERMISSION_DENIED",
+            status_code=403,
+        ),
+    )
+    request = _build_request(
+        method="POST",
+        path="/api/v1/asset-units/unit-1/split",
+        path_params={"unit_id": "unit-1"},
+    )
+
+    with patch(
+        "src.middleware.auth.authz_service.check_access",
+        new=AsyncMock(
+            return_value=AuthzDecision(
+                allowed=False,
+                reason_code="deny",
+            )
+        ),
+    ):
+        with pytest.raises(BaseBusinessError) as exc_info:
+            await checker(
+                request=request,
+                current_user=_UserStub("user-1"),
+                db=MagicMock(),
+            )
+
+    assert exc_info.value.code == "ASSET_OPS_PERMISSION_DENIED"
+    assert exc_info.value.status_code == 403
 
 
 @pytest.mark.asyncio

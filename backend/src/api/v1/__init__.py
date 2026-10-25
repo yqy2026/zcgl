@@ -4,10 +4,14 @@ from fastapi import APIRouter
 
 # --- route_registry 自注册模块加载（触发 route_registry.register_router） ---
 from . import (
+    asset_units,  # noqa: F401
     authz,  # noqa: F401
+    contract_intake_sessions,  # noqa: F401
     extraction_sessions,  # noqa: F401
     party,  # noqa: F401
     property_certificate_attachments,  # noqa: F401
+    terminal_contracts,  # noqa: F401
+    upstream_contracts,  # noqa: F401
 )
 
 # 导入各个模块的路由 - Analytics

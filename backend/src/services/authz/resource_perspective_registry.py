@@ -12,6 +12,7 @@ AuthenticatedDefaultActionMap = dict[str, tuple[AuthzAction, ...]]
 RESOURCE_PERSPECTIVE_REGISTRY: Final[ResourcePerspectiveMap] = {
     "analytics": ("owner", "manager"),
     "asset": ("owner", "manager"),
+    "asset_ops": ("owner", "manager"),
     "contract": ("owner", "manager"),
     "contract_group": ("owner", "manager"),
     "project": ("owner", "manager"),

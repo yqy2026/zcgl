@@ -12,6 +12,7 @@ import {
   SYSTEM_ROUTES,
   BASE_PATHS,
   ANALYTICS_ROUTES,
+  ASSET_OPERATIONS_V5_ROUTES,
   OPERATIONS_ROUTES,
   PROPERTY_CERTIFICATE_ROUTES,
 } from '@/constants/routes';
@@ -75,6 +76,11 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     path: OPERATIONS_ROUTES.LEDGER,
     element: React.lazy(() => import('../pages/OperationsLedger/OperationsLedgerPage')),
     permissions: [{ resource: 'contract', action: 'read' }],
+  },
+  {
+    path: ASSET_OPERATIONS_V5_ROUTES.UNITS,
+    element: React.lazy(() => import('../pages/AssetOperations/AssetUnitsPage')),
+    permissions: [{ resource: 'asset_ops', action: 'read' }],
   },
   {
     path: ASSET_ROUTES.ANALYTICS,

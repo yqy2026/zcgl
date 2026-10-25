@@ -4,7 +4,7 @@
 	test test-backend test-frontend test-frontend-ci test-e2e test-e2e-backend test-e2e-frontend \
 	test-integration test-coverage \
 	build-frontend backend-import check ci-gate \
-	backend-org-cov secrets migrate preflight-organization-party-scope check-migration-naming check-document-runtime docs-lint check-field-drift check-query-param-drift
+	backend-org-cov secrets migrate preflight-organization-party-scope preflight-asset-operations-v5 check-migration-naming check-document-runtime docs-lint check-field-drift check-query-param-drift
 
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
@@ -49,6 +49,7 @@ help:
 	@echo "  secrets           Generate SECRET_KEY and DATA_ENCRYPTION_KEY"
 	@echo "  migrate           Run alembic upgrade head"
 	@echo "  preflight-organization-party-scope Run the read-only Organization/Party cutover gate"
+	@echo "  preflight-asset-operations-v5 Run the read-only asset-operations v5 cutover gate"
 
 setup:
 	@$(MAKE) -j2 setup-backend setup-frontend
@@ -172,6 +173,9 @@ migrate:
 
 preflight-organization-party-scope:
 	cd backend && uv run --frozen --extra dev python -m src.scripts.migration.party_migration.organization_party_scope_preflight --enforce
+
+preflight-asset-operations-v5:
+	cd backend && uv run --frozen --extra dev python -m src.scripts.migration.asset_operations_v5.preflight --enforce
 
 docs-lint:
 	$(PYTHON) scripts/check_requirements_authority.py

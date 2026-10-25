@@ -29,24 +29,28 @@ MODELS_DIR = ROOT / "backend" / "src" / "models"
 # be listed as "no model mapping" and skipped cleanly).
 # ---------------------------------------------------------------------------
 ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
-    "Asset": ("asset.py", "Asset"),
+    "AssetUnit": ("asset_unit.py", "AssetUnit"),
+    "AssetUnitBoundaryChange": ("asset_unit.py", "AssetUnitBoundaryChange"),
+    "AssetUnitBoundarySource": ("asset_unit.py", "AssetUnitBoundarySource"),
+    "ContractLifecycleEvent": ("asset_contract.py", "ContractLifecycleEvent"),
+    "ContractRentSchedule": ("asset_contract.py", "ContractRentSchedule"),
     "Project": ("project.py", "Project"),
-    "ContractGroup": ("contract_group.py", "ContractGroup"),
-    "Contract": ("contract_group.py", "Contract"),
-    "ContractScanDocument": ("contract_group.py", "ContractScanDocument"),
-    "ContractRentTerm": ("contract_group.py", "ContractRentTerm"),
-    "ContractLedgerEntry": ("contract_group.py", "ContractLedgerEntry"),
-    "ServiceFeeLedger": ("contract_group.py", "ServiceFeeLedger"),
-    "OperationalPaymentFlow": ("contract_group.py", "OperationalPaymentFlow"),
-    "PaymentAllocation": ("contract_group.py", "PaymentAllocation"),
-    "ContractAuditLog": ("contract_group.py", "ContractAuditLog"),
-    "LeaseContractDetail": ("contract_group.py", "LeaseContractDetail"),
-    "AgencyAgreementDetail": ("contract_group.py", "AgencyAgreementDetail"),
-    "Attachment": ("attachment.py", "Attachment"),
     "PropertyCertificate": ("property_certificate.py", "PropertyCertificate"),
-    "Ownership": ("ownership.py", "Ownership"),
+    "PropertyCertificateAssetUnit": (
+        "asset_unit.py",
+        "PropertyCertificateAssetUnit",
+    ),
     "Party": ("party.py", "Party"),
-    # CustomerProfile, AnalyticsMetrics not yet implemented as separate ORM models.
+    "TerminalContract": ("asset_contract.py", "TerminalContract"),
+    "TerminalContractAssetUnit": (
+        "asset_contract.py",
+        "TerminalContractAssetUnit",
+    ),
+    "UpstreamContract": ("asset_contract.py", "UpstreamContract"),
+    "UpstreamContractAssetUnit": (
+        "asset_contract.py",
+        "UpstreamContractAssetUnit",
+    ),
 }
 
 # Regex: field contract section heading, e.g. "### 4.1 Asset" or

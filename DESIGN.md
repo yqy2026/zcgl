@@ -49,27 +49,27 @@ colors:
   tag-volcano-text: "#a8071a"
 typography:
   display:
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Microsoft YaHei', sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif"
     fontSize: "1.5rem"
     fontWeight: 600
     lineHeight: 1.25
   headline:
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Microsoft YaHei', sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif"
     fontSize: "1.25rem"
     fontWeight: 600
     lineHeight: 1.5
   title:
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Microsoft YaHei', sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif"
     fontSize: "1rem"
     fontWeight: 600
     lineHeight: 1.5
   body:
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Microsoft YaHei', sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', 'Microsoft YaHei', sans-serif"
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif"
     fontSize: "0.8125rem"
     fontWeight: 500
     lineHeight: 1.5
@@ -182,11 +182,11 @@ AntD 预置/状态 Tag 默认拿 -6/-7 基色当文字，浅底上不足 AA；�
 
 ## Typography
 
-**Display Font:** Inter（回退：-apple-system, Segoe UI, Roboto, Noto Sans, Microsoft YaHei）
-**Body Font:** Inter（同上）
+**Display Font:** 系统无衬线字体（-apple-system / BlinkMacSystemFont / PingFang SC / Microsoft YaHei / Noto Sans SC / Segoe UI）
+**Body Font:** 与 Display 共用同一系统字体栈，不另外加载 Web Font
 **Label/Mono Font:** 无独立等宽；代码与键位使用 source-code-pro / Menlo / Monaco 系统栈
 
-**Character:** 冷静中性的无衬线工具字型。拉丁字符走 Inter，中文自动落入系统字体栈（Noto Sans CJK / 微软雅黑 / PingFang），整体字面紧凑、明度均匀，适合长时间数据浏览。基数为 14px，尺度比约 1.125–1.2，层级靠字号 + 字重（600）而非颜色区分。
+**Character:** 冷静中性的无衬线工具字型。全中文产品优先使用当前系统的中文字体，整体字面紧凑、明度均匀，适合长时间数据浏览。基数为 14px，尺度比约 1.125–1.2，层级靠字号 + 字重（600）而非颜色区分。
 
 ### Hierarchy
 - **Display**（600, 1.5rem/24px, 1.25）：大数字——统计卡片数值（Statistic content）、关键经营指标。
@@ -198,51 +198,51 @@ AntD 预置/状态 Tag 默认拿 -6/-7 基色当文字，浅底上不足 AA；�
 ### Named Rules
 **The 层级靠字号 Rule.** 标题与正文之间优先用字号 + 字重区分，不靠颜色深浅制造层级——颜色留给状态语义。
 
-**The 数字对齐 Rule.** 台账类界面数字密集，body、`.ant-table`、`.ant-statistic-content` 全局启用 `font-variant-numeric: tabular-nums`（Inter 支持），金额与编码列等宽对齐、不跳动。
+**The 数字对齐 Rule.** 台账类界面数字密集，body、`.ant-table`、`.ant-statistic-content` 全局启用 `font-variant-numeric: tabular-nums`，金额与编码列等宽对齐、不跳动。
 
 ## Layout
 
 - **页面骨架**：Sider + Header + Content。Sider 与 Header 为半透明白（rgba(255,255,255,0.95)），Content 落在布局灰蓝（`#f8fafc`）上；正文容器为白色卡片。
 - **页面内边距**：默认 `1.5rem`（pageContainer），紧凑 `1rem`，宽松 `2rem`；响应式容器用 `clamp()` 随视口流动（如 `clamp(0.75rem, 2vw, 1.5rem)`）。
 - **间距节奏**：4/8/12/16/24/32/48px 七档。卡片内边距 16px、表单项间距 12px、区块间距 24px 为高频值。
-- **断点**：xs 576 / sm 768 / md 992 / lg 1200 / xl 1400 / xxl 1600px。桌面默认按 992px 以上设计，sm 以下进入移动布局。
-- **移动端**：表格转卡片视图（ResponsiveTable）、分页居中换行、模态框占满视口（max-width 100vw - 16px、内容区可滚动）、触控目标 44px 起步。
+- **断点**：xs 576 / sm 768 / md 992 / lg 1200 / xl 1400 / xxl 1600px。1280px 是资产运营工作台的目标桌面宽度，不得通过 `min-width: 1280px` 锁死正式页面；断点以内容开始失配为准。
+- **缩放与窄屏**：200% 浏览器缩放下全部内容与操作必须可达；320px 宽度下内容必须重排且不出现页面级水平滚动。表格在窄屏转卡片视图（ResponsiveTable）、分页居中换行、模态框内容区可滚动，触控目标 44px 起步。
 - **模态框宽度档位**：32.5 / 45 / 57.5rem，不做档位外的新尺寸。
 
 ## Elevation & Depth
 
-平实为主、状态响应。**静态表面默认平实**——卡片、表格、表单在 rest 态只靠底色与 1px 细边框分层；阴影只在状态变化时出现：悬停升阶、下拉/弹层/模态等浮起面、焦点环。
+平实为主、状态响应。**静态表面默认平实**——卡片、表格、常驻详情栏和表单在 rest 态只靠底色与 1px `--color-border-light` 细边框分层，`box-shadow: none`；阴影仅用于下拉面板、浮层和模态框。
 
 ### Shadow Vocabulary
-- **sm**（`0 2px 4px rgba(0,0,0,0.08)`）：卡片默认微影（AntD Card 实际为三层超轻叠加）、按钮基础影。
-- **md**（`0 4px 12px rgba(0,0,0,0.1)`）：卡片悬停升阶、下拉面板。
+- **sm**（`0 2px 4px rgba(0,0,0,0.08)`）：仅供特殊浮起状态备用，卡片和按钮静态不使用。
+- **md**（`0 4px 12px rgba(0,0,0,0.1)`）：下拉面板、日期面板。
 - **lg**（`0 8px 24px rgba(0,0,0,0.12)`）：浮层容器、日期面板。
 - **xl**（`0 20px 60px rgba(0,0,0,0.15)`）：模态框、大浮层。
 
 ### Named Rules
-**The Flat-By-Default Rule.** 表面在 rest 态平实。阴影只作为状态响应出现（悬停、浮起、聚焦），静止内容绝不堆影。
+**The Flat-By-Default Rule.** 表面在 rest 态平实。卡片悬停也不得凭空升阶；只有真正脱离文档流的下拉、浮层和模态容器使用阴影。
 
 ## Shapes
 
-圆角语言统一且克制：基础圆角 8px（卡片、模态框），控制件 6px（按钮、输入框、选择器——比容器略锐，强化工具感），4px 用于小元素（滚动条、标签角），胶囊形（999px）只用于 Tag/Badge 类。边框默认 1px 细线；焦点环为 2px 资产蓝 + 2px 偏移 + 外圈淡蓝光晕（`0 0 0 4px rgba(14,99,229,0.1)`）。
+圆角语言统一且克制：基础圆角 8px（卡片、模态框），控制件 6px（按钮、输入框、选择器——比容器略锐，强化工具感），4px 用于小元素（滚动条、状态 Tag），胶囊形（999px）只用于计数 Badge。边框默认 1px 细线；焦点环为 2px 资产蓝 + 2px 偏移 + 外圈淡蓝光晕（`0 0 0 4px rgba(14,99,229,0.1)`）。
 
 ## Components
 
 ### Buttons
 - **Shape:** 6px 圆角，高 32/36/40px（sm/md/lg），字重 500，14px。
-- **Primary:** 资产蓝底（#0e63e5）+ 白字（对比度 5.34:1 达 AA），8px×20px 内边距（md），基础微影；悬停 #1169f0（4.88:1 亦达 AA）、按下 #0958d9。
+- **Primary:** 资产蓝底（#0e63e5）+ 白字（对比度 5.34:1 达 AA），8px×20px 内边距（md），不加基础阴影；悬停 #1169f0（4.88:1 亦达 AA）、按下 #0958d9。每页只保留一个实心 Primary 按钮，其余操作使用 Default / Link / Danger 层级。
 - **Hover / Focus:** 150ms 标准缓动过渡背景与阴影；`:focus-visible` 显示 2px 资产蓝焦点环 + 偏移。
 - **Default:** 纸白底 + 1px 常规边框 + 墨色文字；悬停资产蓝边框与文字。Danger 变体用错误红 `#ff4d4f`。
 
 ### Chips / Tags
-- **Style:** 胶囊形（999px），浅色底 + 语义色文字。**文字色用 `*-text` 深档 token**（global.css 覆盖 AntD 默认 -6/-7 基色以满足 AA）：成功 #237804、警告 #874d00、错误 #cf1322、信息 #0958d9；中性标签用微灰底 + 次级灰文字。背景浅底保持 AntD 默认（#f6ffed/#fffbe6/#fff2f0/#e6f7ff）。
+- **Style:** 状态 Tag 用 4px 方角，高 20–22px，12px/600，浅色底 + 语义色文字。**文字色用 `*-text` 深档 token**（global.css 覆盖 AntD 默认 -6/-7 基色以满足 AA）：成功 #237804、警告 #874d00、错误 #cf1322、信息 #0958d9；中性标签用微灰底 + 次级灰文字。背景浅底保持 AntD 默认（#f6ffed/#fffbe6/#fff2f0/#e6f7ff）。胶囊形只保留给计数 Badge。
 - **State:** 状态 Tag 无交互态；可筛选的 Tag 选中时切资产蓝浅底 + 资产蓝文字。
 
 ### Cards / Containers
 - **Corner Style:** 8px。
 - **Background:** 纸白；标题区与正文同底，靠 semibold 16px 标题 + 1px 浅边框分层，不用色块卡头。
-- **Shadow Strategy:** rest 态超轻微影（AntD 三层叠加），悬停升 md。
-- **Border:** 默认无独立边框（靠底色与阴影），需要强分隔时用 `#f0f0f0`。
+- **Shadow Strategy:** rest 态和普通悬停态均为 `box-shadow: none`。
+- **Border:** Card 默认使用 `variant="outlined"` 和 1px `--color-border-light`；表格、常驻详情栏同样使用描边而不是阴影。
 - **Internal Padding:** 16px（sm 12px / lg 24px 档位）。
 
 ### Inputs / Fields
@@ -251,8 +251,8 @@ AntD 预置/状态 Tag 默认拿 -6/-7 基色当文字，浅底上不足 AA；�
 - **Density:** 表单项垂直间距 12px，标签与控件 4px。
 
 ### Table
-- **Style:** 表头底 `#f8fafc` + 铅灰文字（#595959）+ 透明分割线；单元格 12px 垂直内边距、1px `#f0f0f0` 行分隔；行悬停 `#f1f5f9`。
-- **Focus:** 键盘导航行聚焦为资产蓝浅底 + 2px 资产蓝 outline。
+- **Style:** `size="middle"`，行高 42–52px；表头底 `#f8fafc` + 12px 铅灰文字（#595959）+ 400 字重 + 透明竖分割线；单元格 12px 垂直内边距、1px `#f0f0f0` 行分隔；行悬停 `#f1f5f9`。
+- **Selected / Focus:** 选中行使用资产蓝浅底 + 左侧 2px 主色 inset；键盘导航行聚焦为资产蓝浅底 + 2px 资产蓝 outline。
 
 ### Navigation
 - **Style:** Sider/Header 半透明白（0.95），菜单项透明底、石板文字；选中项为 `rgba(22,119,255,0.08)` 浅蓝底 + 资产蓝文字；悬停资产蓝文字。移动端收起为抽屉。
@@ -263,6 +263,19 @@ AntD 预置/状态 Tag 默认拿 -6/-7 基色当文字，浅底上不足 AA；�
 ### Modal
 - **Style:** 8px 圆角，白底 + lg 阴影；头部 16px×24px 内边距（标题 16px semibold）、正文 24px、底部 12px×24px。宽度档位 32.5/45/57.5rem。
 
+### Detail Panel / Drawer
+- 列表详情默认为右侧常驻栏，不加遮罩、不阻断主列表滚动；使用 1px `--color-border-light` 与主区分隔。
+- 只有“考核范围”等需要集中确认且必须阻断背景的任务使用 Modal；Modal 必须设置焦点陷阱、Escape 关闭并在关闭后恢复触发器焦点。
+
+### Page Copy and States
+- 页面主标题下不放泛化解释性副标题；规则只在相关操作旁就地说明，例如禁用原因或越界警告。
+- 每个正式页面都要明确实现 loading / empty / 403 / error 四态；403 不得降级为空数据。
+
+### Accessibility
+- 所有可交互控件必须使用原生语义元素并有可访问名称；输入控件需可见且绑定的 label，placeholder 不代替 label，图标按钮提供描述性 `aria-label`。
+- 所有流程必须可用键盘完成；所有焦点停靠点使用 `:focus-visible` 的 2px 可见指示，不得用无替代的 `outline: none`。
+- 加载骨架和其他循环动画仅在 `prefers-reduced-motion: no-preference` 下运行；减少动效模式下使用静态占位。
+
 ## Do's and Don'ts
 
 ### Do:
@@ -270,15 +283,17 @@ AntD 预置/状态 Tag 默认拿 -6/-7 基色当文字，浅底上不足 AA；�
 - **Do** 守护单一真相源：token 唯一在 `variables.css`（CSS 层）+ `themeConfig.ts`（AntD 层，与 CSS 层同值）；新增主题机制前先问能否复用既有 token。
 - **Do** 让主色只出现在交互与选中态——按钮、链接、选中、焦点环、行聚焦；展示数据用灰阶与语义色。
 - **Do** 保证文本对比度 ≥4.5:1（WCAG AA）；`contrastFloors` 测试是回归防线，改色后必跑。
-- **Do** 保持 rest 态表面平实，阴影只随状态（hover / 浮层 / 焦点）出现。
+- **Do** 保持静态表面平实，普通卡片悬停也不升阶；阴影只用于下拉、浮层和模态容器。
 - **Do** 维持统一密度：控制件 32–40px 高、表格单元 12px 垂直内边距、表单项 12px 间距；台账数字启用 `tabular-nums`。
-- **Do** 为所有 `:focus-visible` 元素提供 2px 资产蓝焦点环；尊重 `prefers-reduced-motion` 与 `prefers-contrast: high`（全局样式已实现，新代码不得破坏）。
+- **Do** 为所有 `:focus-visible` 元素提供 2px 资产蓝焦点环；尊重 `prefers-reduced-motion` 与 `prefers-contrast: high`，循环动画需在减少动效模式停止。
 - **Do** 使用语义色表达状态：成功绿 / 警告琥珀 / 错误红，配对应浅底 Tag（文字用 `*-text` 深档）。
-- **Do** 移动与触屏场景保证 44px 触控目标，窄屏表格转卡片视图。
+- **Do** 移动与触屏场景保证 44px 触控目标，窄屏表格转卡片视图，并在 200% 缩放和 320px 重排下完成主要任务。
 
 ### Don't:
 - **Don't** 为展示性数据（统计数字、图表、摘要卡片）添加主色填充或渐变装饰。
 - **Don't** 在 rest 态堆叠阴影或使用比 xl 更重的投影。
+- **Don't** 在正式页面使用 `min-width: 1280px`，或把原型的内联样式、本地状态机直接复制到生产代码。
+- **Don't** 在同一页放置多个实心 Primary 按钮，或使用解释性副标题代替就地规则说明。
 - **Don't** 绕过既有档位发明新尺寸——新断点、新模态宽度、新间距档位都需要先复用现有 token。
 - **Don't** 让界面出现英文业务对象名（用户侧统一「合同与协议」「经营台账」等中文名）。
 - **Don't** 用颜色深浅替代字号层级来表达标题/正文差异。
