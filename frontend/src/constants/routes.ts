@@ -33,6 +33,7 @@ export const PROTOTYPE_ROUTES = {
 export const ASSET_OPERATIONS_V5_ROUTES = {
   UNITS: '/asset-operations/units',
   UPSTREAM_CONTRACTS: '/asset-operations/contracts/upstream',
+  INTAKE: '/asset-operations/contracts/intake',
   TERMINAL_CONTRACTS: '/asset-operations/contracts/terminal',
 } as const;
 

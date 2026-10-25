@@ -1,6 +1,16 @@
 /** Capability types consumed from `/api/v1/auth/me/capabilities`. */
 
-export type AuthzAction = 'create' | 'read' | 'list' | 'update' | 'delete' | 'export';
+export type AuthzAction =
+  | 'create'
+  | 'read'
+  | 'list'
+  | 'update'
+  | 'delete'
+  | 'export'
+  | 'write'
+  | 'report'
+  | 'archive'
+  | 'import';
 export type TemporaryAdminAction = 'backup';
 export type CapabilityAction = AuthzAction | TemporaryAdminAction;
 

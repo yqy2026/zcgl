@@ -230,6 +230,45 @@ export interface ContractListResult<T> {
   total: number;
 }
 
+
+function normalizeSession(raw: RawUnitRecord): ContractIntakeSession {
+  const allowedStatus = [
+    'uploaded',
+    'extracting',
+    'ready_for_review',
+    'confirming',
+    'confirmed',
+    'cancelling',
+    'cancelled',
+    'failed',
+  ] as const;
+  const statusValue = String(raw.status ?? 'uploaded');
+  return {
+    id: String(raw.id ?? ''),
+    documentId: String(raw.document_id ?? ''),
+    contractType: ((): ContractIntakeType => {
+      const value = String(raw.contract_type ?? 'terminal');
+      return (
+        (['upstream_lease', 'management_agreement', 'terminal'] as const).includes(
+          value as ContractIntakeType,
+        )
+          ? (value as ContractIntakeType)
+          : 'terminal'
+      );
+    })(),
+    status: (allowedStatus as readonly string[]).includes(statusValue)
+      ? (statusValue as ContractIntakeSession['status'])
+      : 'uploaded',
+    candidateFields:
+      raw.candidate_fields != null &&
+      typeof raw.candidate_fields === 'object'
+        ? (raw.candidate_fields as Record<string, unknown>)
+        : {},
+    warnings: normalizeWarnings(raw.warnings),
+    expiresAt: String(raw.expires_at ?? ''),
+  };
+}
+
 function normalizeWarnings(raw: unknown): {
   code: string;
   severity: string;
@@ -381,6 +420,77 @@ function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
 
 export type UpstreamContractDetail = UpstreamContractListItem;
 export type TerminalContractDetail = TerminalContractListItem;
+
+
+export type ContractIntakeType =
+  | 'upstream_lease'
+  | 'management_agreement'
+  | 'terminal';
+
+export interface ContractIntakeSession {
+  id: string;
+  documentId: string;
+  contractType: ContractIntakeType;
+  status:
+    | 'uploaded'
+    | 'extracting'
+    | 'ready_for_review'
+    | 'confirming'
+    | 'confirmed'
+    | 'cancelling'
+    | 'cancelled'
+    | 'failed';
+  candidateFields: Record<string, unknown>;
+  warnings: { code: string; severity: string; message: string | null }[];
+  expiresAt: string;
+}
+
+export interface RentSchedulePayload {
+  stage_start: string;
+  stage_end: string;
+  base_monthly_rent: string | number;
+  increase_rate?: string | number;
+  free_rent_months?: string | number;
+  discount_amount?: string | number;
+  actual_monthly_rent: string | number;
+  payment_cycle: string;
+  due_day: number;
+}
+
+export interface ConfirmUpstreamPayload {
+  contract_number: string;
+  name: string;
+  owner_party_id: string;
+  operator_party_id: string;
+  start_date: string;
+  end_date: string;
+  payment_cycle?: string;
+  payment_day?: number;
+  management_fee_rate?: string | number;
+  deposit_amount?: string | number;
+  oa_reference?: string;
+  asset_unit_ids: string[];
+  rent_schedules: RentSchedulePayload[];
+}
+
+export interface ConfirmTerminalPayload {
+  contract_number: string;
+  tenant_party_id: string;
+  lessor_party_id: string;
+  upstream_contract_id?: string;
+  start_date: string;
+  end_date: string;
+  deposit_months?: string | number;
+  deposit_amount?: string | number;
+  asset_unit_ids: string[];
+  rent_schedules: RentSchedulePayload[];
+}
+
+export interface CreatedContractResult {
+  id: string;
+  contractNumber: string;
+  idempotent: boolean;
+}
 
 export class AssetOperationsService {
   async listAssetUnits(
@@ -597,6 +707,150 @@ export class AssetOperationsService {
         );
       }
       return normalizeTerminal(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async createIntakeSession(
+    contractType: ContractIntakeType,
+    file: File,
+  ): Promise<ContractIntakeSession> {
+    try {
+      const formData = new FormData();
+      formData.append('contract_type', contractType);
+      formData.append('file', file);
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/contract-intake-sessions`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `创建录入会话失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return normalizeSession(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async getIntakeSession(sessionId: string): Promise<ContractIntakeSession> {
+    try {
+      const result = await apiClient.get<RawUnitRecord>(
+        `${API_BASE}/contract-intake-sessions/${sessionId}`,
+        { cache: false },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `读取录入会话失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return normalizeSession(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async confirmUpstreamIntake(
+    sessionId: string,
+    payload: ConfirmUpstreamPayload,
+    idempotencyKey: string,
+  ): Promise<CreatedContractResult> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/contract-intake-sessions/${sessionId}/confirm-upstream`,
+        payload,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `确认上游合同失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const data = result.data ?? {};
+      return {
+        id: String(data.id ?? ''),
+        contractNumber: String(data.contract_number ?? ''),
+        idempotent: Boolean(data.idempotent),
+      };
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async confirmTerminalIntake(
+    sessionId: string,
+    payload: ConfirmTerminalPayload,
+    idempotencyKey: string,
+  ): Promise<CreatedContractResult> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/contract-intake-sessions/${sessionId}/confirm-terminal`,
+        payload,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `确认终端合同失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const data = result.data ?? {};
+      return {
+        id: String(data.id ?? ''),
+        contractNumber: String(data.contract_number ?? ''),
+        idempotent: Boolean(data.idempotent),
+      };
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async cancelIntakeSession(sessionId: string): Promise<void> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/contract-intake-sessions/${sessionId}/cancel`,
+        {},
+        { retry: false, smartExtract: true },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `取消录入会话失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
     } catch (error) {
       if (error instanceof AssetOperationsError) {
         throw error;
