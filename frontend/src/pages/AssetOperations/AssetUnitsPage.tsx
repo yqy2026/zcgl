@@ -172,6 +172,7 @@ export function AssetUnitsPage(): React.ReactElement {
         <Table<AssetUnitListItem>
           rowKey="id"
           columns={columns}
+          scroll={{ x: 640 }}
           dataSource={units}
           loading={unitsQuery.isLoading}
           rowClassName={(record) => (record.id === selectedId ? 'ant-table-row-selected' : '')}

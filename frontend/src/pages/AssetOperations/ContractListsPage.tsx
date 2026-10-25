@@ -478,6 +478,7 @@ function ContractPageShell<T extends { id: string }>(props: {
         <Table<T>
           rowKey="id"
           columns={props.columns}
+          scroll={{ x: 640 }}
           dataSource={props.items}
           loading={props.listQueryState.isLoading}
           rowClassName={(record) =>
