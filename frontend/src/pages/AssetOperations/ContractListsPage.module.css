@@ -1,0 +1,62 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detailCard {
+  position: sticky;
+  top: 16px;
+}
+
+.fieldRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.fieldLabel {
+  color: var(--color-text-secondary, #646a73);
+  white-space: nowrap;
+}
+
+.fieldValue {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.chainRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.chainNode {
+  border: 1px solid var(--color-border, #e4e6ea);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.chainNodeCurrent {
+  background: var(--color-text, #1f2329);
+  color: #fff;
+  border-color: transparent;
+}

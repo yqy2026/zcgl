@@ -159,6 +159,229 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
   };
 }
 
+
+export interface UpstreamContractListItem {
+  id: string;
+  contractNumber: string;
+  contractType: 'lease' | 'management_agreement';
+  name: string;
+  ownerPartyId: string;
+  operatorPartyId: string;
+  startDate: string;
+  endDate: string;
+  paymentCycle: string | null;
+  paymentDay: number | null;
+  depositAmount: number;
+  renewedFromId: string | null;
+  version: number;
+  status:
+    | 'scheduled'
+    | 'active'
+    | 'expiring'
+    | 'expired_pending_action'
+    | 'exited'
+    | 'historical';
+  warnings: { code: string; severity: string; message: string | null }[];
+  terminalContractIds: string[];
+  coverages: {
+    assetUnitId: string;
+    effectiveFrom: string;
+    effectiveTo: string | null;
+  }[];
+  lifecycleEvents: {
+    id: string;
+    eventType: string;
+    effectiveDate: string;
+    reason: string | null;
+  }[];
+  renewalChain: { contractId: string; contractNumber: string; relation: string }[];
+}
+
+export interface TerminalContractListItem {
+  id: string;
+  contractNumber: string;
+  contractMode: 'sublease' | 'direct_lease';
+  tenantPartyId: string;
+  lessorPartyId: string;
+  upstreamContractId: string | null;
+  startDate: string;
+  endDate: string;
+  depositAmount: number;
+  rentCollector: string;
+  version: number;
+  status: 'scheduled' | 'active' | 'expiring' | 'ended' | 'historical';
+  warnings: { code: string; severity: string; message: string | null }[];
+  coverages: {
+    assetUnitId: string;
+    effectiveFrom: string;
+    effectiveTo: string | null;
+  }[];
+  lifecycleEvents: {
+    id: string;
+    eventType: string;
+    effectiveDate: string;
+    reason: string | null;
+  }[];
+  renewalChain: { contractId: string; contractNumber: string; relation: string }[];
+}
+
+export interface ContractListResult<T> {
+  items: T[];
+  total: number;
+}
+
+function normalizeWarnings(raw: unknown): {
+  code: string;
+  severity: string;
+  message: string | null;
+}[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((item) => {
+    const warning = item as RawUnitRecord;
+    return {
+      code: String(warning.code ?? ''),
+      severity: String(warning.severity ?? 'warning'),
+      message: warning.message == null ? null : String(warning.message),
+    };
+  });
+}
+
+function normalizeCoverages(raw: unknown): {
+  assetUnitId: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+}[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((item) => {
+    const coverage = item as RawUnitRecord;
+    return {
+      assetUnitId: String(coverage.asset_unit_id ?? ''),
+      effectiveFrom: String(coverage.effective_from ?? ''),
+      effectiveTo:
+        coverage.effective_to == null ? null : String(coverage.effective_to),
+    };
+  });
+}
+
+function normalizeEvents(raw: unknown): {
+  id: string;
+  eventType: string;
+  effectiveDate: string;
+  reason: string | null;
+}[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((item) => {
+    const event = item as RawUnitRecord;
+    return {
+      id: String(event.id ?? ''),
+      eventType: String(event.event_type ?? ''),
+      effectiveDate: String(event.effective_date ?? ''),
+      reason: event.reason == null ? null : String(event.reason),
+    };
+  });
+}
+
+function normalizeChain(raw: unknown): {
+  contractId: string;
+  contractNumber: string;
+  relation: string;
+}[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((item) => {
+    const node = item as RawUnitRecord;
+    return {
+      contractId: String(node.contract_id ?? ''),
+      contractNumber: String(node.contract_number ?? ''),
+      relation: String(node.relation ?? ''),
+    };
+  });
+}
+
+function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
+  const allowedUpstreamStatus = [
+    'scheduled',
+    'active',
+    'expiring',
+    'expired_pending_action',
+    'exited',
+    'historical',
+  ] as const;
+  const statusValue = String(raw.status ?? '');
+  return {
+    id: String(raw.id ?? ''),
+    contractNumber: String(raw.contract_number ?? ''),
+    contractType:
+      raw.contract_type === 'management_agreement'
+        ? 'management_agreement'
+        : 'lease',
+    name: String(raw.name ?? ''),
+    ownerPartyId: String(raw.owner_party_id ?? ''),
+    operatorPartyId: String(raw.operator_party_id ?? ''),
+    startDate: String(raw.start_date ?? ''),
+    endDate: String(raw.end_date ?? ''),
+    paymentCycle: raw.payment_cycle == null ? null : String(raw.payment_cycle),
+    paymentDay: raw.payment_day == null ? null : Number(raw.payment_day),
+    depositAmount: toNumber(raw.deposit_amount),
+    renewedFromId:
+      raw.renewed_from_id == null ? null : String(raw.renewed_from_id),
+    version: Number(raw.version ?? 1),
+    status: (allowedUpstreamStatus as readonly string[]).includes(statusValue)
+      ? (statusValue as UpstreamContractListItem['status'])
+      : 'active',
+    warnings: normalizeWarnings(raw.warnings),
+    terminalContractIds: Array.isArray(raw.terminal_contract_ids)
+      ? raw.terminal_contract_ids.map(String)
+      : [],
+    coverages: normalizeCoverages(raw.coverages),
+    lifecycleEvents: normalizeEvents(raw.lifecycle_events),
+    renewalChain: normalizeChain(raw.renewal_chain),
+  };
+}
+
+function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
+  const allowedTerminalStatus = [
+    'scheduled',
+    'active',
+    'expiring',
+    'ended',
+    'historical',
+  ] as const;
+  const statusValue = String(raw.status ?? '');
+  return {
+    id: String(raw.id ?? ''),
+    contractNumber: String(raw.contract_number ?? ''),
+    contractMode:
+      raw.contract_mode === 'direct_lease' ? 'direct_lease' : 'sublease',
+    tenantPartyId: String(raw.tenant_party_id ?? ''),
+    lessorPartyId: String(raw.lessor_party_id ?? ''),
+    upstreamContractId:
+      raw.upstream_contract_id == null ? null : String(raw.upstream_contract_id),
+    startDate: String(raw.start_date ?? ''),
+    endDate: String(raw.end_date ?? ''),
+    depositAmount: toNumber(raw.deposit_amount),
+    rentCollector: String(raw.rent_collector ?? ''),
+    version: Number(raw.version ?? 1),
+    status: (allowedTerminalStatus as readonly string[]).includes(statusValue)
+      ? (statusValue as TerminalContractListItem['status'])
+      : 'active',
+    warnings: normalizeWarnings(raw.warnings),
+    coverages: normalizeCoverages(raw.coverages),
+    lifecycleEvents: normalizeEvents(raw.lifecycle_events),
+    renewalChain: normalizeChain(raw.renewal_chain),
+  };
+}
+
+export type UpstreamContractDetail = UpstreamContractListItem;
+export type TerminalContractDetail = TerminalContractListItem;
+
 export class AssetOperationsService {
   async listAssetUnits(
     params: AssetUnitListParams = {},
@@ -232,6 +455,148 @@ export class AssetOperationsService {
         throw new AssetOperationsError(`更新资产单元失败: ${result.error}`, extractErrorCode(result));
       }
       return normalizeUnit(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async listUpstreamContracts(
+    params: {
+      contractType?: string;
+      ownerPartyId?: string;
+      q?: string;
+      offset?: number;
+      limit?: number;
+    } = {},
+  ): Promise<ContractListResult<UpstreamContractListItem>> {
+    try {
+      const result = await apiClient.get<{
+        items: RawUnitRecord[];
+        total: number;
+      }>(`${API_BASE}/upstream-contracts`, {
+        params: {
+          ...(params.contractType != null
+            ? { contract_type: params.contractType }
+            : {}),
+          ...(params.ownerPartyId != null
+            ? { owner_party_id: params.ownerPartyId }
+            : {}),
+          ...(params.q != null && params.q.trim() !== ''
+            ? { q: params.q }
+            : {}),
+          offset: params.offset ?? 0,
+          limit: params.limit ?? 50,
+        },
+        cache: false,
+      });
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `获取上游合同列表失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const payload = result.data ?? { items: [], total: 0 };
+      return {
+        items: (payload.items ?? []).map(normalizeUpstream),
+        total: Number(payload.total ?? 0),
+      };
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async getUpstreamContract(
+    contractId: string,
+  ): Promise<UpstreamContractDetail> {
+    try {
+      const result = await apiClient.get<RawUnitRecord>(
+        `${API_BASE}/upstream-contracts/${contractId}`,
+        { cache: false },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `获取上游合同详情失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return normalizeUpstream(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async listTerminalContracts(
+    params: {
+      contractMode?: string;
+      upstreamContractId?: string;
+      q?: string;
+      offset?: number;
+      limit?: number;
+    } = {},
+  ): Promise<ContractListResult<TerminalContractListItem>> {
+    try {
+      const result = await apiClient.get<{
+        items: RawUnitRecord[];
+        total: number;
+      }>(`${API_BASE}/terminal-contracts`, {
+        params: {
+          ...(params.contractMode != null
+            ? { contract_mode: params.contractMode }
+            : {}),
+          ...(params.upstreamContractId != null
+            ? { upstream_contract_id: params.upstreamContractId }
+            : {}),
+          ...(params.q != null && params.q.trim() !== ''
+            ? { q: params.q }
+            : {}),
+          offset: params.offset ?? 0,
+          limit: params.limit ?? 50,
+        },
+        cache: false,
+      });
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `获取终端合同列表失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const payload = result.data ?? { items: [], total: 0 };
+      return {
+        items: (payload.items ?? []).map(normalizeTerminal),
+        total: Number(payload.total ?? 0),
+      };
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async getTerminalContract(
+    contractId: string,
+  ): Promise<TerminalContractDetail> {
+    try {
+      const result = await apiClient.get<RawUnitRecord>(
+        `${API_BASE}/terminal-contracts/${contractId}`,
+        { cache: false },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `获取终端合同详情失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return normalizeTerminal(result.data ?? {});
     } catch (error) {
       if (error instanceof AssetOperationsError) {
         throw error;
