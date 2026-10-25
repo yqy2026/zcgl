@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Alert, Table, Tag, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -250,6 +250,11 @@ function UpstreamList(props: {
             ]}
           />
           <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+          <p style={{ marginTop: 8 }}>
+            <Link to={`/asset-operations/contracts/upstream/${detail.id}/actions`}>
+              退出 / 撤销 / 续签操作
+            </Link>
+          </p>
         </div>
       )}
     />
@@ -388,6 +393,11 @@ function TerminalList(props: {
             ]}
           />
           <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+          <p style={{ marginTop: 8 }}>
+            <Link to={`/asset-operations/contracts/terminal/${detail.id}/actions`}>
+              终止 / 撤销 / 续签操作
+            </Link>
+          </p>
         </div>
       )}
     />

@@ -492,6 +492,52 @@ export interface CreatedContractResult {
   idempotent: boolean;
 }
 
+
+export interface TerminationCoverageImpact {
+  assetUnitId: string;
+  effectiveFrom: string;
+  currentEffectiveTo: string | null;
+  newEffectiveTo: string;
+}
+
+export interface TerminationPreview {
+  contractId: string;
+  contractVersion: number;
+  effectiveDate: string;
+  lastValidDay: string;
+  coverageImpact: TerminationCoverageImpact[];
+  warnings: string[];
+  previewToken: string;
+  expiresAt: string;
+}
+
+export interface LifecycleEventRecord {
+  id: string;
+  contractKind: string;
+  contractId: string;
+  eventType: string;
+  effectiveDate: string;
+  reason: string | null;
+  idempotent?: boolean;
+}
+
+export interface ExitPreview {
+  contractId: string;
+  contractVersion: number;
+  depositAmount: number;
+  effectiveDate: string;
+  lastValidDay: string;
+  coverageImpact: TerminationCoverageImpact[];
+  previewToken: string;
+  expiresAt: string;
+}
+
+export interface RenewalResult {
+  id: string;
+  contractNumber: string;
+  idempotent: boolean;
+}
+
 export class AssetOperationsService {
   async listAssetUnits(
     params: AssetUnitListParams = {},
@@ -851,6 +897,327 @@ export class AssetOperationsService {
           extractErrorCode(result),
         );
       }
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  private static toLifecycleEvent(raw: RawUnitRecord): LifecycleEventRecord {
+    return {
+      id: String(raw.id ?? ''),
+      contractKind: String(raw.contract_kind ?? ''),
+      contractId: String(raw.contract_id ?? ''),
+      eventType: String(raw.event_type ?? ''),
+      effectiveDate: String(raw.effective_date ?? ''),
+      reason: raw.reason == null ? null : String(raw.reason),
+    };
+  }
+
+  async previewTerminalTermination(
+    contractId: string,
+    proposal: {
+      effective_date: string;
+      termination_type: string;
+      handover_status: string;
+      deposit_settlement_status: string;
+      reason: string;
+    },
+  ): Promise<TerminationPreview> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/terminal-contracts/${contractId}/termination/preview`,
+        proposal,
+        { retry: false, smartExtract: true },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `终止预览失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const data = result.data ?? {};
+      const impacts = Array.isArray(data.coverage_impact)
+        ? data.coverage_impact
+        : [];
+      return {
+        contractId: String(data.contract_id ?? contractId),
+        contractVersion: Number(data.contract_version ?? 1),
+        effectiveDate: String(data.effective_date ?? ''),
+        lastValidDay: String(data.last_valid_day ?? ''),
+        coverageImpact: impacts.map((item) => {
+          const impact = item as RawUnitRecord;
+          return {
+            assetUnitId: String(impact.asset_unit_id ?? ''),
+            effectiveFrom: String(impact.effective_from ?? ''),
+            currentEffectiveTo:
+              impact.current_effective_to == null
+                ? null
+                : String(impact.current_effective_to),
+            newEffectiveTo: String(impact.new_effective_to ?? ''),
+          };
+        }),
+        warnings: Array.isArray(data.warnings)
+          ? data.warnings.map(String)
+          : [],
+        previewToken: String(data.preview_token ?? ''),
+        expiresAt: String(data.expires_at ?? ''),
+      };
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async commitTerminalTermination(
+    contractId: string,
+    request: { preview_token: string; expected_version: number },
+    idempotencyKey: string,
+  ): Promise<LifecycleEventRecord> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/terminal-contracts/${contractId}/termination`,
+        request,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `终止提交失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return AssetOperationsService.toLifecycleEvent(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async reverseTerminalTermination(
+    contractId: string,
+    proposal: {
+      target_event_id: string;
+      effective_date: string;
+      reason: string;
+    },
+    idempotencyKey: string,
+  ): Promise<LifecycleEventRecord> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/terminal-contracts/${contractId}/termination-reversal`,
+        proposal,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `撤销终止失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return AssetOperationsService.toLifecycleEvent(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async previewUpstreamExit(
+    contractId: string,
+    proposal: { effective_date: string; reason: string },
+  ): Promise<ExitPreview> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/upstream-contracts/${contractId}/exit/preview`,
+        proposal,
+        { retry: false, smartExtract: true },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `退出预览失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const data = result.data ?? {};
+      const impacts = Array.isArray(data.coverage_impact)
+        ? data.coverage_impact
+        : [];
+      return {
+        contractId: String(data.contract_id ?? contractId),
+        contractVersion: Number(data.contract_version ?? 1),
+        depositAmount: toNumber(data.deposit_amount),
+        effectiveDate: String(data.effective_date ?? ''),
+        lastValidDay: String(data.last_valid_day ?? ''),
+        coverageImpact: impacts.map((item) => {
+          const impact = item as RawUnitRecord;
+          return {
+            assetUnitId: String(impact.asset_unit_id ?? ''),
+            effectiveFrom: String(impact.effective_from ?? ''),
+            currentEffectiveTo:
+              impact.current_effective_to == null
+                ? null
+                : String(impact.current_effective_to),
+            newEffectiveTo: String(impact.new_effective_to ?? ''),
+          };
+        }),
+        previewToken: String(data.preview_token ?? ''),
+        expiresAt: String(data.expires_at ?? ''),
+      };
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async commitUpstreamExit(
+    contractId: string,
+    request: { preview_token: string; expected_version: number },
+    idempotencyKey: string,
+  ): Promise<LifecycleEventRecord> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/upstream-contracts/${contractId}/exit`,
+        request,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `退出提交失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return AssetOperationsService.toLifecycleEvent(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async reverseUpstreamExit(
+    contractId: string,
+    proposal: {
+      target_event_id: string;
+      effective_date: string;
+      reason: string;
+    },
+    idempotencyKey: string,
+  ): Promise<LifecycleEventRecord> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/upstream-contracts/${contractId}/exit-reversal`,
+        proposal,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `撤销退出失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      return AssetOperationsService.toLifecycleEvent(result.data ?? {});
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async renewTerminal(
+    contractId: string,
+    payload: ConfirmTerminalPayload & {
+      scan_document_id: string;
+      scan_owner_id: string;
+    },
+    idempotencyKey: string,
+  ): Promise<RenewalResult> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/terminal-contracts/${contractId}/renewals`,
+        payload,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `登记续签失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const data = result.data ?? {};
+      return {
+        id: String(data.id ?? ''),
+        contractNumber: String(data.contract_number ?? ''),
+        idempotent: Boolean(data.idempotent),
+      };
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async renewUpstream(
+    contractId: string,
+    payload: ConfirmUpstreamPayload & {
+      scan_document_id: string;
+      scan_owner_id: string;
+    },
+    idempotencyKey: string,
+  ): Promise<RenewalResult> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(
+        `${API_BASE}/upstream-contracts/${contractId}/renewals`,
+        payload,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          retry: false,
+          smartExtract: true,
+        },
+      );
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `登记续签失败: ${result.error}`,
+          extractErrorCode(result),
+        );
+      }
+      const data = result.data ?? {};
+      return {
+        id: String(data.id ?? ''),
+        contractNumber: String(data.contract_number ?? ''),
+        idempotent: Boolean(data.idempotent),
+      };
     } catch (error) {
       if (error instanceof AssetOperationsError) {
         throw error;

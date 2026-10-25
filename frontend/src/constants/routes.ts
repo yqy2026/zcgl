@@ -35,6 +35,8 @@ export const ASSET_OPERATIONS_V5_ROUTES = {
   UPSTREAM_CONTRACTS: '/asset-operations/contracts/upstream',
   INTAKE: '/asset-operations/contracts/intake',
   TERMINAL_CONTRACTS: '/asset-operations/contracts/terminal',
+  TERMINAL_ACTIONS: '/asset-operations/contracts/terminal/:contractId/actions',
+  UPSTREAM_ACTIONS: '/asset-operations/contracts/upstream/:contractId/actions',
 } as const;
 
 // 资产资源路由

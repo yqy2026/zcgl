@@ -88,6 +88,22 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'asset_ops', action: 'write' }],
   },
   {
+    path: ASSET_OPERATIONS_V5_ROUTES.TERMINAL_ACTIONS,
+    element: React.lazy(async () => {
+      const module = await import('../pages/AssetOperations/LifecycleActionsPage');
+      return { default: module.TerminalActionsPage };
+    }),
+    permissions: [{ resource: 'asset_ops', action: 'write' }],
+  },
+  {
+    path: ASSET_OPERATIONS_V5_ROUTES.UPSTREAM_ACTIONS,
+    element: React.lazy(async () => {
+      const module = await import('../pages/AssetOperations/LifecycleActionsPage');
+      return { default: module.UpstreamActionsPage };
+    }),
+    permissions: [{ resource: 'asset_ops', action: 'write' }],
+  },
+  {
     path: ASSET_OPERATIONS_V5_ROUTES.UPSTREAM_CONTRACTS,
     element: React.lazy(async () => {
       const module = await import('../pages/AssetOperations/ContractListsPage');
