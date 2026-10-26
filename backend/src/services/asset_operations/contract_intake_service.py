@@ -216,18 +216,14 @@ class ContractIntakeSessionService:
                     cleanup_error = exc
             if session_created:
                 try:
-                    self.repository.transition(
-                        session_id, "ready_for_review", "failed"
-                    )
+                    self.repository.transition(session_id, "ready_for_review", "failed")
                 except ExtractionSessionStateError:
                     pass
             if cleanup_error is not None:
                 raise cleanup_error from operation_error
             raise
 
-    def get(
-        self, *, session_id: str, actor_id: str
-    ) -> ContractIntakeSessionResponse:
+    def get(self, *, session_id: str, actor_id: str) -> ContractIntakeSessionResponse:
         return self._public(self._require_owned(session_id, actor_id))
 
     async def confirm_upstream(
@@ -271,9 +267,7 @@ class ContractIntakeSessionService:
             )
         except BaseException:
             if transitioned:
-                self.repository.transition(
-                    session_id, "confirming", "ready_for_review"
-                )
+                self.repository.transition(session_id, "confirming", "ready_for_review")
             raise
         self._finish_confirmation(session_id, status)
         return response
@@ -314,9 +308,7 @@ class ContractIntakeSessionService:
             )
         except BaseException:
             if transitioned:
-                self.repository.transition(
-                    session_id, "confirming", "ready_for_review"
-                )
+                self.repository.transition(session_id, "confirming", "ready_for_review")
             raise
         self._finish_confirmation(session_id, status)
         return response
@@ -356,9 +348,7 @@ class ContractIntakeSessionService:
         except BaseException:
             await db.rollback()
             if transitioned:
-                self.repository.transition(
-                    session_id, "cancelling", "ready_for_review"
-                )
+                self.repository.transition(session_id, "cancelling", "ready_for_review")
             raise
         self.lifecycle.compensate_promotion(self._stored_file(session))
         cancelled = self.repository.transition(session_id, "cancelling", "cancelled")

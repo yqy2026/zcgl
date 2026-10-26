@@ -309,7 +309,7 @@ export function ContractIntakePage(): React.ReactElement {
             <h2 className={styles.stepTitle}>
               第二步 · 核对信息（{TYPE_LABELS[currentSession.contractType]}）
             </h2>
-            <p style={{ margin: '0 0 8px' }}>
+            <p style={{ margin: '0 0 var(--spacing-sm)' }}>
               会话状态 <Tag>{currentSession.status}</Tag>
               <span className={styles.hintText}>有效期至 {currentSession.expiresAt}</span>
             </p>

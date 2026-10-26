@@ -243,8 +243,7 @@ class AssetOperationsQueryService:
             scope=scope,
         )
         items = [
-            self._unit_detail(unit, rented=unit.id in rented_ids)
-            for unit in units
+            self._unit_detail(unit, rented=unit.id in rented_ids) for unit in units
         ]
         return items, total
 
@@ -290,9 +289,7 @@ class AssetOperationsQueryService:
         else:
             status = "vacant"
         rented_area = rentable if status == "rented" else Decimal("0")
-        occupancy = (
-            rented_area / rentable if rentable > 0 else Decimal("0")
-        )
+        occupancy = rented_area / rentable if rentable > 0 else Decimal("0")
         return AssetUnitDetail.model_validate(
             {
                 **{
@@ -399,10 +396,12 @@ class AssetOperationsQueryService:
         )
         if contract is None:
             return None
-        events = await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
-            db,
-            contract_kind="upstream",
-            contract_ids=(contract.id,),
+        events = (
+            await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
+                db,
+                contract_kind="upstream",
+                contract_ids=(contract.id,),
+            )
         )
         coverages = await self.asset_contract_repository.list_upstream_coverages(
             db,
@@ -504,10 +503,12 @@ class AssetOperationsQueryService:
         )
         if contract is None:
             return None
-        events = await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
-            db,
-            contract_kind="terminal",
-            contract_ids=(contract.id,),
+        events = (
+            await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
+                db,
+                contract_kind="terminal",
+                contract_ids=(contract.id,),
+            )
         )
         coverages = await self.asset_contract_repository.list_terminal_coverages(
             db,
@@ -546,10 +547,12 @@ class AssetOperationsQueryService:
         contracts: list[UpstreamContract] | list[TerminalContract],
     ) -> dict[str, tuple[ContractLifecycleEvent, ...]]:
         contract_ids = tuple(sorted(contract.id for contract in contracts))
-        events = await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
-            db,
-            contract_kind=contract_kind,
-            contract_ids=contract_ids,
+        events = (
+            await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
+                db,
+                contract_kind=contract_kind,
+                contract_ids=contract_ids,
+            )
         )
         grouped: dict[str, list[ContractLifecycleEvent]] = {}
         for event in events:
@@ -627,9 +630,7 @@ class AssetOperationsQueryService:
         Events later than ``as_of`` do not exist yet, matching the
         replay-by-date rule the status derivations apply.
         """
-        replayed = tuple(
-            event for event in events if event.effective_date <= as_of
-        )
+        replayed = tuple(event for event in events if event.effective_date <= as_of)
         reversed_event_ids = {
             event.reversed_event_id
             for event in replayed

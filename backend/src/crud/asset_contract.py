@@ -628,9 +628,7 @@ class AssetContractRepository:
             )
         )
         if closed_ids:
-            statement = statement.where(
-                TerminalContract.id.not_in(closed_ids)
-            )
+            statement = statement.where(TerminalContract.id.not_in(closed_ids))
         rows = (await db.execute(statement)).scalars().all()
         return set(rows)
 

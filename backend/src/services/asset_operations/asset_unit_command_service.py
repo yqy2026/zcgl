@@ -83,9 +83,7 @@ class AssetUnitCommandService:
 
         self.repository = repository or default_unit_repository
         self.contract_repository = contract_repository or default_contract_repository
-        self.clock = clock or (
-            lambda: datetime.now(UTC).replace(tzinfo=None)
-        )
+        self.clock = clock or (lambda: datetime.now(UTC).replace(tzinfo=None))
         self.business_today = business_today
         self.id_factory = id_factory
 
@@ -127,10 +125,7 @@ class AssetUnitCommandService:
         changes_managed_period = (
             request.managed_from is not None
             and request.managed_from != unit.managed_from
-        ) or (
-            request.managed_to is not None
-            and request.managed_to != unit.managed_to
-        )
+        ) or (request.managed_to is not None and request.managed_to != unit.managed_to)
         if changes_managed_period:
             new_from = (
                 request.managed_from
@@ -140,8 +135,7 @@ class AssetUnitCommandService:
             new_to = (
                 request.managed_to
                 if request.managed_to is not None
-                else unit.managed_to
-                or date.max
+                else unit.managed_to or date.max
             )
             overlapping = await self.contract_repository.find_terminal_overlaps(
                 db,

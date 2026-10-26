@@ -315,9 +315,7 @@ class ContractLifecycleCommandService:
         )
         active_termination = self._active_termination(events)
         if active_termination is not None:
-            raise TerminalContractAlreadyTerminatedError(
-                event_id=active_termination.id
-            )
+            raise TerminalContractAlreadyTerminatedError(event_id=active_termination.id)
         coverages = await self.repository.list_terminal_coverages(
             db,
             contract_id=contract_id,
@@ -428,9 +426,7 @@ class ContractLifecycleCommandService:
             or target.contract_id != contract_id
             or target.event_type != "terminated"
         ):
-            raise TerminationReversalTargetInvalidError(
-                reason="target_not_terminated"
-            )
+            raise TerminationReversalTargetInvalidError(reason="target_not_terminated")
         events = await self.repository.list_lifecycle_events(
             db,
             contract_kind="terminal",
@@ -534,9 +530,7 @@ class ContractLifecycleCommandService:
         )
         active_termination = self._active_termination(events)
         if active_termination is not None:
-            raise TerminalContractAlreadyTerminatedError(
-                event_id=active_termination.id
-            )
+            raise TerminalContractAlreadyTerminatedError(event_id=active_termination.id)
         coverages = await self.repository.list_terminal_coverages(
             db,
             contract_id=contract_id,
@@ -648,9 +642,7 @@ class ContractLifecycleCommandService:
             raise AssetOperationsVersionConflictError(
                 unit_id=contract_id,
                 expected_version=request.expected_version,
-                actual_version=token_version
-                if isinstance(token_version, int)
-                else -1,
+                actual_version=token_version if isinstance(token_version, int) else -1,
             )
 
         contract = await self._require_terminal(
@@ -673,14 +665,13 @@ class ContractLifecycleCommandService:
             contract_kind="terminal",
             contract_id=contract_id,
         )
-        if (
-            preview_payload.get("state_fingerprint")
-            != self._lifecycle_state_fingerprint(
-                contract_id=contract.id,
-                contract_version=contract.version,
-                coverage_rows=self._coverage_fingerprint_rows(coverages),
-                events=events,
-            )
+        if preview_payload.get(
+            "state_fingerprint"
+        ) != self._lifecycle_state_fingerprint(
+            contract_id=contract.id,
+            contract_version=contract.version,
+            coverage_rows=self._coverage_fingerprint_rows(coverages),
+            events=events,
         ):
             raise AssetOperationsPreviewStaleError("state_changed")
 
@@ -951,9 +942,7 @@ class ContractLifecycleCommandService:
             raise AssetOperationsVersionConflictError(
                 unit_id=contract_id,
                 expected_version=request.expected_version,
-                actual_version=token_version
-                if isinstance(token_version, int)
-                else -1,
+                actual_version=token_version if isinstance(token_version, int) else -1,
             )
 
         contract = await self._require_upstream(
@@ -976,14 +965,13 @@ class ContractLifecycleCommandService:
             contract_kind="upstream",
             contract_id=contract_id,
         )
-        if (
-            preview_payload.get("state_fingerprint")
-            != self._lifecycle_state_fingerprint(
-                contract_id=contract.id,
-                contract_version=contract.version,
-                coverage_rows=self._coverage_fingerprint_rows(coverages),
-                events=events,
-            )
+        if preview_payload.get(
+            "state_fingerprint"
+        ) != self._lifecycle_state_fingerprint(
+            contract_id=contract.id,
+            contract_version=contract.version,
+            coverage_rows=self._coverage_fingerprint_rows(coverages),
+            events=events,
         ):
             raise AssetOperationsPreviewStaleError("state_changed")
 
@@ -1358,8 +1346,7 @@ class ContractLifecycleCommandService:
     @staticmethod
     def _require_successor_after_coverage(
         *,
-        request: UpstreamContractRenewalRequest
-        | TerminalContractRenewalRequest,
+        request: UpstreamContractRenewalRequest | TerminalContractRenewalRequest,
         coverages: tuple[TerminalContractAssetUnit, ...]
         | tuple[UpstreamContractAssetUnit, ...],
     ) -> None:
@@ -1393,9 +1380,7 @@ class ContractLifecycleCommandService:
         )
         terminal_events = await self.repository.list_terminal_lifecycle_events(
             db,
-            contract_ids=tuple(
-                sorted(terminal.id for terminal in terminal_contracts)
-            ),
+            contract_ids=tuple(sorted(terminal.id for terminal in terminal_contracts)),
         )
         validate_upstream_exit(
             upstream_contract_id=contract_id,

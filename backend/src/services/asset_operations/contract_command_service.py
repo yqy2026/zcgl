@@ -455,9 +455,8 @@ class AssetContractCommandService:
             values=request.rent_schedules,
         )
         warnings = [
-            self._warning(code) for code in derive_terminal_contract_warnings(
-                contract, upstream=upstream
-            )
+            self._warning(code)
+            for code in derive_terminal_contract_warnings(contract, upstream=upstream)
         ]
         response = TerminalContractResponse.model_validate(
             {
@@ -656,9 +655,7 @@ class AssetContractCommandService:
         )
         active_termination = self._active_termination(events)
         if active_termination is not None:
-            raise TerminalContractAlreadyTerminatedError(
-                event_id=active_termination.id
-            )
+            raise TerminalContractAlreadyTerminatedError(event_id=active_termination.id)
         terminal_coverages = await self.repository.list_terminal_coverages(
             db,
             contract_id=contract_id,
@@ -689,10 +686,7 @@ class AssetContractCommandService:
                     start_date=contract.start_date,
                     asset_unit_ids=tuple(
                         sorted(
-                            {
-                                coverage.asset_unit_id
-                                for coverage in terminal_coverages
-                            }
+                            {coverage.asset_unit_id for coverage in terminal_coverages}
                         )
                     ),
                 )
@@ -859,10 +853,7 @@ class AssetContractCommandService:
             coverage.asset_unit_id
             for coverage in coverages
             if coverage.effective_from <= start_date
-            and (
-                coverage.effective_to is None
-                or coverage.effective_to >= start_date
-            )
+            and (coverage.effective_to is None or coverage.effective_to >= start_date)
         }
         missing_ids = sorted(set(asset_unit_ids) - active_unit_ids)
         if missing_ids:
@@ -1008,9 +999,7 @@ class AssetContractCommandService:
                     attachment_id=contract.scan_document_id
                 )
             if lifecycle_event is not None:
-                await self.repository.add_lifecycle_event(
-                    db, event=lifecycle_event
-                )
+                await self.repository.add_lifecycle_event(db, event=lifecycle_event)
             await self._add_receipt(
                 db,
                 command_kind="create_upstream",
@@ -1065,9 +1054,7 @@ class AssetContractCommandService:
                     attachment_id=contract.scan_document_id
                 )
             if lifecycle_event is not None:
-                await self.repository.add_lifecycle_event(
-                    db, event=lifecycle_event
-                )
+                await self.repository.add_lifecycle_event(db, event=lifecycle_event)
             await self._add_receipt(
                 db,
                 command_kind="create_terminal",
@@ -1213,10 +1200,7 @@ class AssetContractCommandService:
             if event.event_type == "reversed" and event.reversed_event_id is not None
         }
         for event in events:
-            if (
-                event.event_type == "terminated"
-                and event.id not in reversed_event_ids
-            ):
+            if event.event_type == "terminated" and event.id not in reversed_event_ids:
                 return event
         return None
 
