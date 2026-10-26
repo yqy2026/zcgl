@@ -38,8 +38,9 @@ def test_api_router_should_not_expose_legacy_rental_contract_paths() -> None:
     }
 
     assert legacy_paths == set(), f"旧路径仍被注册: {sorted(legacy_paths)}"
-    assert "/contract-groups" in paths
-    assert "/contracts/{contract_id}/ledger" in paths
+    # V1-4 切换后旧业务路由（含 contract-groups/ledger）整体下线
+    assert "/contract-groups" not in paths
+    assert "/contracts/{contract_id}/ledger" not in paths
 
 
 def test_api_router_should_not_expose_out_of_scope_runtime_paths() -> None:
