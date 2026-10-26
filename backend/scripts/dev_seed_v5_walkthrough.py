@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Dev-database walkthrough seed: user, RBAC, and minimal v5 facts.
 
 Idempotent, fixed IDs, dev only. Run: uv run --frozen --extra dev python scripts/dev_seed_v5_walkthrough.py
@@ -30,9 +29,7 @@ async def main() -> None:
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-    from src.services.core.password_service import PasswordService
     from src.database import get_async_database_url
-    from src.models.attachment import Attachment
     from src.models.asset_contract import (
         TerminalContract,
         TerminalContractAssetUnit,
@@ -40,10 +37,12 @@ async def main() -> None:
         UpstreamContractAssetUnit,
     )
     from src.models.asset_unit import AssetUnit
+    from src.models.attachment import Attachment
     from src.models.auth import AccountType, User
-    from src.models.rbac import Role, UserRoleAssignment
     from src.models.party import Party, PartyReviewStatus, PartyType
     from src.models.project import Project
+    from src.models.rbac import Role, UserRoleAssignment
+    from src.services.core.password_service import PasswordService
 
     engine = create_async_engine(get_async_database_url())
     factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -155,22 +154,23 @@ async def main() -> None:
                 ]
             )
             await session.flush()
-            session.add(UpstreamContract(
-                        id=UPSTREAM_ID,
-                        contract_number="UP-WALK-001",
-                        contract_type="lease",
-                        name="走查上游承租合同",
-                        owner_party_id=OWNER_ID,
-                        operator_party_id=OPERATOR_ID,
-                        start_date=date(2026, 1, 1),
-                        end_date=date(2027, 12, 31),
-                        payment_cycle="monthly",
-                        payment_day=15,
-                        deposit_amount=Decimal("50000"),
-                        scan_document_id=SCAN_UP,
-                        version=1,
-                    ),
-                )
+            session.add(
+                UpstreamContract(
+                    id=UPSTREAM_ID,
+                    contract_number="UP-WALK-001",
+                    contract_type="lease",
+                    name="走查上游承租合同",
+                    owner_party_id=OWNER_ID,
+                    operator_party_id=OPERATOR_ID,
+                    start_date=date(2026, 1, 1),
+                    end_date=date(2027, 12, 31),
+                    payment_cycle="monthly",
+                    payment_day=15,
+                    deposit_amount=Decimal("50000"),
+                    scan_document_id=SCAN_UP,
+                    version=1,
+                ),
+            )
             await session.flush()
             session.add(
                 TerminalContract(
@@ -232,9 +232,7 @@ async def main() -> None:
             user.password_last_changed = datetime.now(UTC).replace(tzinfo=None)
             print("user refreshed")
 
-        role = (
-            await session.scalar(select(Role).where(Role.name == "system_admin"))
-        )
+        role = await session.scalar(select(Role).where(Role.name == "system_admin"))
         if role is None:
             role = Role(
                 id="role-v5-walkthrough-admin",
@@ -251,9 +249,7 @@ async def main() -> None:
             )
         )
         if assignment is None:
-            session.add(
-                UserRoleAssignment(user_id=USER_ID, role_id=role.id)
-            )
+            session.add(UserRoleAssignment(user_id=USER_ID, role_id=role.id))
             print("role assigned")
 
         await session.commit()

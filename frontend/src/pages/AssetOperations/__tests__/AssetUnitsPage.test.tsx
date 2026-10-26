@@ -151,4 +151,26 @@ describe('AssetUnitsPage', () => {
       });
     });
   });
+
+  it('resets the rename form when the selected unit changes', async () => {
+    const first = makeUnit();
+    const second = makeUnit({ id: 'unit-2', unitCode: 'U-002', name: '二号商铺' });
+    mockedService.listAssetUnits.mockResolvedValue({ items: [first, second], total: 2 });
+    mockedService.getAssetUnit.mockImplementation(async unitId =>
+      unitId === second.id ? second : first
+    );
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const input = (await screen.findByLabelText('单元名称')) as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, '未保存名称');
+    await user.click(screen.getByText('二号商铺'));
+
+    await waitFor(() => {
+      expect(mockedService.getAssetUnit).toHaveBeenCalledWith('unit-2');
+      expect((screen.getByLabelText('单元名称') as HTMLInputElement).value).toBe('二号商铺');
+    });
+  });
 });

@@ -1,3 +1,5 @@
+- fix(asset-ops): 采纳 PR #95 最终双轴复核的四项可行动结论。三个资产运营生产表单迁移到 React Hook Form，并补资产切换 reset、完整确认载荷和上游退出预览测试；`dev_intake_e2e.py` 的走查密码统一读取 `V5_WALKTHROUGH_PASSWORD` 且缺失失败关闭；资产运营 Decimal 响应与提交统一走 `convertBackendToFrontend` / `convertFrontendToBackend`，补齐 v5 字段并拒绝把非法值静默归零；REQ-UNT-001 恢复为“开发中”，明确生产端空置备注、拆合操作/历史和合同时间轴仍待合并后补齐。生命周期双页面状态机去重属于非阻断重构，本次不扩张处理。同轮用 Ruff 机械收口两个走查/种子脚本的编码头与导入顺序。验证：后端单测 4148 passed / 23 skipped、覆盖率 76.28%；前端 121 个文件 1402 项测试、lint、严格 UI、format-check、两组 type-check 与生产构建通过。
+
 - fix(asset-ops): 收口 PR #95 的两个 CI 阻断。前端三个资产运营模块样式移除 `--border-width-thin` 的 `1px` 回退值，保持严格样式扫描零命中，并用 Oxfmt 统一 14 个受影响 TS/TSX 文件的既有格式；后端加密测试的模块复位从 `src.crud.asset` 子串匹配收窄为精确模块名，避免误删 `src.crud.asset_unit_boundary` 后产生双模块对象、导致边界仓储补丁失效与全量单测顺序污染。验证：前端 lint、严格 UI 守卫、format-check、两组 type-check、1397 项 Vitest 与生产构建通过；后端最小复现、core 组合及全量单测通过（4146 passed / 23 skipped，覆盖率 76.28%）。
 
 - docs(asset-ops): 新增资产运营 v5 剩余工作交接，按当前 PR #95 证据记录前端严格样式扫描与后端全量单测顺序污染两个合并阻断，给出数据切换、旧域清理、V1 后续联动边界，以及 V2 租金押金管理费、V3 考核报送、V4 档案导入、V5 本月工作台的依赖顺序和验收场景；同步归档索引。仅更新交接文档，不改业务代码和当前实施状态。

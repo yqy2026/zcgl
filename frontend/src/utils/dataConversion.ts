@@ -15,6 +15,7 @@ interface DataObject {
 const DECIMAL_FIELDS = [
   // 面积字段
   'land_area',
+  'building_area',
   'total_land_area',
   'actual_property_area',
   'rentable_area',
@@ -33,12 +34,15 @@ const DECIMAL_FIELDS = [
   'monthly_rent',
   'monthly_rent_base',
   'deposit',
+  'deposit_amount',
+  'deposit_months',
   'total_deposit',
   'due_amount',
   'paid_amount',
   'overdue_amount',
   'late_fee',
   'management_fee',
+  'management_fee_rate',
   'other_fees',
   'total_monthly_amount',
   'paid_rent_amount',
@@ -56,6 +60,11 @@ const DECIMAL_FIELDS = [
   'net_income',
   'total_net_income',
   'total_monthly_rent',
+  'base_monthly_rent',
+  'increase_rate',
+  'free_rent_months',
+  'discount_amount',
+  'actual_monthly_rent',
 
   // 汇总字段
   'total_area',

@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-import { TerminalActionsPage } from '../LifecycleActionsPage';
+import { TerminalActionsPage, UpstreamActionsPage } from '../LifecycleActionsPage';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
-import type { TerminationPreview } from '@/services/assetOperationsService';
+import type { ExitPreview, TerminationPreview } from '@/services/assetOperationsService';
 
 vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
   const actual = await importOriginal<typeof import('@/services/assetOperationsService')>();
@@ -16,6 +16,7 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
       ...actual.assetOperationsService,
       previewTerminalTermination: vi.fn(),
       commitTerminalTermination: vi.fn(),
+      previewUpstreamExit: vi.fn(),
     },
   };
 });
@@ -60,13 +61,63 @@ function renderActionsPage(): void {
   );
 }
 
+function renderUpstreamActionsPage(): void {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/asset-operations/contracts/upstream/upstream-1/actions']}>
+        <Routes>
+          <Route
+            path="/asset-operations/contracts/upstream/:contractId/actions"
+            element={<UpstreamActionsPage />}
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
 beforeEach(() => {
   mockedService.previewTerminalTermination.mockReset();
   mockedService.commitTerminalTermination.mockReset();
+  mockedService.previewUpstreamExit.mockReset();
 });
 
 afterEach(() => {
   cleanup();
+});
+
+describe('UpstreamActionsPage', () => {
+  it('previews an exit with React Hook Form values', async () => {
+    const preview: ExitPreview = {
+      contractId: 'upstream-1',
+      contractVersion: 3,
+      effectiveDate: '2026-07-01',
+      lastValidDay: '2026-06-30',
+      coverageImpact: [],
+      warnings: [],
+      previewToken: 'upstream-token-1',
+      expiresAt: '2026-10-25T10:00:00',
+    };
+    mockedService.previewUpstreamExit.mockResolvedValue(preview);
+    const user = userEvent.setup();
+
+    renderUpstreamActionsPage();
+
+    await user.type(screen.getByLabelText('退出生效日（该日起合同不再有效）'), '2026-07-01');
+    await user.type(screen.getAllByLabelText('原因')[0], '提前退出');
+    await user.click(screen.getByRole('button', { name: '预览退出影响' }));
+
+    await waitFor(() => {
+      expect(mockedService.previewUpstreamExit).toHaveBeenCalledWith('upstream-1', {
+        effective_date: '2026-07-01',
+        reason: '提前退出',
+      });
+    });
+    expect(screen.getByText(/最后有效日 2026-06-30/)).toBeTruthy();
+  });
 });
 
 describe('TerminalActionsPage', () => {

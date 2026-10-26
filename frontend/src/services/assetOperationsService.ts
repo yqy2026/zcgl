@@ -6,6 +6,7 @@
  */
 
 import { apiClient } from '@/api/client';
+import { convertBackendToFrontend, convertFrontendToBackend } from '@/utils/dataConversion';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 
 /**
@@ -78,34 +79,18 @@ export interface AssetUnitListParams {
   limit?: number;
 }
 
-const NUMBER_FIELDS = [
-  'land_area',
-  'building_area',
-  'rentable_area',
-  'rented_area',
-  'occupancy_rate',
-] as const;
-
 type RawUnitRecord = Record<string, unknown>;
 
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') {
-    return value;
+function requireDecimal(record: RawUnitRecord, field: string): number {
+  const value = record[field];
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Invalid Decimal field: ${field}`);
   }
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? 0 : parsed;
-  }
-  return 0;
+  return value;
 }
 
 function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
-  const normalized: RawUnitRecord = { ...raw };
-  for (const field of NUMBER_FIELDS) {
-    if (field in normalized) {
-      normalized[field] = toNumber(normalized[field]);
-    }
-  }
+  const normalized = convertBackendToFrontend<RawUnitRecord>(raw);
   return {
     id: String(normalized.id ?? ''),
     unitCode: String(normalized.unit_code ?? ''),
@@ -116,9 +101,9 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
     usageType: String(normalized.usage_type ?? ''),
     acquisitionMode: String(normalized.acquisition_mode ?? ''),
     isOperating: Boolean(normalized.is_operating),
-    landArea: toNumber(normalized.land_area),
-    buildingArea: toNumber(normalized.building_area),
-    rentableArea: toNumber(normalized.rentable_area),
+    landArea: requireDecimal(normalized, 'land_area'),
+    buildingArea: requireDecimal(normalized, 'building_area'),
+    rentableArea: requireDecimal(normalized, 'rentable_area'),
     managedFrom: String(normalized.managed_from ?? ''),
     managedTo: normalized.managed_to == null ? null : String(normalized.managed_to),
     vacancyReason: normalized.vacancy_reason == null ? null : String(normalized.vacancy_reason),
@@ -134,8 +119,8 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
         : normalized.rental_status === 'non_rentable'
           ? 'non_rentable'
           : 'vacant',
-    rentedArea: toNumber(normalized.rented_area),
-    occupancyRate: toNumber(normalized.occupancy_rate),
+    rentedArea: requireDecimal(normalized, 'rented_area'),
+    occupancyRate: requireDecimal(normalized, 'occupancy_rate'),
     warnings: Array.isArray(normalized.warnings)
       ? normalized.warnings.map(item => {
           const warning = item as RawUnitRecord;
@@ -326,6 +311,7 @@ function normalizeChain(raw: unknown): {
 }
 
 function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
+  const normalized = convertBackendToFrontend<RawUnitRecord>(raw);
   const allowedUpstreamStatus = [
     'scheduled',
     'active',
@@ -346,7 +332,7 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
     endDate: String(raw.end_date ?? ''),
     paymentCycle: raw.payment_cycle == null ? null : String(raw.payment_cycle),
     paymentDay: raw.payment_day == null ? null : Number(raw.payment_day),
-    depositAmount: toNumber(raw.deposit_amount),
+    depositAmount: requireDecimal(normalized, 'deposit_amount'),
     renewedFromId: raw.renewed_from_id == null ? null : String(raw.renewed_from_id),
     version: Number(raw.version ?? 1),
     status: (allowedUpstreamStatus as readonly string[]).includes(statusValue)
@@ -363,6 +349,7 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
 }
 
 function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
+  const normalized = convertBackendToFrontend<RawUnitRecord>(raw);
   const allowedTerminalStatus = ['scheduled', 'active', 'expiring', 'ended', 'historical'] as const;
   const statusValue = String(raw.status ?? '');
   return {
@@ -374,7 +361,7 @@ function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
     upstreamContractId: raw.upstream_contract_id == null ? null : String(raw.upstream_contract_id),
     startDate: String(raw.start_date ?? ''),
     endDate: String(raw.end_date ?? ''),
-    depositAmount: toNumber(raw.deposit_amount),
+    depositAmount: requireDecimal(normalized, 'deposit_amount'),
     rentCollector: String(raw.rent_collector ?? ''),
     version: Number(raw.version ?? 1),
     status: (allowedTerminalStatus as readonly string[]).includes(statusValue)
@@ -773,7 +760,7 @@ export class AssetOperationsService {
     try {
       const result = await apiClient.post<RawUnitRecord>(
         `${API_BASE}/contract-intake-sessions/${sessionId}/confirm-upstream`,
-        payload,
+        convertFrontendToBackend(payload),
         {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
@@ -786,7 +773,7 @@ export class AssetOperationsService {
           extractErrorCode(result)
         );
       }
-      const data = result.data ?? {};
+      const data = convertBackendToFrontend<RawUnitRecord>(result.data ?? {});
       return {
         id: String(data.id ?? ''),
         contractNumber: String(data.contract_number ?? ''),
@@ -808,7 +795,7 @@ export class AssetOperationsService {
     try {
       const result = await apiClient.post<RawUnitRecord>(
         `${API_BASE}/contract-intake-sessions/${sessionId}/confirm-terminal`,
-        payload,
+        convertFrontendToBackend(payload),
         {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
@@ -821,7 +808,7 @@ export class AssetOperationsService {
           extractErrorCode(result)
         );
       }
-      const data = result.data ?? {};
+      const data = convertBackendToFrontend<RawUnitRecord>(result.data ?? {});
       return {
         id: String(data.id ?? ''),
         contractNumber: String(data.contract_number ?? ''),
@@ -986,12 +973,12 @@ export class AssetOperationsService {
       if (!result.success) {
         throw new AssetOperationsError(`退出预览失败: ${result.error}`, extractErrorCode(result));
       }
-      const data = result.data ?? {};
+      const data = convertBackendToFrontend<RawUnitRecord>(result.data ?? {});
       const impacts = Array.isArray(data.coverage_impact) ? data.coverage_impact : [];
       return {
         contractId: String(data.contract_id ?? contractId),
         contractVersion: Number(data.contract_version ?? 1),
-        depositAmount: toNumber(data.deposit_amount),
+        depositAmount: requireDecimal(data, 'deposit_amount'),
         effectiveDate: String(data.effective_date ?? ''),
         lastValidDay: String(data.last_valid_day ?? ''),
         coverageImpact: impacts.map(item => {
@@ -1084,7 +1071,7 @@ export class AssetOperationsService {
     try {
       const result = await apiClient.post<RawUnitRecord>(
         `${API_BASE}/terminal-contracts/${contractId}/renewals`,
-        payload,
+        convertFrontendToBackend(payload),
         {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
@@ -1119,7 +1106,7 @@ export class AssetOperationsService {
     try {
       const result = await apiClient.post<RawUnitRecord>(
         `${API_BASE}/upstream-contracts/${contractId}/renewals`,
-        payload,
+        convertFrontendToBackend(payload),
         {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,

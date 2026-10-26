@@ -2,12 +2,13 @@
  * 资产运营 · 资产单元列表
  *
  * 四态分离：loading / empty / 403 / error 互不吞并；选中行同步到 URL
- * 查询参数，刷新后恢复同一对象。数据走 React Query，编辑走 React Hook Form
- * 的最小替代（单字段表单直接受控），派生字段（出租状态/面积/出租率）只读。
+ * 查询参数，刷新后恢复同一对象。数据走 React Query，编辑走 React Hook Form，
+ * 派生字段（出租状态/面积/出租率）只读。
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Controller, useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import { Alert, Table, Tag, Input, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -268,24 +269,35 @@ function RenameForm(props: {
   errorMessage: string | null;
   onSubmit: (name: string) => void;
 }): React.ReactElement {
-  const [name, setName] = useState(props.unit.name);
+  const { control, handleSubmit, reset, watch } = useForm<{ name: string }>({
+    defaultValues: { name: props.unit.name },
+  });
+  useEffect(() => {
+    reset({ name: props.unit.name });
+  }, [props.unit.id, props.unit.name, reset]);
+
+  const name = watch('name');
   const trimmed = name.trim();
   const changed = trimmed !== props.unit.name && trimmed !== '';
 
   return (
     <form
       style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}
-      onSubmit={event => {
-        event.preventDefault();
-        if (changed) {
-          props.onSubmit(trimmed);
+      onSubmit={handleSubmit(values => {
+        const submittedName = values.name.trim();
+        if (submittedName !== '' && submittedName !== props.unit.name) {
+          props.onSubmit(submittedName);
         }
-      }}
+      })}
     >
       <label htmlFor="unit-rename-input" style={{ fontSize: 13 }}>
         单元名称
       </label>
-      <Input id="unit-rename-input" value={name} onChange={event => setName(event.target.value)} />
+      <Controller
+        control={control}
+        name="name"
+        render={({ field }) => <Input id="unit-rename-input" {...field} />}
+      />
       {props.errorMessage != null ? (
         <Alert type="error" showIcon title={props.errorMessage} />
       ) : null}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """HTTP E2E for contract intake sessions over real Redis (dev backend :8002).
 
 Covers: upload -> ready_for_review, confirm-terminal (idempotent retry),
@@ -9,7 +8,7 @@ cancel compensation, scan single-consumption. Run with backend up:
 from __future__ import annotations
 
 import io
-import json
+import os
 import uuid
 from pathlib import Path
 
@@ -17,14 +16,22 @@ import httpx
 
 BASE = "http://localhost:8002/api/v1"
 USERNAME = "v5-walkthrough"
-PASSWORD = "V5Walk!2026x"
 TENANT_ID = "v5-walkthrough-tenant"
 LESSOR_ID = "v5-walkthrough-operator"
 UNIT_A = "v5-walkthrough-unit-a"
 
 
+def get_walkthrough_password() -> str:
+    """Read the shared walkthrough password without embedding credentials."""
+    password = os.environ.get("V5_WALKTHROUGH_PASSWORD", "")
+    if not password:
+        raise RuntimeError("V5_WALKTHROUGH_PASSWORD must be set")
+    return password
+
+
 def main() -> None:
     results: list[tuple[str, bool, str]] = []
+    password = get_walkthrough_password()
 
     def record(name: str, ok: bool, detail: str = "") -> None:
         results.append((name, ok, detail))
@@ -33,25 +40,25 @@ def main() -> None:
     with httpx.Client(base_url=BASE, timeout=30) as client:
         login = client.post(
             "/auth/login",
-            json={"identifier": USERNAME, "password": PASSWORD},
+            json={"identifier": USERNAME, "password": password},
         )
         record("login", login.status_code == 200, str(login.status_code))
-        csrf_token = login.cookies.get("csrf_token") or client.cookies.get(
-            "csrf_token"
-        )
+        csrf_token = login.cookies.get("csrf_token") or client.cookies.get("csrf_token")
         client.headers.update({"X-CSRF-Token": csrf_token or ""})
 
         # 1. Upload: create intake session with a fake signed scan PDF
-        pdf = io.BytesIO(
-            Path(__file__).parent.joinpath("_e2e_scan.pdf").read_bytes()
-        )
+        pdf = io.BytesIO(Path(__file__).parent.joinpath("_e2e_scan.pdf").read_bytes())
         upload = client.post(
             "/contract-intake-sessions",
             data={"contract_type": "terminal"},
             files={"file": ("e2e-terminal.pdf", pdf, "application/pdf")},
         )
         if upload.status_code != 201 or not upload.content:
-            record("upload creates session", False, f"{upload.status_code} {upload.text[:120]}")
+            record(
+                "upload creates session",
+                False,
+                f"{upload.status_code} {upload.text[:120]}",
+            )
             raise SystemExit(1)
         session = upload.json()
         session_id = session.get("id", "")
@@ -64,16 +71,13 @@ def main() -> None:
         read = client.get(f"/contract-intake-sessions/{session_id}")
         record(
             "read session ready_for_review",
-            read.status_code == 200
-            and read.json().get("status") == "ready_for_review",
+            read.status_code == 200 and read.json().get("status") == "ready_for_review",
             str(read.json().get("status")),
         )
 
         # 1b. Rerun hygiene: terminate the previous E2E terminal if present,
         # so this round's coverage on the shared unit does not overlap.
-        listing = client.get(
-            "/terminal-contracts", params={"q": "TM-E2E-INTAKE"}
-        )
+        listing = client.get("/terminal-contracts", params={"q": "TM-E2E-INTAKE"})
         for item in listing.json().get("items", []):
             if item.get("contract_number", "").startswith("TM-E2E-INTAKE"):
                 if item.get("status") in ("active", "expiring", "scheduled"):
@@ -119,7 +123,11 @@ def main() -> None:
             headers={"Idempotency-Key": idem},
         )
         if confirm.status_code != 201:
-            record("confirm creates terminal", False, f"{confirm.status_code} {confirm.text[:200]}")
+            record(
+                "confirm creates terminal",
+                False,
+                f"{confirm.status_code} {confirm.text[:200]}",
+            )
             raise SystemExit(1)
         body = confirm.json()
         contract_id = body.get("id", "")
@@ -153,23 +161,26 @@ def main() -> None:
         # 3. Same scan cannot be consumed twice: new session uploading the same
         # bytes is a different attachment, so instead verify via detail scan id.
         detail = client.get(f"/terminal-contracts/{contract_id}")
-        scan_bound = detail.status_code == 200 and detail.json().get(
-            "scan_document_id"
-        )
+        scan_bound = detail.status_code == 200 and detail.json().get("scan_document_id")
         record("scan bound to contract", bool(scan_bound))
 
         # 4. Cancel path on a fresh session compensates (no contract created)
         upload2 = client.post(
             "/contract-intake-sessions",
             data={"contract_type": "terminal"},
-            files={"file": ("e2e-cancel.pdf", io.BytesIO(pdf.getvalue()), "application/pdf")},
+            files={
+                "file": (
+                    "e2e-cancel.pdf",
+                    io.BytesIO(pdf.getvalue()),
+                    "application/pdf",
+                )
+            },
         )
         session2 = upload2.json()["id"]
         cancel = client.post(f"/contract-intake-sessions/{session2}/cancel")
         gone = client.get(f"/contract-intake-sessions/{session2}")
         cancelled_state = (
-            gone.status_code == 200
-            and gone.json().get("status") == "cancelled"
+            gone.status_code == 200 and gone.json().get("status") == "cancelled"
         )
         record(
             "cancel marks session cancelled",

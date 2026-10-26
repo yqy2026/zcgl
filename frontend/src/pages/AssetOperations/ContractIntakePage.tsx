@@ -9,6 +9,7 @@
 
 import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Input, Tag } from 'antd';
 
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
@@ -76,7 +77,9 @@ export function ContractIntakePage(): React.ReactElement {
   const [contractType, setContractType] = useState<ContractIntakeType>('terminal');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [session, setSession] = useState<ContractIntakeSession | null>(null);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const { control, getValues, handleSubmit, reset, watch } = useForm<FormState>({
+    defaultValues: EMPTY_FORM,
+  });
   const [created, setCreated] = useState<{
     contractNumber: string;
     idempotencyKey: string;
@@ -99,6 +102,7 @@ export function ContractIntakePage(): React.ReactElement {
       if (session == null) {
         throw new Error('会话不存在');
       }
+      const form = getValues();
       const unitIds = form.assetUnitIds
         .split(/[,，\s]+/)
         .map(value => value.trim())
@@ -159,7 +163,7 @@ export function ContractIntakePage(): React.ReactElement {
     mutationFn: (sessionId: string) => assetOperationsService.cancelIntakeSession(sessionId),
     onSuccess: () => {
       setSession(null);
-      setForm(EMPTY_FORM);
+      reset(EMPTY_FORM);
       setSelectedFile(null);
       if (fileInputRef.current != null) {
         fileInputRef.current.value = '';
@@ -169,9 +173,7 @@ export function ContractIntakePage(): React.ReactElement {
 
   const isTerminal = contractType === 'terminal';
   const setUpstreamType = contractType !== 'terminal';
-
-  const setField = (field: keyof FormState) => (value: string) =>
-    setForm(previous => ({ ...previous, [field]: value }));
+  const form = watch();
 
   const confirmDisabled =
     confirmMutation.isPending ||
@@ -190,11 +192,12 @@ export function ContractIntakePage(): React.ReactElement {
   ): React.ReactElement => (
     <label className={styles.fieldColumn}>
       {label}
-      <Input
-        value={form[field]}
-        placeholder={options.placeholder}
-        type={options.type ?? 'text'}
-        onChange={event => setField(field)(event.target.value)}
+      <Controller
+        control={control}
+        name={field}
+        render={({ field: inputField }) => (
+          <Input {...inputField} placeholder={options.placeholder} type={options.type ?? 'text'} />
+        )}
       />
     </label>
   );
@@ -218,7 +221,7 @@ export function ContractIntakePage(): React.ReactElement {
             onClick={() => {
               setCreated(null);
               setSession(null);
-              setForm(EMPTY_FORM);
+              reset(EMPTY_FORM);
               setSelectedFile(null);
             }}
           >
@@ -355,7 +358,9 @@ export function ContractIntakePage(): React.ReactElement {
                     type="primary"
                     disabled={confirmDisabled}
                     loading={confirmMutation.isPending}
-                    onClick={() => confirmMutation.mutate(newIdempotencyKey())}
+                    onClick={() =>
+                      void handleSubmit(() => confirmMutation.mutate(newIdempotencyKey()))()
+                    }
                   >
                     确认登记
                   </Button>

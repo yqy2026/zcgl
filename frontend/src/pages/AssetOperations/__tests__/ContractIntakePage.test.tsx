@@ -120,6 +120,20 @@ describe('ContractIntakePage', () => {
     await waitFor(() => {
       expect(mockedService.confirmTerminalIntake).toHaveBeenCalledTimes(1);
     });
+    expect(mockedService.confirmTerminalIntake).toHaveBeenCalledWith(
+      'session-1',
+      {
+        contract_number: 'TM-100',
+        tenant_party_id: 'tenant-1',
+        lessor_party_id: 'operator-1',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
+        deposit_amount: '0',
+        asset_unit_ids: ['unit-1'],
+        rent_schedules: [],
+      },
+      expect.stringMatching(/.+/)
+    );
     const [, , idempotencyKey] = mockedService.confirmTerminalIntake.mock.calls[0];
     expect(idempotencyKey).toMatch(/.+/);
     await waitFor(() => {

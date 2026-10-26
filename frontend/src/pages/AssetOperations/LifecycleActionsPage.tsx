@@ -9,12 +9,93 @@
 import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Input } from 'antd';
 
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { ExitPreview, TerminationPreview } from '@/services/assetOperationsService';
 
 import styles from './LifecycleActionsPage.module.css';
+
+interface TerminalTerminationForm {
+  effectiveDate: string;
+  terminationType: string;
+  handoverStatus: string;
+  depositSettlementStatus: string;
+  reason: string;
+}
+
+interface ReversalForm {
+  targetEventId: string;
+  effectiveDate: string;
+  reason: string;
+}
+
+interface TerminalRenewalForm {
+  contractNumber: string;
+  tenantPartyId: string;
+  lessorPartyId: string;
+  startDate: string;
+  endDate: string;
+  depositAmount: string;
+  assetUnitIds: string;
+}
+
+interface UpstreamExitForm {
+  effectiveDate: string;
+  reason: string;
+}
+
+interface UpstreamRenewalForm {
+  contractNumber: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  paymentCycle: string;
+  paymentDay: string;
+  depositAmount: string;
+  assetUnitIds: string;
+}
+
+const TERMINAL_TERMINATION_DEFAULTS: TerminalTerminationForm = {
+  effectiveDate: '',
+  terminationType: 'early',
+  handoverStatus: 'pending',
+  depositSettlementStatus: 'pending',
+  reason: '',
+};
+
+const REVERSAL_DEFAULTS: ReversalForm = {
+  targetEventId: '',
+  effectiveDate: '',
+  reason: '',
+};
+
+const TERMINAL_RENEWAL_DEFAULTS: TerminalRenewalForm = {
+  contractNumber: '',
+  tenantPartyId: '',
+  lessorPartyId: '',
+  startDate: '',
+  endDate: '',
+  depositAmount: '0',
+  assetUnitIds: '',
+};
+
+const UPSTREAM_EXIT_DEFAULTS: UpstreamExitForm = {
+  effectiveDate: '',
+  reason: '',
+};
+
+const UPSTREAM_RENEWAL_DEFAULTS: UpstreamRenewalForm = {
+  contractNumber: '',
+  name: '',
+  startDate: '',
+  endDate: '',
+  paymentCycle: 'monthly',
+  paymentDay: '15',
+  depositAmount: '0',
+  assetUnitIds: '',
+};
 
 function newIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -38,39 +119,42 @@ export function TerminalActionsPage(): React.ReactElement {
   const navigate = useNavigate();
   const contractId = params.contractId ?? '';
 
-  const [form, setForm] = useState({
-    effectiveDate: '',
-    terminationType: 'early',
-    handoverStatus: 'pending',
-    depositSettlementStatus: 'pending',
-    reason: '',
+  const {
+    control: terminationControl,
+    handleSubmit: handleTerminationSubmit,
+    watch: watchTermination,
+  } = useForm<TerminalTerminationForm>({
+    defaultValues: TERMINAL_TERMINATION_DEFAULTS,
   });
-  const [reversal, setReversal] = useState({
-    targetEventId: '',
-    effectiveDate: '',
-    reason: '',
+  const {
+    control: reversalControl,
+    handleSubmit: handleReversalSubmit,
+    watch: watchReversal,
+  } = useForm<ReversalForm>({
+    defaultValues: REVERSAL_DEFAULTS,
   });
   const [preview, setPreview] = useState<TerminationPreview | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const renewFileRef = useRef<HTMLInputElement>(null);
-  const [renewForm, setRenewForm] = useState({
-    contractNumber: '',
-    tenantPartyId: '',
-    lessorPartyId: '',
-    startDate: '',
-    endDate: '',
-    depositAmount: '0',
-    assetUnitIds: '',
+  const {
+    control: renewalControl,
+    handleSubmit: handleRenewalSubmit,
+    watch: watchRenewal,
+  } = useForm<TerminalRenewalForm>({
+    defaultValues: TERMINAL_RENEWAL_DEFAULTS,
   });
+  const terminationForm = watchTermination();
+  const reversalForm = watchReversal();
+  const renewalForm = watchRenewal();
 
   const previewMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (values: TerminalTerminationForm) =>
       assetOperationsService.previewTerminalTermination(contractId, {
-        effective_date: form.effectiveDate,
-        termination_type: form.terminationType,
-        handover_status: form.handoverStatus,
-        deposit_settlement_status: form.depositSettlementStatus,
-        reason: form.reason.trim(),
+        effective_date: values.effectiveDate,
+        termination_type: values.terminationType,
+        handover_status: values.handoverStatus,
+        deposit_settlement_status: values.depositSettlementStatus,
+        reason: values.reason.trim(),
       }),
     onSuccess: result => {
       setPreview(result);
@@ -99,15 +183,15 @@ export function TerminalActionsPage(): React.ReactElement {
   });
 
   const reversalMutation = useMutation({
-    mutationFn: (idempotencyKey: string) =>
+    mutationFn: (input: { values: ReversalForm; idempotencyKey: string }) =>
       assetOperationsService.reverseTerminalTermination(
         contractId,
         {
-          target_event_id: reversal.targetEventId.trim(),
-          effective_date: reversal.effectiveDate,
-          reason: reversal.reason.trim(),
+          target_event_id: input.values.targetEventId.trim(),
+          effective_date: input.values.effectiveDate,
+          reason: input.values.reason.trim(),
         },
-        idempotencyKey
+        input.idempotencyKey
       ),
     onSuccess: () => {
       setNotice('终止已撤销，覆盖期已恢复到合同到期日。');
@@ -122,20 +206,21 @@ export function TerminalActionsPage(): React.ReactElement {
     mutationFn: (input: {
       session: { id: string; documentId: string };
       idempotencyKey: string;
+      values: TerminalRenewalForm;
     }) => {
-      const unitIds = renewForm.assetUnitIds
+      const unitIds = input.values.assetUnitIds
         .split(/[,，\s]+/)
         .map(value => value.trim())
         .filter(value => value !== '');
       return assetOperationsService.renewTerminal(
         contractId,
         {
-          contract_number: renewForm.contractNumber.trim(),
-          tenant_party_id: renewForm.tenantPartyId.trim(),
-          lessor_party_id: renewForm.lessorPartyId.trim(),
-          start_date: renewForm.startDate,
-          end_date: renewForm.endDate,
-          deposit_amount: renewForm.depositAmount,
+          contract_number: input.values.contractNumber.trim(),
+          tenant_party_id: input.values.tenantPartyId.trim(),
+          lessor_party_id: input.values.lessorPartyId.trim(),
+          start_date: input.values.startDate,
+          end_date: input.values.endDate,
+          deposit_amount: input.values.depositAmount,
           asset_unit_ids: unitIds,
           rent_schedules: [],
           scan_document_id: input.session.documentId,
@@ -161,42 +246,36 @@ export function TerminalActionsPage(): React.ReactElement {
         <h2 className={styles.actionTitle}>终止</h2>
         <label className={styles.fieldColumn}>
           终止生效日（该日起合同不再有效）
-          <Input
-            type="date"
-            value={form.effectiveDate}
-            onChange={event =>
-              setForm(previous => ({
-                ...previous,
-                effectiveDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={terminationControl}
+            name="effectiveDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           终止类型
-          <Input
-            value={form.terminationType}
-            onChange={event =>
-              setForm(previous => ({
-                ...previous,
-                terminationType: event.target.value,
-              }))
-            }
+          <Controller
+            control={terminationControl}
+            name="terminationType"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           原因
-          <Input
-            value={form.reason}
-            onChange={event => setForm(previous => ({ ...previous, reason: event.target.value }))}
+          <Controller
+            control={terminationControl}
+            name="reason"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <Button
           disabled={
-            form.effectiveDate === '' || form.reason.trim() === '' || previewMutation.isPending
+            terminationForm.effectiveDate === '' ||
+            terminationForm.reason.trim() === '' ||
+            previewMutation.isPending
           }
           loading={previewMutation.isPending}
-          onClick={() => previewMutation.mutate()}
+          onClick={() => void handleTerminationSubmit(values => previewMutation.mutate(values))()}
         >
           预览终止影响
         </Button>
@@ -244,39 +323,26 @@ export function TerminalActionsPage(): React.ReactElement {
         <h2 className={styles.actionTitle}>撤销终止（纠错）</h2>
         <label className={styles.fieldColumn}>
           原终止事件 ID（来自合同详情的生命周期事件）
-          <Input
-            value={reversal.targetEventId}
-            onChange={event =>
-              setReversal(previous => ({
-                ...previous,
-                targetEventId: event.target.value,
-              }))
-            }
+          <Controller
+            control={reversalControl}
+            name="targetEventId"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           撤销生效日
-          <Input
-            type="date"
-            value={reversal.effectiveDate}
-            onChange={event =>
-              setReversal(previous => ({
-                ...previous,
-                effectiveDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={reversalControl}
+            name="effectiveDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           原因
-          <Input
-            value={reversal.reason}
-            onChange={event =>
-              setReversal(previous => ({
-                ...previous,
-                reason: event.target.value,
-              }))
-            }
+          <Controller
+            control={reversalControl}
+            name="reason"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         {reversalMutation.isError ? (
@@ -290,13 +356,17 @@ export function TerminalActionsPage(): React.ReactElement {
         ) : null}
         <Button
           disabled={
-            reversal.targetEventId.trim() === '' ||
-            reversal.effectiveDate === '' ||
-            reversal.reason.trim() === '' ||
+            reversalForm.targetEventId.trim() === '' ||
+            reversalForm.effectiveDate === '' ||
+            reversalForm.reason.trim() === '' ||
             reversalMutation.isPending
           }
           loading={reversalMutation.isPending}
-          onClick={() => reversalMutation.mutate(newIdempotencyKey())}
+          onClick={() =>
+            void handleReversalSubmit(values =>
+              reversalMutation.mutate({ values, idempotencyKey: newIdempotencyKey() })
+            )()
+          }
         >
           撤销终止
         </Button>
@@ -336,76 +406,50 @@ export function TerminalActionsPage(): React.ReactElement {
         ) : null}
         <label className={styles.fieldColumn}>
           后继合同编号
-          <Input
-            value={renewForm.contractNumber}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                contractNumber: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="contractNumber"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           租户 Party ID
-          <Input
-            value={renewForm.tenantPartyId}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                tenantPartyId: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="tenantPartyId"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           出租方 Party ID
-          <Input
-            value={renewForm.lessorPartyId}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                lessorPartyId: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="lessorPartyId"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           后继起租日（必须晚于原合同覆盖结束）
-          <Input
-            type="date"
-            value={renewForm.startDate}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                startDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="startDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           后继到期日
-          <Input
-            type="date"
-            value={renewForm.endDate}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                endDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="endDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           覆盖资产单元 ID（逗号分隔，由原合同带出核对）
-          <Input
-            value={renewForm.assetUnitIds}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                assetUnitIds: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="assetUnitIds"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         {renewMutation.isError ? (
@@ -419,22 +463,26 @@ export function TerminalActionsPage(): React.ReactElement {
           type="primary"
           disabled={
             renewSessionMutation.data == null ||
-            renewForm.contractNumber.trim() === '' ||
-            renewForm.startDate === '' ||
-            renewForm.endDate === '' ||
-            renewForm.assetUnitIds.trim() === '' ||
+            renewalForm.contractNumber.trim() === '' ||
+            renewalForm.startDate === '' ||
+            renewalForm.endDate === '' ||
+            renewalForm.assetUnitIds.trim() === '' ||
             renewMutation.isPending
           }
           loading={renewMutation.isPending}
           onClick={() =>
-            renewSessionMutation.data != null &&
-            renewMutation.mutate({
-              session: {
-                id: renewSessionMutation.data.id,
-                documentId: renewSessionMutation.data.documentId,
-              },
-              idempotencyKey: newIdempotencyKey(),
-            })
+            void handleRenewalSubmit(values => {
+              if (renewSessionMutation.data != null) {
+                renewMutation.mutate({
+                  session: {
+                    id: renewSessionMutation.data.id,
+                    documentId: renewSessionMutation.data.documentId,
+                  },
+                  idempotencyKey: newIdempotencyKey(),
+                  values,
+                });
+              }
+            })()
           }
         >
           登记续签
@@ -451,31 +499,39 @@ export function UpstreamActionsPage(): React.ReactElement {
   const navigate = useNavigate();
   const contractId = params.contractId ?? '';
 
-  const [form, setForm] = useState({ effectiveDate: '', reason: '' });
-  const [reversal, setReversal] = useState({
-    targetEventId: '',
-    effectiveDate: '',
-    reason: '',
+  const {
+    control: exitControl,
+    handleSubmit: handleExitSubmit,
+    watch: watchExit,
+  } = useForm<UpstreamExitForm>({
+    defaultValues: UPSTREAM_EXIT_DEFAULTS,
+  });
+  const {
+    control: reversalControl,
+    handleSubmit: handleReversalSubmit,
+    watch: watchReversal,
+  } = useForm<ReversalForm>({
+    defaultValues: REVERSAL_DEFAULTS,
   });
   const [preview, setPreview] = useState<ExitPreview | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const renewFileRef = useRef<HTMLInputElement>(null);
-  const [renewForm, setRenewForm] = useState({
-    contractNumber: '',
-    name: '',
-    startDate: '',
-    endDate: '',
-    paymentCycle: 'monthly',
-    paymentDay: '15',
-    depositAmount: '0',
-    assetUnitIds: '',
+  const {
+    control: renewalControl,
+    handleSubmit: handleRenewalSubmit,
+    watch: watchRenewal,
+  } = useForm<UpstreamRenewalForm>({
+    defaultValues: UPSTREAM_RENEWAL_DEFAULTS,
   });
+  const exitForm = watchExit();
+  const reversalForm = watchReversal();
+  const renewalForm = watchRenewal();
 
   const previewMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (values: UpstreamExitForm) =>
       assetOperationsService.previewUpstreamExit(contractId, {
-        effective_date: form.effectiveDate,
-        reason: form.reason.trim(),
+        effective_date: values.effectiveDate,
+        reason: values.reason.trim(),
       }),
     onSuccess: result => {
       setPreview(result);
@@ -504,15 +560,15 @@ export function UpstreamActionsPage(): React.ReactElement {
   });
 
   const reversalMutation = useMutation({
-    mutationFn: (idempotencyKey: string) =>
+    mutationFn: (input: { values: ReversalForm; idempotencyKey: string }) =>
       assetOperationsService.reverseUpstreamExit(
         contractId,
         {
-          target_event_id: reversal.targetEventId.trim(),
-          effective_date: reversal.effectiveDate,
-          reason: reversal.reason.trim(),
+          target_event_id: input.values.targetEventId.trim(),
+          effective_date: input.values.effectiveDate,
+          reason: input.values.reason.trim(),
         },
-        idempotencyKey
+        input.idempotencyKey
       ),
     onSuccess: () => {
       setNotice('退出已撤销，覆盖期已恢复到合同到期日。');
@@ -527,23 +583,24 @@ export function UpstreamActionsPage(): React.ReactElement {
     mutationFn: (input: {
       session: { id: string; documentId: string };
       idempotencyKey: string;
+      values: UpstreamRenewalForm;
     }) => {
-      const unitIds = renewForm.assetUnitIds
+      const unitIds = input.values.assetUnitIds
         .split(/[,，\s]+/)
         .map(value => value.trim())
         .filter(value => value !== '');
       return assetOperationsService.renewUpstream(
         contractId,
         {
-          contract_number: renewForm.contractNumber.trim(),
-          name: renewForm.name.trim(),
+          contract_number: input.values.contractNumber.trim(),
+          name: input.values.name.trim(),
           owner_party_id: '',
           operator_party_id: '',
-          start_date: renewForm.startDate,
-          end_date: renewForm.endDate,
-          payment_cycle: renewForm.paymentCycle,
-          payment_day: Number(renewForm.paymentDay),
-          deposit_amount: renewForm.depositAmount,
+          start_date: input.values.startDate,
+          end_date: input.values.endDate,
+          payment_cycle: input.values.paymentCycle,
+          payment_day: Number(input.values.paymentDay),
+          deposit_amount: input.values.depositAmount,
           asset_unit_ids: unitIds,
           rent_schedules: [],
           scan_document_id: input.session.documentId,
@@ -569,30 +626,28 @@ export function UpstreamActionsPage(): React.ReactElement {
         <h2 className={styles.actionTitle}>退出在管</h2>
         <label className={styles.fieldColumn}>
           退出生效日（该日起合同不再有效）
-          <Input
-            type="date"
-            value={form.effectiveDate}
-            onChange={event =>
-              setForm(previous => ({
-                ...previous,
-                effectiveDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={exitControl}
+            name="effectiveDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           原因
-          <Input
-            value={form.reason}
-            onChange={event => setForm(previous => ({ ...previous, reason: event.target.value }))}
+          <Controller
+            control={exitControl}
+            name="reason"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <Button
           disabled={
-            form.effectiveDate === '' || form.reason.trim() === '' || previewMutation.isPending
+            exitForm.effectiveDate === '' ||
+            exitForm.reason.trim() === '' ||
+            previewMutation.isPending
           }
           loading={previewMutation.isPending}
-          onClick={() => previewMutation.mutate()}
+          onClick={() => void handleExitSubmit(values => previewMutation.mutate(values))()}
         >
           预览退出影响
         </Button>
@@ -640,39 +695,26 @@ export function UpstreamActionsPage(): React.ReactElement {
         <h2 className={styles.actionTitle}>撤销退出（纠错）</h2>
         <label className={styles.fieldColumn}>
           原退出事件 ID
-          <Input
-            value={reversal.targetEventId}
-            onChange={event =>
-              setReversal(previous => ({
-                ...previous,
-                targetEventId: event.target.value,
-              }))
-            }
+          <Controller
+            control={reversalControl}
+            name="targetEventId"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           撤销生效日
-          <Input
-            type="date"
-            value={reversal.effectiveDate}
-            onChange={event =>
-              setReversal(previous => ({
-                ...previous,
-                effectiveDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={reversalControl}
+            name="effectiveDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           原因
-          <Input
-            value={reversal.reason}
-            onChange={event =>
-              setReversal(previous => ({
-                ...previous,
-                reason: event.target.value,
-              }))
-            }
+          <Controller
+            control={reversalControl}
+            name="reason"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         {reversalMutation.isError ? (
@@ -686,13 +728,17 @@ export function UpstreamActionsPage(): React.ReactElement {
         ) : null}
         <Button
           disabled={
-            reversal.targetEventId.trim() === '' ||
-            reversal.effectiveDate === '' ||
-            reversal.reason.trim() === '' ||
+            reversalForm.targetEventId.trim() === '' ||
+            reversalForm.effectiveDate === '' ||
+            reversalForm.reason.trim() === '' ||
             reversalMutation.isPending
           }
           loading={reversalMutation.isPending}
-          onClick={() => reversalMutation.mutate(newIdempotencyKey())}
+          onClick={() =>
+            void handleReversalSubmit(values =>
+              reversalMutation.mutate({ values, idempotencyKey: newIdempotencyKey() })
+            )()
+          }
         >
           撤销退出
         </Button>
@@ -721,64 +767,42 @@ export function UpstreamActionsPage(): React.ReactElement {
         ) : null}
         <label className={styles.fieldColumn}>
           后继合同编号
-          <Input
-            value={renewForm.contractNumber}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                contractNumber: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="contractNumber"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           后继合同名称
-          <Input
-            value={renewForm.name}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                name: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="name"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           后继起租日
-          <Input
-            type="date"
-            value={renewForm.startDate}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                startDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="startDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           后继到期日
-          <Input
-            type="date"
-            value={renewForm.endDate}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                endDate: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="endDate"
+            render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
         <label className={styles.fieldColumn}>
           覆盖资产单元 ID（由原合同带出核对）
-          <Input
-            value={renewForm.assetUnitIds}
-            onChange={event =>
-              setRenewForm(previous => ({
-                ...previous,
-                assetUnitIds: event.target.value,
-              }))
-            }
+          <Controller
+            control={renewalControl}
+            name="assetUnitIds"
+            render={({ field }) => <Input {...field} />}
           />
         </label>
         {renewMutation.isError ? (
@@ -792,23 +816,27 @@ export function UpstreamActionsPage(): React.ReactElement {
           type="primary"
           disabled={
             renewSessionMutation.data == null ||
-            renewForm.contractNumber.trim() === '' ||
-            renewForm.name.trim() === '' ||
-            renewForm.startDate === '' ||
-            renewForm.endDate === '' ||
-            renewForm.assetUnitIds.trim() === '' ||
+            renewalForm.contractNumber.trim() === '' ||
+            renewalForm.name.trim() === '' ||
+            renewalForm.startDate === '' ||
+            renewalForm.endDate === '' ||
+            renewalForm.assetUnitIds.trim() === '' ||
             renewMutation.isPending
           }
           loading={renewMutation.isPending}
           onClick={() =>
-            renewSessionMutation.data != null &&
-            renewMutation.mutate({
-              session: {
-                id: renewSessionMutation.data.id,
-                documentId: renewSessionMutation.data.documentId,
-              },
-              idempotencyKey: newIdempotencyKey(),
-            })
+            void handleRenewalSubmit(values => {
+              if (renewSessionMutation.data != null) {
+                renewMutation.mutate({
+                  session: {
+                    id: renewSessionMutation.data.id,
+                    documentId: renewSessionMutation.data.documentId,
+                  },
+                  idempotencyKey: newIdempotencyKey(),
+                  values,
+                });
+              }
+            })()
           }
         >
           登记续签

@@ -18,10 +18,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from src.database import async_session_scope
 from src.schemas.llm_prompt import PromptTemplateCreate
 from src.services.llm_prompt.prompt_manager import PromptManager
+
+from src.database import async_session_scope
 
 
 async def seed_prompts(db: AsyncSession) -> None:
@@ -180,9 +180,7 @@ async def seed_prompts(db: AsyncSession) -> None:
 
             # Use PromptManager to create prompt and version
             schema = PromptTemplateCreate(**prompt_data)
-            template = await manager.create_prompt_async(
-                db, schema, user_id="system"
-            )
+            template = await manager.create_prompt_async(db, schema, user_id="system")
 
             # Activate the prompt (manager creates it as DRAFT)
             await manager.activate_prompt_async(db, template.id)
@@ -207,6 +205,7 @@ async def seed_prompts(db: AsyncSession) -> None:
 
 
 if __name__ == "__main__":
+
     async def _run() -> None:
         async with async_session_scope() as db:
             await seed_prompts(db)
