@@ -1,6 +1,0 @@
-.stateContainer {
-  height: var(--chart-height);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}

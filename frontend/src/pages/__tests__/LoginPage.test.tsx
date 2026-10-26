@@ -187,7 +187,7 @@ describe('LoginPage', () => {
   });
 
   describe('表单提交', () => {
-    it('成功登录后跳转到工作台', async () => {
+    it('成功登录后跳转到资产单元', async () => {
       mockLogin.mockResolvedValue(undefined);
 
       render(
@@ -213,7 +213,7 @@ describe('LoginPage', () => {
       });
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith('/asset-operations/units', { replace: true });
       });
     });
 

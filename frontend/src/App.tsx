@@ -33,7 +33,7 @@ import PageTransition from './components/Layout/PageTransition';
 
 const AssetOperationsPrototypePage =
   import.meta.env.DEV === true
-    ? React.lazy(() => import('./pages/Prototype/AssetOperations/AssetOperationsPrototypePage'))
+    ? NotFoundPage
     : null;
 
 const InlineForbidden: React.FC = () => {
@@ -180,7 +180,7 @@ const AppContent: React.FC = () => {
           isAuthenticated ? (
             // 已登录用户访问登录页面,重定向到之前访问的页面或仪表板
             <Navigate
-              to={(location.state as LocationState)?.from?.pathname ?? '/dashboard'}
+              to={(location.state as LocationState)?.from?.pathname ?? '/asset-operations/units'}
               replace
             />
           ) : (

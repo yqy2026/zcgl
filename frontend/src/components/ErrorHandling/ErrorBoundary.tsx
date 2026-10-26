@@ -141,7 +141,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       errorInfo: null,
       retryCount: 0,
     });
-    window.location.href = '/dashboard';
+    window.location.href = '/asset-operations/units';
   };
 
   private canRetry = () => {
@@ -192,7 +192,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
       window.history.back();
     } else {
       // 没有历史记录时，导航到首页
-      window.location.href = '/dashboard';
+      window.location.href = '/asset-operations/units';
     }
   };
 
@@ -347,7 +347,7 @@ export const useErrorHandler = () => {
  * 注意：此 Hook 需要在 Router 上下文中使用
  */
 export const useRouterErrorBoundary = () => {
-  const handleError = useCallback((error: Error, fallbackPath: string = '/dashboard') => {
+  const handleError = useCallback((error: Error, fallbackPath: string = '/asset-operations/units') => {
     console.error('路由错误:', error);
 
     // 根据错误类型决定处理方式

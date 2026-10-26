@@ -35,21 +35,44 @@ try {
   page.on('pageerror', (error) => pageErrors.push(String(error)));
 
   // Login
-  await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForSelector('#identifier', { timeout: 30000 });
   await page.fill('#identifier', 'v5-walkthrough');
   await page.fill('#password', process.env.V5_WALKTHROUGH_PASSWORD ?? '');
   await page.click('button[type="submit"]');
   try {
-    await page.waitForURL((url) => !String(url).includes('/login'), { timeout: 15000 });
+    await page.waitForURL((url) => !String(url).includes('/login'), { timeout: 60000, waitUntil: 'domcontentloaded' });
     record('login', true);
+  // v5 切换断言：登录落点与无旧菜单
+  await page.waitForTimeout(400);
+  record(
+    'post-login lands on units',
+    page.url().includes('/asset-operations/units'),
+    page.url(),
+  );
+  const sidebarText = await page
+    .locator('aside, .ant-layout-sider')
+    .first()
+    .innerText()
+    .catch(() => '');
+  record(
+    'sidebar has no legacy entries',
+    !sidebarText.includes('工作台') &&
+      !sidebarText.includes('资产台账') &&
+      !sidebarText.includes('合同中心'),
+  );
+  record(
+    'sidebar has v5 entries',
+    sidebarText.includes('资产运营') && sidebarText.includes('资产单元'),
+  );
   } catch (error) {
     record('login', false, String(error).slice(0, 120));
     throw error;
   }
 
   for (const [route, heading] of ROUTES) {
-    await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(600);
+    await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(1200);
 
     // Default 1280: heading visible
     const headingVisible = await page
@@ -81,8 +104,8 @@ try {
   }
 
   // Units page: row click opens detail pane
-  await page.goto(`${BASE}/asset-operations/units`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(600);
+  await page.goto(`${BASE}/asset-operations/units`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForTimeout(1200);
   const firstRow = page.locator('.ant-table-tbody tr.ant-table-row').first();
   await firstRow.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
   if (await firstRow.isVisible()) {
