@@ -5,16 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 import { ContractIntakePage } from '../ContractIntakePage';
-import {
-  assetOperationsService,
-  AssetOperationsError,
-} from '@/services/assetOperationsService';
+import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { ContractIntakeSession } from '@/services/assetOperationsService';
 
-vi.mock(import('@/services/assetOperationsService'), async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import('@/services/assetOperationsService')
-  >();
+vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
+  const actual = await importOriginal<typeof import('@/services/assetOperationsService')>();
   return {
     ...actual,
     assetOperationsService: {
@@ -30,9 +25,7 @@ vi.mock(import('@/services/assetOperationsService'), async (importOriginal) => {
 
 const mockedService = vi.mocked(assetOperationsService);
 
-function makeSession(
-  overrides: Partial<ContractIntakeSession> = {},
-): ContractIntakeSession {
+function makeSession(overrides: Partial<ContractIntakeSession> = {}): ContractIntakeSession {
   return {
     id: 'session-1',
     documentId: 'doc-1',
@@ -54,7 +47,7 @@ function renderPage(): void {
       <MemoryRouter initialEntries={['/asset-operations/contracts/intake']}>
         <ContractIntakePage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -81,7 +74,7 @@ describe('ContractIntakePage', () => {
             message: '自动提取不可用',
           },
         ],
-      }),
+      })
     );
     const user = userEvent.setup();
     const file = new File(['pdf'], 'scan.pdf', { type: 'application/pdf' });
@@ -94,10 +87,7 @@ describe('ContractIntakePage', () => {
     await user.click(screen.getByRole('button', { name: '上传并创建会话' }));
 
     await waitFor(() => {
-      expect(mockedService.createIntakeSession).toHaveBeenCalledWith(
-        'terminal',
-        file,
-      );
+      expect(mockedService.createIntakeSession).toHaveBeenCalledWith('terminal', file);
     });
     await waitFor(() => {
       expect(screen.getByText(/手工核对/)).toBeTruthy();
@@ -116,10 +106,7 @@ describe('ContractIntakePage', () => {
 
     renderPage();
     const input = screen.getByLabelText('已签扫描件（PDF/图片）');
-    await user.upload(
-      input,
-      new File(['pdf'], 'scan.pdf', { type: 'application/pdf' }),
-    );
+    await user.upload(input, new File(['pdf'], 'scan.pdf', { type: 'application/pdf' }));
     await user.click(screen.getByRole('button', { name: '上传并创建会话' }));
 
     await user.type(await screen.findByLabelText('合同编号'), 'TM-100');
@@ -133,8 +120,7 @@ describe('ContractIntakePage', () => {
     await waitFor(() => {
       expect(mockedService.confirmTerminalIntake).toHaveBeenCalledTimes(1);
     });
-    const [, , idempotencyKey] =
-      mockedService.confirmTerminalIntake.mock.calls[0];
+    const [, , idempotencyKey] = mockedService.confirmTerminalIntake.mock.calls[0];
     expect(idempotencyKey).toMatch(/.+/);
     await waitFor(() => {
       expect(screen.getByText(/已登记合同 TM-100/)).toBeTruthy();
@@ -148,10 +134,7 @@ describe('ContractIntakePage', () => {
 
     renderPage();
     const input = screen.getByLabelText('已签扫描件（PDF/图片）');
-    await user.upload(
-      input,
-      new File(['pdf'], 'scan.pdf', { type: 'application/pdf' }),
-    );
+    await user.upload(input, new File(['pdf'], 'scan.pdf', { type: 'application/pdf' }));
     await user.click(screen.getByRole('button', { name: '上传并创建会话' }));
 
     await user.click(await screen.findByRole('button', { name: '取消录入' }));
@@ -166,23 +149,18 @@ describe('ContractIntakePage', () => {
 
   it('surfaces scope 403 as a warning rather than a generic error', async () => {
     mockedService.createIntakeSession.mockRejectedValue(
-      new AssetOperationsError('创建录入会话失败', 'ASSET_OPS_PERMISSION_DENIED'),
+      new AssetOperationsError('创建录入会话失败', 'ASSET_OPS_PERMISSION_DENIED')
     );
     const user = userEvent.setup();
 
     renderPage();
     const input = screen.getByLabelText('已签扫描件（PDF/图片）');
-    await user.upload(
-      input,
-      new File(['pdf'], 'scan.pdf', { type: 'application/pdf' }),
-    );
+    await user.upload(input, new File(['pdf'], 'scan.pdf', { type: 'application/pdf' }));
     await user.click(screen.getByRole('button', { name: '上传并创建会话' }));
 
     await waitFor(() => {
       expect(mockedService.createIntakeSession).toHaveBeenCalled();
     });
-    expect(
-      screen.queryByText('没有可访问的资产范围，请联系管理员配置数据范围。'),
-    ).toBeNull();
+    expect(screen.queryByText('没有可访问的资产范围，请联系管理员配置数据范围。')).toBeNull();
   });
 });

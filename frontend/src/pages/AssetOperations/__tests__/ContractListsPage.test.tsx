@@ -3,23 +3,15 @@ import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
-import {
-  UpstreamContractsPage,
-  TerminalContractsPage,
-} from '../ContractListsPage';
-import {
-  assetOperationsService,
-  AssetOperationsError,
-} from '@/services/assetOperationsService';
+import { UpstreamContractsPage, TerminalContractsPage } from '../ContractListsPage';
+import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type {
   TerminalContractListItem,
   UpstreamContractListItem,
 } from '@/services/assetOperationsService';
 
-vi.mock(import('@/services/assetOperationsService'), async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import('@/services/assetOperationsService')
-  >();
+vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
+  const actual = await importOriginal<typeof import('@/services/assetOperationsService')>();
   return {
     ...actual,
     assetOperationsService: {
@@ -34,9 +26,7 @@ vi.mock(import('@/services/assetOperationsService'), async (importOriginal) => {
 
 const mockedService = vi.mocked(assetOperationsService);
 
-function makeUpstream(
-  overrides: Partial<UpstreamContractListItem> = {},
-): UpstreamContractListItem {
+function makeUpstream(overrides: Partial<UpstreamContractListItem> = {}): UpstreamContractListItem {
   return {
     id: 'upstream-1',
     contractNumber: 'UP-001',
@@ -73,9 +63,7 @@ function makeUpstream(
   };
 }
 
-function makeTerminal(
-  overrides: Partial<TerminalContractListItem> = {},
-): TerminalContractListItem {
+function makeTerminal(overrides: Partial<TerminalContractListItem> = {}): TerminalContractListItem {
   return {
     id: 'terminal-1',
     contractNumber: 'TM-001',
@@ -112,7 +100,7 @@ function renderPage(element: React.ReactElement): void {
       <MemoryRouter initialEntries={['/asset-operations/contracts/upstream']}>
         {element}
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -148,15 +136,13 @@ describe('UpstreamContractsPage', () => {
 
   it('shows the scope warning instead of treating 403 as empty', async () => {
     mockedService.listUpstreamContracts.mockRejectedValue(
-      new AssetOperationsError('获取上游合同列表失败', 'PARTY_SCOPE_MISSING'),
+      new AssetOperationsError('获取上游合同列表失败', 'PARTY_SCOPE_MISSING')
     );
 
     renderPage(<UpstreamContractsPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText('没有可访问的资产范围，请联系管理员配置数据范围。'),
-      ).toBeTruthy();
+      expect(screen.getByText('没有可访问的资产范围，请联系管理员配置数据范围。')).toBeTruthy();
     });
     expect(screen.queryByText('暂无上游合同')).toBeNull();
   });

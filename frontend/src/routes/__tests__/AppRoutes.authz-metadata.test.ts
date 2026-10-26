@@ -23,9 +23,7 @@ describe('AppRoutes authz metadata', () => {
     for (const [path, expectedPermission] of expectedByPath.entries()) {
       const route = protectedRouteMap.get(path);
       expect(route, path).toBeDefined();
-      expect(normalizePermissions(route?.permissions ?? [])).toEqual([
-        expectedPermission,
-      ]);
+      expect(normalizePermissions(route?.permissions ?? [])).toEqual([expectedPermission]);
     }
   });
 
@@ -40,7 +38,7 @@ describe('AppRoutes authz metadata', () => {
         '/operations/ledger',
         '/analytics',
         '/ownership',
-      ]),
+      ])
     );
   });
 });

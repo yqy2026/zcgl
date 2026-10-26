@@ -11,14 +11,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Input } from 'antd';
 
-import {
-  assetOperationsService,
-  AssetOperationsError,
-} from '@/services/assetOperationsService';
-import type {
-  ExitPreview,
-  TerminationPreview,
-} from '@/services/assetOperationsService';
+import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
+import type { ExitPreview, TerminationPreview } from '@/services/assetOperationsService';
 
 import styles from './LifecycleActionsPage.module.css';
 
@@ -78,7 +72,7 @@ export function TerminalActionsPage(): React.ReactElement {
         deposit_settlement_status: form.depositSettlementStatus,
         reason: form.reason.trim(),
       }),
-    onSuccess: (result) => {
+    onSuccess: result => {
       setPreview(result);
       setNotice(null);
     },
@@ -95,7 +89,7 @@ export function TerminalActionsPage(): React.ReactElement {
           preview_token: preview.previewToken,
           expected_version: preview.contractVersion,
         },
-        idempotencyKey,
+        idempotencyKey
       );
     },
     onSuccess: () => {
@@ -113,7 +107,7 @@ export function TerminalActionsPage(): React.ReactElement {
           effective_date: reversal.effectiveDate,
           reason: reversal.reason.trim(),
         },
-        idempotencyKey,
+        idempotencyKey
       ),
     onSuccess: () => {
       setNotice('终止已撤销，覆盖期已恢复到合同到期日。');
@@ -121,8 +115,7 @@ export function TerminalActionsPage(): React.ReactElement {
   });
 
   const renewSessionMutation = useMutation({
-    mutationFn: (file: File) =>
-      assetOperationsService.createIntakeSession('terminal', file),
+    mutationFn: (file: File) => assetOperationsService.createIntakeSession('terminal', file),
   });
 
   const renewMutation = useMutation({
@@ -132,8 +125,8 @@ export function TerminalActionsPage(): React.ReactElement {
     }) => {
       const unitIds = renewForm.assetUnitIds
         .split(/[,，\s]+/)
-        .map((value) => value.trim())
-        .filter((value) => value !== '');
+        .map(value => value.trim())
+        .filter(value => value !== '');
       return assetOperationsService.renewTerminal(
         contractId,
         {
@@ -148,15 +141,16 @@ export function TerminalActionsPage(): React.ReactElement {
           scan_document_id: input.session.documentId,
           scan_owner_id: input.session.id,
         },
-        input.idempotencyKey,
+        input.idempotencyKey
       );
     },
-    onSuccess: (result) => {
+    onSuccess: result => {
       setNotice(`续签后继合同 ${result.contractNumber} 已登记，原合同不变。`);
     },
   });
 
-  const previewCommitted = conflictMessage(previewMutation.error) ?? conflictMessage(commitMutation.error);
+  const previewCommitted =
+    conflictMessage(previewMutation.error) ?? conflictMessage(commitMutation.error);
 
   return (
     <div className={styles.page}>
@@ -170,8 +164,8 @@ export function TerminalActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={form.effectiveDate}
-            onChange={(event) =>
-              setForm((previous) => ({
+            onChange={event =>
+              setForm(previous => ({
                 ...previous,
                 effectiveDate: event.target.value,
               }))
@@ -182,8 +176,8 @@ export function TerminalActionsPage(): React.ReactElement {
           终止类型
           <Input
             value={form.terminationType}
-            onChange={(event) =>
-              setForm((previous) => ({
+            onChange={event =>
+              setForm(previous => ({
                 ...previous,
                 terminationType: event.target.value,
               }))
@@ -194,13 +188,13 @@ export function TerminalActionsPage(): React.ReactElement {
           原因
           <Input
             value={form.reason}
-            onChange={(event) =>
-              setForm((previous) => ({ ...previous, reason: event.target.value }))
-            }
+            onChange={event => setForm(previous => ({ ...previous, reason: event.target.value }))}
           />
         </label>
         <Button
-          disabled={form.effectiveDate === '' || form.reason.trim() === '' || previewMutation.isPending}
+          disabled={
+            form.effectiveDate === '' || form.reason.trim() === '' || previewMutation.isPending
+          }
           loading={previewMutation.isPending}
           onClick={() => previewMutation.mutate()}
         >
@@ -214,7 +208,7 @@ export function TerminalActionsPage(): React.ReactElement {
               showIcon
               title={`最后有效日 ${preview.lastValidDay}；请核对以下覆盖截止变化后确认。`}
             />
-            {preview.coverageImpact.map((impact) => (
+            {preview.coverageImpact.map(impact => (
               <div className={styles.impactRow} key={impact.assetUnitId}>
                 <span>{impact.assetUnitId}</span>
                 <span>
@@ -230,9 +224,7 @@ export function TerminalActionsPage(): React.ReactElement {
                 type="error"
                 showIcon
                 title={
-                  commitMutation.error instanceof Error
-                    ? commitMutation.error.message
-                    : '提交失败'
+                  commitMutation.error instanceof Error ? commitMutation.error.message : '提交失败'
                 }
               />
             ) : null}
@@ -254,8 +246,8 @@ export function TerminalActionsPage(): React.ReactElement {
           原终止事件 ID（来自合同详情的生命周期事件）
           <Input
             value={reversal.targetEventId}
-            onChange={(event) =>
-              setReversal((previous) => ({
+            onChange={event =>
+              setReversal(previous => ({
                 ...previous,
                 targetEventId: event.target.value,
               }))
@@ -267,8 +259,8 @@ export function TerminalActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={reversal.effectiveDate}
-            onChange={(event) =>
-              setReversal((previous) => ({
+            onChange={event =>
+              setReversal(previous => ({
                 ...previous,
                 effectiveDate: event.target.value,
               }))
@@ -279,8 +271,8 @@ export function TerminalActionsPage(): React.ReactElement {
           原因
           <Input
             value={reversal.reason}
-            onChange={(event) =>
-              setReversal((previous) => ({
+            onChange={event =>
+              setReversal(previous => ({
                 ...previous,
                 reason: event.target.value,
               }))
@@ -292,9 +284,7 @@ export function TerminalActionsPage(): React.ReactElement {
             type="error"
             showIcon
             title={
-              reversalMutation.error instanceof Error
-                ? reversalMutation.error.message
-                : '撤销失败'
+              reversalMutation.error instanceof Error ? reversalMutation.error.message : '撤销失败'
             }
           />
         ) : null}
@@ -321,7 +311,7 @@ export function TerminalActionsPage(): React.ReactElement {
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
             aria-label="续签扫描件"
-            onChange={(event) => {
+            onChange={event => {
               const file = event.target.files?.[0] ?? null;
               if (file != null) {
                 renewSessionMutation.mutate(file);
@@ -348,8 +338,8 @@ export function TerminalActionsPage(): React.ReactElement {
           后继合同编号
           <Input
             value={renewForm.contractNumber}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 contractNumber: event.target.value,
               }))
@@ -360,8 +350,8 @@ export function TerminalActionsPage(): React.ReactElement {
           租户 Party ID
           <Input
             value={renewForm.tenantPartyId}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 tenantPartyId: event.target.value,
               }))
@@ -372,8 +362,8 @@ export function TerminalActionsPage(): React.ReactElement {
           出租方 Party ID
           <Input
             value={renewForm.lessorPartyId}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 lessorPartyId: event.target.value,
               }))
@@ -385,8 +375,8 @@ export function TerminalActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={renewForm.startDate}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 startDate: event.target.value,
               }))
@@ -398,8 +388,8 @@ export function TerminalActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={renewForm.endDate}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 endDate: event.target.value,
               }))
@@ -410,8 +400,8 @@ export function TerminalActionsPage(): React.ReactElement {
           覆盖资产单元 ID（逗号分隔，由原合同带出核对）
           <Input
             value={renewForm.assetUnitIds}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 assetUnitIds: event.target.value,
               }))
@@ -422,11 +412,7 @@ export function TerminalActionsPage(): React.ReactElement {
           <Alert
             type="error"
             showIcon
-            title={
-              renewMutation.error instanceof Error
-                ? renewMutation.error.message
-                : '续签失败'
-            }
+            title={renewMutation.error instanceof Error ? renewMutation.error.message : '续签失败'}
           />
         ) : null}
         <Button
@@ -491,7 +477,7 @@ export function UpstreamActionsPage(): React.ReactElement {
         effective_date: form.effectiveDate,
         reason: form.reason.trim(),
       }),
-    onSuccess: (result) => {
+    onSuccess: result => {
       setPreview(result);
       setNotice(null);
     },
@@ -508,7 +494,7 @@ export function UpstreamActionsPage(): React.ReactElement {
           preview_token: preview.previewToken,
           expected_version: preview.contractVersion,
         },
-        idempotencyKey,
+        idempotencyKey
       );
     },
     onSuccess: () => {
@@ -526,7 +512,7 @@ export function UpstreamActionsPage(): React.ReactElement {
           effective_date: reversal.effectiveDate,
           reason: reversal.reason.trim(),
         },
-        idempotencyKey,
+        idempotencyKey
       ),
     onSuccess: () => {
       setNotice('退出已撤销，覆盖期已恢复到合同到期日。');
@@ -534,8 +520,7 @@ export function UpstreamActionsPage(): React.ReactElement {
   });
 
   const renewSessionMutation = useMutation({
-    mutationFn: (file: File) =>
-      assetOperationsService.createIntakeSession('upstream_lease', file),
+    mutationFn: (file: File) => assetOperationsService.createIntakeSession('upstream_lease', file),
   });
 
   const renewMutation = useMutation({
@@ -545,8 +530,8 @@ export function UpstreamActionsPage(): React.ReactElement {
     }) => {
       const unitIds = renewForm.assetUnitIds
         .split(/[,，\s]+/)
-        .map((value) => value.trim())
-        .filter((value) => value !== '');
+        .map(value => value.trim())
+        .filter(value => value !== '');
       return assetOperationsService.renewUpstream(
         contractId,
         {
@@ -564,15 +549,16 @@ export function UpstreamActionsPage(): React.ReactElement {
           scan_document_id: input.session.documentId,
           scan_owner_id: input.session.id,
         },
-        input.idempotencyKey,
+        input.idempotencyKey
       );
     },
-    onSuccess: (result) => {
+    onSuccess: result => {
       setNotice(`续签后继合同 ${result.contractNumber} 已登记，各方由原合同带出。`);
     },
   });
 
-  const previewCommitted = conflictMessage(previewMutation.error) ?? conflictMessage(commitMutation.error);
+  const previewCommitted =
+    conflictMessage(previewMutation.error) ?? conflictMessage(commitMutation.error);
 
   return (
     <div className={styles.page}>
@@ -586,8 +572,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={form.effectiveDate}
-            onChange={(event) =>
-              setForm((previous) => ({
+            onChange={event =>
+              setForm(previous => ({
                 ...previous,
                 effectiveDate: event.target.value,
               }))
@@ -598,13 +584,13 @@ export function UpstreamActionsPage(): React.ReactElement {
           原因
           <Input
             value={form.reason}
-            onChange={(event) =>
-              setForm((previous) => ({ ...previous, reason: event.target.value }))
-            }
+            onChange={event => setForm(previous => ({ ...previous, reason: event.target.value }))}
           />
         </label>
         <Button
-          disabled={form.effectiveDate === '' || form.reason.trim() === '' || previewMutation.isPending}
+          disabled={
+            form.effectiveDate === '' || form.reason.trim() === '' || previewMutation.isPending
+          }
           loading={previewMutation.isPending}
           onClick={() => previewMutation.mutate()}
         >
@@ -618,7 +604,7 @@ export function UpstreamActionsPage(): React.ReactElement {
               showIcon
               title={`最后有效日 ${preview.lastValidDay}；请核对覆盖截止变化后确认。`}
             />
-            {preview.coverageImpact.map((impact) => (
+            {preview.coverageImpact.map(impact => (
               <div className={styles.impactRow} key={impact.assetUnitId}>
                 <span>{impact.assetUnitId}</span>
                 <span>
@@ -634,9 +620,7 @@ export function UpstreamActionsPage(): React.ReactElement {
                 type="error"
                 showIcon
                 title={
-                  commitMutation.error instanceof Error
-                    ? commitMutation.error.message
-                    : '提交失败'
+                  commitMutation.error instanceof Error ? commitMutation.error.message : '提交失败'
                 }
               />
             ) : null}
@@ -658,8 +642,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           原退出事件 ID
           <Input
             value={reversal.targetEventId}
-            onChange={(event) =>
-              setReversal((previous) => ({
+            onChange={event =>
+              setReversal(previous => ({
                 ...previous,
                 targetEventId: event.target.value,
               }))
@@ -671,8 +655,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={reversal.effectiveDate}
-            onChange={(event) =>
-              setReversal((previous) => ({
+            onChange={event =>
+              setReversal(previous => ({
                 ...previous,
                 effectiveDate: event.target.value,
               }))
@@ -683,8 +667,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           原因
           <Input
             value={reversal.reason}
-            onChange={(event) =>
-              setReversal((previous) => ({
+            onChange={event =>
+              setReversal(previous => ({
                 ...previous,
                 reason: event.target.value,
               }))
@@ -696,9 +680,7 @@ export function UpstreamActionsPage(): React.ReactElement {
             type="error"
             showIcon
             title={
-              reversalMutation.error instanceof Error
-                ? reversalMutation.error.message
-                : '撤销失败'
+              reversalMutation.error instanceof Error ? reversalMutation.error.message : '撤销失败'
             }
           />
         ) : null}
@@ -725,7 +707,7 @@ export function UpstreamActionsPage(): React.ReactElement {
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
             aria-label="续签扫描件"
-            onChange={(event) => {
+            onChange={event => {
               const file = event.target.files?.[0] ?? null;
               if (file != null) {
                 renewSessionMutation.mutate(file);
@@ -741,8 +723,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           后继合同编号
           <Input
             value={renewForm.contractNumber}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 contractNumber: event.target.value,
               }))
@@ -753,8 +735,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           后继合同名称
           <Input
             value={renewForm.name}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 name: event.target.value,
               }))
@@ -766,8 +748,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={renewForm.startDate}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 startDate: event.target.value,
               }))
@@ -779,8 +761,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           <Input
             type="date"
             value={renewForm.endDate}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 endDate: event.target.value,
               }))
@@ -791,8 +773,8 @@ export function UpstreamActionsPage(): React.ReactElement {
           覆盖资产单元 ID（由原合同带出核对）
           <Input
             value={renewForm.assetUnitIds}
-            onChange={(event) =>
-              setRenewForm((previous) => ({
+            onChange={event =>
+              setRenewForm(previous => ({
                 ...previous,
                 assetUnitIds: event.target.value,
               }))
@@ -803,11 +785,7 @@ export function UpstreamActionsPage(): React.ReactElement {
           <Alert
             type="error"
             showIcon
-            title={
-              renewMutation.error instanceof Error
-                ? renewMutation.error.message
-                : '续签失败'
-            }
+            title={renewMutation.error instanceof Error ? renewMutation.error.message : '续签失败'}
           />
         ) : null}
         <Button

@@ -11,14 +11,8 @@ import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Alert, Button, Input, Tag } from 'antd';
 
-import {
-  assetOperationsService,
-  AssetOperationsError,
-} from '@/services/assetOperationsService';
-import type {
-  ContractIntakeSession,
-  ContractIntakeType,
-} from '@/services/assetOperationsService';
+import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
+import type { ContractIntakeSession, ContractIntakeType } from '@/services/assetOperationsService';
 
 import styles from './ContractIntakePage.module.css';
 
@@ -96,9 +90,8 @@ export function ContractIntakePage(): React.ReactElement {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: (file: File) =>
-      assetOperationsService.createIntakeSession(contractType, file),
-    onSuccess: (createdSession) => setSession(createdSession),
+    mutationFn: (file: File) => assetOperationsService.createIntakeSession(contractType, file),
+    onSuccess: createdSession => setSession(createdSession),
   });
 
   const confirmMutation = useMutation({
@@ -108,8 +101,8 @@ export function ContractIntakePage(): React.ReactElement {
       }
       const unitIds = form.assetUnitIds
         .split(/[,，\s]+/)
-        .map((value) => value.trim())
-        .filter((value) => value !== '');
+        .map(value => value.trim())
+        .filter(value => value !== '');
       if (contractType === 'terminal') {
         return assetOperationsService.confirmTerminalIntake(
           session.id,
@@ -122,13 +115,11 @@ export function ContractIntakePage(): React.ReactElement {
               : {}),
             start_date: form.startDate,
             end_date: form.endDate,
-            ...(form.depositAmount.trim() !== ''
-              ? { deposit_amount: form.depositAmount }
-              : {}),
+            ...(form.depositAmount.trim() !== '' ? { deposit_amount: form.depositAmount } : {}),
             asset_unit_ids: unitIds,
             rent_schedules: [],
           },
-          idempotencyKey,
+          idempotencyKey
         );
       }
       return assetOperationsService.confirmUpstreamIntake(
@@ -146,20 +137,15 @@ export function ContractIntakePage(): React.ReactElement {
           ...(contractType === 'upstream_lease' && form.paymentDay !== ''
             ? { payment_day: Number(form.paymentDay) }
             : {}),
-          ...(contractType === 'management_agreement' &&
-          form.managementFeeRate.trim() !== ''
+          ...(contractType === 'management_agreement' && form.managementFeeRate.trim() !== ''
             ? { management_fee_rate: form.managementFeeRate }
             : {}),
-          ...(form.depositAmount.trim() !== ''
-            ? { deposit_amount: form.depositAmount }
-            : {}),
-          ...(form.oaReference.trim() !== ''
-            ? { oa_reference: form.oaReference }
-            : {}),
+          ...(form.depositAmount.trim() !== '' ? { deposit_amount: form.depositAmount } : {}),
+          ...(form.oaReference.trim() !== '' ? { oa_reference: form.oaReference } : {}),
           asset_unit_ids: unitIds,
           rent_schedules: [],
         },
-        idempotencyKey,
+        idempotencyKey
       );
     },
     onSuccess: (result, idempotencyKey) =>
@@ -170,8 +156,7 @@ export function ContractIntakePage(): React.ReactElement {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (sessionId: string) =>
-      assetOperationsService.cancelIntakeSession(sessionId),
+    mutationFn: (sessionId: string) => assetOperationsService.cancelIntakeSession(sessionId),
     onSuccess: () => {
       setSession(null);
       setForm(EMPTY_FORM);
@@ -186,7 +171,7 @@ export function ContractIntakePage(): React.ReactElement {
   const setUpstreamType = contractType !== 'terminal';
 
   const setField = (field: keyof FormState) => (value: string) =>
-    setForm((previous) => ({ ...previous, [field]: value }));
+    setForm(previous => ({ ...previous, [field]: value }));
 
   const confirmDisabled =
     confirmMutation.isPending ||
@@ -201,7 +186,7 @@ export function ContractIntakePage(): React.ReactElement {
   const renderField = (
     label: string,
     field: keyof FormState,
-    options: { placeholder?: string; type?: string } = {},
+    options: { placeholder?: string; type?: string } = {}
   ): React.ReactElement => (
     <label className={styles.fieldColumn}>
       {label}
@@ -209,7 +194,7 @@ export function ContractIntakePage(): React.ReactElement {
         value={form[field]}
         placeholder={options.placeholder}
         type={options.type ?? 'text'}
-        onChange={(event) => setField(field)(event.target.value)}
+        onChange={event => setField(field)(event.target.value)}
       />
     </label>
   );
@@ -224,11 +209,7 @@ export function ContractIntakePage(): React.ReactElement {
 
       {created != null ? (
         <div className={styles.stepCard}>
-          <Alert
-            type="success"
-            showIcon
-            title={`已登记合同 ${created.contractNumber}`}
-          />
+          <Alert type="success" showIcon title={`已登记合同 ${created.contractNumber}`} />
           <p className={styles.hintText}>
             幂等键 {created.idempotencyKey}
             （相同键重试不会创建第二份合同）。
@@ -248,7 +229,7 @@ export function ContractIntakePage(): React.ReactElement {
         <div className={styles.stepCard}>
           <h2 className={styles.stepTitle}>第一步 · 选择类型并上传扫描件</h2>
           <div role="radiogroup" aria-label="合同类型" style={{ display: 'flex', gap: 8 }}>
-            {(Object.keys(TYPE_LABELS) as ContractIntakeType[]).map((type) => (
+            {(Object.keys(TYPE_LABELS) as ContractIntakeType[]).map(type => (
               <Button
                 key={type}
                 type={contractType === type ? 'primary' : 'default'}
@@ -267,7 +248,7 @@ export function ContractIntakePage(): React.ReactElement {
               ref={fileInputRef}
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(event) => {
+              onChange={event => {
                 const file = event.target.files?.[0] ?? null;
                 setSelectedFile(file);
               }}
@@ -279,9 +260,7 @@ export function ContractIntakePage(): React.ReactElement {
               showIcon
               style={{ marginTop: 8 }}
               title={
-                uploadMutation.error instanceof Error
-                  ? uploadMutation.error.message
-                  : '上传失败'
+                uploadMutation.error instanceof Error ? uploadMutation.error.message : '上传失败'
               }
             />
           ) : null}
@@ -302,101 +281,93 @@ export function ContractIntakePage(): React.ReactElement {
       ) : session != null ? (
         <>
           {(() => {
-            const currentSession: ContractIntakeSession =
-              sessionQuery.data ?? session;
+            const currentSession: ContractIntakeSession = sessionQuery.data ?? session;
             return (
-          <div className={styles.stepCard}>
-            <h2 className={styles.stepTitle}>
-              第二步 · 核对信息（{TYPE_LABELS[currentSession.contractType]}）
-            </h2>
-            <p style={{ margin: '0 0 var(--spacing-sm)' }}>
-              会话状态 <Tag>{currentSession.status}</Tag>
-              <span className={styles.hintText}>有效期至 {currentSession.expiresAt}</span>
-            </p>
-            {currentSession.warnings.map((warning) => (
-              <Alert
-                key={warning.code}
-                type={warning.severity === 'error' ? 'error' : 'warning'}
-                showIcon
-                style={{ marginBottom: 8 }}
-                title={WARNING_LABELS[warning.code] ?? warning.message ?? warning.code}
-              />
-            ))}
-            <div className={styles.fieldGrid}>
-              {renderField('合同编号', 'contractNumber')}
-              {!isTerminal ? renderField('合同名称', 'name') : null}
-              {isTerminal ? renderField('租户 Party ID', 'tenantPartyId') : null}
-              {isTerminal ? renderField('出租方 Party ID', 'lessorPartyId') : null}
-              {setUpstreamType ? renderField('产权方 Party ID', 'ownerPartyId') : null}
-              {setUpstreamType ? renderField('运营方 Party ID', 'operatorPartyId') : null}
-              {renderField('起租日', 'startDate', { type: 'date' })}
-              {renderField('到期日', 'endDate', { type: 'date' })}
-              {renderField('押金金额', 'depositAmount')}
-              {isTerminal
-                ? renderField('上游合同 ID（可留空）', 'upstreamContractId')
-                : null}
-              {contractType === 'upstream_lease'
-                ? renderField('付款周期', 'paymentCycle')
-                : null}
-              {contractType === 'upstream_lease'
-                ? renderField('付款日', 'paymentDay')
-                : null}
-              {contractType === 'management_agreement'
-                ? renderField('管理费比例（0-1）', 'managementFeeRate')
-                : null}
-              {setUpstreamType ? renderField('OA 单号（可选）', 'oaReference') : null}
-              {renderField(
-                '覆盖资产单元 ID（逗号分隔）',
-                'assetUnitIds',
-                { placeholder: 'unit-1, unit-2' },
-              )}
-            </div>
-            <p className={styles.hintText}>
-              合同类型与扫描件由会话携带，确认时不重复提交；租金阶段可在合同
-              创建后维护。
-            </p>
-            {confirmMutation.isError ? (
-              <Alert
-                type="error"
-                showIcon
-                style={{ marginTop: 8 }}
-                title={
-                  confirmMutation.error instanceof Error
-                    ? confirmMutation.error.message
-                    : '确认失败'
-                }
-              />
-            ) : null}
-            {cancelMutation.isError ? (
-              <Alert
-                type="error"
-                showIcon
-                style={{ marginTop: 8 }}
-                title={
-                  cancelMutation.error instanceof Error
-                    ? cancelMutation.error.message
-                    : '取消失败'
-                }
-              />
-            ) : null}
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-              <Button
-                type="primary"
-                disabled={confirmDisabled}
-                loading={confirmMutation.isPending}
-                onClick={() => confirmMutation.mutate(newIdempotencyKey())}
-              >
-                确认登记
-              </Button>
-              <Button
-                disabled={cancelMutation.isPending}
-                loading={cancelMutation.isPending}
-                onClick={() => cancelMutation.mutate(currentSession.id)}
-              >
-                取消录入
-              </Button>
-            </div>
-          </div>
+              <div className={styles.stepCard}>
+                <h2 className={styles.stepTitle}>
+                  第二步 · 核对信息（{TYPE_LABELS[currentSession.contractType]}）
+                </h2>
+                <p style={{ margin: '0 0 var(--spacing-sm)' }}>
+                  会话状态 <Tag>{currentSession.status}</Tag>
+                  <span className={styles.hintText}>有效期至 {currentSession.expiresAt}</span>
+                </p>
+                {currentSession.warnings.map(warning => (
+                  <Alert
+                    key={warning.code}
+                    type={warning.severity === 'error' ? 'error' : 'warning'}
+                    showIcon
+                    style={{ marginBottom: 8 }}
+                    title={WARNING_LABELS[warning.code] ?? warning.message ?? warning.code}
+                  />
+                ))}
+                <div className={styles.fieldGrid}>
+                  {renderField('合同编号', 'contractNumber')}
+                  {!isTerminal ? renderField('合同名称', 'name') : null}
+                  {isTerminal ? renderField('租户 Party ID', 'tenantPartyId') : null}
+                  {isTerminal ? renderField('出租方 Party ID', 'lessorPartyId') : null}
+                  {setUpstreamType ? renderField('产权方 Party ID', 'ownerPartyId') : null}
+                  {setUpstreamType ? renderField('运营方 Party ID', 'operatorPartyId') : null}
+                  {renderField('起租日', 'startDate', { type: 'date' })}
+                  {renderField('到期日', 'endDate', { type: 'date' })}
+                  {renderField('押金金额', 'depositAmount')}
+                  {isTerminal ? renderField('上游合同 ID（可留空）', 'upstreamContractId') : null}
+                  {contractType === 'upstream_lease'
+                    ? renderField('付款周期', 'paymentCycle')
+                    : null}
+                  {contractType === 'upstream_lease' ? renderField('付款日', 'paymentDay') : null}
+                  {contractType === 'management_agreement'
+                    ? renderField('管理费比例（0-1）', 'managementFeeRate')
+                    : null}
+                  {setUpstreamType ? renderField('OA 单号（可选）', 'oaReference') : null}
+                  {renderField('覆盖资产单元 ID（逗号分隔）', 'assetUnitIds', {
+                    placeholder: 'unit-1, unit-2',
+                  })}
+                </div>
+                <p className={styles.hintText}>
+                  合同类型与扫描件由会话携带，确认时不重复提交；租金阶段可在合同 创建后维护。
+                </p>
+                {confirmMutation.isError ? (
+                  <Alert
+                    type="error"
+                    showIcon
+                    style={{ marginTop: 8 }}
+                    title={
+                      confirmMutation.error instanceof Error
+                        ? confirmMutation.error.message
+                        : '确认失败'
+                    }
+                  />
+                ) : null}
+                {cancelMutation.isError ? (
+                  <Alert
+                    type="error"
+                    showIcon
+                    style={{ marginTop: 8 }}
+                    title={
+                      cancelMutation.error instanceof Error
+                        ? cancelMutation.error.message
+                        : '取消失败'
+                    }
+                  />
+                ) : null}
+                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                  <Button
+                    type="primary"
+                    disabled={confirmDisabled}
+                    loading={confirmMutation.isPending}
+                    onClick={() => confirmMutation.mutate(newIdempotencyKey())}
+                  >
+                    确认登记
+                  </Button>
+                  <Button
+                    disabled={cancelMutation.isPending}
+                    loading={cancelMutation.isPending}
+                    onClick={() => cancelMutation.mutate(currentSession.id)}
+                  >
+                    取消录入
+                  </Button>
+                </div>
+              </div>
             );
           })()}
         </>
@@ -410,7 +381,6 @@ export default ContractIntakePage;
 export function isIntakeScopeForbidden(error: unknown): boolean {
   return (
     error instanceof AssetOperationsError &&
-    (error.code === 'PARTY_SCOPE_MISSING' ||
-      error.code === 'ASSET_OPS_PERMISSION_DENIED')
+    (error.code === 'PARTY_SCOPE_MISSING' || error.code === 'ASSET_OPS_PERMISSION_DENIED')
   );
 }

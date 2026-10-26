@@ -1,10 +1,6 @@
 import React from 'react';
 import type { AuthzAction, ResourceType } from '@/types/capability';
-import {
-  ASSET_OPERATIONS_V5_ROUTES,
-  PROFILE_ROUTES,
-  SYSTEM_ROUTES,
-} from '@/constants/routes';
+import { ASSET_OPERATIONS_V5_ROUTES, PROFILE_ROUTES, SYSTEM_ROUTES } from '@/constants/routes';
 
 export interface ProtectedRouteItem {
   path: string;

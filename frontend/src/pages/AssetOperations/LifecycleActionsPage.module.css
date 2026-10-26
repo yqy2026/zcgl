@@ -6,7 +6,7 @@
 }
 
 .actionCard {
-  border: var(--border-width-thin, 1px) solid var(--color-border, #e4e6ea);
+  border: var(--border-width-thin) solid var(--color-border, #e4e6ea);
   border-radius: var(--spacing-sm);
   padding: var(--spacing-lg);
 }

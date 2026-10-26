@@ -11,10 +11,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Alert, Table, Tag, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
-import {
-  assetOperationsService,
-  AssetOperationsError,
-} from '@/services/assetOperationsService';
+import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type {
   TerminalContractListItem,
   UpstreamContractListItem,
@@ -24,24 +21,22 @@ import styles from './ContractListsPage.module.css';
 
 const PAGE_SIZE = 20;
 
-const UPSTREAM_STATUS_LABELS: Record<UpstreamContractListItem['status'], string> =
-  {
-    scheduled: '待生效',
-    active: '履行中',
-    expiring: '即将到期',
-    expired_pending_action: '已到期待处理',
-    exited: '已退出',
-    historical: '历史版本',
-  };
+const UPSTREAM_STATUS_LABELS: Record<UpstreamContractListItem['status'], string> = {
+  scheduled: '待生效',
+  active: '履行中',
+  expiring: '即将到期',
+  expired_pending_action: '已到期待处理',
+  exited: '已退出',
+  historical: '历史版本',
+};
 
-const TERMINAL_STATUS_LABELS: Record<TerminalContractListItem['status'], string> =
-  {
-    scheduled: '待生效',
-    active: '履行中',
-    expiring: '即将到期',
-    ended: '已结束',
-    historical: '历史版本',
-  };
+const TERMINAL_STATUS_LABELS: Record<TerminalContractListItem['status'], string> = {
+  scheduled: '待生效',
+  active: '履行中',
+  expiring: '即将到期',
+  ended: '已结束',
+  historical: '历史版本',
+};
 
 const WARNING_LABELS: Record<string, string> = {
   UPSTREAM_CONTRACT_MISSING: '暂无上游',
@@ -52,8 +47,7 @@ const WARNING_LABELS: Record<string, string> = {
 export function isScopeForbidden(error: unknown): boolean {
   return (
     error instanceof AssetOperationsError &&
-    (error.code === 'PARTY_SCOPE_MISSING' ||
-      error.code === 'ASSET_OPS_PERMISSION_DENIED')
+    (error.code === 'PARTY_SCOPE_MISSING' || error.code === 'ASSET_OPS_PERMISSION_DENIED')
   );
 }
 
@@ -70,7 +64,7 @@ function ChainRow(props: {
       {props.chain.length === 0 ? (
         <span>—</span>
       ) : (
-        props.chain.map((node) => (
+        props.chain.map(node => (
           <span
             key={node.contractId}
             className={
@@ -79,11 +73,7 @@ function ChainRow(props: {
                 : styles.chainNode
             }
           >
-            {node.relation === 'predecessor'
-              ? '← '
-              : node.relation === 'successor'
-                ? '→ '
-                : ''}
+            {node.relation === 'predecessor' ? '← ' : node.relation === 'successor' ? '→ ' : ''}
             {node.contractNumber}
           </span>
         ))
@@ -97,7 +87,7 @@ function ContractDetailRows(props: {
 }): React.ReactElement {
   return (
     <div>
-      {props.rows.map((row) => (
+      {props.rows.map(row => (
         <div className={styles.fieldRow} key={row.label}>
           <span className={styles.fieldLabel}>{row.label}</span>
           <span className={styles.fieldValue}>{row.value}</span>
@@ -108,21 +98,11 @@ function ContractDetailRows(props: {
 }
 
 export function UpstreamContractsPage(): React.ReactElement {
-  return (
-    <UpstreamList
-      title="上游合同"
-      statusLabels={UPSTREAM_STATUS_LABELS}
-    />
-  );
+  return <UpstreamList title="上游合同" statusLabels={UPSTREAM_STATUS_LABELS} />;
 }
 
 export function TerminalContractsPage(): React.ReactElement {
-  return (
-    <TerminalList
-      title="终端合同"
-      statusLabels={TERMINAL_STATUS_LABELS}
-    />
-  );
+  return <TerminalList title="终端合同" statusLabels={TERMINAL_STATUS_LABELS} />;
 }
 
 function UpstreamList(props: {
@@ -135,11 +115,7 @@ function UpstreamList(props: {
   const [pagination, setPagination] = useState({ current: 1, pageSize: PAGE_SIZE });
 
   const listQuery = useQuery({
-    queryKey: [
-      'asset-operations-upstream-contracts',
-      appliedSearch,
-      pagination.current,
-    ],
+    queryKey: ['asset-operations-upstream-contracts', appliedSearch, pagination.current],
     queryFn: () =>
       assetOperationsService.listUpstreamContracts({
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
@@ -180,7 +156,7 @@ function UpstreamList(props: {
         render: (_: unknown, record) => `${record.startDate} ~ ${record.endDate}`,
       },
     ],
-    [props.statusLabels],
+    [props.statusLabels]
   );
 
   const items = listQuery.data?.items ?? [];
@@ -208,7 +184,7 @@ function UpstreamList(props: {
       pagination={pagination}
       setPagination={setPagination}
       selectedId={selectedId}
-      onSelect={(contractId) => {
+      onSelect={contractId => {
         const next = new URLSearchParams(searchParams);
         next.set('contract_id', contractId);
         setSearchParams(next, { replace: true });
@@ -218,45 +194,46 @@ function UpstreamList(props: {
         isError: detailQuery.isError,
         error: detailQuery.error,
       }}
-      detail={detail == null ? null : (
-        <div>
-          <h2 style={{ fontSize: 16, marginTop: 0 }}>
-            {detail.contractNumber} · {detail.name}
-          </h2>
-          <ContractDetailRows
-            rows={[
-              {
-                label: '类型',
-                value:
-                  detail.contractType === 'lease' ? '承租合同' : '委托管理协议',
-              },
-              { label: '押金', value: formatMoney(detail.depositAmount) },
-              { label: '付款周期', value: detail.paymentCycle ?? '—' },
-              {
-                label: '覆盖单元',
-                value: `${detail.coverages.length} 个`,
-              },
-              {
-                label: '关联终端',
-                value:
-                  detail.terminalContractIds.length === 0
-                    ? '暂无'
-                    : `${detail.terminalContractIds.length} 份`,
-              },
-              {
-                label: '生命周期事件',
-                value: `${detail.lifecycleEvents.length} 条`,
-              },
-            ]}
-          />
-          <ChainRow chain={detail.renewalChain} currentId={detail.id} />
-          <p style={{ marginTop: 8 }}>
-            <Link to={`/asset-operations/contracts/upstream/${detail.id}/actions`}>
-              退出 / 撤销 / 续签操作
-            </Link>
-          </p>
-        </div>
-      )}
+      detail={
+        detail == null ? null : (
+          <div>
+            <h2 style={{ fontSize: 16, marginTop: 0 }}>
+              {detail.contractNumber} · {detail.name}
+            </h2>
+            <ContractDetailRows
+              rows={[
+                {
+                  label: '类型',
+                  value: detail.contractType === 'lease' ? '承租合同' : '委托管理协议',
+                },
+                { label: '押金', value: formatMoney(detail.depositAmount) },
+                { label: '付款周期', value: detail.paymentCycle ?? '—' },
+                {
+                  label: '覆盖单元',
+                  value: `${detail.coverages.length} 个`,
+                },
+                {
+                  label: '关联终端',
+                  value:
+                    detail.terminalContractIds.length === 0
+                      ? '暂无'
+                      : `${detail.terminalContractIds.length} 份`,
+                },
+                {
+                  label: '生命周期事件',
+                  value: `${detail.lifecycleEvents.length} 条`,
+                },
+              ]}
+            />
+            <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <p style={{ marginTop: 8 }}>
+              <Link to={`/asset-operations/contracts/upstream/${detail.id}/actions`}>
+                退出 / 撤销 / 续签操作
+              </Link>
+            </p>
+          </div>
+        )
+      }
     />
   );
 }
@@ -271,11 +248,7 @@ function TerminalList(props: {
   const [pagination, setPagination] = useState({ current: 1, pageSize: PAGE_SIZE });
 
   const listQuery = useQuery({
-    queryKey: [
-      'asset-operations-terminal-contracts',
-      appliedSearch,
-      pagination.current,
-    ],
+    queryKey: ['asset-operations-terminal-contracts', appliedSearch, pagination.current],
     queryFn: () =>
       assetOperationsService.listTerminalContracts({
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
@@ -308,7 +281,7 @@ function TerminalList(props: {
             <Tag color={record.status === 'active' ? 'blue' : 'default'}>
               {props.statusLabels[record.status]}
             </Tag>
-            {record.warnings.map((warning) => (
+            {record.warnings.map(warning => (
               <Tag key={warning.code} color="gold">
                 {WARNING_LABELS[warning.code] ?? warning.code}
               </Tag>
@@ -322,7 +295,7 @@ function TerminalList(props: {
         render: (_: unknown, record) => `${record.startDate} ~ ${record.endDate}`,
       },
     ],
-    [props.statusLabels],
+    [props.statusLabels]
   );
 
   const items = listQuery.data?.items ?? [];
@@ -350,7 +323,7 @@ function TerminalList(props: {
       pagination={pagination}
       setPagination={setPagination}
       selectedId={selectedId}
-      onSelect={(contractId) => {
+      onSelect={contractId => {
         const next = new URLSearchParams(searchParams);
         next.set('contract_id', contractId);
         setSearchParams(next, { replace: true });
@@ -360,46 +333,43 @@ function TerminalList(props: {
         isError: detailQuery.isError,
         error: detailQuery.error,
       }}
-      detail={detail == null ? null : (
-        <div>
-          <h2 style={{ fontSize: 16, marginTop: 0 }}>
-            {detail.contractNumber}
-          </h2>
-          <ContractDetailRows
-            rows={[
-              {
-                label: '模式',
-                value:
-                  detail.contractMode === 'sublease' ? '转租' : '产权方直签',
-              },
-              { label: '押金', value: formatMoney(detail.depositAmount) },
-              {
-                label: '上游合同',
-                value: detail.upstreamContractId ?? '暂无（风险提示）',
-              },
-              {
-                label: '覆盖单元',
-                value:
-                  detail.coverages.length === 0
-                    ? '暂无'
-                    : detail.coverages
-                        .map((coverage) => coverage.assetUnitId)
-                        .join('、'),
-              },
-              {
-                label: '生命周期事件',
-                value: `${detail.lifecycleEvents.length} 条`,
-              },
-            ]}
-          />
-          <ChainRow chain={detail.renewalChain} currentId={detail.id} />
-          <p style={{ marginTop: 8 }}>
-            <Link to={`/asset-operations/contracts/terminal/${detail.id}/actions`}>
-              终止 / 撤销 / 续签操作
-            </Link>
-          </p>
-        </div>
-      )}
+      detail={
+        detail == null ? null : (
+          <div>
+            <h2 style={{ fontSize: 16, marginTop: 0 }}>{detail.contractNumber}</h2>
+            <ContractDetailRows
+              rows={[
+                {
+                  label: '模式',
+                  value: detail.contractMode === 'sublease' ? '转租' : '产权方直签',
+                },
+                { label: '押金', value: formatMoney(detail.depositAmount) },
+                {
+                  label: '上游合同',
+                  value: detail.upstreamContractId ?? '暂无（风险提示）',
+                },
+                {
+                  label: '覆盖单元',
+                  value:
+                    detail.coverages.length === 0
+                      ? '暂无'
+                      : detail.coverages.map(coverage => coverage.assetUnitId).join('、'),
+                },
+                {
+                  label: '生命周期事件',
+                  value: `${detail.lifecycleEvents.length} 条`,
+                },
+              ]}
+            />
+            <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <p style={{ marginTop: 8 }}>
+              <Link to={`/asset-operations/contracts/terminal/${detail.id}/actions`}>
+                终止 / 撤销 / 续签操作
+              </Link>
+            </p>
+          </div>
+        )
+      }
     />
   );
 }
@@ -409,9 +379,7 @@ interface SearchState {
   setSearchText: (value: string) => void;
   appliedSearch: string;
   setAppliedSearch: (value: string) => void;
-  setPagination: React.Dispatch<
-    React.SetStateAction<{ current: number; pageSize: number }>
-  >;
+  setPagination: React.Dispatch<React.SetStateAction<{ current: number; pageSize: number }>>;
 }
 
 interface ListQueryState {
@@ -429,9 +397,7 @@ function ContractPageShell<T extends { id: string }>(props: {
   items: T[];
   total: number;
   pagination: { current: number; pageSize: number };
-  setPagination: React.Dispatch<
-    React.SetStateAction<{ current: number; pageSize: number }>
-  >;
+  setPagination: React.Dispatch<React.SetStateAction<{ current: number; pageSize: number }>>;
   selectedId: string;
   onSelect: (id: string) => void;
   detailState: { isLoading: boolean; isError: boolean; error: unknown };
@@ -462,10 +428,10 @@ function ContractPageShell<T extends { id: string }>(props: {
         aria-label="搜索合同编号"
         placeholder="搜索合同编号"
         value={props.searchProps.searchText}
-        onChange={(event) => props.searchProps.setSearchText(event.target.value)}
-        onSearch={(value) => {
+        onChange={event => props.searchProps.setSearchText(event.target.value)}
+        onSearch={value => {
           props.searchProps.setAppliedSearch(value);
-          props.searchProps.setPagination((previous) => ({
+          props.searchProps.setPagination(previous => ({
             ...previous,
             current: 1,
           }));
@@ -481,22 +447,17 @@ function ContractPageShell<T extends { id: string }>(props: {
           scroll={{ x: 640 }}
           dataSource={props.items}
           loading={props.listQueryState.isLoading}
-          rowClassName={(record) =>
-            record.id === props.selectedId ? 'ant-table-row-selected' : ''
-          }
-          onRow={(record) => ({ onClick: () => props.onSelect(record.id) })}
+          rowClassName={record => (record.id === props.selectedId ? 'ant-table-row-selected' : '')}
+          onRow={record => ({ onClick: () => props.onSelect(record.id) })}
           pagination={{
             current: props.pagination.current,
             pageSize: props.pagination.pageSize,
             total: props.total,
             showSizeChanger: false,
-            onChange: (page, pageSize) =>
-              props.setPagination({ current: page, pageSize }),
+            onChange: (page, pageSize) => props.setPagination({ current: page, pageSize }),
           }}
           locale={{
-            emptyText: props.listQueryState.isError
-              ? ' '
-              : props.listQueryState.emptyText,
+            emptyText: props.listQueryState.isError ? ' ' : props.listQueryState.emptyText,
           }}
         />
 
@@ -516,7 +477,7 @@ function ContractPageShell<T extends { id: string }>(props: {
           ) : props.detailState.isLoading ? (
             <p>详情加载中…</p>
           ) : (
-            props.detail ?? <p>在左侧选择一份合同查看详情。</p>
+            (props.detail ?? <p>在左侧选择一份合同查看详情。</p>)
           )}
         </aside>
       </div>

@@ -31,10 +31,7 @@ interface LocationState {
 import { AnimatePresence } from 'framer-motion';
 import PageTransition from './components/Layout/PageTransition';
 
-const AssetOperationsPrototypePage =
-  import.meta.env.DEV === true
-    ? NotFoundPage
-    : null;
+const AssetOperationsPrototypePage = import.meta.env.DEV === true ? NotFoundPage : null;
 
 const InlineForbidden: React.FC = () => {
   return (

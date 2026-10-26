@@ -12,10 +12,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Alert, Table, Tag, Input, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
-import {
-  assetOperationsService,
-  AssetOperationsError,
-} from '@/services/assetOperationsService';
+import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
 
 import styles from './AssetUnitsPage.module.css';
@@ -45,8 +42,7 @@ function formatPercent(value: number): string {
 function isScopeForbidden(error: unknown): boolean {
   return (
     error instanceof AssetOperationsError &&
-    (error.code === 'PARTY_SCOPE_MISSING' ||
-      error.code === 'ASSET_OPS_PERMISSION_DENIED')
+    (error.code === 'PARTY_SCOPE_MISSING' || error.code === 'ASSET_OPS_PERMISSION_DENIED')
   );
 }
 
@@ -68,7 +64,7 @@ export function AssetUnitsPage(): React.ReactElement {
       }),
   });
 
-  const selectedId = selectedUnitId !== '' ? selectedUnitId : unitsQuery.data?.items[0]?.id ?? '';
+  const selectedId = selectedUnitId !== '' ? selectedUnitId : (unitsQuery.data?.items[0]?.id ?? '');
   const detailQuery = useQuery({
     queryKey: ['asset-operations-unit', selectedId],
     queryFn: () => assetOperationsService.getAssetUnit(selectedId),
@@ -104,9 +100,7 @@ export function AssetUnitsPage(): React.ReactElement {
         title: '出租状态',
         key: 'rentalStatus',
         render: (_: unknown, record: AssetUnitListItem) => (
-          <Tag color={STATUS_COLORS[record.rentalStatus]}>
-            {STATUS_LABELS[record.rentalStatus]}
-          </Tag>
+          <Tag color={STATUS_COLORS[record.rentalStatus]}>{STATUS_LABELS[record.rentalStatus]}</Tag>
         ),
       },
       {
@@ -122,7 +116,7 @@ export function AssetUnitsPage(): React.ReactElement {
         render: (_: unknown, record: AssetUnitListItem) => formatPercent(record.occupancyRate),
       },
     ],
-    [],
+    []
   );
 
   const units = unitsQuery.data?.items ?? [];
@@ -159,10 +153,10 @@ export function AssetUnitsPage(): React.ReactElement {
         aria-label="搜索单元编号、名称或地址"
         placeholder="搜索单元编号、名称或地址"
         value={searchText}
-        onChange={(event) => setSearchText(event.target.value)}
-        onSearch={(value) => {
+        onChange={event => setSearchText(event.target.value)}
+        onSearch={value => {
           setAppliedSearch(value);
-          setPagination((previous) => ({ ...previous, current: 1 }));
+          setPagination(previous => ({ ...previous, current: 1 }));
         }}
         allowClear
         style={{ maxWidth: 360 }}
@@ -175,8 +169,8 @@ export function AssetUnitsPage(): React.ReactElement {
           scroll={{ x: 640 }}
           dataSource={units}
           loading={unitsQuery.isLoading}
-          rowClassName={(record) => (record.id === selectedId ? 'ant-table-row-selected' : '')}
-          onRow={(record) => ({ onClick: () => handleSelect(record.id) })}
+          rowClassName={record => (record.id === selectedId ? 'ant-table-row-selected' : '')}
+          onRow={record => ({ onClick: () => handleSelect(record.id) })}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
@@ -252,7 +246,7 @@ export function AssetUnitsPage(): React.ReactElement {
                     ? renameMutation.error.message
                     : null
                 }
-                onSubmit={(name) =>
+                onSubmit={name =>
                   renameMutation.mutate({
                     unitId: detail.id,
                     expectedVersion: detail.version,
@@ -281,7 +275,7 @@ function RenameForm(props: {
   return (
     <form
       style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}
-      onSubmit={(event) => {
+      onSubmit={event => {
         event.preventDefault();
         if (changed) {
           props.onSubmit(trimmed);
@@ -291,11 +285,7 @@ function RenameForm(props: {
       <label htmlFor="unit-rename-input" style={{ fontSize: 13 }}>
         单元名称
       </label>
-      <Input
-        id="unit-rename-input"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
+      <Input id="unit-rename-input" value={name} onChange={event => setName(event.target.value)} />
       {props.errorMessage != null ? (
         <Alert type="error" showIcon title={props.errorMessage} />
       ) : null}

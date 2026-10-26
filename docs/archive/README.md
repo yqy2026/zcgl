@@ -24,6 +24,7 @@
 
 | 文件 | 内容 |
 |------|------|
+| `2026-10-26-asset-operations-v5-remaining-work-handoff.md` | PR #95 合并阻断、数据切换、V1 遗留边界及 V2 至 V5 后续实施顺序 |
 | `2026-10-25-asset-operations-v5-v1-handoff.md` | 资产运营 v5 V1 当前实现、验证证据、风险与接手顺序 |
 | `2026-05-31-excel-module-audit.md` | Excel 模块调用关系和合并门槛审计 |
 | `2026-03-07-m2-contract-lifecycle-ledger-handoff.md` | M2 合同生命周期与台账交接快照 |

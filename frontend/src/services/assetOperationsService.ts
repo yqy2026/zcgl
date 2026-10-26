@@ -120,16 +120,10 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
     buildingArea: toNumber(normalized.building_area),
     rentableArea: toNumber(normalized.rentable_area),
     managedFrom: String(normalized.managed_from ?? ''),
-    managedTo:
-      normalized.managed_to == null ? null : String(normalized.managed_to),
-    vacancyReason:
-      normalized.vacancy_reason == null
-        ? null
-        : String(normalized.vacancy_reason),
+    managedTo: normalized.managed_to == null ? null : String(normalized.managed_to),
+    vacancyReason: normalized.vacancy_reason == null ? null : String(normalized.vacancy_reason),
     expectedLeaseStart:
-      normalized.expected_lease_start == null
-        ? null
-        : String(normalized.expected_lease_start),
+      normalized.expected_lease_start == null ? null : String(normalized.expected_lease_start),
     predecessorUnitIds: Array.isArray(normalized.predecessor_unit_ids)
       ? normalized.predecessor_unit_ids.map(String)
       : [],
@@ -143,13 +137,12 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
     rentedArea: toNumber(normalized.rented_area),
     occupancyRate: toNumber(normalized.occupancy_rate),
     warnings: Array.isArray(normalized.warnings)
-      ? normalized.warnings.map((item) => {
+      ? normalized.warnings.map(item => {
           const warning = item as RawUnitRecord;
           return {
             code: String(warning.code ?? ''),
             severity: String(warning.severity ?? 'warning'),
-            message:
-              warning.message == null ? null : String(warning.message),
+            message: warning.message == null ? null : String(warning.message),
           };
         })
       : [],
@@ -158,7 +151,6 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
       : [],
   };
 }
-
 
 export interface UpstreamContractListItem {
   id: string;
@@ -174,13 +166,7 @@ export interface UpstreamContractListItem {
   depositAmount: number;
   renewedFromId: string | null;
   version: number;
-  status:
-    | 'scheduled'
-    | 'active'
-    | 'expiring'
-    | 'expired_pending_action'
-    | 'exited'
-    | 'historical';
+  status: 'scheduled' | 'active' | 'expiring' | 'expired_pending_action' | 'exited' | 'historical';
   warnings: { code: string; severity: string; message: string | null }[];
   terminalContractIds: string[];
   coverages: {
@@ -230,7 +216,6 @@ export interface ContractListResult<T> {
   total: number;
 }
 
-
 function normalizeSession(raw: RawUnitRecord): ContractIntakeSession {
   const allowedStatus = [
     'uploaded',
@@ -248,20 +233,17 @@ function normalizeSession(raw: RawUnitRecord): ContractIntakeSession {
     documentId: String(raw.document_id ?? ''),
     contractType: ((): ContractIntakeType => {
       const value = String(raw.contract_type ?? 'terminal');
-      return (
-        (['upstream_lease', 'management_agreement', 'terminal'] as const).includes(
-          value as ContractIntakeType,
-        )
-          ? (value as ContractIntakeType)
-          : 'terminal'
-      );
+      return (['upstream_lease', 'management_agreement', 'terminal'] as const).includes(
+        value as ContractIntakeType
+      )
+        ? (value as ContractIntakeType)
+        : 'terminal';
     })(),
     status: (allowedStatus as readonly string[]).includes(statusValue)
       ? (statusValue as ContractIntakeSession['status'])
       : 'uploaded',
     candidateFields:
-      raw.candidate_fields != null &&
-      typeof raw.candidate_fields === 'object'
+      raw.candidate_fields != null && typeof raw.candidate_fields === 'object'
         ? (raw.candidate_fields as Record<string, unknown>)
         : {},
     warnings: normalizeWarnings(raw.warnings),
@@ -277,7 +259,7 @@ function normalizeWarnings(raw: unknown): {
   if (!Array.isArray(raw)) {
     return [];
   }
-  return raw.map((item) => {
+  return raw.map(item => {
     const warning = item as RawUnitRecord;
     return {
       code: String(warning.code ?? ''),
@@ -295,13 +277,12 @@ function normalizeCoverages(raw: unknown): {
   if (!Array.isArray(raw)) {
     return [];
   }
-  return raw.map((item) => {
+  return raw.map(item => {
     const coverage = item as RawUnitRecord;
     return {
       assetUnitId: String(coverage.asset_unit_id ?? ''),
       effectiveFrom: String(coverage.effective_from ?? ''),
-      effectiveTo:
-        coverage.effective_to == null ? null : String(coverage.effective_to),
+      effectiveTo: coverage.effective_to == null ? null : String(coverage.effective_to),
     };
   });
 }
@@ -315,7 +296,7 @@ function normalizeEvents(raw: unknown): {
   if (!Array.isArray(raw)) {
     return [];
   }
-  return raw.map((item) => {
+  return raw.map(item => {
     const event = item as RawUnitRecord;
     return {
       id: String(event.id ?? ''),
@@ -334,7 +315,7 @@ function normalizeChain(raw: unknown): {
   if (!Array.isArray(raw)) {
     return [];
   }
-  return raw.map((item) => {
+  return raw.map(item => {
     const node = item as RawUnitRecord;
     return {
       contractId: String(node.contract_id ?? ''),
@@ -357,10 +338,7 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
   return {
     id: String(raw.id ?? ''),
     contractNumber: String(raw.contract_number ?? ''),
-    contractType:
-      raw.contract_type === 'management_agreement'
-        ? 'management_agreement'
-        : 'lease',
+    contractType: raw.contract_type === 'management_agreement' ? 'management_agreement' : 'lease',
     name: String(raw.name ?? ''),
     ownerPartyId: String(raw.owner_party_id ?? ''),
     operatorPartyId: String(raw.operator_party_id ?? ''),
@@ -369,8 +347,7 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
     paymentCycle: raw.payment_cycle == null ? null : String(raw.payment_cycle),
     paymentDay: raw.payment_day == null ? null : Number(raw.payment_day),
     depositAmount: toNumber(raw.deposit_amount),
-    renewedFromId:
-      raw.renewed_from_id == null ? null : String(raw.renewed_from_id),
+    renewedFromId: raw.renewed_from_id == null ? null : String(raw.renewed_from_id),
     version: Number(raw.version ?? 1),
     status: (allowedUpstreamStatus as readonly string[]).includes(statusValue)
       ? (statusValue as UpstreamContractListItem['status'])
@@ -386,23 +363,15 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
 }
 
 function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
-  const allowedTerminalStatus = [
-    'scheduled',
-    'active',
-    'expiring',
-    'ended',
-    'historical',
-  ] as const;
+  const allowedTerminalStatus = ['scheduled', 'active', 'expiring', 'ended', 'historical'] as const;
   const statusValue = String(raw.status ?? '');
   return {
     id: String(raw.id ?? ''),
     contractNumber: String(raw.contract_number ?? ''),
-    contractMode:
-      raw.contract_mode === 'direct_lease' ? 'direct_lease' : 'sublease',
+    contractMode: raw.contract_mode === 'direct_lease' ? 'direct_lease' : 'sublease',
     tenantPartyId: String(raw.tenant_party_id ?? ''),
     lessorPartyId: String(raw.lessor_party_id ?? ''),
-    upstreamContractId:
-      raw.upstream_contract_id == null ? null : String(raw.upstream_contract_id),
+    upstreamContractId: raw.upstream_contract_id == null ? null : String(raw.upstream_contract_id),
     startDate: String(raw.start_date ?? ''),
     endDate: String(raw.end_date ?? ''),
     depositAmount: toNumber(raw.deposit_amount),
@@ -421,11 +390,7 @@ function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
 export type UpstreamContractDetail = UpstreamContractListItem;
 export type TerminalContractDetail = TerminalContractListItem;
 
-
-export type ContractIntakeType =
-  | 'upstream_lease'
-  | 'management_agreement'
-  | 'terminal';
+export type ContractIntakeType = 'upstream_lease' | 'management_agreement' | 'terminal';
 
 export interface ContractIntakeSession {
   id: string;
@@ -492,7 +457,6 @@ export interface CreatedContractResult {
   idempotent: boolean;
 }
 
-
 export interface TerminationCoverageImpact {
   assetUnitId: string;
   effectiveFrom: string;
@@ -539,18 +503,14 @@ export interface RenewalResult {
 }
 
 export class AssetOperationsService {
-  async listAssetUnits(
-    params: AssetUnitListParams = {},
-  ): Promise<AssetUnitListResult> {
+  async listAssetUnits(params: AssetUnitListParams = {}): Promise<AssetUnitListResult> {
     try {
       const result = await apiClient.get<{ items: RawUnitRecord[]; total: number }>(
         `${API_BASE}/asset-units`,
         {
           params: {
             ...(params.projectId != null ? { project_id: params.projectId } : {}),
-            ...(params.ownerPartyId != null
-              ? { owner_party_id: params.ownerPartyId }
-              : {}),
+            ...(params.ownerPartyId != null ? { owner_party_id: params.ownerPartyId } : {}),
             ...(params.usageType != null ? { usage_type: params.usageType } : {}),
             ...(params.q != null && params.q.trim() !== '' ? { q: params.q } : {}),
             ...(params.filter != null ? { filter: params.filter } : {}),
@@ -558,10 +518,13 @@ export class AssetOperationsService {
             limit: params.limit ?? 50,
           },
           cache: false,
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(`获取资产单元列表失败: ${result.error}`, extractErrorCode(result));
+        throw new AssetOperationsError(
+          `获取资产单元列表失败: ${result.error}`,
+          extractErrorCode(result)
+        );
       }
       const payload = result.data ?? { items: [], total: 0 };
       return {
@@ -578,12 +541,14 @@ export class AssetOperationsService {
 
   async getAssetUnit(unitId: string): Promise<AssetUnitListItem> {
     try {
-      const result = await apiClient.get<RawUnitRecord>(
-        `${API_BASE}/asset-units/${unitId}`,
-        { cache: false },
-      );
+      const result = await apiClient.get<RawUnitRecord>(`${API_BASE}/asset-units/${unitId}`, {
+        cache: false,
+      });
       if (!result.success) {
-        throw new AssetOperationsError(`获取资产单元详情失败: ${result.error}`, extractErrorCode(result));
+        throw new AssetOperationsError(
+          `获取资产单元详情失败: ${result.error}`,
+          extractErrorCode(result)
+        );
       }
       return normalizeUnit(result.data ?? {});
     } catch (error) {
@@ -596,19 +561,19 @@ export class AssetOperationsService {
 
   async updateAssetUnit(
     unitId: string,
-    request: { expectedVersion: number; name?: string; address?: string },
+    request: { expectedVersion: number; name?: string; address?: string }
   ): Promise<AssetUnitListItem> {
     try {
-      const result = await apiClient.patch<RawUnitRecord>(
-        `${API_BASE}/asset-units/${unitId}`,
-        {
-          expected_version: request.expectedVersion,
-          ...(request.name != null ? { name: request.name } : {}),
-          ...(request.address != null ? { address: request.address } : {}),
-        },
-      );
+      const result = await apiClient.patch<RawUnitRecord>(`${API_BASE}/asset-units/${unitId}`, {
+        expected_version: request.expectedVersion,
+        ...(request.name != null ? { name: request.name } : {}),
+        ...(request.address != null ? { address: request.address } : {}),
+      });
       if (!result.success) {
-        throw new AssetOperationsError(`更新资产单元失败: ${result.error}`, extractErrorCode(result));
+        throw new AssetOperationsError(
+          `更新资产单元失败: ${result.error}`,
+          extractErrorCode(result)
+        );
       }
       return normalizeUnit(result.data ?? {});
     } catch (error) {
@@ -626,7 +591,7 @@ export class AssetOperationsService {
       q?: string;
       offset?: number;
       limit?: number;
-    } = {},
+    } = {}
   ): Promise<ContractListResult<UpstreamContractListItem>> {
     try {
       const result = await apiClient.get<{
@@ -634,15 +599,9 @@ export class AssetOperationsService {
         total: number;
       }>(`${API_BASE}/upstream-contracts`, {
         params: {
-          ...(params.contractType != null
-            ? { contract_type: params.contractType }
-            : {}),
-          ...(params.ownerPartyId != null
-            ? { owner_party_id: params.ownerPartyId }
-            : {}),
-          ...(params.q != null && params.q.trim() !== ''
-            ? { q: params.q }
-            : {}),
+          ...(params.contractType != null ? { contract_type: params.contractType } : {}),
+          ...(params.ownerPartyId != null ? { owner_party_id: params.ownerPartyId } : {}),
+          ...(params.q != null && params.q.trim() !== '' ? { q: params.q } : {}),
           offset: params.offset ?? 0,
           limit: params.limit ?? 50,
         },
@@ -651,7 +610,7 @@ export class AssetOperationsService {
       if (!result.success) {
         throw new AssetOperationsError(
           `获取上游合同列表失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       const payload = result.data ?? { items: [], total: 0 };
@@ -667,18 +626,16 @@ export class AssetOperationsService {
     }
   }
 
-  async getUpstreamContract(
-    contractId: string,
-  ): Promise<UpstreamContractDetail> {
+  async getUpstreamContract(contractId: string): Promise<UpstreamContractDetail> {
     try {
       const result = await apiClient.get<RawUnitRecord>(
         `${API_BASE}/upstream-contracts/${contractId}`,
-        { cache: false },
+        { cache: false }
       );
       if (!result.success) {
         throw new AssetOperationsError(
           `获取上游合同详情失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       return normalizeUpstream(result.data ?? {});
@@ -697,7 +654,7 @@ export class AssetOperationsService {
       q?: string;
       offset?: number;
       limit?: number;
-    } = {},
+    } = {}
   ): Promise<ContractListResult<TerminalContractListItem>> {
     try {
       const result = await apiClient.get<{
@@ -705,15 +662,11 @@ export class AssetOperationsService {
         total: number;
       }>(`${API_BASE}/terminal-contracts`, {
         params: {
-          ...(params.contractMode != null
-            ? { contract_mode: params.contractMode }
-            : {}),
+          ...(params.contractMode != null ? { contract_mode: params.contractMode } : {}),
           ...(params.upstreamContractId != null
             ? { upstream_contract_id: params.upstreamContractId }
             : {}),
-          ...(params.q != null && params.q.trim() !== ''
-            ? { q: params.q }
-            : {}),
+          ...(params.q != null && params.q.trim() !== '' ? { q: params.q } : {}),
           offset: params.offset ?? 0,
           limit: params.limit ?? 50,
         },
@@ -722,7 +675,7 @@ export class AssetOperationsService {
       if (!result.success) {
         throw new AssetOperationsError(
           `获取终端合同列表失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       const payload = result.data ?? { items: [], total: 0 };
@@ -738,18 +691,16 @@ export class AssetOperationsService {
     }
   }
 
-  async getTerminalContract(
-    contractId: string,
-  ): Promise<TerminalContractDetail> {
+  async getTerminalContract(contractId: string): Promise<TerminalContractDetail> {
     try {
       const result = await apiClient.get<RawUnitRecord>(
         `${API_BASE}/terminal-contracts/${contractId}`,
-        { cache: false },
+        { cache: false }
       );
       if (!result.success) {
         throw new AssetOperationsError(
           `获取终端合同详情失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       return normalizeTerminal(result.data ?? {});
@@ -763,7 +714,7 @@ export class AssetOperationsService {
 
   async createIntakeSession(
     contractType: ContractIntakeType,
-    file: File,
+    file: File
   ): Promise<ContractIntakeSession> {
     try {
       const formData = new FormData();
@@ -776,12 +727,12 @@ export class AssetOperationsService {
           headers: { 'Content-Type': 'multipart/form-data' },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
         throw new AssetOperationsError(
           `创建录入会话失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       return normalizeSession(result.data ?? {});
@@ -797,12 +748,12 @@ export class AssetOperationsService {
     try {
       const result = await apiClient.get<RawUnitRecord>(
         `${API_BASE}/contract-intake-sessions/${sessionId}`,
-        { cache: false },
+        { cache: false }
       );
       if (!result.success) {
         throw new AssetOperationsError(
           `读取录入会话失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       return normalizeSession(result.data ?? {});
@@ -817,7 +768,7 @@ export class AssetOperationsService {
   async confirmUpstreamIntake(
     sessionId: string,
     payload: ConfirmUpstreamPayload,
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<CreatedContractResult> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -827,12 +778,12 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
         throw new AssetOperationsError(
           `确认上游合同失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       const data = result.data ?? {};
@@ -852,7 +803,7 @@ export class AssetOperationsService {
   async confirmTerminalIntake(
     sessionId: string,
     payload: ConfirmTerminalPayload,
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<CreatedContractResult> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -862,12 +813,12 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
         throw new AssetOperationsError(
           `确认终端合同失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
       const data = result.data ?? {};
@@ -889,12 +840,12 @@ export class AssetOperationsService {
       const result = await apiClient.post<RawUnitRecord>(
         `${API_BASE}/contract-intake-sessions/${sessionId}/cancel`,
         {},
-        { retry: false, smartExtract: true },
+        { retry: false, smartExtract: true }
       );
       if (!result.success) {
         throw new AssetOperationsError(
           `取消录入会话失败: ${result.error}`,
-          extractErrorCode(result),
+          extractErrorCode(result)
         );
       }
     } catch (error) {
@@ -924,44 +875,35 @@ export class AssetOperationsService {
       handover_status: string;
       deposit_settlement_status: string;
       reason: string;
-    },
+    }
   ): Promise<TerminationPreview> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
         `${API_BASE}/terminal-contracts/${contractId}/termination/preview`,
         proposal,
-        { retry: false, smartExtract: true },
+        { retry: false, smartExtract: true }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `终止预览失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`终止预览失败: ${result.error}`, extractErrorCode(result));
       }
       const data = result.data ?? {};
-      const impacts = Array.isArray(data.coverage_impact)
-        ? data.coverage_impact
-        : [];
+      const impacts = Array.isArray(data.coverage_impact) ? data.coverage_impact : [];
       return {
         contractId: String(data.contract_id ?? contractId),
         contractVersion: Number(data.contract_version ?? 1),
         effectiveDate: String(data.effective_date ?? ''),
         lastValidDay: String(data.last_valid_day ?? ''),
-        coverageImpact: impacts.map((item) => {
+        coverageImpact: impacts.map(item => {
           const impact = item as RawUnitRecord;
           return {
             assetUnitId: String(impact.asset_unit_id ?? ''),
             effectiveFrom: String(impact.effective_from ?? ''),
             currentEffectiveTo:
-              impact.current_effective_to == null
-                ? null
-                : String(impact.current_effective_to),
+              impact.current_effective_to == null ? null : String(impact.current_effective_to),
             newEffectiveTo: String(impact.new_effective_to ?? ''),
           };
         }),
-        warnings: Array.isArray(data.warnings)
-          ? data.warnings.map(String)
-          : [],
+        warnings: Array.isArray(data.warnings) ? data.warnings.map(String) : [],
         previewToken: String(data.preview_token ?? ''),
         expiresAt: String(data.expires_at ?? ''),
       };
@@ -976,7 +918,7 @@ export class AssetOperationsService {
   async commitTerminalTermination(
     contractId: string,
     request: { preview_token: string; expected_version: number },
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<LifecycleEventRecord> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -986,13 +928,10 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `终止提交失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`终止提交失败: ${result.error}`, extractErrorCode(result));
       }
       return AssetOperationsService.toLifecycleEvent(result.data ?? {});
     } catch (error) {
@@ -1010,7 +949,7 @@ export class AssetOperationsService {
       effective_date: string;
       reason: string;
     },
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<LifecycleEventRecord> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -1020,13 +959,10 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `撤销终止失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`撤销终止失败: ${result.error}`, extractErrorCode(result));
       }
       return AssetOperationsService.toLifecycleEvent(result.data ?? {});
     } catch (error) {
@@ -1039,39 +975,32 @@ export class AssetOperationsService {
 
   async previewUpstreamExit(
     contractId: string,
-    proposal: { effective_date: string; reason: string },
+    proposal: { effective_date: string; reason: string }
   ): Promise<ExitPreview> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
         `${API_BASE}/upstream-contracts/${contractId}/exit/preview`,
         proposal,
-        { retry: false, smartExtract: true },
+        { retry: false, smartExtract: true }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `退出预览失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`退出预览失败: ${result.error}`, extractErrorCode(result));
       }
       const data = result.data ?? {};
-      const impacts = Array.isArray(data.coverage_impact)
-        ? data.coverage_impact
-        : [];
+      const impacts = Array.isArray(data.coverage_impact) ? data.coverage_impact : [];
       return {
         contractId: String(data.contract_id ?? contractId),
         contractVersion: Number(data.contract_version ?? 1),
         depositAmount: toNumber(data.deposit_amount),
         effectiveDate: String(data.effective_date ?? ''),
         lastValidDay: String(data.last_valid_day ?? ''),
-        coverageImpact: impacts.map((item) => {
+        coverageImpact: impacts.map(item => {
           const impact = item as RawUnitRecord;
           return {
             assetUnitId: String(impact.asset_unit_id ?? ''),
             effectiveFrom: String(impact.effective_from ?? ''),
             currentEffectiveTo:
-              impact.current_effective_to == null
-                ? null
-                : String(impact.current_effective_to),
+              impact.current_effective_to == null ? null : String(impact.current_effective_to),
             newEffectiveTo: String(impact.new_effective_to ?? ''),
           };
         }),
@@ -1089,7 +1018,7 @@ export class AssetOperationsService {
   async commitUpstreamExit(
     contractId: string,
     request: { preview_token: string; expected_version: number },
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<LifecycleEventRecord> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -1099,13 +1028,10 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `退出提交失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`退出提交失败: ${result.error}`, extractErrorCode(result));
       }
       return AssetOperationsService.toLifecycleEvent(result.data ?? {});
     } catch (error) {
@@ -1123,7 +1049,7 @@ export class AssetOperationsService {
       effective_date: string;
       reason: string;
     },
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<LifecycleEventRecord> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -1133,13 +1059,10 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `撤销退出失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`撤销退出失败: ${result.error}`, extractErrorCode(result));
       }
       return AssetOperationsService.toLifecycleEvent(result.data ?? {});
     } catch (error) {
@@ -1156,7 +1079,7 @@ export class AssetOperationsService {
       scan_document_id: string;
       scan_owner_id: string;
     },
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<RenewalResult> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -1166,13 +1089,10 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `登记续签失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`登记续签失败: ${result.error}`, extractErrorCode(result));
       }
       const data = result.data ?? {};
       return {
@@ -1194,7 +1114,7 @@ export class AssetOperationsService {
       scan_document_id: string;
       scan_owner_id: string;
     },
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<RenewalResult> {
     try {
       const result = await apiClient.post<RawUnitRecord>(
@@ -1204,13 +1124,10 @@ export class AssetOperationsService {
           headers: { 'Idempotency-Key': idempotencyKey },
           retry: false,
           smartExtract: true,
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(
-          `登记续签失败: ${result.error}`,
-          extractErrorCode(result),
-        );
+        throw new AssetOperationsError(`登记续签失败: ${result.error}`, extractErrorCode(result));
       }
       const data = result.data ?? {};
       return {
@@ -1232,23 +1149,24 @@ export class AssetOperationsService {
       expectedVersion: number;
       vacancyReason?: string;
       expectedLeaseStart?: string;
-    },
+    }
   ): Promise<AssetUnitListItem> {
     try {
       const result = await apiClient.put<RawUnitRecord>(
         `${API_BASE}/asset-units/${unitId}/vacancy-note`,
         {
           expected_version: request.expectedVersion,
-          ...(request.vacancyReason != null
-            ? { vacancy_reason: request.vacancyReason }
-            : {}),
+          ...(request.vacancyReason != null ? { vacancy_reason: request.vacancyReason } : {}),
           ...(request.expectedLeaseStart != null
             ? { expected_lease_start: request.expectedLeaseStart }
             : {}),
-        },
+        }
       );
       if (!result.success) {
-        throw new AssetOperationsError(`更新空置备注失败: ${result.error}`, extractErrorCode(result));
+        throw new AssetOperationsError(
+          `更新空置备注失败: ${result.error}`,
+          extractErrorCode(result)
+        );
       }
       return normalizeUnit(result.data ?? {});
     } catch (error) {

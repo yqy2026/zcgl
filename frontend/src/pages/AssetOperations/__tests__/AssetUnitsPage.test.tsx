@@ -5,16 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 import { AssetUnitsPage } from '../AssetUnitsPage';
-import {
-  assetOperationsService,
-  AssetOperationsError,
-} from '@/services/assetOperationsService';
+import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
 
-vi.mock(import('@/services/assetOperationsService'), async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import('@/services/assetOperationsService')
-  >();
+vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
+  const actual = await importOriginal<typeof import('@/services/assetOperationsService')>();
   return {
     ...actual,
     assetOperationsService: {
@@ -66,7 +61,7 @@ function renderPage(): void {
       <MemoryRouter initialEntries={['/asset-operations/units']}>
         <AssetUnitsPage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -101,15 +96,13 @@ describe('AssetUnitsPage', () => {
 
   it('shows the scope warning instead of treating 403 as empty', async () => {
     mockedService.listAssetUnits.mockRejectedValue(
-      new AssetOperationsError('获取资产单元列表失败', 'PARTY_SCOPE_MISSING'),
+      new AssetOperationsError('获取资产单元列表失败', 'PARTY_SCOPE_MISSING')
     );
 
     renderPage();
 
     await waitFor(() => {
-      expect(
-        screen.getByText('没有可访问的资产范围，请联系管理员配置数据范围。'),
-      ).toBeTruthy();
+      expect(screen.getByText('没有可访问的资产范围，请联系管理员配置数据范围。')).toBeTruthy();
     });
     expect(screen.queryByText('暂无资产单元')).toBeNull();
   });
@@ -141,9 +134,7 @@ describe('AssetUnitsPage', () => {
       total: 1,
     });
     mockedService.getAssetUnit.mockResolvedValue(makeUnit());
-    mockedService.updateAssetUnit.mockResolvedValue(
-      makeUnit({ name: '改名后的商铺', version: 3 }),
-    );
+    mockedService.updateAssetUnit.mockResolvedValue(makeUnit({ name: '改名后的商铺', version: 3 }));
     const user = userEvent.setup();
 
     renderPage();
