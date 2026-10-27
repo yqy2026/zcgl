@@ -23,7 +23,7 @@
 
 ### 3.1 工作台与资产单元
 
-2026-10-27 PR #95 合并门禁补充：`frontend/tests/e2e/asset-flow.spec.ts`、`frontend/tests/e2e/auth/organization-scope-isolation.spec.ts` 与 `frontend/tests/e2e/smoke/main-pages-render.spec.ts` 已迁移到 v5 生产路径；隔离用例通过 `backend/scripts/dev_seed_v5_walkthrough.py` 的两方真实资产验证授权范围，旧入口有明确 404 断言。当前静态检查通过，真实浏览器结果待本轮 CI；这不改变 REQ-UNT-001 的开发中状态。
+2026-10-27 PR #95 合并门禁补充：`frontend/tests/e2e/asset-flow.spec.ts`、`frontend/tests/e2e/auth/organization-scope-isolation.spec.ts` 与 `frontend/tests/e2e/smoke/main-pages-render.spec.ts` 已迁移到 v5 生产路径；隔离用例通过 `backend/scripts/dev_seed_v5_walkthrough.py` 的两方真实资产验证授权范围，旧入口有明确 404 断言。该阶段先完成静态检查；最终真实浏览器及完整 CI 已通过，证据见第 7 节复核记录。这不改变 REQ-UNT-001 的开发中状态。
 
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |
 |---|---|---|---|---|---|

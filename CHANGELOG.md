@@ -1,3 +1,5 @@
+- docs(asset-ops): 采纳最终文档复核建议，将追踪表早期“浏览器待 CI”阶段记录明确指向最终成功证据，避免与已完成的门禁状态混淆；需求状态不变。
+
 - docs(asset-ops): 归档后全仓引用复查补同步 menuConfig/AppRoutes 两处源码注释中的 V1 方案路径；无运行行为变化。
 
 - docs(asset-ops): 在 e6d463bf 完整 CI 九项实际执行全绿后归档本次 V1 交付方案，更新活跃/归档/复核索引和交接链接，补最终双轴复核及门禁证据。CI：后端单测 4151 passed / 23 skipped，前端 1405 passed，后端 E2E 36 passed，前端 E2E 35 passed 且零重试，集成 258 passed / 2 skipped，API 一致性通过；skip 不计通过，CodeQL 依仓库能力条件未执行。REQ-UNT-001 保持开发中，产品验收、目标环境数据切换和后续 V2–V5 未随本次方案归档宣告完成。
