@@ -1,3 +1,5 @@
+- fix(ci): 修复浏览器 35/35 通过后报告门禁仍失败的脚本配置。e2e:ci 的 --reporter=dot,json 会覆盖 Playwright 配置中的 JSON/JUnit/HTML 文件输出，只向 stdout 打印 JSON，导致重试率检查没有报告可读；移除 CLI reporter 覆盖，使用配置中的 reporter 和既定报告路径。无浏览器最小复现确认修改前测试退出 0 但缺少 JSON、重试门禁退出 1，修改后报告生成且门禁通过；保留重试率门禁，不吞错。
+
 - fix(asset-ops): 修复真实浏览器 E2E 捕获的上传重复请求。生产 QueryClient 默认 mutation 重试一次，服务层 retry:false 仅关闭 API 客户端重试；录入、终端续签和上游续签三个创建上传会话的 mutation 现均显式禁用重试。补齐上游续签上传失败 Alert，回归测试启用生产相同的 mutation 重试默认值，先复现三处重复调用再验证错误可见、单次上传、不推进步骤或创建续签。定向 10 项、类型、格式和 lint 通过；保留单次 POST 的浏览器断言，等待完整 CI 验证。
 
 - test(asset-ops): 根据 PR #95 第二轮 CI 的页面快照，修正两条非法文件上传 E2E 的错误提示假设；保留 422、停留上传步骤和单次请求断言，新增 VALIDATION_ERROR、extension_not_allowed 与页面展示服务端错误消息的验证。该轮其余 33 条浏览器用例、前后端单测及后端 E2E 已通过，待新提交完整 CI 复核。
