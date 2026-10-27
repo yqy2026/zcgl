@@ -235,7 +235,7 @@
 ---
 
 ## 🔍 Evidence Sources
-- **项目信息**: `CLAUDE.md`, `openspec/project.md`
+- **项目信息**: `AGENTS.md`, `openspec/project.md`
 - **技术架构**: `frontend/package.json`, `backend/pyproject.toml`
 - **服务配置**: `docker-compose.yml`
 - **API结构**: `backend/src/api/v1/` 目录
