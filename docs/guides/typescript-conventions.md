@@ -22,10 +22,10 @@
 | **默认值** | `value \|\| default` | `value ?? default` |
 | **空值检查** | `if (value)` | `if (value != null)` |
 | **对象检查** | `if (obj)` | `if (obj != null)` |
-| **字符串检查** | `if (str)` | `if (str?.trim() !== '')` |
+| **字符串检查** | `if (str)`、`if (str?.trim() !== '')` | `if (str != null && str.trim() !== '')` |
 | **布尔比较** | `if (bool)` | `if (bool === true)` |
 | **数字零值** | `if (num)` | `if (num != null && num > 0)` |
-| **数组长度** | `arr.length` | `arr?.length ?? 0` |
+| **非空数组** | `if (arr.length)` | `if ((arr?.length ?? 0) > 0)` |
 
 ---
 
@@ -64,14 +64,19 @@ function formatAmount(value: number | undefined): string {
 ### 3. 字符串验证
 
 ```typescript
-// ✅ 正确 - 显式检查
-if (searchTerm?.trim() !== '') {
+// ✅ 正确 - 先判空再 trim
+if (searchTerm != null && searchTerm.trim() !== '') {
   performSearch(searchTerm.trim());
 }
 
 // ❌ 错误
 if (searchTerm) {  // 可能匹配空字符串 " "
   performSearch(searchTerm);
+}
+
+// ❌ 错误 - searchTerm 为 null/undefined 时 `undefined !== ''` 为 true，进入分支后 searchTerm.trim() 抛 TypeError
+if (searchTerm?.trim() !== '') {
+  performSearch(searchTerm.trim());
 }
 ```
 
