@@ -138,6 +138,49 @@ async def test_get_capabilities_should_include_rbac_permission_when_abac_policy_
     assert project_capability.perspectives == ["manager"]
 
 
+async def test_get_capabilities_exposes_asset_ops_business_actions_and_scope() -> None:
+    db = MagicMock()
+    context_builder = MagicMock()
+    context_builder.build_subject_context = AsyncMock(
+        return_value=SubjectContext(
+            user_id="user-1",
+            owner_party_ids=["owner-party-1"],
+            manager_party_ids=[],
+            role_ids=["role-1"],
+        )
+    )
+    authz_crud = MagicMock()
+    authz_crud.get_policies_by_role_ids = AsyncMock(return_value=[])
+    service = AuthzService(
+        context_builder=context_builder,
+        authz_crud=authz_crud,
+    )
+
+    with (
+        patch.object(
+            service,
+            "_get_user_role_summary",
+            new=AsyncMock(return_value={"role_ids": ["role-1"], "is_admin": False}),
+        ),
+        patch.object(
+            service,
+            "_get_static_rbac_actions",
+            new=AsyncMock(
+                return_value={
+                    "asset_ops": {"read", "write", "report", "archive", "import"}
+                }
+            ),
+        ),
+    ):
+        result = await service.get_capabilities(db, user_id="user-1")
+
+    capability = next(
+        item for item in result.capabilities if item.resource == "asset_ops"
+    )
+    assert capability.actions == ["archive", "import", "read", "report", "write"]
+    assert capability.perspectives == ["owner"]
+
+
 async def test_check_access_should_fallback_to_rbac_when_abac_rule_missing() -> None:
     db = MagicMock()
     context_builder = MagicMock()

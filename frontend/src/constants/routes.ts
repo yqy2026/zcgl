@@ -29,6 +29,16 @@ export const PROTOTYPE_ROUTES = {
   ASSET_OPERATIONS: '/prototype/asset-operations',
 } as const;
 
+// 资产运营 v5 生产路由（V1 纵向切片）
+export const ASSET_OPERATIONS_V5_ROUTES = {
+  UNITS: '/asset-operations/units',
+  UPSTREAM_CONTRACTS: '/asset-operations/contracts/upstream',
+  INTAKE: '/asset-operations/contracts/intake',
+  TERMINAL_CONTRACTS: '/asset-operations/contracts/terminal',
+  TERMINAL_ACTIONS: '/asset-operations/contracts/terminal/:contractId/actions',
+  UPSTREAM_ACTIONS: '/asset-operations/contracts/upstream/:contractId/actions',
+} as const;
+
 // 资产资源路由
 export const ASSET_ROUTES = {
   LIST: '/assets/list',

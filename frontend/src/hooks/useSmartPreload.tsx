@@ -188,9 +188,7 @@ class SmartPreloadManager {
   private getPreloadFunction(route: string): PreloadFunction | null {
     // 预加载函数映射
     const preloadFunctions: Record<string, PreloadFunction> = {
-      '/dashboard': () => import('../pages/Dashboard/DashboardPage'),
-      '/assets/list': () => import('../pages/Assets/AssetListPage'),
-      '/assets/new': () => import('../pages/Assets/AssetCreatePage'),
+      '/asset-operations/units': () => import('../pages/AssetOperations/AssetUnitsPage'),
       '/system/users': () => import('../pages/System/UserManagement'),
       '/system/roles': () => import('../pages/System/RoleManagement'),
     };

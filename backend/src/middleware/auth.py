@@ -3,7 +3,7 @@
 """
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import jwt as jwt
@@ -11,7 +11,7 @@ from fastapi import Cookie, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.environment import is_production as is_production
-from ..core.exception_handler import forbidden
+from ..core.exception_handler import BaseBusinessError, forbidden
 from ..database import get_async_db
 from ..models.auth import User
 from ..schemas.auth import TokenData
@@ -183,6 +183,7 @@ def require_authz(
     resource_context: Mapping[str, Any] | ResourceContextResolver | None = None,
     *,
     deny_as_not_found: bool = False,
+    denial_error_factory: Callable[[], BaseBusinessError] | None = None,
 ) -> AuthzPermissionChecker:
     """ABAC 鉴权依赖工厂。"""
     return AuthzPermissionChecker(
@@ -191,6 +192,7 @@ def require_authz(
         resource_id=resource_id,
         resource_context=resource_context,
         deny_as_not_found=deny_as_not_found,
+        denial_error_factory=denial_error_factory,
         authz_service_client=authz_service,
         log=logger,
     )

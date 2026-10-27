@@ -1,0 +1,42 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(17.5rem, 1fr);
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detailCard {
+  position: sticky;
+  top: var(--spacing-lg);
+}
+
+.fieldRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: 0.25rem 0;
+  font-size: 13rem;
+}
+
+.fieldLabel {
+  color: var(--color-text-secondary, #646a73);
+  white-space: nowrap;
+}
+
+.fieldValue {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: anywhere;
+}

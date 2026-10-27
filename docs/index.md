@@ -18,6 +18,7 @@
 - [系统架构概览](architecture/system-overview.md)
 - [数据库设计基线](architecture/database-design.md)
 - [架构决策记录索引](architecture/README.md)
+- [ADR-0028: 资产运营 v5 工作台边界](architecture/ADR-0028-asset-operations-v5-workbench-boundary.md)
 - [ADR-0022: Organization 与 Party 正交及主体范围单一解析](architecture/ADR-0022-organization-party-scope-boundary.md)
 - [ADR-0001: Party-Role 历史架构](architecture/ADR-0001-party-role-architecture.md)
 
@@ -58,6 +59,7 @@
 
 ### 设计资产
 - [设计资产索引](design/README.md)
+- [资产运营 v5 可点击原型](../frontend/prototype/asset-ops-v5.html)
 - [项目主轴资产运营 UI 图](design/ui-mockups/2026-05-16-project-main-axis/README.md)
 
 ### 方案设计

@@ -136,6 +136,29 @@ describe('themeConfig ↔ variables.css 同值（单一真相源）', () => {
   });
 });
 
+describe('资产运营 v5 视觉基线', () => {
+  it('使用中文系统字体栈，不引入 Inter', () => {
+    const cssFontFamily = resolveToken('font-family-base');
+    const antdFontFamily = String(baseThemeConfig.token?.fontFamily ?? '');
+
+    for (const fontFamily of [cssFontFamily, antdFontFamily]) {
+      expect(fontFamily).not.toContain('Inter');
+      expect(fontFamily).toContain('PingFang SC');
+      expect(fontFamily).toContain('Microsoft YaHei');
+      expect(fontFamily).toContain('Noto Sans SC');
+    }
+  });
+
+  it('静态卡片只用描边分层，不使用阴影', () => {
+    expect(resolveToken('card-shadow')).toBe('none');
+    expect(baseThemeConfig.components?.Card?.boxShadow).toBe('none');
+  });
+
+  it('状态 Tag 使用 sm 方角，胶囊形仅留给 Badge', () => {
+    expect(globalCssSource).toMatch(/\.ant-tag\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/s);
+  });
+});
+
 describe('图表色板感知距离', () => {
   it('CHART_LABEL_COLORS 字面值与对应 token 严格一致（G2 label fill 不支持 var()）', () => {
     expect(CHART_LABEL_COLORS.light).toBe(resolveToken('color-bg-primary'));

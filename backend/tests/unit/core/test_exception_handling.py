@@ -125,24 +125,25 @@ class TestAPIExceptionHandling:
     """测试API层异常处理"""
 
     @patch(
-        "src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock
+        "src.api.v1.asset_units.asset_operations_query_service.list_asset_units",
+        new_callable=AsyncMock,
     )
     @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)
     def test_api_propagates_business_exceptions(
         self,
         mock_is_admin,
-        mock_get_asset,
+        mock_list_units,
         client,
     ):
         """测试API层业务异常保持契约语义"""
         mock_is_admin.return_value = True
-        mock_get_asset.side_effect = BusinessValidationError(
+        mock_list_units.side_effect = BusinessValidationError(
             "资产ID格式不正确",
             field_errors={"asset_id": ["invalid"]},
         )
 
         response = client.get(
-            "/api/v1/assets/non_existent_id",
+            "/api/v1/asset-units",
             headers={"X-Perspective": "owner"},
         )
 
@@ -153,23 +154,25 @@ class TestAPIExceptionHandling:
         assert data["error"]["message"] == "资产ID格式不正确"
 
     @patch(
-        "src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock
+        "src.api.v1.asset_units.asset_operations_query_service.list_asset_units",
+        new_callable=AsyncMock,
     )
     @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)
     def test_api_general_exception_masked_as_internal_error(
-        self, mock_is_admin, mock_get_asset, client
+        self, mock_is_admin, mock_list_units, client
     ):
         """测试API层通用异常会走错误恢复中间件契约"""
         mock_is_admin.return_value = True
-        mock_get_asset.side_effect = RuntimeError("database unavailable")
+        mock_list_units.side_effect = RuntimeError("database unavailable")
 
         response = client.get(
-            "/api/v1/assets/non_existent_id",
+            "/api/v1/asset-units",
             headers={"X-Perspective": "owner"},
         )
 
-        assert response.status_code == 503
+        # v5 端点经 internal_error 缝隙统一掩码为 500 INTERNAL_ERROR；
+        # 恢复中间件的 503 DATABASE_ERROR 契约由 middleware 层测试覆盖
+        assert response.status_code == 500
         data = response.json()
         assert data["success"] is False
-        assert data["error"]["code"] == "DATABASE_ERROR"
-        assert data["error"]["message"] == "database unavailable"
+        assert data["error"]["code"] == "INTERNAL_SERVER_ERROR"

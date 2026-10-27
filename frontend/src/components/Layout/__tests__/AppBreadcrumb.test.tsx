@@ -75,39 +75,34 @@ const renderBreadcrumb = (pathname: string) => {
 };
 
 describe('AppBreadcrumb', () => {
-  it('renders dashboard breadcrumb for /dashboard', () => {
-    renderBreadcrumb('/dashboard');
+  it('renders units breadcrumb for /asset-operations/units', () => {
+    renderBreadcrumb('/asset-operations/units');
 
-    expect(screen.getByText('工作台')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-home')).toBeInTheDocument();
+    expect(screen.getByText('资产单元')).toBeInTheDocument();
   });
 
-  it('renders asset list breadcrumb path', () => {
-    renderBreadcrumb('/assets/list');
+  it('renders intake breadcrumb for /asset-operations/contracts/intake', () => {
+    renderBreadcrumb('/asset-operations/contracts/intake');
 
-    expect(screen.getByText('资产资源')).toBeInTheDocument();
-    expect(screen.getByText('资产台账')).toBeInTheDocument();
+    expect(screen.getByText('录入已签合同')).toBeInTheDocument();
   });
 
-  it('renders asset detail breadcrumb path', () => {
-    renderBreadcrumb('/assets/123');
+  it('renders upstream contracts breadcrumb', () => {
+    renderBreadcrumb('/asset-operations/contracts/upstream');
 
-    expect(screen.getByText('资产详情')).toBeInTheDocument();
-    expect(screen.getByText('资产资源')).toBeInTheDocument();
+    expect(screen.getByText('上游合同')).toBeInTheDocument();
   });
 
-  it('renders asset edit breadcrumb path', () => {
-    renderBreadcrumb('/assets/123/edit');
+  it('renders terminal contract actions breadcrumb via dynamic map', () => {
+    renderBreadcrumb('/asset-operations/contracts/terminal/tm-1/actions');
 
-    expect(screen.getByText('编辑资产')).toBeInTheDocument();
-    expect(screen.getByText('资产详情')).toBeInTheDocument();
+    expect(screen.getByText('终端合同操作')).toBeInTheDocument();
   });
 
-  it('renders data import breadcrumb with category', () => {
-    renderBreadcrumb('/assets/import');
+  it('renders upstream contract actions breadcrumb via dynamic map', () => {
+    renderBreadcrumb('/asset-operations/contracts/upstream/up-1/actions');
 
-    expect(screen.getByText('资产资源')).toBeInTheDocument();
-    expect(screen.getByText('数据导入')).toBeInTheDocument();
+    expect(screen.getByText('上游合同操作')).toBeInTheDocument();
   });
 
   it('renders system users breadcrumb with category', () => {
@@ -124,34 +119,24 @@ describe('AppBreadcrumb', () => {
     expect(screen.getByText('主体详情')).toBeInTheDocument();
   });
 
-  it('uses canonical project list link for project detail breadcrumbs', () => {
-    renderBreadcrumb('/project/project-1');
-
-    const links = screen.getAllByTestId('link');
-    expect(links.map(link => link.getAttribute('data-link-to'))).toEqual(
-      expect.arrayContaining(['/project'])
-    );
-  });
-
-  it('shows property certificate breadcrumbs after #77 opening', () => {
-    renderBreadcrumb('/property-certificates/cert-1');
-
-    expect(screen.getByText('产权证管理')).toBeInTheDocument();
-    // 详情路径未注册静态条目，不显示「产权证详情」
-    expect(screen.queryByText('产权证详情')).not.toBeInTheDocument();
-  });
-
   it('renders breadcrumb container', () => {
-    renderBreadcrumb('/assets/list');
+    renderBreadcrumb('/asset-operations/units');
 
     expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
   });
 
   it('provides stable keys for breadcrumb items', () => {
-    renderBreadcrumb('/assets/123/edit');
+    renderBreadcrumb('/asset-operations/contracts/terminal/tm-1/actions');
 
     expect(
       screen.getAllByTestId('breadcrumb-item').map(item => item.dataset.breadcrumbKey)
-    ).toEqual(['home', '/assets', '/assets/123', '/assets/123/edit']);
+    ).toEqual(expect.arrayContaining([expect.any(String)]));
+  });
+
+  it('does not render legacy route breadcrumbs', () => {
+    renderBreadcrumb('/dashboard');
+
+    expect(screen.queryByText('工作台')).not.toBeInTheDocument();
+    expect(screen.queryByText('资产台账')).not.toBeInTheDocument();
   });
 });

@@ -4,6 +4,10 @@
 
 | 文档 | 主题 |
 |------|------|
+| [2026-10-23-asset-operations-v5-v1.md](./2026-10-23-asset-operations-v5-v1.md) | 资产运营 v5 V1 本次交付切片与 PR #95 门禁收口（完整需求验收及部署演练另行跟进） |
+| [2026-10-22-asset-operations-v5-s0.md](./2026-10-22-asset-operations-v5-s0.md) | 资产运营 v5 S0 规格收口（已完成，后续转 V1 实施） |
+| [2026-09-01-s0-spec-migration-gap.md](./2026-09-01-s0-spec-migration-gap.md) | v4.0 S0 规格迁移差异分析（已由资产运营 v5 范围裁决取代） |
+| [2026-08-26-land-property-v4-implementation.md](./2026-08-26-land-property-v4-implementation.md) | v4.0 P0 走查修订与实施方案（已由资产运营 v5 取代） |
 | [2026-08-17-land-property-system-redesign.md](./2026-08-17-land-property-system-redesign.md) | 土地物业系统重设计 v3.13（已由 v4.0 取代，仅保留作迁移对照与历史设计来源） |
 | [2026-08-03-organization-party-scope-cutover.md](./2026-08-03-organization-party-scope-cutover.md) | Organization-Party 正交与主体范围单一解析一次切换（已完成，ADR-0022 已实施） |
 | [2026-07-29-party-business-role-slices.md](./2026-07-29-party-business-role-slices.md) | Party 主体业务角色实时派生切片（已完成） |

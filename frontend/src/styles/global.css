@@ -109,6 +109,8 @@ select:focus-visible {
 /* Unified card rhythm */
 .ant-card:not(.ant-card-small) {
   border-radius: var(--card-radius);
+  border-color: var(--color-border-light);
+  box-shadow: none;
 }
 
 .ant-card:not(.ant-card-small) .ant-card-head {
@@ -168,6 +170,12 @@ select:focus-visible {
   font-feature-settings: 'tnum';
 }
 
+.ant-tag {
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
 /* Tag 文字对比度修正：AntD 预置/状态 Tag 用 -6/-7 基色当文字，浅底上不足 WCAG AA（4.5:1） */
 .ant-tag.ant-tag-blue:not(.ant-tag-disabled) {
   color: var(--color-blue-text);
@@ -220,11 +228,21 @@ select:focus-visible {
 .ant-table-thead > tr > th {
   padding-top: var(--table-cell-padding-sm);
   padding-bottom: var(--table-cell-padding-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
 }
 
 .ant-table-tbody > tr > td {
   padding-top: var(--table-cell-padding-sm);
   padding-bottom: var(--table-cell-padding-sm);
+}
+
+.ant-table-tbody > tr.ant-table-row-selected > td {
+  background: var(--color-primary-light);
+}
+
+.ant-table-tbody > tr.ant-table-row-selected > td:first-child {
+  box-shadow: inset var(--focus-ring-width) 0 0 var(--color-primary);
 }
 
 /* Skip to main content link (for keyboard users) */

@@ -73,8 +73,7 @@ def test_legacy_contract_service_modules_should_be_retired() -> None:
     assert not hasattr(models, "Rent" + "Term")
     assert not hasattr(models, "Rent" + "Ledger")
     assert not hasattr(models, legacy_contract_assets_name)
-    assert not hasattr(models, "ContractType")
-    assert not hasattr(models, "PaymentCycle")
+    # ContractType/PaymentCycle 等通用名已由 v5 资产运营模型合法复用，不再断言
     assert not hasattr(schemas, "Rent" + "ContractCreate")
     assert not hasattr(schemas, "Rent" + "TermCreate")
     assert not hasattr(schemas, "Rent" + "LedgerCreate")

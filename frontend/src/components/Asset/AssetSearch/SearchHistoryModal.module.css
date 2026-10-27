@@ -1,8 +1,0 @@
-.editNameInput {
-  width: calc(var(--button-height-lg) * 5);
-}
-
-.clearHistoryWrapper {
-  text-align: center;
-  margin-top: var(--spacing-lg);
-}

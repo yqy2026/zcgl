@@ -141,7 +141,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       errorInfo: null,
       retryCount: 0,
     });
-    window.location.href = '/dashboard';
+    window.location.href = '/asset-operations/units';
   };
 
   private canRetry = () => {
@@ -192,7 +192,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
       window.history.back();
     } else {
       // 没有历史记录时，导航到首页
-      window.location.href = '/dashboard';
+      window.location.href = '/asset-operations/units';
     }
   };
 
@@ -347,19 +347,22 @@ export const useErrorHandler = () => {
  * 注意：此 Hook 需要在 Router 上下文中使用
  */
 export const useRouterErrorBoundary = () => {
-  const handleError = useCallback((error: Error, fallbackPath: string = '/dashboard') => {
-    console.error('路由错误:', error);
+  const handleError = useCallback(
+    (error: Error, fallbackPath: string = '/asset-operations/units') => {
+      console.error('路由错误:', error);
 
-    // 根据错误类型决定处理方式
-    if (error.name === 'ChunkLoadError') {
-      // 资源加载错误，刷新页面
-      window.location.reload();
-    } else {
-      // 其他错误，使用 window.location 导航到安全页面
-      // 这样即使在 Router 上下文之外也能工作
-      window.location.href = fallbackPath;
-    }
-  }, []);
+      // 根据错误类型决定处理方式
+      if (error.name === 'ChunkLoadError') {
+        // 资源加载错误，刷新页面
+        window.location.reload();
+      } else {
+        // 其他错误，使用 window.location 导航到安全页面
+        // 这样即使在 Router 上下文之外也能工作
+        window.location.href = fallbackPath;
+      }
+    },
+    []
+  );
 
   return { handleError };
 };

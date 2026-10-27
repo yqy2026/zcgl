@@ -885,6 +885,20 @@ jobs:
                     ),
                     await ensure_permission(
                         db,
+                        resource="asset_ops",
+                        action="read",
+                        display_name="查看资产运营",
+                        description="Frontend E2E 资产单元与合同链读取",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="asset_ops",
+                        action="write",
+                        display_name="维护资产运营",
+                        description="Frontend E2E 合同录入与生命周期操作",
+                    ),
+                    await ensure_permission(
+                        db,
                         resource="asset",
                         action="read",
                         display_name="读取资产",
@@ -942,15 +956,16 @@ jobs:
                 ]
                 for permission in required_permissions:
                     await ensure_role_permission(db, admin_role.id, permission.id)
-                # org-scope-isolation 前置（issue #92 / Q10）：角色候选要求「非 admin
-                # 且带 asset read」——user 角色挂上 asset read，否则 fail-loud 会在 CI
-                # 上显式失败（此前静默 skip 掩盖了这个缺口）。
-                asset_read_permission = next(
+                # org-scope-isolation 前置：角色候选要求「非 admin 且带
+                # asset_ops read」，否则 v5 Party scope 用例必须失败而非静默跳过。
+                asset_ops_read_permission = next(
                     p
                     for p in required_permissions
-                    if p.resource == "asset" and p.action == "read"
+                    if p.resource == "asset_ops" and p.action == "read"
                 )
-                await ensure_role_permission(db, regular_role.id, asset_read_permission.id)
+                await ensure_role_permission(
+                    db, regular_role.id, asset_ops_read_permission.id
+                )
                 e2e_party = await ensure_e2e_party(db)
                 # 组织需代表一个 Party 才能解析出有效 Party scope（user organization transfer 前提）
                 if organization.represented_party_id is None:
@@ -985,6 +1000,11 @@ jobs:
 
         asyncio.run(main())
         PY
+
+    - name: Seed v5 asset operations facts for E2E
+      run: |
+        cd backend
+        V5_WALKTHROUGH_PASSWORD="$E2E_ADMIN_PASSWORD" uv run --frozen --extra dev python scripts/dev_seed_v5_walkthrough.py
 
     - name: Start backend server
       run: |
@@ -1126,13 +1146,12 @@ jobs:
         EOF
 
   # ===========================
-  # Integration Tests (main branch only)
+  # Integration Tests (all pipeline events)
   # ===========================
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, backend-e2e, frontend-e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
@@ -1200,7 +1219,6 @@ jobs:
         export REDIS_URL=redis://localhost:6379/0
         export ENVIRONMENT=testing
         uv run pytest tests/integration/ -v --no-cov
-        # REMOVED || true - integration tests should pass on main branch
 
     - name: Upload integration test results
       uses: actions/upload-artifact@v7
@@ -1218,7 +1236,7 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [backend-test, backend-e2e, frontend-test, frontend-e2e, api-consistency]
+    needs: [backend-lint, frontend-lint, backend-test, backend-e2e, frontend-test, frontend-e2e, api-consistency, integration]
     if: always()
 
     steps:
@@ -1243,6 +1261,7 @@ jobs:
         echo "| Frontend Tests | ${{ needs.frontend-test.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Frontend E2E Tests | ${{ needs.frontend-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| API Consistency | ${{ needs.api-consistency.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | ${{ needs.integration.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## 📊 Coverage Targets" >> $GITHUB_STEP_SUMMARY
         echo "- Backend Target: ${{ env.BACKEND_COVERAGE_THRESHOLD }}% (documented standard)" >> $GITHUB_STEP_SUMMARY
@@ -1255,3 +1274,20 @@ jobs:
         echo "- ✅ Security checks **blocking** (Bandit)" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ API consistency **blocking** (critical issues)" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Zero tolerance for new issues" >> $GITHUB_STEP_SUMMARY
+
+    - name: Require every pipeline job to succeed
+      env:
+        JOB_RESULTS: ${{ toJSON(needs) }}
+      run: |
+        python - <<'PY'
+        import json
+        import os
+        import sys
+
+        results = json.loads(os.environ["JOB_RESULTS"])
+        failures = {name: job["result"] for name, job in results.items() if job["result"] != "success"}
+        if failures:
+            print(f"Required pipeline jobs did not succeed: {failures}")
+            sys.exit(1)
+        print("All required pipeline jobs executed and succeeded")
+        PY

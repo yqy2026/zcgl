@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exception_handler import forbidden, not_found
+from ..core.exception_handler import BaseBusinessError, forbidden, not_found
 from ..database import get_async_db
 from ..models.auth import User
 from ..services.authz import authz_service as default_authz_service
@@ -54,6 +54,7 @@ class AuthzPermissionChecker:
         resource_id: str | ResourceIdResolver | None = None,
         resource_context: Mapping[str, Any] | ResourceContextResolver | None = None,
         deny_as_not_found: bool = False,
+        denial_error_factory: Callable[[], BaseBusinessError] | None = None,
         authz_service_client: Any = default_authz_service,
         log: logging.Logger | None = None,
     ) -> None:
@@ -64,6 +65,7 @@ class AuthzPermissionChecker:
         self.resource_id = resource_id
         self.resource_context = resource_context
         self.deny_as_not_found = deny_as_not_found
+        self.denial_error_factory = denial_error_factory
 
     async def __call__(
         self,
@@ -122,6 +124,8 @@ class AuthzPermissionChecker:
                     resource_type=self.resource_type,
                     resource_id=resolved_resource_id,
                 )
+            if self.denial_error_factory is not None:
+                raise self.denial_error_factory()
             raise forbidden("权限不足")
 
         return AuthzContext(

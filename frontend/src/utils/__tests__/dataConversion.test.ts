@@ -91,6 +91,29 @@ describe('convertBackendToFrontend', () => {
       expect(result.total_due_amount).toBe(25000.1);
     });
 
+    it('应该通过统一入口转换资产运营 v5 Decimal 字段', () => {
+      const data = {
+        building_area: '90.50',
+        deposit_amount: '12000.00',
+        management_fee_rate: '0.035',
+        base_monthly_rent: '8000.00',
+        increase_rate: '0.05',
+        discount_amount: '100.00',
+        actual_monthly_rent: '7900.00',
+      };
+      const result = convertBackendToFrontend<Record<string, number>>(data);
+
+      expect(result).toEqual({
+        building_area: 90.5,
+        deposit_amount: 12000,
+        management_fee_rate: 0.035,
+        base_monthly_rent: 8000,
+        increase_rate: 0.05,
+        discount_amount: 100,
+        actual_monthly_rent: 7900,
+      });
+    });
+
     it('应该保持非 Decimal 字段不变', () => {
       const data = { name: 'Test Asset', status: 'active' };
       const result = convertBackendToFrontend(data);

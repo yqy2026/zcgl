@@ -13,6 +13,10 @@ AuthzAction = Literal[
     "delete",
     "export",
     "manage_party_scope",
+    "write",
+    "report",
+    "archive",
+    "import",
 ]
 BindingType = Literal["owner", "manager"]
 ScopeMode = Literal["owner", "manager", "all"]

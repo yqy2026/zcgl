@@ -30,10 +30,8 @@ class TestRouteTrailingSlashContract:
         [
             ("/api/v1/notifications", 401),
             ("/api/v1/organizations", 401),
-            ("/api/v1/projects", 401),
             ("/api/v1/tasks", 401),
             ("/api/v1/ownerships", 404),
-            ("/api/v1/property-certificates", 401),
             ("/api/v1/defects", 404),
         ],
     )
@@ -53,9 +51,7 @@ class TestRouteTrailingSlashContract:
         [
             "/api/v1/notifications",
             "/api/v1/organizations",
-            "/api/v1/projects",
             "/api/v1/tasks",
-            "/api/v1/property-certificates",
         ],
     )
     def test_trailing_slash_redirects_to_canonical(
@@ -74,9 +70,7 @@ class TestRouteTrailingSlashContract:
     @pytest.mark.parametrize(
         "route_path",
         [
-            "/api/v1/projects",
             "/api/v1/organizations",
-            "/api/v1/property-certificates",
             "/api/v1/tasks",
         ],
     )

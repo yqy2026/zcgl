@@ -133,6 +133,9 @@ TEST_USER_ROLE_ASSIGNMENTS = [
 ]
 
 BASIC_PERMISSIONS_DATA = [
+    # 资产运营权限（v5）
+    ("asset_ops", "read", "查看资产运营", "查看资产单元与合同链"),
+    ("asset_ops", "write", "维护资产运营", "登记合同、终止退出续签与单元编辑"),
     # 资产管理权限
     ("asset", "read", "查看资产", "查看资产基本信息"),
     ("asset", "create", "创建资产", "创建新资产"),

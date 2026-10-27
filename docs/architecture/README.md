@@ -32,11 +32,12 @@
 | ADR-0020 | [ADR-0020-party-identity-history-stability.md](./ADR-0020-party-identity-history-stability.md) | 主体历史身份稳定性：MVP 不合并主体（去重=建档查重）+ 合同对手方名称定稿固化快照，当前身份 live / 历史引用冻结 | 🟡 已决策待实施 |
 | ADR-0021 | [ADR-0021-party-business-role-slices-derived.md](./ADR-0021-party-business-role-slices-derived.md) | 主体业务角色按当前有效资产、项目和合同关系实时派生 | ✅ 已实施 |
 | ADR-0022 | [ADR-0022-organization-party-scope-boundary.md](./ADR-0022-organization-party-scope-boundary.md) | Organization 与 Party 正交，组织默认范围继承与用户主体范围统一解析 | 🟡 已决策待实施 |
-| ADR-0023 | [ADR-0023-signed-instrument-project-operating-records.md](./ADR-0023-signed-instrument-project-operating-records.md) | 一份签署文书与多个项目经营记录分层 | 已接受 |
-| ADR-0024 | [ADR-0024-terminal-contract-authority-validation.md](./ADR-0024-terminal-contract-authority-validation.md) | 终端合同生效前验证并冻结出租授权 | 已接受 |
-| ADR-0025 | [ADR-0025-external-contract-approval-evidence.md](./ADR-0025-external-contract-approval-evidence.md) | 使用外部合同审批证据，不建设第二套 BPM | 已接受 |
-| ADR-0026 | [ADR-0026-collection-account-and-cases.md](./ADR-0026-collection-account-and-cases.md) | 欠费账户与多次催收案件分离 | 已接受 |
-| ADR-0027 | [ADR-0027-agency-fee-reconciliation-statement.md](./ADR-0027-agency-fee-reconciliation-statement.md) | 双方盖章对账单确定代理费应收，服务费实收独立登记 | 已接受 |
+| ADR-0023 | [ADR-0023-signed-instrument-project-operating-records.md](./ADR-0023-signed-instrument-project-operating-records.md) | 一份签署文书与多个项目经营记录分层 | 已被 ADR-0028 取代 |
+| ADR-0024 | [ADR-0024-terminal-contract-authority-validation.md](./ADR-0024-terminal-contract-authority-validation.md) | 终端合同生效前验证并冻结出租授权 | 已被 ADR-0028 取代 |
+| ADR-0025 | [ADR-0025-external-contract-approval-evidence.md](./ADR-0025-external-contract-approval-evidence.md) | 使用外部合同审批证据，不建设第二套 BPM | 已被 ADR-0028 取代 |
+| ADR-0026 | [ADR-0026-collection-account-and-cases.md](./ADR-0026-collection-account-and-cases.md) | 欠费账户与多次催收案件分离 | 已被 ADR-0028 取代 |
+| ADR-0027 | [ADR-0027-agency-fee-reconciliation-statement.md](./ADR-0027-agency-fee-reconciliation-statement.md) | 双方盖章对账单确定代理费应收，服务费实收独立登记 | 已被 ADR-0028 收窄 |
+| ADR-0028 | [ADR-0028-asset-operations-v5-workbench-boundary.md](./ADR-0028-asset-operations-v5-workbench-boundary.md) | 资产运营 v5 以单一业务岗和事后登记为产品边界 | 已接受；取代 ADR-0023～0026，收窄 ADR-0027 |
 
 ## 当前架构基线
 

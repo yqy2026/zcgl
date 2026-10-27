@@ -1,43 +1,31 @@
 import { expect, test } from '@playwright/test';
 import { ensureAuthenticated } from './helpers/auth';
 
-test.describe('Asset Management Flow', () => {
+test.describe('@asset-operations asset unit flow', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
   });
 
-  test('should load list and support keyword search', async ({ page }) => {
-    await page.goto('/assets/list');
-    await expect(page).toHaveURL(/\/assets\/list$/);
+  test('loads the v5 list and sends keyword search to the asset-unit API', async ({ page }) => {
+    await page.goto('/asset-operations/units');
+    await expect(page).toHaveURL(/\/asset-operations\/units$/);
+    await expect(page.getByRole('heading', { name: '资产单元' })).toBeVisible();
 
-    const searchInput = page
-      .locator(
-        'input[id="search"], input[placeholder*="搜索"], input[placeholder*="关键词"], input[placeholder*="关键字"]'
-      )
-      .first();
+    const searchInput = page.getByLabel('搜索单元编号、名称或地址');
     await expect(searchInput).toBeVisible();
     await searchInput.fill('测试');
 
-    const searchButton = page.getByRole('button', { name: /搜索|查询/ }).first();
-    const hasSearchButton = await searchButton.isVisible().catch(() => false);
-    if (hasSearchButton) {
-      await searchButton.click();
-    } else {
-      await searchInput.press('Enter');
-    }
-    await page.waitForLoadState('networkidle');
+    const searchRequest = page.waitForRequest(request => {
+      const url = new URL(request.url());
+      return (
+        request.method() === 'GET' &&
+        url.pathname.endsWith('/api/v1/asset-units') &&
+        url.searchParams.get('q') === '测试'
+      );
+    });
+    await searchInput.press('Enter');
+    await searchRequest;
 
-    const hasTable = await page
-      .locator('.ant-table')
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const hasEmpty = await page
-      .locator('.ant-empty')
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    expect(hasTable || hasEmpty).toBe(true);
+    await expect(page.locator('.ant-table')).toBeVisible();
   });
 });

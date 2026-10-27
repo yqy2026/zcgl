@@ -4,23 +4,20 @@ from fastapi import APIRouter
 
 # --- route_registry 自注册模块加载（触发 route_registry.register_router） ---
 from . import (
+    asset_units,  # noqa: F401
     authz,  # noqa: F401
+    contract_intake_sessions,  # noqa: F401
     extraction_sessions,  # noqa: F401
     party,  # noqa: F401
     property_certificate_attachments,  # noqa: F401
+    terminal_contracts,  # noqa: F401
+    upstream_contracts,  # noqa: F401
 )
 
 # 导入各个模块的路由 - Analytics
-from .analytics.analytics import router as analytics_router
-from .analytics.statistics import router as statistics_router
 from .assets import property_certificate  # noqa: F401
 
 # 导入各个模块的路由 - Assets
-from .assets.assets import router as assets_router
-from .assets.custom_fields import router as custom_fields_router
-from .assets.occupancy import router as occupancy_router
-from .assets.project import router as project_router
-
 # 导入各个模块的路由 - Auth
 from .auth.admin import router as admin_router
 from .auth.auth import router as auth_router
@@ -29,11 +26,7 @@ from .auth.organization import router as organization_router
 from .auth.roles import router as roles_router
 
 # 导入各个模块的路由 - Contracts
-from .contracts import contract_groups_router, ledger_router
-
 # 导入各个模块的路由 - Documents
-from .documents.excel import router as excel_router
-
 # 导入各个模块的路由 - LLM Prompts
 from .search import router as search_router
 
@@ -42,7 +35,6 @@ from .system.backup import router as backup_router
 from .system.dictionaries import router as dictionaries_router
 from .system.enum_field import router as enum_field_router
 from .system.error_recovery import router as error_recovery_router
-from .system.history import router as history_router
 from .system.notifications import router as notifications_router
 from .system.operation_logs import router as operation_logs_router
 from .system.system import router as system_router
@@ -57,23 +49,11 @@ api_router.include_router(auth_router, prefix="/auth", tags=["用户认证"])
 api_router.include_router(data_policies_router, prefix="/auth", tags=["数据策略包"])
 api_router.include_router(roles_router, prefix="/roles", tags=["角色管理"])
 api_router.include_router(operation_logs_router, prefix="/logs", tags=["操作日志"])
-api_router.include_router(assets_router, prefix="/assets", tags=["资产管理"])
-api_router.include_router(
-    excel_router, tags=["Excel导入导出"]
-)  # 移除重复的prefix，excel.py已定义
-api_router.include_router(history_router, prefix="/history", tags=["变更历史"])
-api_router.include_router(
-    statistics_router, prefix="/statistics", tags=["数据统计和报表"]
-)
 api_router.include_router(
     tasks_router, tags=["任务管理"]
 )  # Remove prefix - router defines its own paths
-api_router.include_router(occupancy_router, prefix="/occupancy", tags=["出租率计算"])
 api_router.include_router(admin_router, tags=["系统管理"])
 
-api_router.include_router(
-    custom_fields_router, prefix="/asset-custom-fields", tags=["自定义字段管理"]
-)
 api_router.include_router(
     organization_router, prefix="/organizations", tags=["组织架构管理"]
 )
@@ -82,15 +62,11 @@ api_router.include_router(enum_field_router, tags=["枚举字段管理"])
 # dictionaries_router 自带 prefix="/system/dictionaries"，此处直接 include
 api_router.include_router(dictionaries_router)  # Unified dictionary API
 
-api_router.include_router(project_router, prefix="/projects", tags=["项目管理"])
 api_router.include_router(search_router, prefix="/search", tags=["全局搜索"])
 # 合同关系技术聚合（REQ-RNT-001）：/contract-groups/* 和 /contracts/*
-api_router.include_router(contract_groups_router, tags=["合同组管理"])
-api_router.include_router(ledger_router, tags=["台账管理"])
 # Analytics路由 - Service层重构版 (2026-01-04)
 # 原始 2017 行的 analytics.py 已重构为使用 AnalyticsService
 # 业务逻辑迁移至 src/services/analytics/analytics_service.py
-api_router.include_router(analytics_router, prefix="/analytics", tags=["综合分析"])
 
 # 核心系统设置路由必须 fail loud；导入失败应阻断应用启动。
 api_router.include_router(system_settings_router, prefix="/system", tags=["系统设置"])

@@ -10,9 +10,36 @@ from .abac import (  # noqa: F401
     ABACRolePolicy,
 )
 from .asset import Asset  # noqa: F401
+from .asset_contract import (  # noqa: F401
+    AssetContractWriteReceipt,
+    ContractKind,
+    ContractLifecycleEvent,
+    ContractLifecycleEventType,
+    ContractRentSchedule,
+    ContractTerminationType,
+    DepositSettlementStatus,
+    HandoverStatus,
+    PaymentCycle,
+    RentCollector,
+    TerminalContract,
+    TerminalContractAssetUnit,
+    TerminalContractMode,
+    UpstreamContract,
+    UpstreamContractAssetUnit,
+    UpstreamContractType,
+)
 from .asset_history import AssetHistory  # noqa: F401
 from .asset_review_log import AssetReviewLog  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
+from .asset_unit import (  # noqa: F401
+    AssetUnit,
+    AssetUnitAcquisitionMode,
+    AssetUnitBoundaryChange,
+    AssetUnitBoundaryChangeType,
+    AssetUnitBoundarySource,
+    AssetUnitVacancyReason,
+    PropertyCertificateAssetUnit,
+)
 from .associations import (  # noqa: F401  # noqa: F401
     contract_assets,
     contract_group_assets,
@@ -102,8 +129,30 @@ from .user_party_scope_commit import UserPartyScopeCommit  # noqa: F401
 __all__ = [
     "Attachment",
     "Asset",
+    "AssetUnit",
+    "AssetUnitAcquisitionMode",
+    "AssetUnitBoundaryChange",
+    "AssetUnitBoundaryChangeType",
+    "AssetUnitBoundarySource",
+    "AssetUnitVacancyReason",
     "AssetHistory",
     "AssetReviewLog",
+    "AssetContractWriteReceipt",
+    "ContractKind",
+    "ContractLifecycleEvent",
+    "ContractLifecycleEventType",
+    "ContractRentSchedule",
+    "ContractTerminationType",
+    "DepositSettlementStatus",
+    "HandoverStatus",
+    "PaymentCycle",
+    "RentCollector",
+    "TerminalContract",
+    "TerminalContractAssetUnit",
+    "TerminalContractMode",
+    "UpstreamContract",
+    "UpstreamContractAssetUnit",
+    "UpstreamContractType",
     "Ownership",
     "Project",
     "SystemDictionary",
@@ -178,6 +227,7 @@ __all__ = [
     # Property Certificate models
     "CertificateType",
     "PropertyCertificate",
+    "PropertyCertificateAssetUnit",
     # Task models
     "AsyncTask",
     "ExcelTaskConfig",

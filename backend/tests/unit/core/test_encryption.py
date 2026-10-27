@@ -528,13 +528,14 @@ class TestSensitiveDataHandler:
         import importlib
         import sys
 
-        for mod in list(sys.modules.keys()):
-            if (
-                "src.core.config" in mod
-                or "src.core.encryption" in mod
-                or "src.crud.asset" in mod
-                or "src.crud.asset_support" in mod
-            ):
+        modules_to_clear = {
+            "src.core.config",
+            "src.core.encryption",
+            "src.crud.asset",
+            "src.crud.asset_support",
+        }
+        for mod in modules_to_clear:
+            if mod in sys.modules:
                 del sys.modules[mod]
 
         key_bytes = b"e" * 32

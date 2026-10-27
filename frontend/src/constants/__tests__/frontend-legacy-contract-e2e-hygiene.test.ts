@@ -24,10 +24,11 @@ describe('frontend contract extraction e2e hygiene', () => {
     );
   });
 
-  it('keeps the contract session e2e spec on the unified extraction-session API', () => {
+  it('keeps the contract session e2e spec on the v5 intake-session API', () => {
     const source = readSource(contractSessionSpecPath);
 
-    expect(source).toContain('/api/v1/extraction-sessions');
+    expect(source).toContain('/api/v1/contract-intake-sessions');
+    expect(source).not.toContain('/api/v1/extraction-sessions');
     expect(source).not.toContain('/api/v1/rental-contracts/excel/import');
     expect(source).not.toContain('/api/v1/pdf-import/upload');
   });
