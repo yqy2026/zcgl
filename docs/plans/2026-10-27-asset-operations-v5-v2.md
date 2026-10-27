@@ -1,6 +1,6 @@
 # 资产运营 v5 V2 租金、押金与委托管理费实施计划
 
-> **状态**：📋 待评审（草案；§3 待裁决事项拍板并回写 SSOT 后转“实施就绪”）
+> **状态**：🔄 实施就绪（§3 已按建议裁决并回写 SSOT；待 V1 合并后开工）
 > **日期**：2026-10-27
 > **需求**：REQ-LED-001、REQ-DEP-001、REQ-FEE-001（联动 REQ-CTR-001/002 的台账类筛选与付款计划展示）
 > **产品基线**：`docs/prd.md` §6.5、`docs/specs/domain-model.md` §4.16–4.20 / §5.3–5.4 / §6.7–6.8、`docs/specs/api-contract.md` §5.7–5.9、`frontend/prototype/asset-ops-v5-handoff.md`（本月卡片 1–3、终端合同详情、台账、对账单）
@@ -30,11 +30,11 @@ V2 **不实现**：本月工作台（V5，仅保留义务/对账状态的可查�
 | `BusinessChangeEvent` | 领域模型已定义，尚未落地 | V2 首次落地：登记、撤销、顺延、确认、更正均写变更记录（V3 报送引用） |
 | 前端 `/operations/ledger`（旧） | V1-4 已删除 | 新建 `/asset-operations/ledgers` 与 `/asset-operations/management-fees/:statement_id` |
 
-## 3. 开工前待裁决事项
+## 3. 开工前裁决事项
 
-以下是 SSOT 未定义或互相冲突之处。每项给出**建议裁决**；评审确认后先回写 `domain-model.md` / `api-contract.md`，再写失败测试。未裁决项对应切片不得开工。
+以下是起草时 SSOT 未定义或互相冲突之处。2026-10-27 按下表裁决采纳，已回写 `docs/specs/domain-model.md` 与 `docs/specs/api-contract.md`（见“回写位置”）；实施以 SSOT 为准，本表只作决策追溯。
 
-| ID | 问题 | 建议裁决 |
+| ID | 问题 | 裁决 |
 |---|---|---|
 | D-01 | 金额舍入规则未定义（§4.19“按金额规则舍入”） | 统一 `Decimal.quantize(0.01, ROUND_HALF_UP)`；义务金额在生成时舍入，管理费按行舍入后求和（§6.8 已定先行后和） |
 | D-02 | 合同级 `payment_cycle`/`payment_day` 与阶段级 `payment_cycle`/`due_day` 并存 | 义务只读阶段级；合同级字段仅作录入默认值，更新合同级字段不重算义务 |
@@ -44,7 +44,7 @@ V2 **不实现**：本月工作台（V5，仅保留义务/对账状态的可查�
 | D-06 | “未锁定的未来义务”的锁定边界 | 义务在以下任一条件成立时锁定：存在任何登记记录（含已撤销）、账期早于当前业务月、已纳入非 `collecting` 对账单。租金阶段或期限变更只重建未锁定义务，已锁定义务保留原 `locked_source` |
 | D-07 | 终止/退出/续签后多出的未来义务如何处理；状态机无“作废” | 义务新增追加式 `voided` 标记（`voided_by_event_id`），不删除行；生命周期事件撤销时恢复。`status` 增加派生值 `void`，不计入任何合计（需回写 §5.3） |
 | D-08 | 押金收退记录无对象定义（§4.18 只有余额） | 新增 `DepositRecord`（结构与 `RentPaymentRecord` 同构：`collect` / `refund` / `recover` / `owner_reported` / `reversal`），`effective_amount` 由其派生；补错误码 `DEPOSIT_AMOUNT_EXCEEDS_REMAINING`、`DEPOSIT_RECORD_ALREADY_REVERSED` |
-| D-09 | 押金约定何时生成、方向何时切换 | 终端合同确认时生成 `receivable`（向租户收，直签由产权方收、只登记报告）；终止生效后转 `refundable`（应退租户）。上游承租合同的押金由我方付给产权方，生效期内不进入“待处理”三类；退出或到期后生成 `recoverable`（应向产权方收回）。三类之外的“我方应付上游押金”是否需要跟踪，请产品确认 |
+| D-09 | 押金约定何时生成、方向何时切换 | 终端合同确认时生成 `receivable`（向租户收，直签由产权方收、只登记报告）；终止生效后转 `refundable`（应退租户）。上游承租合同的押金由我方付给产权方，生效期内不进入“待处理”三类；退出或到期后生成 `recoverable`（应向产权方收回）。V2 不跟踪“本公司应付上游押金”的付款过程 |
 | D-10 | 管理费对账单 `upstream_contract_id` 单值 vs “每产权方每月一张” | 一个产权方同时有多份委托管理协议时：对账单按产权方+月份唯一，`upstream_contract_id` 改为行级字段（`ManagementFeeStatementLine.upstream_contract_id`），单头保留 `upstream_contract_ids` 快照；行级比例各自快照 |
 | D-11 | 产权方到账登记与对账单行是否两份事实 | 只有一份：到账登记为 `RentPaymentRecord(record_type=owner_reported_receipt)` 挂在 `owner_receipt_expected` 义务上；对账单在 `collecting` 时实时投影这些记录，`confirmed` 时把行写成快照。`owner-receipts` 端点内部委托租金登记服务 |
 | D-12 | 顺延的判定时点与目标期间 | 对账月（N−1 月）的义务到当月最后一天仍未有足额到账的，由用户在对账单上“标记顺延”（原因必填），顺延到 N 月对账单；不自动顺延。部分到账时已到部分计入本期、余额顺延 |
@@ -79,7 +79,7 @@ V2 **不实现**：本月工作台（V5，仅保留义务/对账状态的可查�
 
 ### PR-A：租金义务与登记（REQ-LED-001）
 
-**V2-0 SSOT 回写**
+**V2-0 SSOT 回写**（2026-10-27 已回写，见 §9）
 - 按 §3 裁决更新 `docs/specs/domain-model.md`（§4.16–4.18 字段、`void` 状态、`DepositRecord`、对账单行级上游、舍入规则）与 `docs/specs/api-contract.md`（手工义务端点、押金错误码、`rent_unpaid` / `deposit_unsettled` 筛选）。只改规格，不改代码。
 
 **V2-1 领域与持久化**
@@ -150,3 +150,4 @@ V2 **不实现**：本月工作台（V5，仅保留义务/对账状态的可查�
 ## 9. 实施记录
 
 - 2026-10-27：起草本计划。依据 PRD §6.5、领域模型 §4.16–4.20、API 契约 §5.7–5.9 与 v5 原型交接文档；列出 14 项开工前待裁决事项，待评审。
+- 2026-10-27：§3 的 14 项按建议裁决采纳，V2-0 回写 SSOT。领域模型：§2 金额规则补 `ROUND_HALF_UP` 两位小数与“先行后和”；§4.10 合同级账期字段降为录入默认值；§4.14 补账期、到期日、不足月折算、免租与锁定五条义务生成规则；§4.16 补 `contract_kind` / `free_rent` / `origin` / `basis_note` / `voided_by_event_id`、合同到义务类型映射、作废与恢复规则及 `void` 状态；§4.17 补记录类型匹配与 `owner_reported_receipt` 作为管理费唯一事实来源；§4.18 补押金生成与方向规则，新增 §4.18.1 `DepositRecord`；§4.19 对账单改为产权方+月份唯一并以 `upstream_contract_ids` 快照多协议；§4.20 行级补 `upstream_contract_id` / `rent_ledger_entry_id` / 顺延原因与来源，明确 `collecting` 投影与人工顺延；§5.3/§5.4/§6.7/§6.8 同步。API 契约：`asset_ops:write` 覆盖管理费对账；终端合同列表定义 `rent_unpaid` / `deposit_unsettled`；新增 `custom` 账期手工义务端点；到账登记与租金登记共用事实；新增 11 个错误码。未改代码与需求追踪状态。

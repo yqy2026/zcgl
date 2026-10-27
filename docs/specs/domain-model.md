@@ -15,7 +15,7 @@
 5. **乐观并发**：可写聚合带 `version`；更新要求携带期望版本，冲突返回稳定 409。
 6. **幂等写入**：高后果写操作保存 `idempotency_key`，同键同请求返回首次结果，同键不同请求拒绝。
 7. **数据范围**：所有业务对象通过产权方 Party 或项目归属解析有效 Party 范围；无范围或范围失效失败关闭。
-8. **金额**：金额使用定点十进制，币种 MVP 固定为 `CNY`；显示可格式化，存储和计算不得使用二进制浮点。
+8. **金额**：金额使用定点十进制，币种 MVP 固定为 `CNY`；显示可格式化，存储和计算不得使用二进制浮点。舍入统一为保留 2 位小数、四舍五入（`ROUND_HALF_UP`）：租金义务在生成时舍入，委托管理费按行舍入后求和，任何合计不再二次舍入。
 9. **面积**：面积使用定点十进制平方米；拆分/合并在允许误差内守恒。
 10. **业务时区**：月末、截止日、撤销窗口和“今天”按 `Asia/Shanghai` 解释。
 
@@ -40,8 +40,9 @@
 | RentLedgerEntry | 业务事实 | 某合同某账期的一笔应付、应收或产权方应报到账义务 |
 | RentPaymentRecord | 业务事实 | 外部付款或到账的追加登记及其撤销 |
 | DepositLedgerEntry | 业务事实 | 押金约定、应收/应退/应收回方向和余额 |
+| DepositRecord | 业务事实 | 押金收取、退还、收回或产权方报告的追加登记及其撤销 |
 | ManagementFeeStatement | 业务事实 | 某产权方某月委托管理费对账单 |
-| ManagementFeeStatementLine | 业务事实 | 纳入对账的产权方实际到账租金明细 |
+| ManagementFeeStatementLine | 快照事实 | 确认时纳入或顺延的逐户到账明细；`collecting` 期间由到账登记实时投影 |
 | AssessmentScopeVersion | 业务事实 | 某年度已保存考核范围版本 |
 | AssessmentScopeItem | 业务事实 | 版本内逐资产单元纳入/排除决定 |
 | MonthlyOccupancyReport | 业务事实 | 月度报送草稿和已锁定快照 |
@@ -207,8 +208,8 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 | `operator_party_id` | UUID | 本公司主体 |
 | `start_date` | date | 已签期限开始日 |
 | `end_date` | date | 已签期限结束日，不早于开始日 |
-| `payment_cycle` | enum? | 承租合同：`monthly` / `quarterly` / `yearly` / `custom` |
-| `payment_day` | integer? | 约定到期日 |
+| `payment_cycle` | enum? | 承租合同：`monthly` / `quarterly` / `yearly` / `custom`；仅作租金阶段录入默认值与展示 |
+| `payment_day` | integer? | 约定到期日；仅作租金阶段录入默认值与展示 |
 | `management_fee_rate` | decimal? | 委托管理协议比例，0–1 |
 | `deposit_amount` | decimal | 非负 |
 | `oa_reference` | string? | 外部 OA/合同系统单号，仅作关联信息 |
@@ -219,6 +220,8 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 | `updated_at` | datetime | 最后修改时间 |
 
 派生状态由日期、后继合同和退出事件决定：`scheduled`、`active`、`expiring`、`expired_pending_action`、`exited`、`historical`。
+
+租金义务只读取 `ContractRentSchedule` 的阶段级 `payment_cycle` / `due_day`；修改合同级 `payment_cycle` / `payment_day` 不重算任何义务。
 
 ### 4.11 UpstreamContractAssetUnit
 
@@ -282,6 +285,14 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 
 递增按阶段叠加；季付只在季初月份形成义务。租金表修改只影响尚未锁定的未来义务，历史义务不回写。
 
+义务生成规则（`RentLedgerEntry` 由本表派生）：
+
+1. **账期**：`monthly` 每月一期；`quarterly` 只在 1/4/7/10 月出一期，金额为该季度内各月租金之和；`yearly` 在阶段起始月出一期，金额为此后 12 个月（截至阶段结束）租金之和；`custom` 不自动生成，由用户手工登记义务并填写依据说明。
+2. **到期日**：账期首月的 `due_day` 日；当月无该日时取当月最后一天。
+3. **不足月折算**：阶段或合同起止落在月中时，该月租金 = `actual_monthly_rent × 当月覆盖自然日数 / 当月自然日数`，季付、年付期内的不足月先折算再合并。
+4. **免租**：`free_rent_months` 从阶段起始月起顺延计算，免租月租金为 0；不足整月的免租按自然日折算。免租月仍生成义务行（金额 0、`free_rent=true`）以便台账展示；`discount_amount` 只作核对展示，不再从义务中二次扣减。
+5. **锁定**：义务满足任一条件即锁定——存在任何付款/到账记录（含已撤销）、账期早于当前业务月（`Asia/Shanghai`）、或已被非 `collecting` 状态的委托管理费对账单引用。租金阶段、合同期限或生命周期变化只重建未锁定义务；已锁定义务保留生成时的 `locked_source`。
+
 ### 4.15 ContractLifecycleEvent
 
 | 字段 | 类型 | 约束 |
@@ -317,15 +328,24 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 |---|---|---|
 | `id` | UUID | 主键 |
 | `entry_type` | enum | `upstream_payable` / `terminal_receivable` / `owner_receipt_expected` |
+| `contract_kind` | enum | `upstream` / `terminal` |
 | `contract_id` | UUID | 对应上游或终端合同 |
-| `period` | year-month | 账期 |
+| `period` | year-month | 账期（账期首月） |
 | `due_date` | date | 到期日 |
-| `due_amount` | decimal | 本期义务金额 |
+| `due_amount` | decimal | 本期义务金额，非负 |
 | `currency` | string | 固定 `CNY` |
+| `free_rent` | boolean | 免租期内生成的 0 元义务 |
+| `origin` | enum | `generated` / `manual`；`manual` 仅用于 `custom` 账期 |
+| `basis_note` | string? | `manual` 必填的依据说明 |
 | `locked_source` | object | 生成时合同、租金阶段和主体快照 |
+| `voided_by_event_id` | UUID? | 被终止/退出/续签事件作废时指向该事件；事件被撤销后清空 |
 | `version` | integer | 乐观锁版本 |
 
-派生字段：`effective_paid_amount`、`remaining_amount`、`status`。`status` 为 `upcoming`、`unpaid`、`partial`、`paid`、`overdue`，由到期日和有效付款记录派生。
+`entry_type` 由合同决定：承租合同 → `upstream_payable`；转租终端合同 → `terminal_receivable`；直签终端合同 → `owner_receipt_expected`（产权方收取，本系统只登记产权方报告的到账）。委托管理协议本身不产生租金义务。同一合同同一 `entry_type` 同一账期在未作废行上唯一。
+
+作废规则：终端终止或上游退出生效后，账期首日不早于生效日的未锁定义务记为作废；生效日落在账期内的义务按生效日前一日重新折算。已锁定义务不作废，仍按原金额展示，由用户登记或撤销处理。生命周期事件被撤销时恢复被其作废的义务。续签不作废前驱义务（前驱在其期限内的义务照常存在），后继合同自行生成义务。
+
+派生字段：`effective_paid_amount`、`remaining_amount`、`status`。`status` 为 `upcoming`、`unpaid`、`partial`、`paid`、`overdue`、`void`，由到期日、作废标记和有效付款记录派生；`void` 不计入任何合计与待办。
 
 ### 4.17 RentPaymentRecord
 
@@ -344,6 +364,8 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 
 有效金额为未被有效撤销的正向记录合计。不得直接更新或删除正向记录。
 
+记录类型必须与义务类型匹配：`upstream_payable` 只接受 `payment`，`terminal_receivable` 只接受 `receipt`，`owner_receipt_expected` 只接受 `owner_reported_receipt`；`void` 义务不接受新登记。`owner_reported_receipt` 是委托管理费基数的唯一事实来源，对账单不另存到账金额。
+
 ### 4.18 DepositLedgerEntry
 
 | 字段 | 类型 | 约束 |
@@ -354,8 +376,35 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 | `direction` | enum | `receivable` / `refundable` / `recoverable` |
 | `collector` | enum | `operator` / `owner` |
 | `agreed_amount` | decimal | 约定金额 |
-| `effective_amount` | decimal | 从追加收退记录派生 |
+| `effective_amount` | decimal | 从追加 `DepositRecord` 派生 |
+| `opened_by_event_id` | UUID? | `refundable` / `recoverable` 由终止、退出或到期触发时指向对应事件；自然到期为空 |
 | `status` | enum | 派生：`receivable_uncollected` / `refundable_unreturned` / `recoverable_unreceived` / `settled` |
+| `version` | integer | 乐观锁版本 |
+
+生成与方向：
+
+- 终端合同确认时生成 `receivable`；转租 `collector=operator`，直签 `collector=owner`。
+- 终端合同终止生效或自然到期后，按已收金额生成 `refundable`（应退租户）；直签只记录产权方报告。
+- 上游承租合同押金由本公司付给产权方，合同有效期内不进入待处理；上游退出生效或自然到期后，按约定金额生成 `recoverable`（应向产权方收回）。V2 不跟踪“本公司应付上游押金”的付款过程。
+- 委托管理协议的保证金按上游押金同一口径处理。
+- 生命周期事件被撤销时，由其触发且尚无有效记录的 `refundable` / `recoverable` 一并撤回；已有记录的保留并显示原触发事件已撤销。
+
+### 4.18.1 DepositRecord
+
+| 字段 | 类型 | 约束 |
+|---|---|---|
+| `id` | UUID | 主键 |
+| `deposit_entry_id` | UUID | 对应押金条目 |
+| `record_type` | enum | `collect` / `refund` / `recover` / `owner_reported` / `reversal` |
+| `amount` | decimal | 正向记录大于 0；撤销引用原记录 |
+| `occurred_on` | date | 外部实际发生日期 |
+| `document_id` | UUID? | 可选凭证 |
+| `reverses_record_id` | UUID? | 撤销时必填，且一笔记录只能有效撤销一次 |
+| `reason` | string? | 撤销时必填 |
+| `created_by` / `created_at` | UUID / datetime | 操作审计 |
+| `idempotency_key` | string | 唯一 |
+
+记录类型与方向匹配：`receivable` 接受 `collect`（`collector=operator`）或 `owner_reported`（`collector=owner`）；`refundable` 接受 `refund` 或 `owner_reported`；`recoverable` 接受 `recover`。直签押金不提供抵扣操作。正向记录合计不得超过约定金额，不得直接更新或删除。
 
 ### 4.19 ManagementFeeStatement
 
@@ -363,12 +412,11 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 |---|---|---|
 | `id` | UUID | 主键 |
 | `owner_party_id` | UUID | 产权方 |
-| `upstream_contract_id` | UUID | 委托管理协议 |
-| `period` | year-month | 每产权方每月唯一有效版本 |
+| `upstream_contract_ids` | UUID[] | 确认时纳入的委托管理协议快照；同一产权方多份协议合并为一张单 |
+| `period` | year-month | 对账月；同一产权方同一月份在非 `superseded` 单上唯一 |
 | `statement_number` | string | 唯一编号 |
-| `fee_rate` | decimal | 确认时协议比例快照 |
-| `base_amount` | decimal | 纳入行的产权方实际到账合计 |
-| `fee_amount` | decimal | `base_amount × fee_rate`，按金额规则舍入 |
+| `base_amount` | decimal | 纳入行（非顺延）的产权方实际到账合计 |
+| `fee_amount` | decimal | 纳入行 `fee_amount` 之和；比例按行快照，单头不存单一比例 |
 | `status` | enum | `collecting` / `pending_stamp` / `confirmed` / `superseded` |
 | `stamped_document_id` | UUID? | `confirmed` 必填 |
 | `confirmed_at` / `confirmed_by` | datetime? / UUID? | 确认审计 |
@@ -381,7 +429,9 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 |---|---|---|
 | `id` | UUID | 主键 |
 | `statement_id` | UUID | 对账单 |
+| `upstream_contract_id` | UUID | 该户所属委托管理协议 |
 | `terminal_contract_id` | UUID | 直签终端合同 |
+| `rent_ledger_entry_id` | UUID | 对应 `owner_receipt_expected` 义务 |
 | `asset_unit_ids` | UUID[] | 相关资产单元快照 |
 | `tenant_name_snapshot` | string | 租户名称快照 |
 | `rent_period` | year-month | 租金所属期 |
@@ -391,8 +441,10 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 | `fee_rate` | decimal | 行级比例快照 |
 | `fee_amount` | decimal | 行级费用金额 |
 | `deferred` | boolean | 月末未收时顺延，不计入本单基数 |
+| `deferral_reason` | string? | `deferred=true` 时必填 |
+| `deferred_from_statement_id` | UUID? | 由上期顺延而来时指向原单 |
 
-确认后的行不可修改；更正生成后继对账单。
+`collecting` 期间，行由对账月及此前被顺延的 `owner_receipt_expected` 义务及其 `owner_reported_receipt` 记录实时投影，不单独存到账金额；确认时写成快照。顺延由用户在对账单上逐户标记并填写原因，不自动顺延；部分到账时已到部分计入本单，余额作为顺延行进入下月单。确认后的行不可修改；更正生成后继对账单。
 
 ### 4.21 AssessmentScopeVersion
 
@@ -600,6 +652,7 @@ upcoming -> unpaid -> partial -> paid
                 \-> overdue
 partial ----------------> overdue（过期且仍有余额）
 paid --撤销登记--> partial/unpaid/overdue（按剩余金额与日期重算）
+任一未锁定状态 --终止/退出生效--> void --事件撤销--> 按剩余金额与日期重算
 ```
 
 ### 5.4 委托管理费对账
@@ -608,9 +661,9 @@ paid --撤销登记--> partial/unpaid/overdue（按剩余金额与日期重算�
 collecting -> pending_stamp -> confirmed -> superseded
 ```
 
-- `collecting`：产权方到账尚在登记，未收户可以顺延。
+- `collecting`：产权方到账尚在登记，未收户可以顺延；全部行已足额到账或已标记顺延后可进入 `pending_stamp`，顺延户不阻塞。
 - `pending_stamp`：纳入基数已确定，等待双方盖章文件。
-- `confirmed`：盖章文件存在且确认动作完成，金额锁定。
+- `confirmed`：盖章文件存在且确认动作完成，金额锁定；之后补登的到账进入后续月份或更正单，不改本单。
 - 更正创建后继对账单，原单转 `superseded`，不覆盖原行。
 
 ### 5.5 考核范围
@@ -686,6 +739,8 @@ effective_paid_amount = sum(未被有效撤销的正向 RentPaymentRecord.amount
 remaining_amount = max(due_amount - effective_paid_amount, 0)
 ```
 
+`void` 义务不计入应付/应收合计、已完成金额和逾期统计。
+
 超额登记必须显式提示并默认拒绝；确有业务依据时需独立规则扩展，不静默把负余额带入下一期。
 
 ### 6.8 委托管理费
@@ -695,7 +750,7 @@ line_fee = owner_received_amount × fee_rate
 statement_fee = sum(line_fee)
 ```
 
-按金额舍入规则先算行再求和。月末仍未收到的租金行标记顺延，不计入本期基数。`confirmed` 后不因合同、租户或比例主档变化而重算。
+`line_fee` 按 §2 金额规则舍入到分后再求和。月末仍未收到的租金行标记顺延，不计入本期基数。`confirmed` 后不因合同、租户或比例主档变化而重算。
 
 ### 6.9 档案完成率
 
