@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Request } from '@playwright/test';
+import { expect, test, type Page, type Request, type Response } from '@playwright/test';
 import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
 
 type FileInputScope = Page | { locator: Page['locator'] };
@@ -6,6 +6,17 @@ type FileInputScope = Page | { locator: Page['locator'] };
 const CONTRACT_INTAKE_PATH = '/asset-operations/contracts/intake';
 const CONTRACT_INTAKE_ENDPOINT = '/api/v1/contract-intake-sessions';
 const CONTRACT_INTAKE_HEADING = '录入已签合同';
+
+const expectRejectedFile = async (page: Page, response: Response): Promise<void> => {
+  expect(response.status()).toBe(422);
+  const payload = (await response.json()) as {
+    error: { code: string; message: string; details: { upload_error_code: string } };
+  };
+  expect(payload.error.code).toBe('VALIDATION_ERROR');
+  expect(payload.error.details.upload_error_code).toBe('extension_not_allowed');
+  expect(payload.error.message).toBe('upload extension is not allowed for this purpose');
+  await expect(page.getByRole('alert')).toContainText(payload.error.message);
+};
 
 const uploadPlainTextFile = async (scope: FileInputScope, filename: string): Promise<void> => {
   const uploadInput = scope.locator('input[type="file"]').first();
@@ -33,8 +44,7 @@ test.describe('@user-usable contract intake validation', () => {
       );
     });
     await page.getByRole('button', { name: '上传并创建会话' }).click();
-    expect((await responsePromise).status()).toBe(422);
-    await expect(page.getByText(/创建录入会话失败/i)).toBeVisible();
+    await expectRejectedFile(page, await responsePromise);
     await expect(
       page.getByRole('heading', { name: '第一步 · 选择类型并上传扫描件' })
     ).toBeVisible();
@@ -61,8 +71,7 @@ test.describe('@user-usable contract intake validation', () => {
         );
       });
       await page.getByRole('button', { name: '上传并创建会话' }).click();
-      expect((await responsePromise).status()).toBe(422);
-      await expect(page.getByText(/创建录入会话失败/i)).toBeVisible();
+      await expectRejectedFile(page, await responsePromise);
       await page.waitForTimeout(500);
       expect(uploadRequestCount).toBe(1);
       await expect(page.getByRole('heading', { name: '第二步 · 核对信息' })).toHaveCount(0);
