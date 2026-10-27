@@ -151,8 +151,8 @@
 |---|---|---|
 | 上传 | `POST /api/v1/contract-intake-sessions` | 上传已签扫描件并选择合同类型，返回临时会话 |
 | 读取 | `GET /api/v1/contract-intake-sessions/{session_id}` | 返回提取状态、候选字段、warning 和有效期 |
-| 确认上游 | `POST /api/v1/contract-intake-sessions/{session_id}/confirm-upstream` | 人工确认全部字段后创建上游合同 |
-| 确认终端 | `POST /api/v1/contract-intake-sessions/{session_id}/confirm-terminal` | 人工确认上游、覆盖单元、租户、条款后创建终端合同 |
+| 确认上游 | `POST /api/v1/contract-intake-sessions/{session_id}/confirm-upstream` | 人工确认全部字段（承租合同含租金阶段）后创建上游合同 |
+| 确认终端 | `POST /api/v1/contract-intake-sessions/{session_id}/confirm-terminal` | 人工确认上游、覆盖单元、租户、条款与租金阶段后创建终端合同 |
 | 取消 | `POST /api/v1/contract-intake-sessions/{session_id}/cancel` | 关闭临时会话，不创建业务对象 |
 
 扫描件必填；当前会话同步完成上传校验后即可进入 `ready_for_review`，自动提取不可用时返回 `EXTRACTION_UNAVAILABLE` warning，但不阻止手工确认。会话状态存储依赖 Redis 且按操作者隔离；其他操作者读取同一 ID 返回 404。候选值不得自动创建 Party、资产单元或业务关系。确认请求不得提交或覆盖合同类型、`scan_document_id` 或 `renewed_from_id`：类型与扫描件只从会话读取，续签关系只能经对应合同的 `/renewals` 端点建立。确认成功时，扫描件在合同事务内以附件行锁校验仍归当前会话后改绑正式合同；同一扫描件不能被第二份合同消费，冲突时整笔回滚。取消未确认会话则删除附件元数据和私有文件。
@@ -167,8 +167,8 @@
 | 详情 | `GET /api/v1/upstream-contracts/{contract_id}` | 返回条款、逐单元覆盖、租金阶段、版本链（前驱/当前/后继）、关联终端合同、生命周期事件和派生状态 |
 | 更新 | `PATCH /api/v1/upstream-contracts/{contract_id}` | 乐观锁必填；可编辑 `name`、`end_date`、`management_fee_rate`（仅委托管理协议）、押金（委托管理协议只能为 0）和 `oa_reference`；合同级 `payment_cycle` / `payment_day` 确认后只读，付款方式以租金阶段为准；字段不适用于该合同类型返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`；`end_date` 变更同事务跟随仍等于旧值的覆盖行并重排租金义务；不提供即不改 |
 | 登记续签 | `POST /api/v1/upstream-contracts/{contract_id}/renewals` | 携带后继已签条款（编号、期限、租金/比例、押金、扫描件及其会话 owner）与幂等键；各方、类型和覆盖单元由前驱带出，同事务创建后继并追加 `renewed` 事件；已有未撤销后继返回 409 `CONTRACT_ALREADY_RENEWED` |
-| 租金阶段更正预览 | `POST /api/v1/upstream-contracts/{contract_id}/rent-schedule-correction/preview` | 携带完整的新租金阶段列表和原因；返回新旧阶段对照、当月起义务的新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和 token；改动当前业务月首日之前的阶段内容返回 409 `RENT_SCHEDULE_HISTORY_IMMUTABLE`，阶段越出合同期限或重叠返回 422 `RENT_SCHEDULE_INVALID`，委托管理协议返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`，已退出合同返回 409 `UPSTREAM_CONTRACT_ALREADY_EXITED` |
-| 租金阶段更正提交 | `POST /api/v1/upstream-contracts/{contract_id}/rent-schedule-correction` | 携带 token、期望版本与幂等键；同事务追加新阶段、把被替换阶段标记为已更正（不物理删除）、重排当月起的未锁定义务并写变更记录 |
+| 租金阶段更正预览 | `POST /api/v1/upstream-contracts/{contract_id}/rent-schedule-correction/preview` | 携带完整的新租金阶段列表和原因；返回新旧阶段对照、当月起及补录往月的义务新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和 token；改动当前业务月首日之前已有的阶段内容返回 409 `RENT_SCHEDULE_HISTORY_IMMUTABLE`（往月中没有阶段覆盖的日期可以补录），阶段越出合同期限或重叠返回 422 `RENT_SCHEDULE_INVALID`，委托管理协议返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`，已退出合同返回 409 `UPSTREAM_CONTRACT_ALREADY_EXITED` |
+| 租金阶段更正提交 | `POST /api/v1/upstream-contracts/{contract_id}/rent-schedule-correction` | 携带 token、期望版本与幂等键；同事务追加新阶段、把被替换阶段标记为已更正（不物理删除）、重排当月起的未锁定义务和补录所在往月账期并写变更记录 |
 | 退出预览 | `POST /api/v1/upstream-contracts/{contract_id}/exit/preview` | 返回逐单元覆盖截止（最后有效日为生效日前一日）、押金申报回显、租金义务影响、承租押金应收回金额和 token；仍有有效终端合同返回 409 `ACTIVE_TERMINAL_CONTRACTS_BLOCK_EXIT` |
 | 退出提交 | `POST /api/v1/upstream-contracts/{contract_id}/exit` | 携带 token、期望版本与幂等键，日期与原因由 token 绑定的提议携带；同事务截止覆盖行、追加事件并重排租金义务 |
 | 撤销退出 | `POST /api/v1/upstream-contracts/{contract_id}/exit-reversal` | 追加反向事件，原因必填；同事务恢复覆盖并重排租金义务；续签后继或他合同覆盖阻断 |
@@ -335,7 +335,7 @@
 | 409 | `PAYMENT_RECORD_ALREADY_REVERSED` | 重复撤销付款/到账记录 |
 | 409 | `RENT_LEDGER_ENTRY_VOIDED` | 对已作废租金义务登记 |
 | 409 | `RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED` | 手工义务不满足 `custom` 账期段或补收免租条件，或作废 `generated` 义务 |
-| 409 | `RENT_SCHEDULE_HISTORY_IMMUTABLE` | 租金阶段更正改动了当前业务月首日之前的阶段内容 |
+| 409 | `RENT_SCHEDULE_HISTORY_IMMUTABLE` | 租金阶段更正改动了当前业务月首日之前已有的阶段内容 |
 | 409 | `RENT_LEDGER_ENTRY_LOCKED` | 作废仍有有效登记的手工义务 |
 | 409 | `DEPOSIT_AMOUNT_EXCEEDS_REMAINING` | 押金收入超出待收 / 待付金额，或支出超出持有余额 |
 | 409 | `DEPOSIT_ENTRY_CARRIED_FORWARD` | 向已续签合同的押金条目登记 |
