@@ -69,6 +69,7 @@
 - `archive/guides/` — 历史指南和长版设计快照
 - `archive/integrations/` — 已退出当前入口的 API 与组件说明
 - `archive/backend-plans/` — 后端已完结技术方案
+- `archive/changelog/` — `CHANGELOG.md` 历史条目归档
 - `archive/issues/` — 已被吸收的问题排查记录
 - `archive/requirements-decisions/` — 需求访谈、评审、As-Built、迁移过程归档
 - `archive/reviews/` — 方案或代码审阅记录归档
@@ -90,7 +91,7 @@
 - `plans/` — 活跃方案（进行中 + 搁置）
 - `incidents/` — 事故复盘（Post-Mortem）
 - `issues/` — 项目技术债务排查记录
-- `archive/` — 历史归档（不再维护，含 backend-plans / evidence / guides / integrations / issues / requirements-decisions / reviews）
+- `archive/` — 历史归档（不再维护，含 backend-plans / changelog / evidence / guides / integrations / issues / requirements-decisions / reviews）
 
 ## 🧹 文档治理规则
 - 产品目标态变更修改 `prd.md`

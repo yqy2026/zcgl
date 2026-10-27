@@ -915,5 +915,5 @@ pnpm lint
 - **项目配置**: `frontend/package.json`
 - **TypeScript配置**: `frontend/tsconfig.json`
 - **Vite配置**: `frontend/vite.config.ts`
-- **前端文档**: `frontend/CLAUDE.md`
+- **前端文档**: `frontend/AGENTS.md`
 - **源码结构**: `frontend/src/` 目录
