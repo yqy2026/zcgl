@@ -3,7 +3,7 @@
  *
  * v5 一次性切换后的菜单：资产运营 + 主体管理 + 系统管理。
  * 旧业务入口（工作台/资产台账/产权证/合同中心/经营台账/经营分析）已随
- * V1-4 切换移除，见 docs/plans/2026-10-23-asset-operations-v5-v1.md。
+ * V1-4 切换移除，见 docs/archive/backend-plans/2026-10-23-asset-operations-v5-v1.md。
  */
 
 import type { MenuProps } from 'antd';

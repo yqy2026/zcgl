@@ -15,7 +15,7 @@ export interface ProtectedRouteItem {
 /**
  * v5 一次性切换后的生产路由：资产运营 + 系统管理 + 个人中心。
  * 旧业务路由（工作台/资产/产权证/合同中心/项目/经营台账/经营分析/搜索）
- * 已随 V1-4 切换移除，见 docs/plans/2026-10-23-asset-operations-v5-v1.md。
+ * 已随 V1-4 切换移除，见 docs/archive/backend-plans/2026-10-23-asset-operations-v5-v1.md。
  */
 const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 资产运营
