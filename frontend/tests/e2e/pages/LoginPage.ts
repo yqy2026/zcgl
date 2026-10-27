@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 export class LoginPage {
   readonly page: Page;
@@ -21,7 +21,7 @@ export class LoginPage {
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
     await this.loginButton.click();
-    // Wait for navigation to dashboard or assets
-    await this.page.waitForURL('**/dashboard');
+    // v5 登录后的唯一生产落点是资产单元。
+    await this.page.waitForURL('**/asset-operations/units');
   }
 }

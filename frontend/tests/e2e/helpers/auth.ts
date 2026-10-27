@@ -6,6 +6,7 @@ export interface Credentials {
 }
 
 const LOGIN_PATH = '/login';
+const AUTHENTICATED_LANDING_PATH = '/asset-operations/units';
 
 const readNodeEnv = (name: string): string | undefined => {
   const rawValue = process.env[name];
@@ -27,7 +28,10 @@ const dedupeCredentials = (credentials: Credentials[]): Credentials[] => {
   return uniqueCredentials;
 };
 
-const toCredential = (username: string | undefined, password: string | undefined): Credentials | null => {
+const toCredential = (
+  username: string | undefined,
+  password: string | undefined
+): Credentials | null => {
   if (username == null || username === '' || password == null || password === '') {
     return null;
   }
@@ -47,18 +51,13 @@ const readPasswordCandidates = (rolePrefix: string): string[] => {
 
   const defaults = ['admin123', 'Admin123!@#', 'password123'];
 
-  const candidates = [
-    ...defaults,
-  ].filter((item): item is string => item != null && item !== '');
+  const candidates = [...defaults].filter((item): item is string => item != null && item !== '');
 
   return [...new Set(candidates)];
 };
 
 export const resolveAdminCredentialCandidates = (): Credentials[] => {
-  const username =
-    readNodeEnv('E2E_ADMIN_USERNAME') ??
-    readNodeEnv('E2E_USERNAME') ??
-    'admin';
+  const username = readNodeEnv('E2E_ADMIN_USERNAME') ?? readNodeEnv('E2E_USERNAME') ?? 'admin';
   const passwordCandidates = readPasswordCandidates('E2E_ADMIN');
 
   return dedupeCredentials(
@@ -92,21 +91,14 @@ export const resolveRegularCredential = (): Credentials | null =>
   );
 
 export const resolveLogoutCredential = (): Credentials | null =>
-  toCredential(
-    readNodeEnv('E2E_LOGOUT_USERNAME'),
-    readNodeEnv('E2E_LOGOUT_PASSWORD')
-  );
+  toCredential(readNodeEnv('E2E_LOGOUT_USERNAME'), readNodeEnv('E2E_LOGOUT_PASSWORD'));
 
 const usernameSelector =
   'input#identifier, input[name="identifier"], input#login_username, input[name="username"]';
 const passwordSelector = 'input#login_password, input[name="password"]';
 const submitSelector = 'button[type="submit"]';
 
-const navigateWithRetry = async (
-  page: Page,
-  path: string,
-  attempts: number = 2
-): Promise<void> => {
+const navigateWithRetry = async (page: Page, path: string, attempts: number = 2): Promise<void> => {
   let lastError: unknown = null;
 
   for (let index = 0; index < attempts; index += 1) {
@@ -130,7 +122,10 @@ const navigateWithRetry = async (
   }
 };
 
-export const loginWithCredential = async (page: Page, credential: Credentials): Promise<boolean> => {
+export const loginWithCredential = async (
+  page: Page,
+  credential: Credentials
+): Promise<boolean> => {
   await navigateWithRetry(page, LOGIN_PATH);
 
   const usernameInput = page.locator(usernameSelector).first();
@@ -185,9 +180,7 @@ export const loginWithCredentialRetry = async (
 
 export const resolveCsrfToken = async (page: Page): Promise<string | null> =>
   await page.evaluate(() => {
-    const csrfCookie = document.cookie
-      .split('; ')
-      .find(item => item.startsWith('csrf_token='));
+    const csrfCookie = document.cookie.split('; ').find(item => item.startsWith('csrf_token='));
     if (csrfCookie == null || csrfCookie === '') {
       return null;
     }
@@ -214,16 +207,15 @@ export const loginAsAdmin = async (page: Page): Promise<Credentials> => {
     await clearAuthState(page);
   }
 
-  throw new Error(
-    '无法使用 E2E 管理员凭证登录。请设置 E2E_ADMIN_USERNAME / E2E_ADMIN_PASSWORD。'
-  );
+  throw new Error('无法使用 E2E 管理员凭证登录。请设置 E2E_ADMIN_USERNAME / E2E_ADMIN_PASSWORD。');
 };
 
 export const ensureAuthenticated = async (page: Page): Promise<Credentials> => {
-  await navigateWithRetry(page, '/dashboard');
+  await navigateWithRetry(page, AUTHENTICATED_LANDING_PATH);
   await page
     .waitForURL(
-      url => url.pathname.startsWith('/dashboard') || url.pathname.startsWith(LOGIN_PATH),
+      url =>
+        url.pathname.startsWith(AUTHENTICATED_LANDING_PATH) || url.pathname.startsWith(LOGIN_PATH),
       { timeout: 5_000 }
     )
     .catch(() => undefined);
@@ -287,9 +279,7 @@ export const resolveSeedPartyId = async (page: Page): Promise<string> => {
   const response = await page.request.get('/api/v1/parties?limit=20');
   expect(response.status()).toBe(200);
   const items = (await response.json()) as PartyListItem[];
-  const party = items.find(
-    item => item.code === 'LE-000001' || item.name === 'E2E Legal Entity'
-  );
+  const party = items.find(item => item.code === 'LE-000001' || item.name === 'E2E Legal Entity');
   if (party == null) {
     throw new Error(
       '[e2e helpers] seed party (LE-000001 / E2E Legal Entity) missing; run the E2E seed first.'

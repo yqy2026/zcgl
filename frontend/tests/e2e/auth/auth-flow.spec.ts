@@ -14,9 +14,9 @@ test.describe('Authentication Flow', () => {
     await clearAuthState(page);
   });
 
-  test('should login and redirect to dashboard', async ({ page }) => {
+  test('should login and redirect to asset units', async ({ page }) => {
     await loginAsAdmin(page);
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/asset-operations\/units/);
   });
 
   test('should keep login page for invalid credentials', async ({ page }) => {
@@ -31,10 +31,10 @@ test.describe('Authentication Flow', () => {
 
   test('should persist session after page refresh', async ({ page }) => {
     await loginAsAdmin(page);
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/asset-operations\/units/);
 
     await page.reload();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/asset-operations\/units/);
   });
 
   test('should revoke session after logout endpoint call', async ({ page }) => {
@@ -44,13 +44,13 @@ test.describe('Authentication Flow', () => {
       const loginSuccess = await loginWithCredential(page, logoutCredential);
       expect(loginSuccess).toBe(true);
     }
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/asset-operations\/units/);
 
     const headers = await resolveCsrfHeaders(page);
     const response = await page.request.post('/api/v1/auth/logout', { headers });
     expect(response.ok()).toBe(true);
 
-    await page.goto('/dashboard');
+    await page.goto('/asset-operations/units');
     await expect(page).toHaveURL(/\/login/);
   });
 });

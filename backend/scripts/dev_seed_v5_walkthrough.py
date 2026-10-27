@@ -17,6 +17,7 @@ TENANT_ID = "v5-walkthrough-tenant"
 PROJECT_ID = "v5-walkthrough-project"
 UNIT_A = "v5-walkthrough-unit-a"
 UNIT_B = "v5-walkthrough-unit-b"
+OTHER_OWNER_UNIT = "v5-walkthrough-other-owner-unit"
 UPSTREAM_ID = "v5-walkthrough-upstream"
 TERMINAL_ID = "v5-walkthrough-terminal"
 SCAN_UP = "v5-walkthrough-scan-up"
@@ -212,6 +213,31 @@ async def main() -> None:
                 ]
             )
             print("v5 facts seeded")
+
+        # Keep an actual out-of-scope record so Party isolation assertions cannot
+        # pass merely because the other owner's inventory is empty. This must
+        # also work when the original walkthrough facts have already been seeded.
+        if await session.get(AssetUnit, OTHER_OWNER_UNIT) is None:
+            session.add(
+                AssetUnit(
+                    id=OTHER_OWNER_UNIT,
+                    unit_code="AU-WALK-OTHER",
+                    name="走查其他产权方单元",
+                    project_id=PROJECT_ID,
+                    owner_party_id=OPERATOR_ID,
+                    address="走查地址 3 号",
+                    usage_type="commercial",
+                    acquisition_mode="owned",
+                    is_operating=True,
+                    land_area=Decimal("0"),
+                    building_area=Decimal("40"),
+                    rentable_area=Decimal("30"),
+                    managed_from=date(2026, 1, 1),
+                    predecessor_unit_ids=[],
+                    version=1,
+                )
+            )
+            print("v5 other-owner fact seeded")
 
         user = await session.get(User, USER_ID)
         if user is None:

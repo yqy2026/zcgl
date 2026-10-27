@@ -3,9 +3,9 @@ import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
 
 type FileInputScope = Page | { locator: Page['locator'] };
 
-const CONTRACT_DOCUMENT_REVIEW_PATH = '/contract-center/import';
-const CONTRACT_EXTRACTION_ENDPOINT = '/api/v1/extraction-sessions';
-const CONTRACT_DOCUMENT_REVIEW_HEADING = '合同文件解析';
+const CONTRACT_INTAKE_PATH = '/asset-operations/contracts/intake';
+const CONTRACT_INTAKE_ENDPOINT = '/api/v1/contract-intake-sessions';
+const CONTRACT_INTAKE_HEADING = '录入已签合同';
 
 const uploadPlainTextFile = async (scope: FileInputScope, filename: string): Promise<void> => {
   const uploadInput = scope.locator('input[type="file"]').first();
@@ -16,64 +16,67 @@ const uploadPlainTextFile = async (scope: FileInputScope, filename: string): Pro
   });
 };
 
-const expectMessageVisible = async (page: Page, messagePattern: RegExp): Promise<void> => {
-  const messageNotice = page
-    .locator('.ant-message-notice-content')
-    .filter({ hasText: messagePattern })
-    .first();
-  await expect(messageNotice).toBeVisible();
-};
-
-test.describe('@user-usable contract document review validation', () => {
+test.describe('@user-usable contract intake validation', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
   });
 
-  test('rejects a non-PDF file before creating an extraction session', async ({ page }) => {
-    await page.goto(CONTRACT_DOCUMENT_REVIEW_PATH);
-    await expect(page).toHaveURL(/\/contract-center\/import$/);
-    await expect(
-      page.getByRole('heading', { name: CONTRACT_DOCUMENT_REVIEW_HEADING })
-    ).toBeVisible();
+  test('rejects a non-PDF file without creating an intake session', async ({ page }) => {
+    await page.goto(CONTRACT_INTAKE_PATH);
+    await expect(page).toHaveURL(/\/asset-operations\/contracts\/intake$/);
+    await expect(page.getByRole('heading', { name: CONTRACT_INTAKE_HEADING })).toBeVisible();
 
     await uploadPlainTextFile(page, 'contract.txt');
-    await expectMessageVisible(page, /仅支持 PDF 文件/i);
+    const responsePromise = page.waitForResponse(response => {
+      return (
+        response.request().method() === 'POST' && response.url().endsWith(CONTRACT_INTAKE_ENDPOINT)
+      );
+    });
+    await page.getByRole('button', { name: '上传并创建会话' }).click();
+    expect((await responsePromise).status()).toBe(422);
+    await expect(page.getByText(/创建录入会话失败/i)).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: '第一步 · 选择类型并上传扫描件' })
+    ).toBeVisible();
   });
 
-  test('does not send an extraction request for a rejected file', async ({ page }) => {
-    await page.goto(CONTRACT_DOCUMENT_REVIEW_PATH);
-    await expect(page).toHaveURL(/\/contract-center\/import$/);
-    await expect(
-      page.getByRole('heading', { name: CONTRACT_DOCUMENT_REVIEW_HEADING })
-    ).toBeVisible();
+  test('sends one failed upload request and never advances a rejected file', async ({ page }) => {
+    await page.goto(CONTRACT_INTAKE_PATH);
+    await expect(page).toHaveURL(/\/asset-operations\/contracts\/intake$/);
+    await expect(page.getByRole('heading', { name: CONTRACT_INTAKE_HEADING })).toBeVisible();
 
     let uploadRequestCount = 0;
     const requestListener = (request: Request) => {
-      if (request.method() === 'POST' && request.url().includes(CONTRACT_EXTRACTION_ENDPOINT)) {
+      if (request.method() === 'POST' && request.url().endsWith(CONTRACT_INTAKE_ENDPOINT)) {
         uploadRequestCount += 1;
       }
     };
     page.on('request', requestListener);
     try {
       await uploadPlainTextFile(page, 'contract.txt');
-      await expectMessageVisible(page, /仅支持 PDF 文件/i);
+      const responsePromise = page.waitForResponse(response => {
+        return (
+          response.request().method() === 'POST' &&
+          response.url().endsWith(CONTRACT_INTAKE_ENDPOINT)
+        );
+      });
+      await page.getByRole('button', { name: '上传并创建会话' }).click();
+      expect((await responsePromise).status()).toBe(422);
+      await expect(page.getByText(/创建录入会话失败/i)).toBeVisible();
       await page.waitForTimeout(500);
-      expect(uploadRequestCount).toBe(0);
+      expect(uploadRequestCount).toBe(1);
+      await expect(page.getByRole('heading', { name: '第二步 · 核对信息' })).toHaveCount(0);
     } finally {
       page.off('request', requestListener);
     }
   });
 });
 
-test.describe('@user-usable import route authentication', () => {
-  test('redirects an anonymous user to login for protected import routes', async ({ page }) => {
+test.describe('@user-usable intake route authentication', () => {
+  test('redirects an anonymous user to login for the protected intake route', async ({ page }) => {
     await clearAuthState(page);
 
-    const protectedImportRoutes = ['/assets/import', CONTRACT_DOCUMENT_REVIEW_PATH];
-
-    for (const route of protectedImportRoutes) {
-      await page.goto(route);
-      await expect(page).toHaveURL(/\/login/);
-    }
+    await page.goto(CONTRACT_INTAKE_PATH);
+    await expect(page).toHaveURL(/\/login/);
   });
 });

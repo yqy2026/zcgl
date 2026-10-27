@@ -10,28 +10,28 @@ interface UsabilityRouteCase {
 
 const CORE_ROUTE_CASES: UsabilityRouteCase[] = [
   {
-    path: '/dashboard',
-    urlPattern: /\/dashboard/,
-    titlePattern: /资产管理看板|工作台|仪表盘/i,
-    readySelectors: ['.dashboardContainer', '.ant-card', '.errorContainer'],
+    path: '/asset-operations/units',
+    urlPattern: /\/asset-operations\/units$/,
+    titlePattern: /资产单元/,
+    readySelectors: ['.ant-table', '.ant-empty', '.ant-alert'],
   },
   {
-    path: '/assets/list',
-    urlPattern: /\/assets\/list$/,
-    titlePattern: /资产列表|资产管理/i,
-    readySelectors: ['.ant-table', '.ant-empty'],
+    path: '/asset-operations/contracts/upstream',
+    urlPattern: /\/asset-operations\/contracts\/upstream$/,
+    titlePattern: /上游合同/,
+    readySelectors: ['.ant-table', '.ant-empty', '.ant-alert'],
   },
   {
-    path: '/contract-groups',
-    urlPattern: /\/contract-groups$/,
-    titlePattern: /合同组管理/i,
-    readySelectors: ['.ant-table', '.ant-empty'],
+    path: '/asset-operations/contracts/terminal',
+    urlPattern: /\/asset-operations\/contracts\/terminal$/,
+    titlePattern: /终端合同/,
+    readySelectors: ['.ant-table', '.ant-empty', '.ant-alert'],
   },
   {
-    path: '/project',
-    urlPattern: /\/project$/,
-    titlePattern: /项目管理/i,
-    readySelectors: ['.ant-table', '.ant-empty'],
+    path: '/asset-operations/contracts/intake',
+    urlPattern: /\/asset-operations\/contracts\/intake$/,
+    titlePattern: /录入已签合同/,
+    readySelectors: ['input[type="file"]', 'button'],
   },
 ];
 
@@ -99,27 +99,11 @@ test.describe('@user-usable 用户可用性冒烟', () => {
   });
 
   test('authenticated user can reach key creation entries', async ({ page }) => {
-    await page.goto('/assets/list');
-    await expect(page).toHaveURL(/\/assets\/list$/);
-    const createAssetButton = page.getByRole('button', { name: /新增资产/ }).first();
-    if (await isLocatorVisible(createAssetButton)) {
-      await createAssetButton.click();
-    } else {
-      await page.goto('/assets/new');
-    }
-    await expect(page).toHaveURL(/\/assets\/new/);
-    await expect(page.getByRole('heading', { name: /新增资产|编辑资产/i })).toBeVisible();
-
-    await page.goto('/contract-center/import');
-    await expect(page).toHaveURL(/\/contract-center\/import$/);
-    await expect(page.getByRole('heading', { name: '合同文件解析' })).toBeVisible();
-
-    await page.goto('/project');
-    await expect(page).toHaveURL(/\/project$/);
-    const createProjectButton = page.getByRole('button', { name: /新建项目/ }).first();
-    await expect(createProjectButton).toBeVisible();
-    await createProjectButton.click();
-    await expect(page.getByRole('dialog', { name: /新建项目|编辑项目/i })).toBeVisible();
+    await page.goto('/asset-operations/contracts/intake');
+    await expect(page).toHaveURL(/\/asset-operations\/contracts\/intake$/);
+    await expect(page.getByRole('heading', { name: '录入已签合同' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '终端合同' })).toBeVisible();
+    await expect(page.getByLabel('已签扫描件（PDF/图片）')).toBeVisible();
   });
 });
 

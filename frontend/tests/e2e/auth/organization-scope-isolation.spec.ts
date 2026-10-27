@@ -7,87 +7,42 @@ import {
   resolveCsrfHeaders,
 } from '../helpers/auth';
 
-// 前置条件缺失必须显式失败（issue #92 / Q10）：静默 skip 会让核心隔离用例
-// 在种子环境退化时空转而不被察觉。CI 种子保证这些前置成立；本地未起种子
-// 环境时跑到本文件应当报错，而不是悄悄跳过。
-const rejectPreconditionFailure = (failed: boolean, message: string): void => {
-  if (failed) {
-    throw new Error(`[org-scope-isolation] Precondition failure: ${message}`);
-  }
-};
-
-const requirePrecondition = <T>(
-  value: T | null | undefined,
-  message: string
-): T => {
-  if (value == null) {
-    throw new Error(`[org-scope-isolation] Precondition failure: ${message}`);
-  }
-  return value;
-};
-
-interface PermissionItem {
-  id: string;
-  resource: string;
-  action: string;
-  name?: string;
-}
-
-interface UserItem {
-  id: string;
-  username: string;
-  role_id?: string | null;
-  is_admin?: boolean;
-}
-
-interface AssetItem {
-  id: string;
-  property_name: string;
-  owner_party_id?: string | null;
-}
+const WALKTHROUGH_OWNER_ID = 'v5-walkthrough-owner';
+const WALKTHROUGH_OPERATOR_ID = 'v5-walkthrough-operator';
 
 interface OrganizationItem {
   id: string;
   code?: string;
-  name?: string;
+}
+
+interface PermissionItem {
+  action: string;
+  resource: string;
 }
 
 interface RoleListItem {
   id: string;
   name: string;
-  display_name?: string;
 }
 
 interface RoleDetailItem {
-  id: string;
   permissions?: PermissionItem[];
 }
 
-interface PartyItem {
+interface UserItem {
   id: string;
-  status?: string;
-  review_status?: string | null;
+  username: string;
 }
 
-interface PartyPair {
-  partyAId: string;
-  partyBId: string;
+interface AssetUnitItem {
+  id: string;
+  owner_party_id: string;
 }
 
-interface AssetListResult {
+interface AssetUnitListResponse {
+  items: AssetUnitItem[];
   total: number;
-  items: AssetItem[];
 }
-
-const READABLE_ACTIONS = new Set(['read', 'view', 'list', 'query', 'get']);
-const FALLBACK_OWNERSHIP_STATUS = '已确权';
-const FALLBACK_PROPERTY_NATURE = '经营类';
-const FALLBACK_USAGE_STATUS = '自用';
-
-const readNodeEnv = (name: string): string | undefined => {
-  const rawValue = process.env[name];
-  return typeof rawValue === 'string' && rawValue !== '' ? rawValue : undefined;
-};
 
 const normalizeNonEmpty = (value: unknown): string | null => {
   if (value == null) {
@@ -95,22 +50,6 @@ const normalizeNonEmpty = (value: unknown): string | null => {
   }
   const normalized = String(value).trim();
   return normalized !== '' ? normalized : null;
-};
-
-const uniqueNonEmpty = (values: Array<string | null | undefined>): string[] => {
-  const result: string[] = [];
-  const seen = new Set<string>();
-
-  for (const item of values) {
-    const normalized = normalizeNonEmpty(item);
-    if (normalized == null || seen.has(normalized)) {
-      continue;
-    }
-    seen.add(normalized);
-    result.push(normalized);
-  }
-
-  return result;
 };
 
 const extractData = <T>(payload: unknown): T => {
@@ -122,17 +61,14 @@ const extractData = <T>(payload: unknown): T => {
   ) {
     return (payload as { data: T }).data;
   }
-
   return payload as T;
 };
 
-const buildPhone = (serial: number): string => {
-  const suffix = String(serial % 1000000000).padStart(9, '0');
-  return `13${suffix}`;
-};
-
 const parsePaginatedItems = <T>(payload: unknown): T[] => {
-  const extracted = extractData<{ items?: unknown }>(payload);
+  const extracted = extractData<unknown>(payload);
+  if (Array.isArray(extracted)) {
+    return extracted as T[];
+  }
   if (
     extracted != null &&
     typeof extracted === 'object' &&
@@ -143,163 +79,60 @@ const parsePaginatedItems = <T>(payload: unknown): T[] => {
   return [];
 };
 
-const parsePaginatedTotal = (payload: unknown): number => {
-  const extracted = extractData<{ total?: unknown; items?: unknown }>(payload);
-  if (extracted != null && typeof extracted === 'object') {
-    const maybeTotal = (extracted as { total?: unknown }).total;
-    if (typeof maybeTotal === 'number' && Number.isFinite(maybeTotal)) {
-      return maybeTotal;
-    }
-    const maybeItems = (extracted as { items?: unknown }).items;
-    if (Array.isArray(maybeItems)) {
-      return maybeItems.length;
-    }
-  }
-  return 0;
-};
-
 const readResponseSnippet = async (response: APIResponse): Promise<string> => {
-  try {
-    const rawText = await response.text();
-    if (rawText.length <= 260) {
-      return rawText;
-    }
-    return `${rawText.slice(0, 260)}...`;
-  } catch {
-    return '<unavailable>';
-  }
+  const rawText = await response.text().catch(() => '<unavailable>');
+  return rawText.length <= 260 ? rawText : `${rawText.slice(0, 260)}...`;
 };
 
-const commitUserPartyBinding = async ({
-  page,
-  userId,
-  partyId,
-  relationType,
-  mutationHeaders,
-  idempotencyKey,
-}: {
-  page: Page;
-  userId: string;
-  partyId: string;
-  relationType: 'owner' | 'manager';
-  mutationHeaders: Record<string, string>;
-  idempotencyKey: string;
-}): Promise<void> => {
-  const previewResponse = await page.request.post(
-    `/api/v1/users/${userId}/party-bindings/preview`,
-    {
-      headers: mutationHeaders,
-      data: {
-        operation: 'create',
-        party_id: partyId,
-        relation_type: relationType,
-      },
-    }
+const buildPhone = (serial: number): string => {
+  const suffix = String(serial % 1_000_000_000).padStart(9, '0');
+  return `13${suffix}`;
+};
+
+const requireCsrfHeaders = async (page: Page): Promise<Record<string, string>> => {
+  const headers = await resolveCsrfHeaders(page);
+  if (Object.keys(headers).length === 0) {
+    throw new Error('[org-scope-isolation] authenticated session has no CSRF token');
+  }
+  return headers;
+};
+
+const resolveRegularAssetOpsRoleId = async (page: Page): Promise<string> => {
+  const rolesResponse = await page.request.get('/api/v1/roles?page=1&page_size=100');
+  expect(rolesResponse.status()).toBe(200);
+  const rolesPayload = (await rolesResponse.json()) as unknown;
+  const role = parsePaginatedItems<RoleListItem>(rolesPayload).find(item => item.name === 'user');
+  if (role == null) {
+    throw new Error('[org-scope-isolation] seeded regular role "user" is missing');
+  }
+
+  const detailResponse = await page.request.get(`/api/v1/roles/${role.id}`);
+  expect(detailResponse.status()).toBe(200);
+  const detail = extractData<RoleDetailItem>((await detailResponse.json()) as unknown);
+  const canReadAssetOperations = (detail.permissions ?? []).some(
+    permission => permission.resource === 'asset_ops' && permission.action === 'read'
   );
-  if (previewResponse.status() !== 200) {
-    const errorSnippet = await readResponseSnippet(previewResponse);
-    throw new Error(
-      `Failed to preview user Party binding, status=${previewResponse.status()}, body=${errorSnippet}`
-    );
+  if (!canReadAssetOperations) {
+    throw new Error('[org-scope-isolation] regular role lacks asset_ops:read');
   }
-
-  const previewPayload = (await previewResponse.json()) as unknown;
-  const preview = extractData<{ preview_token?: unknown }>(previewPayload);
-  const previewToken = normalizeNonEmpty(preview.preview_token);
-  if (previewToken == null) {
-    throw new Error('User Party binding preview did not return a token.');
-  }
-
-  const commitResponse = await page.request.post(
-    `/api/v1/users/${userId}/party-bindings/commit`,
-    {
-      headers: mutationHeaders,
-      data: {
-        preview_token: previewToken,
-        reason: 'E2E user Party scope setup.',
-        idempotency_key: idempotencyKey,
-      },
-    }
-  );
-  if (commitResponse.status() !== 200) {
-    const errorSnippet = await readResponseSnippet(commitResponse);
-    throw new Error(
-      `Failed to commit user Party binding, status=${commitResponse.status()}, body=${errorSnippet}`
-    );
-  }
-};
-const isBindingEligibleParty = (party: PartyItem): boolean => {
-  return party.status === 'active' && party.review_status === 'approved';
+  return role.id;
 };
 
-const listBindingEligiblePartyIds = async (page: Page): Promise<Set<string>> => {
-  const response = await page.request.get('/api/v1/parties?limit=200');
-  if (response.status() !== 200) {
-    return new Set();
-  }
-
-  const payload = (await response.json()) as unknown;
-  const parties = extractData<PartyItem[] | unknown>(payload);
-  if (!Array.isArray(parties)) {
-    return new Set();
-  }
-
-  return new Set(
-    parties
-      .filter((party): party is PartyItem => isBindingEligibleParty(party as PartyItem))
-      .map(party => normalizeNonEmpty(party.id))
-      .filter((partyId): partyId is string => partyId != null)
-  );
-};
-
-const approvePartyForScope = async ({
-  page,
-  partyId,
-  mutationHeaders,
-}: {
-  page: Page;
-  partyId: string;
-  mutationHeaders: Record<string, string>;
-}): Promise<boolean> => {
-  const submitResponse = await page.request.post(`/api/v1/parties/${partyId}/submit-review`, {
-    headers: mutationHeaders,
-  });
-  if (submitResponse.status() !== 200) {
-    return false;
-  }
-
-  const approveResponse = await page.request.post(`/api/v1/parties/${partyId}/approve-review`, {
-    headers: mutationHeaders,
-  });
-  return approveResponse.status() === 200;
-};
-
-/**
- * API 建出的用户默认 is_active=False，且激活要求有效组织链（后端契约，
- * issue #92 复核发现）——先做 organization transfer（挂到种子组织
- * E2E-ORG-ROOT，本地 fallback 第一个 active 组织）再 activate，缺一不可。
- */
 const activateCreatedUser = async (
   page: Page,
   userId: string,
-  mutationHeaders: Record<string, string>,
-  suffix: number
-): Promise<boolean> => {
+  mutationHeaders: Record<string, string>
+): Promise<void> => {
   const organizationsResponse = await page.request.get(
     '/api/v1/organizations?page=1&page_size=100'
   );
-  if (organizationsResponse.status() !== 200) {
-    return false;
-  }
-  const organizationsPayload = (await organizationsResponse.json()) as unknown;
-  const organizationCandidates = Array.isArray(organizationsPayload)
-    ? (organizationsPayload as OrganizationItem[])
-    : parsePaginatedItems<OrganizationItem>(organizationsPayload);
-  const organization =
-    organizationCandidates.find(item => item.code === 'E2E-ORG-ROOT') ??
-    organizationCandidates[0];
+  expect(organizationsResponse.status()).toBe(200);
+  const organizations = parsePaginatedItems<OrganizationItem>(
+    (await organizationsResponse.json()) as unknown
+  );
+  const organization = organizations.find(item => item.code === 'E2E-ORG-ROOT');
   if (organization == null) {
-    return false;
+    throw new Error('[org-scope-isolation] seeded organization E2E-ORG-ROOT is missing');
   }
 
   const previewResponse = await page.request.post(
@@ -309,752 +142,233 @@ const activateCreatedUser = async (
       data: { organization_id: organization.id },
     }
   );
-  if (previewResponse.status() !== 200) {
-    return false;
-  }
-  const previewPayload = (await previewResponse.json()) as {
-    preview_token?: string;
-  };
-  const previewToken = normalizeNonEmpty(previewPayload.preview_token);
+  expect(previewResponse.status()).toBe(200);
+  const preview = extractData<{ preview_token?: string }>(
+    (await previewResponse.json()) as unknown
+  );
+  const previewToken = normalizeNonEmpty(preview.preview_token);
   if (previewToken == null) {
-    return false;
+    throw new Error('[org-scope-isolation] organization preview did not return a token');
   }
 
-  const commitResponse = await page.request.put(
-    `/api/v1/auth/users/${userId}/organization`,
+  const commitResponse = await page.request.put(`/api/v1/auth/users/${userId}/organization`, {
+    headers: mutationHeaders,
+    data: {
+      preview_token: previewToken,
+      reason: 'asset operations E2E scope setup',
+      idempotency_key: `e2e-org-${userId}`,
+    },
+  });
+  expect(commitResponse.status()).toBe(200);
+
+  const activateResponse = await page.request.post(`/api/v1/auth/users/${userId}/activate`, {
+    headers: mutationHeaders,
+  });
+  expect(activateResponse.status()).toBe(200);
+};
+
+const createRegularUser = async ({
+  page,
+  roleId,
+  password,
+  suffix,
+  label,
+  mutationHeaders,
+}: {
+  page: Page;
+  roleId: string;
+  password: string;
+  suffix: number;
+  label: string;
+  mutationHeaders: Record<string, string>;
+}): Promise<UserItem> => {
+  const response = await page.request.post('/api/v1/auth/users', {
+    headers: mutationHeaders,
+    data: {
+      username: `e2e_v5_scope_${label}_${suffix}`,
+      full_name: `E2E V5 Scope ${label} ${suffix}`,
+      email: `e2e.v5.scope.${label}.${suffix}@example.com`,
+      phone: buildPhone(suffix + (label === 'bound' ? 1 : 2)),
+      password,
+      role_id: roleId,
+    },
+  });
+  if (response.status() !== 200) {
+    throw new Error(
+      `[org-scope-isolation] user creation failed: ${await readResponseSnippet(response)}`
+    );
+  }
+  const user = extractData<Partial<UserItem>>((await response.json()) as unknown);
+  const userId = normalizeNonEmpty(user.id);
+  const username = normalizeNonEmpty(user.username);
+  if (userId == null || username == null) {
+    throw new Error('[org-scope-isolation] user creation returned an invalid payload');
+  }
+  await activateCreatedUser(page, userId, mutationHeaders);
+  return { id: userId, username };
+};
+
+const commitOwnerBinding = async ({
+  page,
+  userId,
+  mutationHeaders,
+  suffix,
+}: {
+  page: Page;
+  userId: string;
+  mutationHeaders: Record<string, string>;
+  suffix: number;
+}): Promise<void> => {
+  const previewResponse = await page.request.post(
+    `/api/v1/users/${userId}/party-bindings/preview`,
     {
       headers: mutationHeaders,
       data: {
-        preview_token: previewToken,
-        reason: 'org-scope-isolation e2e',
-        idempotency_key: `e2e-org-${userId}`,
+        operation: 'create',
+        party_id: WALKTHROUGH_OWNER_ID,
+        relation_type: 'owner',
       },
     }
   );
-  if (commitResponse.status() !== 200) {
-    return false;
-  }
-
-  const activateResponse = await page.request.post(
-    `/api/v1/auth/users/${userId}/activate`,
-    { headers: mutationHeaders }
-  );
-  return activateResponse.status() === 200;
-};
-const resolveRoleCandidateIds = async (page: Page): Promise<string[]> => {
-  const explicitRoleId = normalizeNonEmpty(readNodeEnv('E2E_SCOPE_ROLE_ID'));
-  if (explicitRoleId != null) {
-    return [explicitRoleId];
-  }
-
-  const roleIds: Array<string | null> = [];
-  const rolesResponse = await page.request.get('/api/v1/roles?page=1&page_size=100');
-  if (rolesResponse.status() === 200) {
-    const rolesPayload = (await rolesResponse.json()) as unknown;
-    const roleItems = parsePaginatedItems<RoleListItem>(rolesPayload);
-
-    for (const role of roleItems) {
-      const roleId = normalizeNonEmpty(role.id);
-      if (roleId == null) {
-        continue;
-      }
-      const roleName = `${role.name ?? ''} ${role.display_name ?? ''}`.toLowerCase();
-      if (roleName.includes('admin') || roleName.includes('管理员')) {
-        continue;
-      }
-
-      const roleDetailResponse = await page.request.get(`/api/v1/roles/${roleId}`);
-      if (roleDetailResponse.status() !== 200) {
-        continue;
-      }
-
-      const roleDetailPayload = (await roleDetailResponse.json()) as unknown;
-      const roleDetail = extractData<RoleDetailItem>(roleDetailPayload);
-      const permissions = Array.isArray(roleDetail.permissions)
-        ? roleDetail.permissions
-        : [];
-      const hasAssetReadPermission = permissions.some(permission => {
-        const resource = normalizeNonEmpty(permission.resource);
-        const action = normalizeNonEmpty(permission.action)?.toLowerCase() ?? '';
-        return resource === 'asset' && READABLE_ACTIONS.has(action);
-      });
-      if (hasAssetReadPermission) {
-        roleIds.push(roleId);
-      }
-    }
-  }
-
-  const usersResponse = await page.request.get('/api/v1/auth/users?page=1&page_size=100');
-  if (usersResponse.status() === 200) {
-    const usersPayload = (await usersResponse.json()) as unknown;
-    const userItems = parsePaginatedItems<UserItem>(usersPayload);
-
-    for (const user of userItems) {
-      if (user.is_admin === true) {
-        continue;
-      }
-      roleIds.push(normalizeNonEmpty(user.role_id));
-    }
-  }
-
-  return uniqueNonEmpty(roleIds);
-};
-
-const resolvePartyPair = async (
-  page: Page,
-  suffix: number,
-  mutationHeaders: Record<string, string>
-): Promise<PartyPair | null> => {
-  const explicitPartyAId = normalizeNonEmpty(readNodeEnv('E2E_SCOPE_PARTY_A_ID'));
-  const explicitPartyBId = normalizeNonEmpty(readNodeEnv('E2E_SCOPE_PARTY_B_ID'));
-
-  if (
-    explicitPartyAId != null &&
-    explicitPartyBId != null &&
-    explicitPartyAId === explicitPartyBId
-  ) {
-    throw new Error('E2E_SCOPE_PARTY_A_ID 与 E2E_SCOPE_PARTY_B_ID 不能相同。');
-  }
-
-  if (explicitPartyAId != null && explicitPartyBId != null) {
-    return { partyAId: explicitPartyAId, partyBId: explicitPartyBId };
-  }
-
-  const candidatePartyIds: Array<string | null> = [explicitPartyAId, explicitPartyBId];
-  const eligiblePartyIds = await listBindingEligiblePartyIds(page);
-  candidatePartyIds.push(...eligiblePartyIds);
-
-  let dedupedPartyIds = uniqueNonEmpty(candidatePartyIds);
-  if (dedupedPartyIds.length < 2) {
-    const missingCount = 2 - dedupedPartyIds.length;
-    for (let i = 0; i < missingCount; i += 1) {
-      const createPartyResponse = await page.request.post('/api/v1/parties', {
-        headers: mutationHeaders,
-        data: {
-          // PartyCreate 是 extra=forbid，status 由服务端默认（active）；
-          // 传 status 会让兜底建 party 恒 422（issue #92 复核发现）。
-          party_type: 'legal_entity',
-          name: `E2E Scope Party ${suffix}-${i + 1}`,
-        },
-      });
-      if (createPartyResponse.status() !== 200 && createPartyResponse.status() !== 201) {
-        continue;
-      }
-      const createPartyPayload = (await createPartyResponse.json()) as unknown;
-      const createdParty = extractData<PartyItem>(createPartyPayload);
-      const createdPartyId = normalizeNonEmpty(createdParty.id);
-      if (
-        createdPartyId != null &&
-        (await approvePartyForScope({
-          page,
-          partyId: createdPartyId,
-          mutationHeaders,
-        }))
-      ) {
-        candidatePartyIds.push(createdPartyId);
-      }
-    }
-  }
-
-  dedupedPartyIds = uniqueNonEmpty(candidatePartyIds);
-  if (dedupedPartyIds.length < 2) {
-    const assetsResponse = await page.request.get('/api/v1/assets?page=1&page_size=200');
-    if (assetsResponse.status() === 200) {
-      const assetsPayload = (await assetsResponse.json()) as unknown;
-      const assetItems = parsePaginatedItems<AssetItem>(assetsPayload);
-      for (const asset of assetItems) {
-        candidatePartyIds.push(normalizeNonEmpty(asset.owner_party_id));
-      }
-    }
-  }
-
-  dedupedPartyIds = uniqueNonEmpty(candidatePartyIds);
-  if (dedupedPartyIds.length < 2) {
-    return null;
-  }
-
-  if (explicitPartyAId != null) {
-    const partyBId = dedupedPartyIds.find(item => item !== explicitPartyAId);
-    if (partyBId == null) {
-      return null;
-    }
-    return { partyAId: explicitPartyAId, partyBId };
-  }
-
-  if (explicitPartyBId != null) {
-    const partyAId = dedupedPartyIds.find(item => item !== explicitPartyBId);
-    if (partyAId == null) {
-      return null;
-    }
-    return { partyAId, partyBId: explicitPartyBId };
-  }
-
-  return {
-    partyAId: dedupedPartyIds[0],
-    partyBId: dedupedPartyIds[1],
-  };
-};
-
-const fetchAssetsByOwnership = async (
-  page: Page,
-  partyId: string
-): Promise<AssetListResult | null> => {
-  const response = await page.request.get(
-    // 资产列表产权方筛选已统一为 owner_party_id（ownership_id 已废弃）
-    `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(partyId)}`
-  );
-  if (response.status() !== 200) {
-    console.error(
-      `[org-scope-isolation] asset fetch failed: ${response.status()} ${await response.text()}`
+  if (previewResponse.status() !== 200) {
+    throw new Error(
+      `[org-scope-isolation] binding preview failed: ${await readResponseSnippet(previewResponse)}`
     );
-    return null;
+  }
+  const preview = extractData<{ preview_token?: string }>(
+    (await previewResponse.json()) as unknown
+  );
+  const previewToken = normalizeNonEmpty(preview.preview_token);
+  if (previewToken == null) {
+    throw new Error('[org-scope-isolation] binding preview did not return a token');
   }
 
-  const payload = (await response.json()) as unknown;
-  return {
-    total: parsePaginatedTotal(payload),
-    items: parsePaginatedItems<AssetItem>(payload),
-  };
-};
-
-const tryCreateAssetForParty = async (
-  page: Page,
-  partyId: string,
-  suffix: number,
-  label: string,
-  mutationHeaders: Record<string, string>
-): Promise<boolean> => {
-  const response = await page.request.post('/api/v1/assets', {
+  const commitResponse = await page.request.post(`/api/v1/users/${userId}/party-bindings/commit`, {
     headers: mutationHeaders,
     data: {
-      // AssetCreate 字段名是 asset_name/address_detail（issue #92 复核发现：
-      // 旧的 property_name/address 会被忽略 → 422 → 造数恒失败）。
-      asset_name: `E2E Scope Asset ${label} ${suffix}`,
-      address_detail: `E2E Scope Address ${label} ${suffix}`,
-      ownership_status: FALLBACK_OWNERSHIP_STATUS,
-      property_nature: FALLBACK_PROPERTY_NATURE,
-      usage_status: FALLBACK_USAGE_STATUS,
-      owner_party_id: partyId,
-      manager_party_id: partyId,
+      preview_token: previewToken,
+      reason: 'asset operations E2E scope setup',
+      idempotency_key: `e2e-v5-binding-${suffix}`,
     },
   });
-
-  if (response.status() !== 201) {
-    console.error(
-      `[org-scope-isolation] asset create failed (${label}): ${await response.text()}`
-    );
-  }
-  return response.status() === 201;
+  expect(commitResponse.status()).toBe(200);
 };
 
-test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
-  test('newly created users should only see assets bound to their own party scope', async ({
-    page,
-  }) => {
+const fetchUnits = async (page: Page, ownerPartyId?: string): Promise<AssetUnitListResponse> => {
+  const params = new URLSearchParams({ limit: '100' });
+  if (ownerPartyId != null) {
+    params.set('owner_party_id', ownerPartyId);
+  }
+  const response = await page.request.get(`/api/v1/asset-units?${params.toString()}`);
+  expect(response.status()).toBe(200);
+  return extractData<AssetUnitListResponse>((await response.json()) as unknown);
+};
+
+const restoreAdminAndDeleteUsers = async (page: Page, userIds: string[]): Promise<void> => {
+  if (userIds.length === 0) {
+    return;
+  }
+  await clearAuthState(page);
+  await ensureAuthenticated(page);
+  const headers = await requireCsrfHeaders(page);
+  for (const userId of userIds) {
+    await page.request.delete(`/api/v1/auth/users/${userId}`, { headers });
+  }
+};
+
+test.describe('@authz-org-scope v5 asset-unit Party scope isolation', () => {
+  test('an owner-bound regular user sees only the bound owner asset units', async ({ page }) => {
     await ensureAuthenticated(page);
+    const mutationHeaders = await requireCsrfHeaders(page);
+    const roleId = await resolveRegularAssetOpsRoleId(page);
+    const adminOwnUnits = await fetchUnits(page, WALKTHROUGH_OWNER_ID);
+    const adminOtherUnits = await fetchUnits(page, WALKTHROUGH_OPERATOR_ID);
+    expect(adminOwnUnits.total).toBeGreaterThanOrEqual(2);
+    expect(adminOwnUnits.items).not.toHaveLength(0);
+    expect(adminOtherUnits.total).toBeGreaterThanOrEqual(1);
+    expect(adminOtherUnits.items).not.toHaveLength(0);
+    const otherUnitIds = new Set(adminOtherUnits.items.map(item => item.id));
+    const suffix = Date.now();
+    const password = `Aa!${suffix}`;
     const createdUserIds: string[] = [];
 
-    const suffix = Date.now();
-    const sharedPassword = `Aa!${suffix}`;
-    const mutationHeaders = await resolveCsrfHeaders(page);
-    const explicitRoleId = normalizeNonEmpty(readNodeEnv('E2E_SCOPE_ROLE_ID'));
-    const hasExplicitPartyPair =
-      normalizeNonEmpty(readNodeEnv('E2E_SCOPE_PARTY_A_ID')) != null &&
-      normalizeNonEmpty(readNodeEnv('E2E_SCOPE_PARTY_B_ID')) != null;
-
-    rejectPreconditionFailure(
-      Object.keys(mutationHeaders).length === 0,
-      'Authenticated session has no csrf_token cookie; cannot run mutation setup.'
-    );
-
-    const roleCandidateIds = await resolveRoleCandidateIds(page);
-    rejectPreconditionFailure(
-      roleCandidateIds.length === 0,
-      'No available role candidates. Set E2E_SCOPE_ROLE_ID for deterministic run.'
-    );
-
-    const partyPair = requirePrecondition(
-      await resolvePartyPair(page, suffix, mutationHeaders),
-      'No available party pair. Set E2E_SCOPE_PARTY_A_ID and E2E_SCOPE_PARTY_B_ID.'
-    );
-
-    let scopedPartyAId = partyPair.partyAId;
-    let scopedPartyBId = partyPair.partyBId;
-
-    let adminAssetsForPartyA = requirePrecondition(
-      await fetchAssetsByOwnership(page, scopedPartyAId),
-      'Current session cannot read assets list for configured parties (A).'
-    );
-    let adminAssetsForPartyB = requirePrecondition(
-      await fetchAssetsByOwnership(page, scopedPartyBId),
-      'Current session cannot read assets list for configured parties (B).'
-    );
-
-    if (adminAssetsForPartyA.total === 0) {
-      await tryCreateAssetForParty(page, scopedPartyAId, suffix, 'A', mutationHeaders);
-    }
-    if (adminAssetsForPartyB.total === 0) {
-      await tryCreateAssetForParty(page, scopedPartyBId, suffix, 'B', mutationHeaders);
-    }
-
-    let refreshedAdminAssetsForPartyA = requirePrecondition(
-      await fetchAssetsByOwnership(page, scopedPartyAId),
-      'Cannot confirm post-setup asset totals for configured parties (A).'
-    );
-    let refreshedAdminAssetsForPartyB = requirePrecondition(
-      await fetchAssetsByOwnership(page, scopedPartyBId),
-      'Cannot confirm post-setup asset totals for configured parties (B).'
-    );
-
-    if (
-      refreshedAdminAssetsForPartyA.total === 0 &&
-      refreshedAdminAssetsForPartyB.total === 0
-    ) {
-      const assetsResponse = await page.request.get('/api/v1/assets?page=1&page_size=200');
-      if (assetsResponse.status() === 200) {
-        const assetsPayload = (await assetsResponse.json()) as unknown;
-        const ownerPartyIds = uniqueNonEmpty(
-          parsePaginatedItems<AssetItem>(assetsPayload).map(item =>
-            normalizeNonEmpty(item.owner_party_id)
-          )
-        );
-        const eligiblePartyIds = await listBindingEligiblePartyIds(page);
-        const eligibleOwnerPartyIds = ownerPartyIds.filter(partyId => eligiblePartyIds.has(partyId));
-        if (eligibleOwnerPartyIds.length > 0) {
-          const fallbackPartyAId = eligibleOwnerPartyIds[0];
-          const fallbackPartyBId =
-            eligibleOwnerPartyIds.find(item => item !== fallbackPartyAId) ??
-            [scopedPartyAId, scopedPartyBId].find(item => item !== fallbackPartyAId) ??
-            null;
-          if (fallbackPartyBId != null) {
-            scopedPartyAId = fallbackPartyAId;
-            scopedPartyBId = fallbackPartyBId;
-
-            adminAssetsForPartyA = requirePrecondition(
-              await fetchAssetsByOwnership(page, scopedPartyAId),
-              'Fallback asset read failed for party A.'
-            );
-            adminAssetsForPartyB = requirePrecondition(
-              await fetchAssetsByOwnership(page, scopedPartyBId),
-              'Fallback asset read failed for party B.'
-            );
-            if (adminAssetsForPartyA.total === 0) {
-              await tryCreateAssetForParty(
-                page,
-                scopedPartyAId,
-                suffix,
-                'A-Fallback',
-                mutationHeaders
-              );
-            }
-            if (adminAssetsForPartyB.total === 0) {
-              await tryCreateAssetForParty(
-                page,
-                scopedPartyBId,
-                suffix,
-                'B-Fallback',
-                mutationHeaders
-              );
-            }
-            refreshedAdminAssetsForPartyA = requirePrecondition(
-              await fetchAssetsByOwnership(page, scopedPartyAId),
-              'Fallback refreshed asset read failed for party A.'
-            );
-            refreshedAdminAssetsForPartyB = requirePrecondition(
-              await fetchAssetsByOwnership(page, scopedPartyBId),
-              'Fallback refreshed asset read failed for party B.'
-            );
-          }
-        }
-      }
-    }
-
-    if (
-      refreshedAdminAssetsForPartyA == null ||
-      refreshedAdminAssetsForPartyB == null
-    ) {
-      throw new Error(
-        '[org-scope-isolation] Precondition failure: Cannot confirm post-fallback asset totals for party scopes.'
-      );
-    }
-
-    if (
-      refreshedAdminAssetsForPartyA.total === 0 &&
-      refreshedAdminAssetsForPartyB.total === 0
-    ) {
-      if (hasExplicitPartyPair) {
-        throw new Error(
-          [
-            `Configured party A (${scopedPartyAId}) total=0, party B (${scopedPartyBId}) total=0.`,
-            'Please provide parties that contain assets, or grant asset create permission for test setup.',
-          ].join(' ')
-        );
-      }
-      rejectPreconditionFailure(
-        true,
-        'Both party scopes have zero assets and setup cannot seed data in this environment.'
-      );
-    }
-
     try {
-      let selectedRoleId: string | null = null;
-      let userA: UserItem | null = null;
-      const createUserErrors: string[] = [];
-
-      for (const roleId of roleCandidateIds) {
-        const createUserAResponse = await page.request.post('/api/v1/auth/users', {
-          headers: mutationHeaders,
-          data: {
-            username: `e2e_scope_a_${suffix}`,
-            full_name: `E2E Scope A ${suffix}`,
-            email: `e2e.scope.a.${suffix}@example.com`,
-            phone: buildPhone(suffix + 1),
-            password: sharedPassword,
-            role_id: roleId,
-          },
-        });
-
-        if (createUserAResponse.status() !== 200) {
-          const errorSnippet = await readResponseSnippet(createUserAResponse);
-          createUserErrors.push(
-            `[role_id=${roleId}] status=${createUserAResponse.status()} body=${errorSnippet}`
-          );
-          continue;
-        }
-
-        const userPayload = (await createUserAResponse.json()) as unknown;
-        const createdUser = extractData<UserItem>(userPayload);
-        const createdUserId = normalizeNonEmpty(createdUser.id);
-        const createdUsername = normalizeNonEmpty(createdUser.username);
-        if (createdUserId == null || createdUsername == null) {
-          createUserErrors.push(`[role_id=${roleId}] status=200 but user payload invalid`);
-          continue;
-        }
-
-        createdUserIds.push(createdUserId);
-        userA = {
-          ...createdUser,
-          id: createdUserId,
-          username: createdUsername,
-        };
-        selectedRoleId = roleId;
-        break;
-      }
-
-      if (userA == null || selectedRoleId == null) {
-        throw new Error(
-          `[org-scope-isolation] Precondition failure: ${
-            explicitRoleId != null
-              ? `E2E_SCOPE_ROLE_ID=${explicitRoleId} cannot create scoped user. Errors: ${createUserErrors.join(' | ')}`
-              : `No role candidate can create scoped users. ${createUserErrors.join(' | ')}`
-          }`
-        );
-      }
-      // API 建的用户默认停用，需 admin 激活后才能登录（issue #92）。
-      if (!(await activateCreatedUser(page, userA.id, mutationHeaders, suffix))) {
-        throw new Error(
-          '[org-scope-isolation] Precondition failure: cannot activate scoped user A.'
-        );
-      }
-
-      const userBResponse = await page.request.post('/api/v1/auth/users', {
-        headers: mutationHeaders,
-        data: {
-          username: `e2e_scope_b_${suffix}`,
-          full_name: `E2E Scope B ${suffix}`,
-          email: `e2e.scope.b.${suffix}@example.com`,
-          phone: buildPhone(suffix + 2),
-          password: sharedPassword,
-          role_id: selectedRoleId,
-        },
-      });
-      if (userBResponse.status() !== 200) {
-        const errorSnippet = await readResponseSnippet(userBResponse);
-        throw new Error(
-          `Failed to create user B with role ${selectedRoleId}, status=${userBResponse.status()}, body=${errorSnippet}`
-        );
-      }
-      const userBPayload = (await userBResponse.json()) as unknown;
-      const userB = extractData<UserItem>(userBPayload);
-      const userBId = normalizeNonEmpty(userB.id);
-      if (userBId != null) {
-        createdUserIds.push(userBId);
-        if (!(await activateCreatedUser(page, userBId, mutationHeaders, suffix))) {
-          throw new Error(
-            '[org-scope-isolation] Precondition failure: cannot activate scoped user B.'
-          );
-        }
-      }
-
-      await commitUserPartyBinding({
+      const user = await createRegularUser({
         page,
-        userId: userA.id,
-        partyId: scopedPartyAId,
-        relationType: 'owner',
+        roleId,
+        password,
+        suffix,
+        label: 'bound',
         mutationHeaders,
-        idempotencyKey: `e2e-user-party-binding-a-${suffix}`,
       });
-      await commitUserPartyBinding({
+      createdUserIds.push(user.id);
+      await commitOwnerBinding({
         page,
-        userId: userB.id,
-        partyId: scopedPartyBId,
-        relationType: 'owner',
+        userId: user.id,
         mutationHeaders,
-        idempotencyKey: `e2e-user-party-binding-b-${suffix}`,
-      });
-      const assertScopedVisibility = async ({
-        username,
-        ownPartyId,
-        otherPartyId,
-        expectOwnOwnershipAssets,
-      }: {
-        username: string;
-        ownPartyId: string;
-        otherPartyId: string;
-        expectOwnOwnershipAssets: boolean;
-      }): Promise<void> => {
-        await clearAuthState(page);
-        const loginOk = await loginWithCredentialRetry(
-          page,
-          {
-            username,
-            password: sharedPassword,
-          },
-          2
-        );
-        expect(loginOk).toBe(true);
-
-        const ownResponse = await page.request.get(
-          `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(ownPartyId)}`
-        );
-        expect(ownResponse.status()).toBe(200);
-        const ownPayload = (await ownResponse.json()) as unknown;
-        const ownTotal = parsePaginatedTotal(ownPayload);
-        if (expectOwnOwnershipAssets) {
-          expect(ownTotal).toBeGreaterThan(0);
-        } else {
-          expect(ownTotal).toBe(0);
-        }
-
-        const otherResponse = await page.request.get(
-          `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(otherPartyId)}`
-        );
-        expect(otherResponse.status()).toBe(200);
-        const otherPayload = (await otherResponse.json()) as unknown;
-        const otherTotal = parsePaginatedTotal(otherPayload);
-        expect(otherTotal).toBe(0);
-        const otherItems = parsePaginatedItems<AssetItem>(otherPayload);
-        expect(otherItems).toHaveLength(0);
-
-        const unfilteredResponse = await page.request.get('/api/v1/assets?page=1&page_size=100');
-        expect(unfilteredResponse.status()).toBe(200);
-        const unfilteredPayload = (await unfilteredResponse.json()) as unknown;
-        const unfilteredItems = parsePaginatedItems<AssetItem>(unfilteredPayload);
-        const ownerPartyIds = new Set(
-          unfilteredItems
-            .map(item => normalizeNonEmpty(item.owner_party_id))
-            .filter((item): item is string => item != null)
-        );
-        expect(ownerPartyIds.has(otherPartyId)).toBe(false);
-      };
-
-      await assertScopedVisibility({
-        username: userA.username,
-        ownPartyId: scopedPartyAId,
-        otherPartyId: scopedPartyBId,
-        expectOwnOwnershipAssets: refreshedAdminAssetsForPartyA.total > 0,
+        suffix,
       });
 
-      await assertScopedVisibility({
-        username: userB.username,
-        ownPartyId: scopedPartyBId,
-        otherPartyId: scopedPartyAId,
-        expectOwnOwnershipAssets: refreshedAdminAssetsForPartyB.total > 0,
-      });
+      await clearAuthState(page);
+      expect(await loginWithCredentialRetry(page, { username: user.username, password }, 2)).toBe(
+        true
+      );
+
+      const ownUnits = await fetchUnits(page, WALKTHROUGH_OWNER_ID);
+      expect(ownUnits.total).toBeGreaterThanOrEqual(2);
+      expect(ownUnits.items).not.toHaveLength(0);
+      expect(ownUnits.items.every(item => item.owner_party_id === WALKTHROUGH_OWNER_ID)).toBe(true);
+
+      const otherUnits = await fetchUnits(page, WALKTHROUGH_OPERATOR_ID);
+      expect(otherUnits.total).toBe(0);
+      expect(otherUnits.items).toHaveLength(0);
+
+      const unfilteredUnits = await fetchUnits(page);
+      expect(unfilteredUnits.items).not.toHaveLength(0);
+      expect(
+        unfilteredUnits.items.every(item => item.owner_party_id === WALKTHROUGH_OWNER_ID)
+      ).toBe(true);
+      expect(unfilteredUnits.items.some(item => otherUnitIds.has(item.id))).toBe(false);
     } finally {
-      if (createdUserIds.length === 0) {
-        return;
-      }
-
-      try {
-        await clearAuthState(page);
-        await ensureAuthenticated(page);
-        const cleanupHeaders = await resolveCsrfHeaders(page);
-        if (Object.keys(cleanupHeaders).length === 0) {
-          return;
-        }
-
-        const dedupedUserIds = uniqueNonEmpty(createdUserIds);
-        for (const userId of dedupedUserIds) {
-          await page.request.delete(`/api/v1/auth/users/${userId}`, {
-            headers: cleanupHeaders,
-          });
-        }
-      } catch {
-        // Best-effort cleanup; assertion results should not be masked by cleanup failure.
-      }
+      await restoreAdminAndDeleteUsers(page, createdUserIds);
     }
   });
 
-  test('newly created users without party bindings should be fail-closed on assets list', async ({
+  test('a regular user without the explicit owner binding cannot read walkthrough units', async ({
     page,
   }) => {
     await ensureAuthenticated(page);
+    const mutationHeaders = await requireCsrfHeaders(page);
+    const roleId = await resolveRegularAssetOpsRoleId(page);
+    const adminOwnUnits = await fetchUnits(page, WALKTHROUGH_OWNER_ID);
+    const adminOtherUnits = await fetchUnits(page, WALKTHROUGH_OPERATOR_ID);
+    expect(adminOwnUnits.items).not.toHaveLength(0);
+    expect(adminOtherUnits.items).not.toHaveLength(0);
+    const suffix = Date.now();
+    const password = `Aa!${suffix}`;
     const createdUserIds: string[] = [];
 
-    const suffix = Date.now();
-    const sharedPassword = `Aa!${suffix}`;
-    const mutationHeaders = await resolveCsrfHeaders(page);
-
-    rejectPreconditionFailure(
-      Object.keys(mutationHeaders).length === 0,
-      'Authenticated session has no csrf_token cookie; cannot run mutation setup.'
-    );
-
-    const roleCandidateIds = await resolveRoleCandidateIds(page);
-    rejectPreconditionFailure(
-      roleCandidateIds.length === 0,
-      'No available role candidates to create non-admin scoped user.'
-    );
-
     try {
-      let createdUser: UserItem | null = null;
-      const createUserErrors: string[] = [];
-
-      for (const roleId of roleCandidateIds) {
-        const createUserResponse = await page.request.post('/api/v1/auth/users', {
-          headers: mutationHeaders,
-          data: {
-            username: `e2e_scope_unbound_${suffix}`,
-            full_name: `E2E Scope Unbound ${suffix}`,
-            email: `e2e.scope.unbound.${suffix}@example.com`,
-            phone: buildPhone(suffix + 3),
-            password: sharedPassword,
-            role_id: roleId,
-          },
-        });
-
-        if (createUserResponse.status() !== 200) {
-          const errorSnippet = await readResponseSnippet(createUserResponse);
-          createUserErrors.push(
-            `[role_id=${roleId}] status=${createUserResponse.status()} body=${errorSnippet}`
-          );
-          continue;
-        }
-
-        const payload = (await createUserResponse.json()) as unknown;
-        const user = extractData<UserItem>(payload);
-        const userId = normalizeNonEmpty(user.id);
-        const username = normalizeNonEmpty(user.username);
-        if (userId == null || username == null) {
-          createUserErrors.push(`[role_id=${roleId}] status=200 but user payload invalid`);
-          continue;
-        }
-
-        createdUser = {
-          ...user,
-          id: userId,
-          username,
-        };
-        createdUserIds.push(userId);
-        break;
-      }
-
-      if (createdUser == null) {
-        throw new Error(
-          `[org-scope-isolation] Precondition failure: Unable to create unbound non-admin user. ${createUserErrors.join(' | ')}`
-        );
-      }
-
-      if (!(await activateCreatedUser(page, createdUser.id, mutationHeaders, suffix))) {
-        throw new Error(
-          '[org-scope-isolation] Precondition failure: cannot activate unbound user.'
-        );
-      }
-
-      // 用 admin 会话自建一个 approved party 并挂资产（在切换登录之前），
-      // unbound 用户（无显式绑定）必须看不到该 party 的资产——组织默认范围
-      // 只含种子 party，与此无关，断言不受其他 spec 数据影响。
-      const probePartyResponse = await page.request.post('/api/v1/parties', {
-        headers: mutationHeaders,
-        data: { party_type: 'legal_entity', name: `E2E Unbound Party ${suffix}` },
+      const user = await createRegularUser({
+        page,
+        roleId,
+        password,
+        suffix,
+        label: 'unbound',
+        mutationHeaders,
       });
-      expect(probePartyResponse.status()).toBe(200);
-      const probeParty = (await probePartyResponse.json()) as { id?: string };
-      const probePartyId = normalizeNonEmpty(probeParty.id);
-      if (probePartyId == null) {
-        throw new Error(
-          '[org-scope-isolation] Precondition failure: cannot create unbound probe party.'
-        );
-      }
-      expect(
-        await approvePartyForScope({
-          page,
-          partyId: probePartyId,
-          mutationHeaders,
-        })
-      ).toBe(true);
-      const probeAssetResponse = await page.request.post('/api/v1/assets', {
-        headers: mutationHeaders,
-        data: {
-          asset_name: `E2E Unbound Asset ${suffix}`,
-          address_detail: `E2E Unbound Address ${suffix}`,
-          ownership_status: FALLBACK_OWNERSHIP_STATUS,
-          property_nature: FALLBACK_PROPERTY_NATURE,
-          usage_status: FALLBACK_USAGE_STATUS,
-          owner_party_id: probePartyId,
-          manager_party_id: probePartyId,
-        },
-      });
-      expect(
-        probeAssetResponse.status(),
-        `probe asset create failed: ${await probeAssetResponse.text()}`
-      ).toBe(201);
+      createdUserIds.push(user.id);
 
       await clearAuthState(page);
-      const loginOk = await loginWithCredentialRetry(
-        page,
-        {
-          username: createdUser.username,
-          password: sharedPassword,
-        },
-        2
+      expect(await loginWithCredentialRetry(page, { username: user.username, password }, 2)).toBe(
+        true
       );
-      expect(loginOk).toBe(true);
 
-      const filteredResponse = await page.request.get(
-        `/api/v1/assets?page=1&page_size=100&owner_party_id=${encodeURIComponent(probePartyId)}`
-      );
-      expect([200, 403]).toContain(filteredResponse.status());
-      if (filteredResponse.status() === 200) {
-        const filteredPayload = (await filteredResponse.json()) as unknown;
-        const filteredTotal = parsePaginatedTotal(filteredPayload);
-        const filteredItems = parsePaginatedItems<AssetItem>(filteredPayload);
-        expect(filteredTotal).toBe(0);
-        expect(filteredItems).toHaveLength(0);
-      }
+      const walkthroughUnits = await fetchUnits(page, WALKTHROUGH_OWNER_ID);
+      expect(walkthroughUnits.total).toBe(0);
+      expect(walkthroughUnits.items).toHaveLength(0);
     } finally {
-      if (createdUserIds.length === 0) {
-        return;
-      }
-
-      try {
-        await clearAuthState(page);
-        await ensureAuthenticated(page);
-        const cleanupHeaders = await resolveCsrfHeaders(page);
-        if (Object.keys(cleanupHeaders).length === 0) {
-          return;
-        }
-
-        const dedupedUserIds = uniqueNonEmpty(createdUserIds);
-        for (const userId of dedupedUserIds) {
-          await page.request.delete(`/api/v1/auth/users/${userId}`, {
-            headers: cleanupHeaders,
-          });
-        }
-      } catch {
-        // Best-effort cleanup; assertion results should not be masked by cleanup failure.
-      }
+      await restoreAdminAndDeleteUsers(page, createdUserIds);
     }
   });
 });
