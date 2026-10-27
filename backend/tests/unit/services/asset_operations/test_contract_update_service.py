@@ -13,6 +13,7 @@ from src.models.asset_contract import (
     UpstreamContract,
     UpstreamContractAssetUnit,
 )
+from src.models.asset_unit import AssetUnit
 from src.schemas.asset_operations import (
     TerminalContractUpdate,
     UpstreamContractUpdate,
@@ -38,10 +39,17 @@ SCOPE = EffectivePartyScope(
 class _UnitRepository:
     def __init__(self) -> None:
         self.locked: list[tuple[str, ...]] = []
+        self.units = (
+            AssetUnit(
+                id="unit-1",
+                managed_from=date(2026, 1, 1),
+                managed_to=None,
+            ),
+        )
 
     async def lock_for_write(self, _db, *, unit_ids, scope):
         self.locked.append(tuple(sorted(unit_ids)))
-        return ()
+        return self.units
 
 
 class _Repository:
@@ -102,9 +110,7 @@ class _Repository:
         self.events: list[object] = []
 
     async def list_lifecycle_events(self, _db, *, contract_kind, contract_id):
-        return tuple(
-            event for event in self.events if event.contract_id == contract_id
-        )
+        return tuple(event for event in self.events if event.contract_id == contract_id)
 
     async def list_rent_schedules(self, _db, *, contract_kind, contract_ids):
         return ()
@@ -124,16 +130,12 @@ class _Repository:
 
     async def list_terminal_coverages(self, _db, *, contract_id):
         return tuple(
-            c
-            for c in self.terminal_coverages
-            if c.terminal_contract_id == contract_id
+            c for c in self.terminal_coverages if c.terminal_contract_id == contract_id
         )
 
     async def list_upstream_coverages(self, _db, *, contract_id):
         return tuple(
-            c
-            for c in self.upstream_coverages
-            if c.upstream_contract_id == contract_id
+            c for c in self.upstream_coverages if c.upstream_contract_id == contract_id
         )
 
     async def retarget_upstream_coverage_ends(
@@ -199,6 +201,76 @@ def _terminal_update(**overrides: object) -> TerminalContractUpdate:
     values: dict[str, object] = {"expected_version": 2}
     values.update(overrides)
     return TerminalContractUpdate.model_validate(values)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["upstream", "terminal"])
+async def test_contract_extension_rejects_coverage_outside_unit_managed_period(
+    kind: str,
+) -> None:
+    repository = _Repository()
+    service = _service(repository)
+    service.unit_repository.units[0].managed_to = date(2026, 12, 31)
+    db = _DB()
+    request = (
+        _upstream_update(end_date=date(2027, 6, 30))
+        if kind == "upstream"
+        else _terminal_update(end_date=date(2027, 6, 30))
+    )
+
+    with pytest.raises(AssetContractCoverageInvalidError) as error:
+        await getattr(service, f"update_{kind}")(
+            db,
+            contract_id=f"{kind}-1",
+            request=request,
+            actor_id="actor-1",
+            scope=SCOPE,
+        )
+
+    assert error.value.details["reason"] == "outside_asset_unit_managed_period"
+    assert repository.retargets == []
+    assert db.commits == 0
+
+
+@pytest.mark.asyncio
+async def test_upstream_extension_preserves_retired_source_coverage() -> None:
+    repository = _Repository()
+    repository.upstream_coverages[0].effective_to = date(2026, 6, 30)
+    repository.upstream_coverages.append(
+        UpstreamContractAssetUnit(
+            upstream_contract_id="upstream-1",
+            asset_unit_id="unit-2",
+            effective_from=date(2026, 7, 1),
+            effective_to=date(2026, 12, 31),
+        )
+    )
+    service = _service(repository)
+    service.unit_repository.units = (
+        AssetUnit(
+            id="unit-1",
+            managed_from=date(2026, 1, 1),
+            managed_to=date(2026, 6, 30),
+        ),
+        AssetUnit(
+            id="unit-2",
+            managed_from=date(2026, 7, 1),
+            managed_to=date(2027, 6, 30),
+        ),
+    )
+    db = _DB()
+
+    response = await service.update_upstream(
+        db,
+        contract_id="upstream-1",
+        request=_upstream_update(end_date=date(2027, 6, 30)),
+        actor_id="actor-1",
+        scope=SCOPE,
+    )
+
+    assert response.end_date == date(2027, 6, 30)
+    assert repository.upstream_coverages[0].effective_to == date(2026, 6, 30)
+    assert repository.upstream_coverages[1].effective_to == date(2027, 6, 30)
+    assert db.commits == 1
 
 
 @pytest.mark.asyncio

@@ -546,13 +546,19 @@ class AssetContractCommandService:
                 setattr(contract, field, value)
         try:
             if request.end_date is not None and request.end_date != old_end:
-                await self.unit_repository.lock_for_write(
+                units = await self._lock_exact_units(
                     db,
-                    unit_ids=sorted(
-                        {coverage.asset_unit_id for coverage in upstream_coverages}
-                    ),
-                    scope=scope,
+                    sorted({coverage.asset_unit_id for coverage in upstream_coverages}),
+                    scope,
                 )
+                units_by_id = {unit.id: unit for unit in units}
+                for coverage in upstream_coverages:
+                    if coverage.effective_to == old_end:
+                        self._validate_unit_periods(
+                            (units_by_id[coverage.asset_unit_id],),
+                            start_date=coverage.effective_from,
+                            end_date=request.end_date,
+                        )
                 await self.repository.retarget_upstream_coverage_ends(
                     db,
                     contract_id=contract_id,
@@ -692,13 +698,19 @@ class AssetContractCommandService:
                 )
                 contract.upstream_contract_id = request.upstream_contract_id
             if extends:
-                await self.unit_repository.lock_for_write(
+                units = await self._lock_exact_units(
                     db,
-                    unit_ids=sorted(
-                        {coverage.asset_unit_id for coverage in terminal_coverages}
-                    ),
-                    scope=scope,
+                    sorted({coverage.asset_unit_id for coverage in terminal_coverages}),
+                    scope,
                 )
+                units_by_id = {unit.id: unit for unit in units}
+                for coverage in terminal_coverages:
+                    if coverage.effective_to == old_end:
+                        self._validate_unit_periods(
+                            (units_by_id[coverage.asset_unit_id],),
+                            start_date=coverage.effective_from,
+                            end_date=new_end,
+                        )
                 await self.repository.retarget_terminal_coverage_ends(
                     db,
                     contract_id=contract_id,

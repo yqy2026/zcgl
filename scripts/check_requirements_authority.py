@@ -461,6 +461,8 @@ _CRITICAL_E2E_REQS: frozenset[str] = frozenset(
         "REQ-RNT-001",
         "REQ-RNT-005",
         "REQ-RNT-006",
+        "REQ-CTR-001",
+        "REQ-CTR-002",
         "REQ-AST-003",
         "REQ-AST-005",
         "REQ-PTY-001",
