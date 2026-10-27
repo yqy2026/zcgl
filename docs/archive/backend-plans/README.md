@@ -4,6 +4,7 @@
 
 | 文档 | 主题 |
 |------|------|
+| [2026-10-23-asset-operations-v5-v1.md](./2026-10-23-asset-operations-v5-v1.md) | 资产运营 v5 V1 本次交付切片与 PR #95 门禁收口（完整需求验收及部署演练另行跟进） |
 | [2026-10-22-asset-operations-v5-s0.md](./2026-10-22-asset-operations-v5-s0.md) | 资产运营 v5 S0 规格收口（已完成，后续转 V1 实施） |
 | [2026-09-01-s0-spec-migration-gap.md](./2026-09-01-s0-spec-migration-gap.md) | v4.0 S0 规格迁移差异分析（已由资产运营 v5 范围裁决取代） |
 | [2026-08-26-land-property-v4-implementation.md](./2026-08-26-land-property-v4-implementation.md) | v4.0 P0 走查修订与实施方案（已由资产运营 v5 取代） |

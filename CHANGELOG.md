@@ -1,3 +1,5 @@
+- docs(asset-ops): 在 e6d463bf 完整 CI 九项实际执行全绿后归档本次 V1 交付方案，更新活跃/归档/复核索引和交接链接，补最终双轴复核及门禁证据。CI：后端单测 4151 passed / 23 skipped，前端 1405 passed，后端 E2E 36 passed，前端 E2E 35 passed 且零重试，集成 258 passed / 2 skipped，API 一致性通过；skip 不计通过，CodeQL 依仓库能力条件未执行。REQ-UNT-001 保持开发中，产品验收、目标环境数据切换和后续 V2–V5 未随本次方案归档宣告完成。
+
 - fix(ci): 修复浏览器 35/35 通过后报告门禁仍失败的脚本配置。e2e:ci 的 --reporter=dot,json 会覆盖 Playwright 配置中的 JSON/JUnit/HTML 文件输出，只向 stdout 打印 JSON，导致重试率检查没有报告可读；移除 CLI reporter 覆盖，使用配置中的 reporter 和既定报告路径。无浏览器最小复现确认修改前测试退出 0 但缺少 JSON、重试门禁退出 1，修改后报告生成且门禁通过；保留重试率门禁，不吞错。
 
 - fix(asset-ops): 修复真实浏览器 E2E 捕获的上传重复请求。生产 QueryClient 默认 mutation 重试一次，服务层 retry:false 仅关闭 API 客户端重试；录入、终端续签和上游续签三个创建上传会话的 mutation 现均显式禁用重试。补齐上游续签上传失败 Alert，回归测试启用生产相同的 mutation 重试默认值，先复现三处重复调用再验证错误可见、单次上传、不推进步骤或创建续签。定向 10 项、类型、格式和 lint 通过；保留单次 POST 的浏览器断言，等待完整 CI 验证。

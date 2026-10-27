@@ -1,12 +1,14 @@
 # 资产运营 v5 剩余工作交接
 
+> 2026-10-27 补充：本次 V1 交付切片已完成双轴复核和完整 CI，方案已归档；收口证据及当前边界见 [PR #95 最终复核记录](reviews/2026-10-27-asset-operations-v5-v1-pr95-review.md)。下文保留交接当时的历史状态。
+
 ## 这份交接从哪里开始
 
 截至 2026 年 10 月 26 日，资产运营 v5 V1 的主体代码已经提交并推送到 `codex/asset-ops-v5-s0`，PR 为 [#95 资产运营 v5 V1 全量落地](https://github.com/yqy2026/zcgl/pull/95)，当前仍是打开状态。本文记录的两个 CI 阻断已经在本地查明根因并修复，相关代码、文档和格式化改动尚待提交推送，由 GitHub CI 复核。
 
 这份文件接替 [2026 年 10 月 25 日的开发交接](2026-10-25-asset-operations-v5-v1-handoff.md)。旧文件记录的是尚未提交时的中途状态，其中关于终止、退出、续签、列表页和生产前端尚未完成的内容已经过时，只保留作过程追溯。
 
-当前产品事实仍以 [PRD](../prd.md) 为准，字段与状态以 [领域模型](../specs/domain-model.md) 为准，端点与错误码以 [API 契约](../specs/api-contract.md) 为准，实现证据以 [需求追踪表](../traceability/requirements-trace.md) 为准。V1 方案在 PR 通过全部检查并完成最终复核前继续留在 [活跃计划目录](../plans/2026-10-23-asset-operations-v5-v1.md)。
+当前产品事实仍以 [PRD](../prd.md) 为准，字段与状态以 [领域模型](../specs/domain-model.md) 为准，端点与错误码以 [API 契约](../specs/api-contract.md) 为准，实现证据以 [需求追踪表](../traceability/requirements-trace.md) 为准。V1 方案在 PR 通过全部检查并完成最终复核前继续留在 [活跃计划目录](backend-plans/2026-10-23-asset-operations-v5-v1.md)。
 
 现在的准确判断是，功能开发已经进入 PR，原有阻断在本地完成修复和全量验证；仍需提交推送、等待全部必需检查真实执行并通过、完成最终双轴复核，才可合并。数据切换和 V2 继续等待 V1 合并。
 

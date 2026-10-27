@@ -8,7 +8,6 @@
 
 | 方案 | 状态 |
 |------|------|
-| [资产运营 v5 V1 资产单元与合同链实施计划](2026-10-23-asset-operations-v5-v1.md) | 🔄 S0 已完成；正在从只读数据预检开始实施资产单元和合同事实链 |
 | [anydoc 办公文档解析引入评估](2026-08-08-anydoc-office-doc-parsing.md) | ⏸ 搁置（备选技术方案，无对应活跃 REQ） |
 
 历史方案见 [`docs/archive/backend-plans/`](../archive/backend-plans/README.md)。

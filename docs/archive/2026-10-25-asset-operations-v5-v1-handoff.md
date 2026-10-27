@@ -1,12 +1,14 @@
 # 资产运营 v5 V1 开发交接
 
+> 2026-10-27 补充：本次 V1 交付切片已完成双轴复核和完整 CI，方案已归档；收口证据及当前边界见 [PR #95 最终复核记录](reviews/2026-10-27-asset-operations-v5-v1-pr95-review.md)。下文保留交接当时的历史状态。
+
 ## 交接时的工作区状态
 
 当前开发目录为 `D:\work\zcgl`，分支为 `codex/asset-ops-v5-s0`。分支指针仍停在提交 `2eb47e5c`，与 `develop` 当前基线一致。本轮资产运营 v5 的代码、文档、原型和测试改动都还在工作区内，没有形成提交。
 
 接手后不要执行清理、重置或切换分支。工作区包含大量相互关联的已修改文件和新增文件，任何清理动作都可能直接丢失本轮实现。开始工作前先执行 `git status --short --branch`，确认状态与本文一致。
 
-当前唯一有效的实施方案是 [资产运营 v5 V1 计划](../plans/2026-10-23-asset-operations-v5-v1.md)。产品事实以 [PRD](../prd.md) 为准，字段与状态以 [领域模型](../specs/domain-model.md) 为准，端点与错误码以 [API 契约](../specs/api-contract.md) 为准，实现证据以 [需求追踪表](../traceability/requirements-trace.md) 为准。
+当前唯一有效的实施方案是 [资产运营 v5 V1 计划](backend-plans/2026-10-23-asset-operations-v5-v1.md)。产品事实以 [PRD](../prd.md) 为准，字段与状态以 [领域模型](../specs/domain-model.md) 为准，端点与错误码以 [API 契约](../specs/api-contract.md) 为准，实现证据以 [需求追踪表](../traceability/requirements-trace.md) 为准。
 
 最初用于评审的原型目录 `C:\Users\y\Downloads\拯救项目原型 (1)` 仍然存在。已采纳的原型内容已经整理到 `frontend/prototype/`，后续开发和评审应以仓库内文件及 SSOT 为准，下载目录只用于追溯原始输入。
 
