@@ -17,6 +17,9 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
       previewTerminalTermination: vi.fn(),
       commitTerminalTermination: vi.fn(),
       previewUpstreamExit: vi.fn(),
+      createIntakeSession: vi.fn(),
+      renewTerminal: vi.fn(),
+      renewUpstream: vi.fn(),
     },
   };
 });
@@ -45,7 +48,10 @@ function makePreview(): TerminationPreview {
 
 function renderActionsPage(): void {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: 1, retryDelay: 0 },
+    },
   });
   render(
     <QueryClientProvider client={queryClient}>
@@ -63,7 +69,10 @@ function renderActionsPage(): void {
 
 function renderUpstreamActionsPage(): void {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: 1, retryDelay: 0 },
+    },
   });
   render(
     <QueryClientProvider client={queryClient}>
@@ -83,10 +92,33 @@ beforeEach(() => {
   mockedService.previewTerminalTermination.mockReset();
   mockedService.commitTerminalTermination.mockReset();
   mockedService.previewUpstreamExit.mockReset();
+  mockedService.createIntakeSession.mockReset();
+  mockedService.renewTerminal.mockReset();
+  mockedService.renewUpstream.mockReset();
 });
 
 afterEach(() => {
   cleanup();
+});
+
+it.each([
+  { type: 'terminal', renderPage: renderActionsPage },
+  { type: 'upstream_lease', renderPage: renderUpstreamActionsPage },
+])('does not retry a rejected $type renewal scan upload', async ({ type, renderPage }) => {
+  const uploadError = new AssetOperationsError('扫描件无效', 'VALIDATION_ERROR');
+  mockedService.createIntakeSession.mockRejectedValue(uploadError);
+  const user = userEvent.setup();
+  renderPage();
+  const file = new File(['pdf'], 'renewal.pdf', { type: 'application/pdf' });
+
+  await user.upload(screen.getByLabelText('续签扫描件'), file);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('扫描件无效');
+  expect(mockedService.createIntakeSession).toHaveBeenCalledExactlyOnceWith(type, file);
+  expect(screen.queryByText('扫描件已上传，可填写后继条款。')).toBeNull();
+  expect(screen.getByRole('button', { name: '登记续签' })).toBeDisabled();
+  expect(mockedService.renewTerminal).not.toHaveBeenCalled();
+  expect(mockedService.renewUpstream).not.toHaveBeenCalled();
 });
 
 describe('UpstreamActionsPage', () => {

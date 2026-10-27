@@ -40,7 +40,10 @@ function makeSession(overrides: Partial<ContractIntakeSession> = {}): ContractIn
 
 function renderPage(): void {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: 1, retryDelay: 0 },
+    },
   });
   render(
     <QueryClientProvider client={queryClient}>
@@ -64,6 +67,32 @@ afterEach(() => {
 });
 
 describe('ContractIntakePage', () => {
+  it('does not retry a rejected upload under the production mutation retry default', async () => {
+    mockedService.createIntakeSession.mockRejectedValue(
+      new AssetOperationsError(
+        'upload extension is not allowed for this purpose',
+        'VALIDATION_ERROR'
+      )
+    );
+    const user = userEvent.setup();
+
+    renderPage();
+    await user.upload(
+      screen.getByLabelText('已签扫描件（PDF/图片）'),
+      new File(['pdf'], 'scan.pdf', { type: 'application/pdf' })
+    );
+    const uploadButton = screen.getByRole('button', { name: '上传并创建会话' });
+    await user.click(uploadButton);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'upload extension is not allowed for this purpose'
+    );
+    expect(mockedService.createIntakeSession).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('heading', { name: '第一步 · 选择类型并上传扫描件' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: /第二步/ })).toBeNull();
+    expect(uploadButton).toBeEnabled();
+  });
+
   it('uploads a file with the chosen contract type and enters the review step', async () => {
     mockedService.createIntakeSession.mockResolvedValue(
       makeSession({

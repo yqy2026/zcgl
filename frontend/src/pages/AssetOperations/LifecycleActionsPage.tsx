@@ -200,6 +200,7 @@ export function TerminalActionsPage(): React.ReactElement {
 
   const renewSessionMutation = useMutation({
     mutationFn: (file: File) => assetOperationsService.createIntakeSession('terminal', file),
+    retry: false,
   });
 
   const renewMutation = useMutation({
@@ -577,6 +578,7 @@ export function UpstreamActionsPage(): React.ReactElement {
 
   const renewSessionMutation = useMutation({
     mutationFn: (file: File) => assetOperationsService.createIntakeSession('upstream_lease', file),
+    retry: false,
   });
 
   const renewMutation = useMutation({
@@ -764,6 +766,17 @@ export function UpstreamActionsPage(): React.ReactElement {
         {renewSessionMutation.isPending ? <p>扫描件上传中…</p> : null}
         {renewSessionMutation.data != null ? (
           <p className={styles.hintText}>扫描件已上传，可填写后继条款。</p>
+        ) : null}
+        {renewSessionMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              renewSessionMutation.error instanceof Error
+                ? renewSessionMutation.error.message
+                : '扫描件上传失败'
+            }
+          />
         ) : null}
         <label className={styles.fieldColumn}>
           后继合同编号

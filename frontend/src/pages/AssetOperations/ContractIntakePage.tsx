@@ -94,6 +94,7 @@ export function ContractIntakePage(): React.ReactElement {
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => assetOperationsService.createIntakeSession(contractType, file),
+    retry: false,
     onSuccess: createdSession => setSession(createdSession),
   });
 
