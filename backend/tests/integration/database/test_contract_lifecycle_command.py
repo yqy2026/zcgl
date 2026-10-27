@@ -115,9 +115,7 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
                 )
             )
             await session.execute(
-                delete(TerminalContract).where(
-                    TerminalContract.id.in_(terminal_ids)
-                )
+                delete(TerminalContract).where(TerminalContract.id.in_(terminal_ids))
             )
             await session.execute(
                 delete(UpstreamContractAssetUnit).where(
@@ -125,13 +123,9 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
                 )
             )
             await session.execute(
-                delete(UpstreamContract).where(
-                    UpstreamContract.id.in_(upstream_ids)
-                )
+                delete(UpstreamContract).where(UpstreamContract.id.in_(upstream_ids))
             )
-            await session.execute(
-                delete(AssetUnit).where(AssetUnit.id == UNIT_ID)
-            )
+            await session.execute(delete(AssetUnit).where(AssetUnit.id == UNIT_ID))
             await session.execute(
                 delete(Attachment).where(
                     Attachment.id.in_(
@@ -143,9 +137,7 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
                     )
                 )
             )
-            await session.execute(
-                delete(Project).where(Project.id == PROJECT_ID)
-            )
+            await session.execute(delete(Project).where(Project.id == PROJECT_ID))
             await session.execute(
                 delete(Party).where(Party.id.in_((OWNER_ID, TENANT_ID)))
             )
@@ -337,9 +329,7 @@ async def test_termination_closes_coverage_and_allows_successor(
         await session.rollback()
 
     async with session_factory() as session:
-        coverage = await session.get(
-            TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID)
-        )
+        coverage = await session.get(TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID))
         assert coverage is not None
         assert coverage.effective_to == date(2026, 6, 29)
         contract = await session.get(TerminalContract, CONTRACT_ID)
@@ -473,9 +463,7 @@ async def test_termination_reversal_restores_coverage_and_blocks_on_successor(
             idempotency_key="lifecycle-termination-reverse-001",
         )
     async with session_factory() as session:
-        coverage = await session.get(
-            TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID)
-        )
+        coverage = await session.get(TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID))
         assert coverage is not None
         assert coverage.effective_to == date(2026, 6, 29)
 
@@ -509,9 +497,7 @@ async def test_termination_reversal_restores_coverage_and_blocks_on_successor(
     assert replayed.idempotent is True
 
     async with session_factory() as session:
-        coverage = await session.get(
-            TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID)
-        )
+        coverage = await session.get(TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID))
         assert coverage is not None
         assert coverage.effective_to == date(2026, 12, 31)
 
@@ -525,9 +511,7 @@ async def test_termination_reversal_restores_coverage_and_blocks_on_successor(
             idempotency_key="lifecycle-termination-reverse-002",
         )
     async with session_factory() as session:
-        coverage = await session.get(
-            TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID)
-        )
+        coverage = await session.get(TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID))
         assert coverage is not None
         assert coverage.effective_to == date(2026, 6, 29)
 
@@ -578,9 +562,7 @@ async def test_termination_reversal_restores_coverage_and_blocks_on_successor(
     assert error.value.details["blocking_contract_ids"] == [SUCCESSOR_ID]
 
     async with session_factory() as session:
-        coverage = await session.get(
-            TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID)
-        )
+        coverage = await session.get(TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID))
         assert coverage is not None
         assert coverage.effective_to == date(2026, 6, 29)
 
@@ -1097,15 +1079,27 @@ async def test_contract_updates_follow_coverage_and_enforce_locks(
     assert updated.version == 2
 
     async with session_factory() as session:
-        coverage = await session.get(
-            TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID)
-        )
+        coverage = await session.get(TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID))
         contract = await session.get(TerminalContract, CONTRACT_ID)
         assert coverage is not None
         assert coverage.effective_to == date(2027, 6, 30)
         assert contract is not None
         assert contract.deposit_amount == Decimal("26000")
         assert contract.version == 2
+
+    async with session_factory() as session:
+        with pytest.raises(AssetContractCoverageInvalidError) as period_error:
+            await command_service.update_terminal(
+                session,
+                contract_id=CONTRACT_ID,
+                request=TerminalContractUpdate.model_validate(
+                    {"expected_version": 2, "end_date": "2028-12-31"}
+                ),
+                actor_id=ACTOR_ID,
+                scope=SCOPE,
+            )
+        await session.rollback()
+    assert period_error.value.details["reason"] == "outside_asset_unit_managed_period"
 
     async with session_factory() as session:
         session.add(
@@ -1116,7 +1110,7 @@ async def test_contract_updates_follow_coverage_and_enforce_locks(
                 tenant_party_id=TENANT_ID,
                 lessor_party_id=OWNER_ID,
                 start_date=date(2027, 7, 1),
-                end_date=date(2028, 6, 29),
+                end_date=date(2027, 12, 31),
                 deposit_amount=Decimal("0"),
                 rent_collector="operator",
                 scan_document_id=SCAN_ID,
@@ -1128,7 +1122,7 @@ async def test_contract_updates_follow_coverage_and_enforce_locks(
                 terminal_contract_id=OVERLAP_ID,
                 asset_unit_id=UNIT_ID,
                 effective_from=date(2027, 7, 1),
-                effective_to=date(2028, 6, 29),
+                effective_to=date(2027, 12, 31),
             )
         )
         await session.commit()
@@ -1139,7 +1133,7 @@ async def test_contract_updates_follow_coverage_and_enforce_locks(
                 session,
                 contract_id=CONTRACT_ID,
                 request=TerminalContractUpdate.model_validate(
-                    {"expected_version": 2, "end_date": "2028-12-31"}
+                    {"expected_version": 2, "end_date": "2027-12-31"}
                 ),
                 actor_id=ACTOR_ID,
                 scope=SCOPE,
@@ -1148,9 +1142,7 @@ async def test_contract_updates_follow_coverage_and_enforce_locks(
     assert overlap_error.value.details["reason"] == "coverage_overlap_after_extension"
 
     async with session_factory() as session:
-        coverage = await session.get(
-            TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID)
-        )
+        coverage = await session.get(TerminalContractAssetUnit, (CONTRACT_ID, UNIT_ID))
         assert coverage is not None
         assert coverage.effective_to == date(2027, 6, 30)
 
@@ -1180,9 +1172,7 @@ async def test_asset_unit_reads_and_updates_over_real_postgresql(
     )
 
     async with session_factory() as session:
-        items, total = await query_service.list_asset_units(
-            session, scope=SCOPE
-        )
+        items, total = await query_service.list_asset_units(session, scope=SCOPE)
         detail = await query_service.get_asset_unit_detail(
             session, UNIT_ID, scope=SCOPE
         )
