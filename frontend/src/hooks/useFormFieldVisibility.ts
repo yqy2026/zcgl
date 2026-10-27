@@ -21,6 +21,11 @@ const hasProjectName = (values: AssetFormData): boolean => {
   return projectName != null && projectName.trim() !== '';
 };
 
+const hasBusinessCategory = (values: AssetFormData): boolean => {
+  const businessCategory = values.business_category;
+  return businessCategory != null && businessCategory.trim() !== '';
+};
+
 // 字段显示规则配置 - Asset表单专用
 const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
   // 经营类物业才显示出租相关字段
@@ -60,7 +65,7 @@ const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
   // 有业态类别时显示经营模式
   {
     field: 'revenue_mode',
-    condition: values => values.business_category?.trim() !== '',
+    condition: hasBusinessCategory,
     dependsOn: ['business_category'],
   },
 
