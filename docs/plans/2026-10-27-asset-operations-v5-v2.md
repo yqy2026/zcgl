@@ -1,168 +1,201 @@
 # 资产运营 v5 V2 租金、押金与委托管理费实施计划
 
-> **状态**：🔄 实施就绪（§3 裁决已回写 SSOT，2026-10-27 整体复核修订；D-17、D-18 两项待产品确认，不阻塞开工；待 V1 合并后开工）
+> **状态**：🔄 实施就绪（§3 全部裁决已回写 SSOT；待 V1 合并后开工）
 > **日期**：2026-10-27
-> **需求**：REQ-LED-001、REQ-DEP-001、REQ-FEE-001（联动 REQ-CTR-001/002 的台账类筛选、付款计划展示和终止 / 退出预览）
-> **产品基线**：`docs/prd.md` §4.1 / §6.5、`docs/specs/domain-model.md` §4.14–4.20 / §4.31 / §5.3–5.4 / §6.7–6.8、`docs/specs/api-contract.md` §5.6–5.9 / §7、`frontend/prototype/asset-ops-v5-handoff.md`（本月卡片 1–3、终端合同详情与终止弹窗、台账、对账单）
+> **需求**：REQ-LED-001、REQ-DEP-001、REQ-FEE-001（联动 REQ-CTR-001/002 的合同修改、租金阶段更正、终止 / 退出预览与台账类筛选）
+> **产品基线**：`docs/prd.md` §4.1 / §6.5 / §7、`docs/specs/domain-model.md` §4.10 / §4.14–4.20 / §4.29 / §4.31 / §5.3–5.4 / §6.7–6.8、`docs/specs/api-contract.md` §5.5–5.9 / §5.14 / §6 / §7、`frontend/prototype/asset-ops-v5-handoff.md`（本月卡片 1–3、合同详情与终止弹窗、台账、对账单）
 > **前置条件**：V1（PR #95）已合并到 `develop`；目标环境数据切换方案已确认（见 `docs/archive/2026-10-26-asset-operations-v5-remaining-work-handoff.md`）
 
 ## 1. 目标与非目标
 
-V2 在 V1 的“上游合同 → 资产单元 → 终端合同”事实链上，建立三条资金事实：
+V2 在 V1 的“上游合同 → 资产单元 → 终端合同”事实链上，建立三条资金事实，并补齐它们依赖的合同修改规则与变更记录：
 
-1. **租金义务与登记**：由合同租金阶段生成承租应付、转租应收、直签产权方应报到账三类义务；合同期限或生命周期变化时重排未锁定义务；外部付款 / 到账以追加记录登记，支持部分完成、跨月结转与有原因撤销。
-2. **押金**：每份合同一条押金条目，跟踪约定与实际持有，区分应收未收、应付未付（上游押金）、应退未退、应收回四类；续签时押金转入后继合同，转租押金可抵扣欠租。
+1. **租金义务与登记**：由合同租金阶段生成承租应付、转租应收、直签产权方应报到账三类义务；合同期限、租金阶段或生命周期变化时重排未锁定义务；外部付款 / 到账以追加记录登记，支持部分完成、跨月结转与有原因撤销；租金阶段可更正（只影响当月起的义务）；提前退租可登记补收免租。
+2. **押金**：承租合同和终端合同各一条押金条目，跟踪约定与实际持有，区分应收未收、应付未付、应退未退、应收回四类；续签时押金转入后继合同；合同结束后转租押金可抵扣欠租，终止时默认自动抵扣。委托管理协议不约定保证金。
 3. **委托管理费对账**：基于产权方实际到账逐户试算，每产权方每月一张对账单，截止日后未收余额自动顺延，按月份顺序盖章确认后锁定，更正走后继单。
+4. **合同修补与变更记录**：合同级付款周期 / 付款日确认后只读；合同修改按合同类型校验字段；落地变更记录，覆盖 V2 命令和 V1 合同命令。
 
-V2 **不实现**：本月工作台（V5，仅保留义务 / 押金 / 对账状态的可查询投影）、考核范围与报送（V3）、档案矩阵与导入（V4，盖章件与凭证复用 V1 已有 Attachment 存储，不建档案矩阵）、银行流水认领、发票、催收、付款指令（PRD §4.2 Out of Scope），以及 §3 中待产品确认的 D-17、D-18。
+V2 **不实现**：本月工作台（V5，仅保留义务 / 押金 / 对账状态的可查询投影）、考核范围与报送（V3）、档案矩阵与导入（V4，盖章件与凭证复用 V1 已有 Attachment 存储，不建档案矩阵）、资产单元命令的变更记录（V3 补齐）、银行流水认领、发票、催收、付款指令（PRD §4.2 Out of Scope）。
 
 ## 2. 现有实现盘点与裁决
 
-| 现有对象 | 实际状态 | V2 裁决 |
+| 现有对象 | 实际状态（已核对代码） | V2 裁决 |
 |---|---|---|
-| `ContractRentSchedule`（V1） | 存阶段起止、原定 / 实际月租、递增、免租、`payment_cycle`、`due_day`；录入后没有修改入口 | 义务只取 `actual_monthly_rent`、账期与 `due_day`；其余字段只做核对展示（D-05）；修改入口缺失见 D-18 |
-| `UpstreamContract.payment_cycle` / `payment_day` | 合同级字段，与阶段级字段重复；V1 PATCH 可改 | 只作录入默认值与展示，修改不重算义务（D-02）；前端在修改处提示“付款周期以租金阶段为准” |
-| `UpstreamContractUpdate` / `TerminalContractUpdate`（V1 PATCH） | 可改 `end_date`、押金、委托管理费比例、绑上游等 | `end_date` 变更在同一事务触发义务重排；押金约定由押金条目派生读取，无需同步；比例变化只影响未确认对账单；绑上游使待补录户进入对账（D-12） |
-| `ContractLifecycleEvent`（终止 / 退出 / 续签 / 撤销） | 追加事件，可按日重放；终止事件带 `deposit_settlement_status` 声明 | 驱动义务重排与押金阶段；义务服务只读事件，不改写事件；押金状态以派生为准，事件上的声明不参与计算 |
-| `AssetContractWriteReceipt`（V1） | 只有 `create_upstream` / `create_terminal` 两类，数据库 CHECK 约束限定 | 扩展为资产运营高后果命令的幂等回执，新增手工义务与管理费对账命令类型（D-15），迁移同步放宽 CHECK |
+| `ContractRentSchedule`（V1） | 存阶段起止、原定 / 实际月租、递增、免租、`payment_cycle`、`due_day`；确认后没有修改入口；改到期日不调整阶段 | 义务只取 `actual_monthly_rent`、账期与 `due_day`（D-05）；新增“租金阶段更正”命令（D-18）；到期日延长出现的无阶段期间只提示缺口（D-19） |
+| `UpstreamContractUpdate`（V1 PATCH） | 可改名称、到期日、合同级付款周期 / 付款日、管理费比例、押金、OA 单号；不按合同类型校验，类型不符时靠数据库 CHECK 拦截 | 移除合同级付款周期 / 付款日（D-02）；按类型校验管理费比例与押金，返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`（D-21）；`end_date` 变更在同一事务重排义务 |
+| `TerminalContractUpdate`（V1 PATCH） | 可改挂接上游、到期日、押金月数 / 金额 | `end_date` 变更在同一事务重排义务；押金约定由押金条目派生读取；改挂上游只影响未确认对账单 |
+| `UpstreamContract.deposit_amount` | 委托管理协议也可填押金，没有约束 | 委托管理协议固定为 0（D-09）；录入、续签、更新校验，迁移加 CHECK |
+| `ContractLifecycleEvent`（终止 / 退出 / 续签 / 撤销） | 追加事件，可按日重放；终止事件带 `deposit_settlement_status` 声明；预览—提交，提议由 token 绑定 | 驱动义务重排与押金阶段；终止提议新增押金抵扣与补收免租，提交时同一事务写入（D-08、D-17）；事件上的押金声明不参与计算 |
+| `AssetContractWriteReceipt`（V1） | 按“操作人 + 幂等键”唯一；只有 `create_upstream` / `create_terminal`（续签复用），数据库 CHECK 限定 | 扩展命令类型：租金阶段更正、手工义务、管理费对账（D-15），迁移同步放宽 CHECK |
+| 生命周期事件幂等 | 终止、退出、撤销使用事件自带的唯一 `idempotency_key` | 租金记录、押金记录沿用同一模式 |
+| `BusinessChangeEvent` | 领域模型已定义，V1 没有表 | V2 落地：V2 命令全部写入；同时给 V1 合同命令补写；资产单元命令留给 V3；补 §5.14 读取端点（D-20） |
+| `OperationLog`（请求日志中间件） | 对登录用户的每个 `/api` 请求记一条，响应后另开事务写入，无改前改后与业务原因 | 保留为请求级审计，不替代变更记录 |
 | `ContractLedgerEntry` / `OperationalPaymentFlow` / `ServiceFeeLedger`（旧 v4，`contract_group.py`） | 含可变 `paid_amount`、旧归属口径；V1 已断开路由 | **不复用、不双读、不迁移语义**；新表另起名，旧表随旧域清理删除 |
 | `Attachment` 私有存储（V1 扫描件） | 已有统一文件校验与私有存储 | 付款凭证、押金凭证与盖章件复用；不建 `ArchiveDocument` 矩阵（V4） |
-| `BusinessChangeEvent` | 领域模型已定义，V1 未落地 | V2 首次落地：登记、撤销、重排、顺延、确认、更正均写变更记录（V3 报送引用） |
 | 前端 `/operations/ledger`（旧） | V1-4 已删除 | 新建 `/asset-operations/ledgers` 与 `/asset-operations/management-fees/:statement_id` |
 
 ## 3. 裁决记录
 
-起草时 SSOT 未定义或互相冲突之处，经 2026-10-27 采纳并回写 `docs/specs/domain-model.md`、`docs/specs/api-contract.md` 和 `docs/prd.md`；同日整体复核后修订了与原型、V1 实现不一致的裁决（“复核修订”列）。实施以 SSOT 为准，本表只作决策追溯。
+全部裁决已回写 `docs/specs/domain-model.md`、`docs/specs/api-contract.md`、`docs/prd.md`、需求追踪说明和原型交接文档。实施以 SSOT 为准，本表只作决策追溯。
 
-| ID | 问题 | 裁决 | 复核修订 |
+| ID | 议题 | 最终裁决 | 依据与修订 |
 |---|---|---|---|
-| D-01 | 金额舍入规则未定义 | 两位小数 `ROUND_HALF_UP`；义务生成时舍入，管理费按行舍入后求和 | — |
-| D-02 | 合同级与阶段级账期字段并存 | 义务只读阶段级；合同级只作录入默认值 | 补充：V1 PATCH 仍可改合同级字段，前端须提示不影响义务 |
-| D-03 | 季付 / 年付 / 自定义账期如何出义务 | 按自然月；同账期的连续阶段合并为账期段，季付 / 年付以段起始月为锚每 3 / 12 个月一期；`custom` 手工登记并可作废 | 原裁决“季付在 1/4/7/10 月出、年付只在阶段起始月出一期”与原型不符（原型 `upDue` 以起租月为锚），且年付漏了多年阶段，已改 |
-| D-04 | 起止日落在月中是否折算 | 按自然日折算，同月跨阶段分段折算 | 保留。原型终止弹窗按整月计当月欠租，属原型简化，见 §8 风险 |
-| D-05 | 免租如何落到各期 | 只用 `actual_monthly_rent`；0 元账期不生成义务，台账按阶段显示“免租” | 原裁决“免租月置 0”会与原型“按月平均减免”模式重复扣减，已改；删除 `free_rent` 字段 |
-| D-06 | 锁定边界 | 只有存在有效登记才锁定 | 原裁决把“账期早于当前月”也算锁定，会让补登的终止无法作废往月未付义务，已改；租金阶段变更仍只重排当前月起的义务 |
-| D-07 | 终止 / 退出后多出的义务 | 统一“重排”：未锁定义务按目标集合更新 / 作废 / 恢复 / 新建；锁定义务不动并提示 `RENT_LEDGER_PLAN_MISMATCH` | 原裁决按事件作废并在撤销时恢复，未覆盖期限更新与登记撤销，已改为重排；字段改为 `voided_at` / `void_correlation_id`；唯一键改为 `period_start`，避免月中换账期时同月两期冲突 |
-| D-08 | 押金记录 | 新增 `DepositRecord`：`collect` / `refund` / `deduct` / `owner_reported_collect` / `owner_reported_refund` / `pay` / `recover` / `reversal` | 原 `owner_reported` 无法区分收与退，已拆分；新增上游 `pay`；新增 `deduct` 与租金 `deposit_offset` 成对写入、成对撤销 |
-| D-09 | 押金方向 | 每份合同一条条目，阶段、方向和状态全部派生；上游押金跟踪应付未付与应收回 | 按产品决定改为跟踪上游押金（原裁决不跟踪）；按原型“续签后押金转入新合同，不退回”增加续签转入；合同改押金约定时自动重算 |
-| D-10 | 对账单单值上游 vs 每产权方每月一张 | 产权方 + 月份唯一，协议记在行上 | — |
-| D-11 | 到账登记与对账单行是否两份事实 | 一份：`owner_reported_receipt`；对账单确认前投影、确认时快照 | 补充：快照记录 `counted_record_ids`；被已确认单计入的到账不可撤销，须先更正 |
-| D-12 | 顺延时点与对账单生命周期 | 截止日为对账月次月最后一天；截止日前可手工顺延（原因必填），截止后未收余额自动顺延；按月份顺序确认；只能更正最近一张已确认单 | 原裁决“不自动顺延”与 PRD“月末仍未收到的户顺延、不阻塞”和原型“10-31 仍未收的顺延下月”不符，已改；补充对账单创建时机、`collecting` / `pending_stamp` 改为派生、上游缺失户的处理 |
-| D-13 | 盖章件上传与确认权限 | `asset_ops:write` | — |
-| D-14 | 超额登记 | 不做扩展，409 失败关闭 | — |
-| D-15 | 幂等存储（复核新增） | 租金 / 押金记录用自身唯一 `idempotency_key`；手工义务与管理费对账命令用扩展后的 `AssetContractWriteReceipt` | — |
-| D-16 | 终止 / 退出预览（复核新增） | 预览返回义务新建 / 更新 / 作废 / 恢复数量、锁定不一致清单与押金状态变化；token 绑定受影响义务版本 | — |
-| D-17 | 提前退租补收免租优惠（复核发现，**待产品确认**） | 原型终止弹窗有“免租优惠补收”，SSOT 没有，合同也没有补收条款字段。V2 不实现；如采纳，需先在合同上增加补收条款并定义补收义务类型 | — |
-| D-18 | 租金阶段更正入口（复核发现，**待产品确认**） | V1 PATCH 不能改租金阶段，录错的阶段只能等 V4 导入更新。V2 不新增入口；重排规则已为阶段变更预留（只重排当前月起的义务） | — |
+| D-01 | 金额舍入 | 两位小数 `ROUND_HALF_UP`；义务生成时舍入，管理费按行舍入后求和 | 首轮采纳 |
+| D-02 | 合同级与阶段级付款字段并存 | 义务只读阶段级；合同级只作录入默认值，确认后只读，从 PATCH 移除 | 产品裁决（10c-B） |
+| D-03 | 季付 / 年付从哪个月出账 | 按自然月；同账期的连续阶段合并为账期段，以段起始月为锚每 3 / 12 个月一期（即从起租月起算）；到期日用阶段 `due_day`，录入默认月付 25 日、季付 15 日 | 产品裁决（1A），同原型 `upDue`；首轮“自然季度”作废 |
+| D-04 | 起止日落在月中 | 按自然日折算，含终止当月 | 产品裁决（5A）；原型终止弹窗按整月计，以本裁决为准 |
+| D-05 | 免租 | 只用 `actual_monthly_rent`；0 元账期不出账，台账显示“免租” | 产品确认（7）；首轮“免租月置 0”会对“首年内按月平均减免”重复扣减，作废 |
+| D-06 | 锁定边界 | 只有存在有效登记才锁定 | 产品裁决（8A）；首轮把过去月份也算锁定，补登终止无法作废往月未付义务，作废 |
+| D-07 | 合同变化后义务怎么调整 | 统一重排：未锁定义务按目标集合更新 / 作废 / 恢复 / 新建；锁定义务不动并提示 `RENT_LEDGER_PLAN_MISMATCH`；`period_start` 唯一 | 产品裁决（8A） |
+| D-08 | 押金抵扣欠租 | 只在合同结束阶段可抵扣；终止预览默认按到期日从早到晚把可用押金全部抵扣（可取消或调整，token 绑定），提交时与终止同一事务成对写入；撤销终止时成对撤销；之后仍可手工抵扣 | 产品裁决（3A + 结束后才可抵扣），同原型终止弹窗 |
+| D-09 | 押金模型 | 承租合同与终端合同各一条，约定 / 持有 / 方向 / 状态全部派生；跟踪承租押金应付未付与应收回；续签登记时整体转入后继；**委托管理协议不约定保证金** | 产品裁决（上游押金跟踪、2A、委托协议无保证金） |
+| D-10 | 对账单粒度 | 产权方 + 月份唯一，协议记在行上 | 首轮采纳 |
+| D-11 | 到账事实 | 只有 `owner_reported_receipt` 一份；对账单确认前投影、确认时快照 `counted_record_ids`；被已确认单计入的到账须先更正才能撤销 | 首轮采纳，复核补充 |
+| D-12 | 顺延与对账顺序 | 截止日为对账月次月最后一天；截止前可手工顺延（原因必填），截止后未收余额自动顺延；按月份顺序确认；只能更正最近一张已确认单 | 产品裁决（6A），同 PRD 与原型“10-31 仍未收的顺延下月” |
+| D-13 | 对账权限 | 盖章件上传与确认均为 `asset_ops:write` | 首轮采纳 |
+| D-14 | 超额登记 | 不做扩展，409 失败关闭 | 首轮采纳 |
+| D-15 | 幂等存储 | 租金 / 押金记录用自身唯一键；租金阶段更正、手工义务与管理费对账命令扩展 `AssetContractWriteReceipt` | 产品裁决（11A） |
+| D-16 | 终止 / 退出预览 | 返回义务影响、锁定不一致清单与押金变化（终止含结算试算）；token 绑定受影响义务与押金条目版本 | 复核新增 |
+| D-17 | 提前退租补收免租 | 手工登记：终止预览可填金额与依据，也可终止后补登；只限有未撤销提前终止的转租合同；参与押金抵扣；撤销终止时未锁定的作废 | 产品裁决（4C） |
+| D-18 | 租金阶段录错 | 新增“租金阶段更正”预览—提交：原因必填；当前业务月首日之前的阶段内容不可改；只重排当月起的未锁定义务 | 产品裁决（10b-B） |
+| D-19 | 延长到期日超出租金阶段 | 允许；无阶段期间不出账，提示 `RENT_SCHEDULE_GAP`，可用租金阶段更正补齐 | 产品裁决（10a-A） |
+| D-20 | 变更记录 | V2 落地 `BusinessChangeEvent`，覆盖 V2 命令与 V1 合同命令（确认、修改、续签、终止、退出、阶段更正及撤销）；资产单元命令留 V3；操作日志不替代 | 产品裁决（12B） |
+| D-21 | 合同修改类型校验 | 管理费比例只适用委托管理协议，押金只适用承租合同；不符返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`（现由数据库 CHECK 拦成 500） | 由 D-02 / D-09 推出，核对 V1 代码时发现 |
 
 ## 4. 失败测试清单（先写）
 
 | 测试 ID | 预期失败条件 | 守护的意图 |
 |---|---|---|
-| V2-T01 | 季付按自然季度而非账期段起始月出应付；年付多年阶段只出一期；跨阶段账期未分段计算 | 账期规则（领域模型 §4.14） |
-| V2-T02 | 月中起止未按日折算；同月跨阶段未分段；“免租期前置”的 0 元阶段生成了义务；“按月平均减免”被二次扣减 | 折算与免租（D-04 / D-05） |
+| V2-T01 | 季付按自然季度而非账期段起始月出应付；年付多年阶段只出一期；跨阶段账期未分段计算 | 账期规则（D-03） |
+| V2-T02 | 月中起止或终止当月未按日折算；同月跨阶段未分段；“起租后前 N 个月全免”的 0 元阶段生成了义务；“首年内按月平均减免”被二次扣减 | 折算与免租（D-04 / D-05） |
 | V2-T03 | 期限更新后未锁定义务未更新 / 作废 / 新建；有效登记的义务被改动或未出现 `RENT_LEDGER_PLAN_MISMATCH`；月中换账期产生重复行 | 重排与锁定（D-06 / D-07） |
 | V2-T04 | 一笔义务分两次登记结清后撤销第二笔，状态不是 `partial` 或原记录被修改 / 删除 | 追加式登记与撤销（ACC-V5-006 / G2） |
 | V2-T05 | 登记金额超出剩余义务被接受，或重复撤销同一记录成功 | `PAYMENT_AMOUNT_EXCEEDS_REMAINING` / `PAYMENT_RECORD_ALREADY_REVERSED` |
 | V2-T06 | 同幂等键同请求生成第二条记录；同键不同金额未返回 `IDEMPOTENCY_CONFLICT` | 重试不重复写入 |
 | V2-T07 | 往月未完成义务在切换查询月份后从“未完成”列表消失 | 跨月结转（PRD §6.5） |
-| V2-T08 | 补登过去生效的终止后，生效日之后未登记的往月义务仍计入应收；边界账期未按日重算；撤销终止后未恢复；续签改动了前驱义务 | 重排覆盖补登与撤销 |
-| V2-T09 | 直签终端押金可登记 `collect` / `deduct` 等非产权方报告类型 | 直签押金只登记产权方报告（api-contract §5.8） |
-| V2-T10 | 终端到期后未转应退、上游退出后未转应收回；上游在期未付清未显示应付未付；合同调低押金后未出现应退 / 应收回；撤销记录后余额未恢复 | 押金四类方向（REQ-DEP-001） |
-| V2-T11 | 续签后前驱仍显示应退 / 应收回，后继未转入前驱余额；向已续签条目登记未返回 `DEPOSIT_ENTRY_CARRIED_FORWARD` | 续签转入 |
-| V2-T12 | 押金抵扣未同时写入租金 `deposit_offset`；撤销任一侧未撤销另一侧；超出义务剩余金额未返回 `DEPOSIT_OFFSET_TARGET_INVALID` | 抵扣成对一致 |
-| V2-T13 | 截止日前未处理行仍可确认；截止日后未收余额未自动顺延；顺延余额计入本单基数或未带入下月单；部分到账未分别计入与顺延 | 顺延不阻塞已具备条件的对账（PRD §6.5、§6.8） |
-| V2-T14 | 已确认对账单在修改比例、租户名称或补登到账后金额变化；撤销已被计入的到账未返回 `MANAGEMENT_FEE_STATEMENT_LOCKED` | 确认锁定（ACC-V5-007 / G2） |
-| V2-T15 | 存在更早未确认单时可确认；可更正非最近一张已确认单；无盖章件可确认；更正覆盖原单而非生成后继 | 对账顺序与状态机（§5.4） |
-| V2-T16 | 上游缺失的直签义务进入对账单；补录上游后未按规则进入当月或带入最早未确认单 | 上游缺失不影响对账口径 |
-| V2-T17 | 无 Party 范围时台账 / 押金 / 对账单返回空列表；范围外合同的义务或押金可被登记 | 403 失败关闭（REQ-AUTH-002） |
-| V2-T18 | 账期、截止日或逾期按 UTC 日期判断，`Asia/Shanghai` 跨日边界归属错误 | 业务时区口径 |
-| V2-T19 | 台账、押金或对账单页把 403 当 empty，或把刷新错误清空成空列表 | 四态不混淆（ACC-V5-010） |
-| V2-T20 | 台账矩阵合计与逐条义务不一致；对账单合计与行合计不一致 | 派生页面数字一致（G1） |
+| V2-T08 | 补登过去生效的终止后，生效日之后未登记的往月义务仍计入应收；撤销终止后未恢复；续签改动了前驱义务 | 重排覆盖补登与撤销 |
+| V2-T09 | 租金阶段更正改动当月以前的阶段内容未返回 `RENT_SCHEDULE_HISTORY_IMMUTABLE`；跨越当月首日的阶段未拆分；当月以前的义务被重排或被提示不一致；缺原因未返回 `CORRECTION_REASON_REQUIRED`；已终止 / 已退出合同可更正 | 阶段更正（D-18） |
+| V2-T10 | PATCH 仍接受合同级付款周期 / 付款日；承租合同填管理费比例或委托管理协议填非 0 押金未返回 `CONTRACT_FIELD_NOT_APPLICABLE`；延长到期日超出阶段时为缺口期间出账或未提示 `RENT_SCHEDULE_GAP` | 合同修改规则（D-02 / D-19 / D-21） |
+| V2-T11 | 直签终端押金可登记 `collect` / `deduct` 等非产权方报告类型 | 直签押金只登记产权方报告 |
+| V2-T12 | 终端到期或已登记终止后未转应退、承租合同已登记退出后未转应收回；承租合同期内未付清未显示应付未付；合同调低押金后未出现应退 / 应收回；撤销记录后余额未恢复；委托管理协议出现押金条目 | 押金四类方向（REQ-DEP-001） |
+| V2-T13 | 续签后前驱仍显示应退 / 应收回，后继未转入前驱余额；向已续签条目登记未返回 `DEPOSIT_ENTRY_CARRIED_FORWARD` | 续签转入（D-09） |
+| V2-T14 | 合同期内抵扣未返回 `DEPOSIT_OFFSET_NOT_ALLOWED`；抵扣未同时写入租金 `deposit_offset`；撤销任一侧未撤销另一侧；超出义务剩余金额未返回 `DEPOSIT_OFFSET_TARGET_INVALID` | 抵扣成对一致（D-08） |
+| V2-T15 | 终止预览未按到期日从早到晚默认抵扣（含补收免租）；调整或取消抵扣未被 token 绑定；提交时抵扣、补收与终止不在同一事务；预览后欠租或押金变化未返回 `PREVIEW_STALE`；撤销终止未成对撤销随终止写入的抵扣 | 终止结算（D-08 / D-16） |
+| V2-T16 | 非转租、非提前终止或终止已撤销时可登记补收免租；撤销终止后未锁定的补收义务未作废 | 补收免租（D-17） |
+| V2-T17 | 截止日前未处理行仍可确认；截止日后未收余额未自动顺延；顺延余额计入本单基数或未带入下月单；部分到账未分别计入与顺延 | 顺延不阻塞已具备条件的对账（D-12） |
+| V2-T18 | 已确认对账单在修改比例、租户名称或补登到账后金额变化；撤销已被计入的到账未返回 `MANAGEMENT_FEE_STATEMENT_LOCKED` | 确认锁定（ACC-V5-007 / G2） |
+| V2-T19 | 存在更早未确认单时可确认；可更正非最近一张已确认单；无盖章件可确认；更正覆盖原单而非生成后继 | 对账顺序与状态机（§5.4） |
+| V2-T20 | 上游缺失的直签义务进入对账单；补录上游、撤销终止或重排后迟到的义务未带入最早未确认单 | 迟到义务不漏计 |
+| V2-T21 | 无 Party 范围时台账 / 押金 / 对账单 / 变更记录返回空列表；范围外合同的义务或押金可被登记 | 403 失败关闭（REQ-AUTH-002） |
+| V2-T22 | 账期、截止日或逾期按 UTC 日期判断，`Asia/Shanghai` 跨日边界归属错误 | 业务时区口径 |
+| V2-T23 | 台账、押金或对账单页把 403 当 empty，或把刷新错误清空成空列表 | 四态不混淆（ACC-V5-010） |
+| V2-T24 | 台账矩阵合计与逐条义务不一致；对账单合计与行合计不一致 | 派生页面数字一致（G1） |
+| V2-T25 | V1 合同命令或 V2 命令成功后没有变更记录，或业务写入回滚后仍留有变更记录；撤销 / 顺延 / 更正类记录缺原因 | 变更记录同事务写入（D-20） |
 
 ## 5. 文件级实施顺序
 
-每个切片按 V1 惯例走“失败测试 → 模型 / 迁移 → CRUD → 服务 → API → 前端”纵向红绿循环，单独提交，切片完成后做一次双轴复核（标准轴 + 规格轴）。整个 V2 按以下三个 PR 交付，不合成一个大 PR；PR-B 的押金抵扣依赖 PR-A 的租金记录，PR-C 依赖 PR-A 的义务与到账。
+每个切片按 V1 惯例走“失败测试 → 模型 / 迁移 → CRUD → 服务 → API → 前端”纵向红绿循环，单独提交，切片完成后做一次双轴复核（标准轴 + 规格轴）。按以下四个 PR 依次交付，不合成一个大 PR。
+
+### PR-0：合同修补与变更记录（V1 行为变更）
+
+**V2-0 SSOT 回写**（2026-10-27 已完成，见 §9）
+
+**V2-1 合同修改规则**
+- `backend/src/schemas/asset_operations.py`：`UpstreamContractUpdate` 移除 `payment_cycle` / `payment_day`；录入确认与续签请求对委托管理协议拒绝非 0 押金。
+- `contract_command_service.py`：`update_upstream` 按合同类型校验 `management_fee_rate` 与 `deposit_amount`，返回 `CONTRACT_FIELD_NOT_APPLICABLE`（`errors.py` 新增）。
+- 迁移：先只读检查委托管理协议押金非 0 的行，存在即失败并输出清单；再加 CHECK `contract_type = 'lease' OR deposit_amount = 0`。
+- 前端：合同详情的付款周期改为只读并提示“以租金阶段为准”；录入页阶段付款日默认月付 25、季付 15；同步 `assetOperationsService.ts` 类型与现有测试样例。
+
+**V2-2 变更记录**
+- `backend/src/models/business_change_event.py`、迁移、CRUD：`BusinessChangeEvent`（领域模型 §4.29），敏感字段脱敏。
+- 在 V1 合同命令的同一事务写入：合同确认、修改、续签、终止 / 退出预览提交及撤销；`correlation_id` 串联一次命令的全部写入。
+- `backend/src/api/v1/business_change_events.py`：§5.14 读取端点，按 Party 范围过滤。V2-T25 在此 PR 先覆盖 V1 合同命令。
 
 ### PR-A：租金义务与登记（REQ-LED-001）
 
-**V2-0 SSOT 回写**（2026-10-27 已回写并复核修订，见 §9）
+**V2-3 领域与持久化**
+- `backend/src/models/asset_ledger.py`：`RentLedgerEntry`（`entry_type`、`contract_kind`、`contract_id`、`period`、`period_start`、`period_end`、`due_date`、`due_amount`、`origin`、`basis_note`、`locked_source` JSONB、`voided_at`、`void_correlation_id`、`version`）、`RentPaymentRecord`（追加式；`reverses_record_id` 部分唯一索引；`paired_deposit_record_id` 预留给 PR-B）。
+- 迁移：`generated` 义务在 `(contract_kind, contract_id, entry_type, period_start)` 上唯一；金额 `Numeric(14,2)`，义务金额 CHECK 大于 0；回执 CHECK 加入 `correct_rent_schedule` / `create_manual_rent_entry` / `void_manual_rent_entry`；不建旧表外键。
+- `backend/src/schemas/asset_ledger.py`：写模型 `extra=forbid`，拒绝派生字段（`DERIVED_FIELD_NOT_WRITABLE`）。
 
-**V2-1 领域与持久化**
-- `backend/src/models/asset_ledger.py`：`RentLedgerEntry`（`entry_type`、`contract_kind`、`contract_id`、`period`、`period_start`、`period_end`、`due_date`、`due_amount`、`origin`、`basis_note`、`locked_source` JSONB、`voided_at`、`void_correlation_id`、`version`）、`RentPaymentRecord`（追加式；`reverses_record_id` 部分唯一索引保证一笔只能撤销一次；`paired_deposit_record_id` 预留给 PR-B）、`BusinessChangeEvent`。
-- `backend/alembic/versions/2026xxxx_asset_operations_v5_rent_ledger.py`：建表；`generated` 义务在 `(contract_kind, contract_id, entry_type, period_start)` 上唯一；金额 `Numeric(14,2)`，义务金额 CHECK 大于 0；放宽 `asset_contract_write_receipts.command_kind` CHECK，加入 `create_manual_rent_entry` / `void_manual_rent_entry`；不建旧表外键。
-- `backend/src/schemas/asset_ledger.py`：写模型 `extra=forbid`，拒绝 `status` / `effective_paid_amount` / `remaining_amount` 等派生字段（`DERIVED_FIELD_NOT_WRITABLE`）。
-- `backend/src/models/__init__.py` 显式导出。
+**V2-4 义务生成与重排（纯函数优先）**
+- `rent_obligation_rules.py`：纯函数计算目标账期集合（账期段与锚月、跨阶段分段、按日折算、0 元账期跳过、期限截断与 `RENT_SCHEDULE_GAP`）并与现有义务对齐，输出新建 / 更新 / 作废 / 恢复 / 不一致。V2-T01 / T02 / T03 / T08 在此层先转绿。
+- `rent_obligation_service.py`：同一事务执行重排并写变更记录。挂接点：合同确认、`update_upstream` / `update_terminal` 的 `end_date` 变更、续签、终止 / 退出及其撤销。锁顺序沿用 V1：资产单元 → 合同 → 义务行。
+- 终止 / 退出预览（D-16）：追加义务影响；token 指纹加入受影响义务版本；保持 V1 已有字段不变。
+- `backend/scripts/` 一次性幂等回填：为 V1 已有合同重排生成义务（PR-B、PR-C 合并后同一脚本补押金条目与对账单）；先 dry-run 输出合同数、义务数与金额合计。
 
-**V2-2 义务生成与重排（纯函数优先）**
-- `backend/src/services/asset_operations/rent_obligation_rules.py`：纯函数计算目标账期集合——账期段与锚月、跨阶段分段、按日折算、0 元账期跳过、期限截断与 `RENT_SCHEDULE_GAP`；纯函数对齐目标与现有义务，输出新建 / 更新 / 作废 / 恢复 / 不一致。V2-T01 / T02 / T03 / T08 在此层先转绿。
-- `backend/src/services/asset_operations/rent_obligation_service.py`：在**同一事务**内执行重排并写 `BusinessChangeEvent`。挂接点：`contract_command_service.py` 的合同确认、`update_upstream` / `update_terminal` 的 `end_date` 变更；`contract_lifecycle_command_service.py` 的续签、终止、退出及其撤销。锁顺序沿用 V1：先资产单元、再合同、再义务行。
-- 终止 / 退出预览（D-16）：在 V1 预览响应中追加义务影响与押金状态变化，预览 token 指纹加入受影响义务版本；保持 V1 已有字段不变。
-- `backend/scripts/` 新增一次性幂等回填：为 V1 已存在的合同重排生成义务（PR-B、PR-C 合并后同一脚本补押金条目与对账单）；先 dry-run 输出合同数、义务数与金额合计，再执行。
+**V2-5 租金阶段更正（D-18）**
+- `rent_schedule_correction_service.py`：预览校验新阶段（期限内、不重叠、当月首日以前内容不变，跨越当月首日的阶段先拆分再比较），计算当月起的重排影响；提交时替换阶段、重排、写变更记录，幂等走回执。V2-T09 转绿。
+- 上游 / 终端合同各两个端点（§5.5 / §5.6）。
 
-**V2-3 登记、撤销与手工义务**
-- `backend/src/services/asset_operations/rent_payment_command_service.py`：登记（按 Party 范围锁义务行 `FOR UPDATE`，校验剩余金额、记录类型与 `entry_type` 匹配、凭证归属）；撤销（原因必填、重复撤销 409，同一事务重排该合同义务）；幂等以记录自身唯一键实现，同键比对已存字段。
-- 手工义务创建 / 作废：限 `custom` 账期段，依据说明必填，幂等走 `AssetContractWriteReceipt`。
-- `backend/src/services/asset_operations/rent_ledger_query_service.py`：派生 `effective_paid_amount` / `remaining_amount` / `status`；矩阵按 `ledger_type`（`upstream_rent` / `terminal_rent`）× 1–12 月聚合，标注非付款月与免租期；列表关联统一 `selectinload` 防 N+1。
-- `backend/src/api/v1/rent_ledgers.py`：自注册 §5.7 的六个端点。
-- `terminal-contracts` 列表接入 `rent_unpaid` 筛选；上游合同详情返回“付款计划”阶段汇总（已付 a/b · 下期）。
+**V2-6 登记、撤销与手工义务**
+- `rent_payment_command_service.py`：登记（按 Party 范围锁义务行 `FOR UPDATE`，校验剩余金额、记录类型与 `entry_type` 匹配、凭证归属）；撤销（原因必填、重复撤销 409，同一事务重排该合同义务）；幂等以记录自身唯一键实现。
+- 手工义务：`manual`（限 `custom` 账期段）与 `clawback`（限有未撤销提前终止的转租合同，D-17）的创建 / 作废，依据说明必填，幂等走回执。V2-T16 转绿。
+- `rent_ledger_query_service.py`：派生 `effective_paid_amount` / `remaining_amount` / `status`；矩阵按 `ledger_type`（`upstream_rent` / `terminal_rent`）× 1–12 月聚合，标注非付款月与免租期；列表 `selectinload` 防 N+1。
+- `backend/src/api/v1/rent_ledgers.py`：§5.7 六个端点；`terminal-contracts` 列表接入 `rent_unpaid`；上游合同详情返回“付款计划”阶段汇总（已付 a/b · 下期）。
 
-**V2-4 前端台账**
-- `frontend/src/services/assetLedgerService.ts`：封装 V2 API，Decimal 走 `convertBackendToFrontend` / `convertFrontendToBackend`。
-- `frontend/src/pages/AssetOperations/LedgersPage.tsx`：`/asset-operations/ledgers`，页签“承租租金（应付）/ 终端租金（应收）”（管理费页签在 PR-C 接入）；行 = 合同，列 = 1–12 月 + 合计，当前月主色、未来月灰，表内横向滚动；格子点击后右侧详情栏展示来源条款、账期起止、记录链、warning 与“登记 / 撤销”。
+**V2-7 前端台账**
+- `assetLedgerService.ts`：封装 API，Decimal 走 `convertBackendToFrontend` / `convertFrontendToBackend`。
+- `LedgersPage.tsx`：`/asset-operations/ledgers`，页签“承租租金（应付）/ 终端租金（应收）”（管理费页签在 PR-C 接入）；行 = 合同，列 = 1–12 月 + 合计，当前月主色、未来月灰，表内横向滚动；格子详情栏展示来源条款、账期起止、记录链、warning 与“登记 / 撤销”。
 - 登记卡与撤销弹窗：React Hook Form；金额默认剩余额、日期默认今天（上海业务日）、凭证可选；部分登记显示“部分付款 · 欠 ¥x”。
-- 合同列表 / 详情：终端合同“本月收租块”（转租登记到账、直签登记产权方已报）、“租金未到账”筛选；上游合同“付款计划”块；合同级付款周期旁提示以租金阶段为准；终止 / 退出确认页展示义务影响。
-- `frontend/src/constants/routes.ts`、`AppRoutes.tsx`、`menuConfig.tsx` 注册“台账”入口（`asset_ops:read`，写操作 `asset_ops:write`）。
-- 四态、唯一主按钮、1280px / 200% / 320px 走查。
+- 合同详情：终端“本月收租块”、“租金未到账”筛选；上游“付款计划”块；“租金阶段更正”入口（预览显示新旧阶段与影响）；终止 / 退出确认页展示义务影响。
+- `routes.ts`、`AppRoutes.tsx`、`menuConfig.tsx` 注册“台账”入口（`asset_ops:read`，写操作 `asset_ops:write`）；四态、唯一主按钮、1280px / 200% / 320px 走查。
 
-### PR-B：押金（REQ-DEP-001）
+### PR-B：押金与终止结算（REQ-DEP-001）
 
-**V2-5 押金**
-- 模型 / 迁移：`DepositLedgerEntry`（每份合同一条，只存 `collector` 与版本）、`DepositRecord`；合同确认与续签事务内创建条目。
-- `backend/src/services/asset_operations/deposit_rules.py`：纯函数派生 `own_held` / 续签转入转出 / 在期阶段 / `gap` / 方向与状态；V2-T10 / T11 在此层先转绿。
-- `deposit_command_service.py`：登记（记录类型与收取方匹配、收入不超过待收 / 待付、支出不超过持有余额、已续签条目拒绝）；`deduct` 与租金 `deposit_offset` 同一事务成对写入，撤销任一侧成对撤销（V2-T12）。
-- `deposit_query_service.py`：待处理列表按派生状态筛选，用 SQL 聚合记录合计与续签链，避免逐条计算；`backend/src/api/v1/deposits.py` 自注册 §5.8 四个端点。
-- `terminal-contracts` 列表接入 `deposit_unsettled` 筛选。
-- 前端：终端 / 上游合同详情栏“押金明细”（约定、持有、转入 / 转出、待处理方向与金额、记录链）与登记 / 退还 / 支付 / 收回 / 抵扣按钮；终止弹窗“押金结算”区展示已收、抵扣欠租与应退；“押金未结清”筛选。本月页“押金待处理”通栏留给 V5。
+**V2-8 押金**
+- 模型 / 迁移：`DepositLedgerEntry`（承租合同与终端合同各一条，只存 `collector` 与版本）、`DepositRecord`（含 `offset_ledger_entry_id`、`lifecycle_event_id`）；合同确认与续签事务内创建条目。
+- `deposit_rules.py`：纯函数派生 `own_held`、续签转入 / 转出、在期 / 结束阶段（含已登记未生效的终止 / 退出）、`gap`、方向与状态。V2-T12 / T13 先转绿。
+- `deposit_command_service.py`：登记（类型与收取方匹配、收入不超过待收 / 待付、支出不超过持有、已续签条目拒绝）；`deduct` 只在结束阶段、与租金 `deposit_offset` 成对写入与撤销。V2-T11 / T14 转绿。
+- `deposit_query_service.py`：待处理列表按派生状态筛选，SQL 聚合记录合计与续签链；`backend/src/api/v1/deposits.py` 四个端点；`terminal-contracts` 列表接入 `deposit_unsettled`。
+
+**V2-9 终止结算（D-08 / D-17）**
+- 终止预览请求增加押金抵扣方式（默认自动 / 不抵扣 / 明细）与补收免租金额和依据；预览返回结算试算，token 绑定规范化后的抵扣明细、补收和押金条目版本。
+- 终止提交在同一事务：截止覆盖 → 追加终止事件 → 重排义务 → 创建补收义务 → 按明细成对写抵扣（`lifecycle_event_id` 指向终止事件）。撤销终止成对撤销这些抵扣，作废未锁定的补收义务。V2-T15 转绿。
+- 退出预览返回承租押金应收回金额。
+- 前端：合同详情“押金明细”（约定、持有、转入 / 转出、待处理方向与金额、记录链）与登记 / 退还 / 支付 / 收回 / 抵扣按钮；终止弹窗“押金结算”区（已收、抵扣欠租明细可取消或调整、补收免租输入、应退还租户 / 租户还需补缴）；“押金未结清”筛选。本月页“押金待处理”通栏留给 V5。
 
 ### PR-C：委托管理费对账（REQ-FEE-001）
 
-**V2-6 对账单**
-- 模型 / 迁移：`ManagementFeeStatement`（产权方 + 月份在非 `superseded` 上唯一）、`ManagementFeeStatementLine`（确认快照）；放宽回执 CHECK，加入 `defer_management_fee_line` / `confirm_management_fee_statement` / `supersede_management_fee_statement`。
-- `management_fee_rules.py`：纯函数投影——`current` / `carried` 行、计入实收（扣除已被确认单计入的记录）、截止日自动顺延、已处理判定与派生状态、行费舍入与合计。V2-T13 / T16 在此层先转绿。
-- `management_fee_command_service.py`：对账单随 `owner_receipt_expected` 义务生成创建（挂到 PR-A 的重排服务）；产权方到账委托租金登记服务并使对账单版本加一；手工顺延（原因必填）；上传 / 替换盖章件；确认（期望版本 + 幂等键、盖章件必填、顺序校验、写快照、带出顺延余额并按需创建下月单）；更正（只限最近一张已确认单，创建后继、原单 `superseded`）。
-- 租金登记撤销服务补充校验：被已确认单计入的到账撤销返回 `MANAGEMENT_FEE_STATEMENT_LOCKED`（V2-T14）。
+**V2-10 对账单**
+- 模型 / 迁移：`ManagementFeeStatement`（产权方 + 月份在非 `superseded` 上唯一）、`ManagementFeeStatementLine`（确认快照）；回执 CHECK 加入 `defer_management_fee_line` / `confirm_management_fee_statement` / `supersede_management_fee_statement`。
+- `management_fee_rules.py`：纯函数投影——`current` / `carried` 行、计入实收（扣除已被确认单计入的记录）、截止日自动顺延、已处理判定与派生状态、行费舍入与合计。V2-T17 / T20 先转绿。
+- `management_fee_command_service.py`：对账单随已绑定协议的 `owner_receipt_expected` 义务生成创建（挂到 PR-A 重排）；产权方到账委托租金登记服务并使版本加一；手工顺延；上传 / 替换盖章件；确认（期望版本 + 幂等键、盖章件必填、顺序校验、写快照、带出顺延余额并按需创建下月单）；更正（只限最近一张已确认单，原因必填）。V2-T18 / T19 转绿。
+- 租金登记撤销补充校验：被已确认单计入的到账返回 `MANAGEMENT_FEE_STATEMENT_LOCKED`。
 - `backend/src/api/v1/management_fee_statements.py`：§5.9 七个端点。
-- 前端：`/asset-operations/management-fees/:statement_id` 纸面样式对账单（最大宽 760px，明细列、合计大写、盖章栏、“上传盖章件”主按钮、打印、截止日与待补录上游提示）；台账“委托管理费”页签（已确认金额 / 待盖章 / 收租中 / 未到，合计只计已确认）；`from=monthly` 时的“← 返回本月”留待 V5 接入。
+- 前端：`/asset-operations/management-fees/:statement_id` 纸面样式对账单（最大宽 760px，明细列、合计大写、盖章栏、“上传盖章件”主按钮、打印、截止日与待补录上游提示）；台账“委托管理费”页签（已确认金额 / 待盖章 / 收租中 / 未到，合计只计已确认）；`from=monthly` 的“← 返回本月”留待 V5。
 
 ## 6. 数据与切换原则
 
-1. V2 只新增表与追加记录，不修改 V1 已有合同事实；义务、押金条目与对账单回填走一次性幂等脚本，先 dry-run 后执行，输出合同数、义务数、押金条目数、对账单数与金额合计供核对。
-2. 不读取、不转换旧 `contract_ledger_entries` / `operational_payment_flows` / `service_fee_ledgers`；目标环境若需要历史付款、押金或对账事实，走 V4 导入或人工底稿，不在 V2 做语义迁移。
-3. 不建立“新表无数据时回落旧表”的兼容分支；旧表删除仍归旧域清理专项。
-4. 金额全程 `Decimal`，日期全程 `Asia/Shanghai` 业务日；任何派生值（状态、余额、合计、押金方向、管理费金额）不入写模型。
+1. V2 只新增表与追加记录；对 V1 已有事实的改变只有两处：委托管理协议押金必须为 0（先检查、后加约束，存在非 0 行时迁移失败并输出清单，由人工处理），以及合同级付款字段改为只读。
+2. 义务、押金条目（只为承租合同和终端合同）与对账单回填走一次性幂等脚本，先 dry-run 后执行，输出合同数、义务数、押金条目数、对账单数与金额合计供核对。
+3. 不读取、不转换旧 `contract_ledger_entries` / `operational_payment_flows` / `service_fee_ledgers`；目标环境若需要历史付款、押金或对账事实，走 V4 导入或人工底稿，不在 V2 做语义迁移。
+4. 不建立“新表无数据时回落旧表”的兼容分支；旧表删除仍归旧域清理专项。
+5. 金额全程 `Decimal`，日期全程 `Asia/Shanghai` 业务日；任何派生值（状态、余额、合计、押金方向、管理费金额）不入写模型。
 
 ## 7. 验证门槛
 
 - 各切片按 TDD 顺序跑定向测试，再跑 `ruff check` / `ruff format` / `mypy src`、受影响的前后端单测、迁移命名检查、`backend-import`、`docs-lint`、前端 lint / 严格 UI / type-check / 构建。
-- V2-T01–V2-T20 全部转绿；V2-T03 / T04 / T08 / T10 / T11 / T12 / T14 必须有真实 PostgreSQL 集成证据；真实 HTTP E2E 至少覆盖“登记两笔 → 撤销第二笔 → 状态回到 partial”“补登终止 → 往月未登记义务作废”“续签 → 押金转入后继”和“对账确认后改比例金额不变”。
-- 每个 PR 合并前更新 `docs/traceability/requirements-trace.md` 对应 REQ 的代码与测试证据，并在 `docs/traceability/mvp-acceptance-checklist.md` 回填 ACC-V5-006 / 007 与 G2；没有产品验收记录不写“已验收”。
-- 未执行的测试、未接入的页面或在实施中新发现的规格缺口均使 V2 保持进行中；D-17 / D-18 若在开工前被采纳，先回写 SSOT 并补失败测试。
+- V2-T01–V2-T25 全部转绿；V2-T03 / T04 / T08 / T09 / T12 / T13 / T14 / T15 / T18 / T25 必须有真实 PostgreSQL 集成证据；真实 HTTP E2E 至少覆盖“登记两笔 → 撤销第二笔 → 状态回到 partial”“补登终止 → 往月未登记义务作废”“终止默认抵扣 → 撤销终止 → 抵扣成对撤销”“续签 → 押金转入后继”和“对账确认后改比例金额不变”。
+- 每个 PR 合并前更新 `docs/traceability/requirements-trace.md` 对应 REQ 的代码与测试证据（PR-0 同步更新 REQ-CTR-001/002 的证据路径），并在 `docs/traceability/mvp-acceptance-checklist.md` 回填 ACC-V5-006 / 007 与 G2；没有产品验收记录不写“已验收”。
+- 未执行的测试、未接入的页面或实施中新发现的规格缺口均使 V2 保持进行中；新缺口先回写 SSOT 并补失败测试。
 
 ## 8. 风险
 
 | 风险 | 缓解 |
 |---|---|
-| 重排与生命周期命令或登记撤销并发，导致重复或遗漏义务 | 与合同写操作共用资产单元 / 合同 / 义务行锁顺序；`period_start` 唯一约束兜底；重排纯函数可重复执行 |
-| 锁定义务与合同条款不一致长期滞留 | `RENT_LEDGER_PLAN_MISMATCH` 在台账格子、合同详情和终止 / 退出预览可见；V5 本月页再汇总 |
-| 原型终止弹窗按整月计当月欠租，规格按日折算 | 以 SSOT 为准；产品走查时专门核对终止当月金额，如需改为整月计租，先改领域模型 §4.14 |
+| 重排与生命周期命令、阶段更正或登记撤销并发，导致重复或遗漏义务 | 共用资产单元 / 合同 / 义务 / 押金条目行锁顺序；`period_start` 唯一约束兜底；重排纯函数可重复执行 |
+| 终止提交一次写覆盖、事件、义务、补收与抵扣，事务变大 | 只锁本合同及其覆盖单元、义务和押金条目；预览 token 绑定版本，提交前统一复核，失败整体回滚 |
+| PR-0 改变 V1 已上线前的接口与约束 | 在 V1 合并后、目标环境切换前完成；同步更新 V1 单测、E2E 与前端类型；迁移前检查存量数据 |
+| 锁定义务与合同条款不一致长期滞留 | `RENT_LEDGER_PLAN_MISMATCH` 在台账格子、合同详情和预览可见；V5 本月页再汇总 |
 | 押金派生状态在列表筛选时计算量大 | 记录合计与续签链用 SQL 聚合一次算出；待处理列表分页在数据库完成 |
 | 回填脚本在已有登记的环境重复执行 | 脚本幂等（重排纯函数 + 唯一键），dry-run 输出差异，锁定义务只报告不改 |
-| 对账单投影与租金登记两处数字不一致 | D-11 单一事实源；V2-T20 交叉断言对账单合计、行合计与台账格子 |
-| 三个 PR 改动同一套金额口径 | PR-A 固化舍入、账期与重排，PR-B / PR-C 只读复用，不得各自实现舍入 |
+| 对账单投影与租金登记两处数字不一致 | D-11 单一事实源；V2-T24 交叉断言对账单合计、行合计与台账格子 |
+| 多个 PR 改动同一套金额口径 | PR-A 固化舍入、账期与重排，PR-B / PR-C 只读复用，不得各自实现舍入 |
 
 ## 9. 实施记录
 
 - 2026-10-27：起草本计划。依据 PRD §6.5、领域模型 §4.16–4.20、API 契约 §5.7–5.9 与 v5 原型交接文档；列出 14 项开工前待裁决事项，待评审。
 - 2026-10-27：§3 的 14 项按建议裁决采纳，V2-0 回写 SSOT（领域模型 §2 / §4.10 / §4.14 / §4.16–4.20 / §5.3–5.4 / §6.7–6.8，API 契约 §3.1 / §5.6–5.9 / §7）。未改代码与需求追踪状态。
-- 2026-10-27：按产品决定改为跟踪上游押金，并对 V2 规格做整体复核。对照原型 `asset-ops-v5.html` 与 V1 代码修订 D-02 / D-03 / D-05 / D-06 / D-07 / D-08 / D-09 / D-11 / D-12，新增 D-15–D-18：季付锚定账期段起始月、只用实际月租、锁定只看有效登记、统一重排与 `period_start` 唯一、押金每合同一条且全部派生（含应付未付、续签转入、抵扣欠租）、对账单截止日自动顺延与按月顺序确认。同步回写领域模型 §3 / §4.14 / §4.16–4.20 / §4.31 / §5.3–5.4 / §6.8、API 契约 §4 / §5.6–5.9 / §7、PRD §4.1 / §6.5 / REQ-DEP-001、需求追踪 REQ-DEP-001 说明和原型交接文档押金口径；测试清单扩为 V2-T01–T20。未改代码。
+- 2026-10-27：按产品决定改为跟踪上游押金，并对照原型与 V1 代码做整体复核，修订季付锚定、免租、锁定与重排、押金派生模型、对账单顺延与确认顺序等规则（未经逐项裁决先写入，随后提交产品裁决）。
+- 2026-10-27：产品裁决：委托管理协议没有保证金；其余采纳建议——季付以起租月为锚（到期日按合同、录入默认 25 / 15）、续签登记时押金整体转入、终止默认自动抵扣欠租且只在合同结束后可抵扣、补收免租手工登记、按日折算、截止后自动顺延并按月顺序确认、只用实际月租、只有有效登记才锁定、延长到期日只提示阶段缺口、新增租金阶段更正（当月起生效）、合同级付款字段只读、扩展幂等回执、V2 落地变更记录并补写 V1 合同命令。回写领域模型 §4.10 / §4.14–4.18.1 / §4.29 / §4.31、API 契约 §5.5–5.9 / §6 / §7、PRD §6.5 / REQ-LED-001 / REQ-DEP-001、需求追踪说明与原型交接文档；计划拆为 PR-0 至 PR-C，测试清单扩为 V2-T01–T25。未改代码。

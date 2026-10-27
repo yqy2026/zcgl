@@ -165,11 +165,15 @@
 |---|---|---|
 | 列表 | `GET /api/v1/upstream-contracts` | 分页返回派生状态行；支持 `contract_type`、`owner_party_id`、`q` 搜索；到期区间与项目过滤待后续切片；续签链与 warning 按调用方范围派生，范围外的关联方按缺失处理 |
 | 详情 | `GET /api/v1/upstream-contracts/{contract_id}` | 返回条款、逐单元覆盖、租金阶段、版本链（前驱/当前/后继）、关联终端合同、生命周期事件和派生状态 |
-| 更新 | `PATCH /api/v1/upstream-contracts/{contract_id}` | 乐观锁必填；可编辑 `name`/`end_date`/付款字段/押金/`oa_reference`，`end_date` 变更同事务跟随仍等于旧值的覆盖行；不提供即不改，不可清空已选上游 |
+| 更新 | `PATCH /api/v1/upstream-contracts/{contract_id}` | 乐观锁必填；可编辑 `name`、`end_date`、`management_fee_rate`（仅委托管理协议）、押金（委托管理协议只能为 0）和 `oa_reference`；合同级 `payment_cycle` / `payment_day` 确认后只读，付款方式以租金阶段为准；字段不适用于该合同类型返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`；`end_date` 变更同事务跟随仍等于旧值的覆盖行并重排租金义务；不提供即不改 |
 | 登记续签 | `POST /api/v1/upstream-contracts/{contract_id}/renewals` | 携带后继已签条款（编号、期限、租金/比例、押金、扫描件及其会话 owner）与幂等键；各方、类型和覆盖单元由前驱带出，同事务创建后继并追加 `renewed` 事件；已有未撤销后继返回 409 `CONTRACT_ALREADY_RENEWED` |
-| 退出预览 | `POST /api/v1/upstream-contracts/{contract_id}/exit/preview` | 返回逐单元覆盖截止（最后有效日为生效日前一日）、押金申报回显和 token；仍有有效终端合同返回 409 `ACTIVE_TERMINAL_CONTRACTS_BLOCK_EXIT` |
+| 租金阶段更正预览 | `POST /api/v1/upstream-contracts/{contract_id}/rent-schedule-correction/preview` | 携带完整的新租金阶段列表和原因；返回新旧阶段对照、当月起义务的新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和 token；改动当前业务月首日之前的阶段内容返回 409 `RENT_SCHEDULE_HISTORY_IMMUTABLE`，阶段越出合同期限或重叠返回 422 `RENT_SCHEDULE_INVALID`，已退出合同返回 409 `UPSTREAM_CONTRACT_ALREADY_EXITED` |
+| 租金阶段更正提交 | `POST /api/v1/upstream-contracts/{contract_id}/rent-schedule-correction` | 携带 token、期望版本与幂等键；同事务替换租金阶段、重排当月起的未锁定义务并写变更记录 |
+| 退出预览 | `POST /api/v1/upstream-contracts/{contract_id}/exit/preview` | 返回逐单元覆盖截止（最后有效日为生效日前一日）、押金申报回显、租金义务影响、承租押金应收回金额和 token；仍有有效终端合同返回 409 `ACTIVE_TERMINAL_CONTRACTS_BLOCK_EXIT` |
 | 退出提交 | `POST /api/v1/upstream-contracts/{contract_id}/exit` | 携带 token、期望版本与幂等键，日期与原因由 token 绑定的提议携带；同事务截止覆盖行并追加事件 |
 | 撤销退出 | `POST /api/v1/upstream-contracts/{contract_id}/exit-reversal` | 追加反向事件，原因必填；续签后继或他合同覆盖阻断 |
+
+委托管理协议不约定保证金：录入确认、续签和更新时押金必须为 0，否则返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`。
 
 ### 5.6 终端合同
 
@@ -177,11 +181,12 @@
 |---|---|---|
 | 列表 | `GET /api/v1/terminal-contracts` | 分页返回派生状态与风险行；支持 `contract_mode`、`upstream_contract_id`、`q` 搜索，以及台账类 `filter`：`rent_unpaid`（存在剩余金额大于 0 的已到期非 `void` 租金义务）、`deposit_unsettled`（押金状态不是 `settled`）；上游关系 warning 按调用方范围派生，范围外上游按缺失处理 |
 | 详情 | `GET /api/v1/terminal-contracts/{contract_id}` | 返回覆盖单元、模式、上游、条款、租金阶段、版本链、生命周期事件、版本和派生风险 |
-| 更新 | `PATCH /api/v1/terminal-contracts/{contract_id}` | 乐观锁必填；可编辑绑上游（不得清空，改绑重验类型/出租方/覆盖）、`end_date`、押金，响应重算风险；`end_date` 变更同事务跟随覆盖行，重叠 409 |
+| 更新 | `PATCH /api/v1/terminal-contracts/{contract_id}` | 乐观锁必填；可编辑绑上游（不得清空，改绑重验类型/出租方/覆盖）、`end_date`、押金，响应重算风险；`end_date` 变更同事务跟随覆盖行并重排租金义务，重叠 409 |
+| 租金阶段更正预览 / 提交 | `POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction/preview`、`POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction` | 与上游合同同一契约；已终止合同返回 409 `TERMINAL_CONTRACT_ALREADY_TERMINATED` |
 | 登记续签 | `POST /api/v1/terminal-contracts/{contract_id}/renewals` | 携带后继已签条款与幂等键；租户、出租方、模式和覆盖单元由前驱带出，可显式指定新上游（先续上游再续终端时必填）；已有未撤销后继返回 409 `CONTRACT_ALREADY_RENEWED` |
-| 终止预览 | `POST /api/v1/terminal-contracts/{contract_id}/termination/preview` | 返回逐单元覆盖截止（最后有效日为生效日前一日）、押金与交接申报回显、warning 和 token；已终止合同返回 409 |
-| 终止提交 | `POST /api/v1/terminal-contracts/{contract_id}/termination` | 携带 token、期望版本与幂等键，类型/日期/交接/押金/原因由 token 绑定的提议携带；同事务截止覆盖行并追加事件 |
-| 撤销终止 | `POST /api/v1/terminal-contracts/{contract_id}/termination-reversal` | 追加反向事件，原因必填；存在后继事实时失败关闭 |
+| 终止预览 | `POST /api/v1/terminal-contracts/{contract_id}/termination/preview` | 请求可携带押金抵扣方式（缺省按到期日从早到晚自动抵扣欠租；可选不抵扣或给出抵扣明细）和补收免租金额与依据（仅提前终止的转租合同）；返回逐单元覆盖截止（最后有效日为生效日前一日）、押金与交接申报回显、租金义务影响、押金结算试算（已收、抵扣明细、补收免租、应退还租户或租户还需补缴）、warning 和 token；已终止合同返回 409 |
+| 终止提交 | `POST /api/v1/terminal-contracts/{contract_id}/termination` | 携带 token、期望版本与幂等键，类型/日期/交接/押金/抵扣明细/补收免租/原因由 token 绑定的提议携带；同事务截止覆盖行、追加事件、重排租金义务、创建补收免租义务并写入押金抵扣 |
+| 撤销终止 | `POST /api/v1/terminal-contracts/{contract_id}/termination-reversal` | 追加反向事件，原因必填；同事务撤销随该终止写入的押金抵扣、作废未锁定的补收免租义务并重排；存在后继事实时失败关闭 |
 
 上游缺失和租期越界返回 warning，不阻止登记；同一资产单元同日终端合同重叠返回 409。
 
@@ -193,12 +198,12 @@
 | 条目详情 | `GET /api/v1/rent-ledger-entries/{entry_id}` | 返回来源条款、账期起止、义务、有效登记、撤销链、操作人和 warning（如 `RENT_LEDGER_PLAN_MISMATCH`） |
 | 登记付款/到账 | `POST /api/v1/rent-ledger-entries/{entry_id}/records` | 接受记录类型、金额、日期、可选凭证、期望版本和幂等键 |
 | 撤销登记 | `POST /api/v1/rent-payment-records/{record_id}/reversal` | 原记录不可更新；原因必填；同一事务重排该合同义务，返回重算状态 |
-| 手工义务 | `POST /api/v1/rent-ledger-entries` | 仅限 `custom` 账期段；接受合同、账期起止、到期日、金额、依据说明（必填）和幂等键 |
-| 作废手工义务 | `POST /api/v1/rent-ledger-entries/{entry_id}/void` | 仅限无有效登记的 `manual` 义务；原因、期望版本和幂等键 |
+| 手工义务 | `POST /api/v1/rent-ledger-entries` | `origin=manual` 仅限 `custom` 账期段；`origin=clawback` 仅限有未撤销提前终止的转租终端合同（补收免租优惠，终止时未填可在此补登）；接受合同、账期起止、到期日、金额、依据说明（必填）和幂等键 |
+| 作废手工义务 | `POST /api/v1/rent-ledger-entries/{entry_id}/void` | 仅限无有效登记的 `manual` / `clawback` 义务；原因、期望版本和幂等键 |
 
-金额默认等于剩余义务但允许减少形成部分完成。超出剩余金额默认返回 409 `PAYMENT_AMOUNT_EXCEEDS_REMAINING`。记录类型与义务类型不匹配返回 422 `RENT_RECORD_TYPE_MISMATCH`（`deposit_offset` 只能经押金抵扣创建）；对 `void` 义务登记返回 409 `RENT_LEDGER_ENTRY_VOIDED`；在非 `custom` 账期段创建手工义务或作废 `generated` 义务返回 409 `RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED`；作废有有效登记的手工义务返回 409 `RENT_LEDGER_ENTRY_LOCKED`；撤销已被确认对账单计入的产权方到账返回 409 `MANAGEMENT_FEE_STATEMENT_LOCKED`。
+金额默认等于剩余义务但允许减少形成部分完成。超出剩余金额默认返回 409 `PAYMENT_AMOUNT_EXCEEDS_REMAINING`。记录类型与义务类型不匹配返回 422 `RENT_RECORD_TYPE_MISMATCH`（`deposit_offset` 只能经押金抵扣创建）；对 `void` 义务登记返回 409 `RENT_LEDGER_ENTRY_VOIDED`；手工义务不满足上述条件或作废 `generated` 义务返回 409 `RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED`；作废有有效登记的手工义务返回 409 `RENT_LEDGER_ENTRY_LOCKED`；撤销已被确认对账单计入的产权方到账返回 409 `MANAGEMENT_FEE_STATEMENT_LOCKED`。
 
-`generated` 义务由合同确认、续签、期限更新、终止 / 退出及其撤销和登记撤销在同一事务内重排（规则见领域模型 §4.14、§4.16），不提供生成或重算端点；派生字段（`status`、`effective_paid_amount`、`remaining_amount`）不可写。终端终止和上游退出的预览在原有影响之外，返回租金义务的新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和押金状态变化；预览 token 同时绑定受影响义务的版本。
+`generated` 义务由合同确认、续签、期限更新、租金阶段更正、终止 / 退出及其撤销和登记撤销在同一事务内重排（规则见领域模型 §4.14、§4.16），不提供生成或重算端点；派生字段（`status`、`effective_paid_amount`、`remaining_amount`）不可写。终端终止和上游退出的预览在原有影响之外，返回租金义务的新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和押金状态变化；预览 token 同时绑定受影响义务的版本。
 
 ### 5.8 押金
 
@@ -209,9 +214,9 @@
 | 登记处理 | `POST /api/v1/deposits/{deposit_id}/records` | 记录类型、金额、日期、可选凭证、期望版本和幂等键；`deduct` 必须指定被抵扣的终端租金义务 |
 | 撤销处理 | `POST /api/v1/deposit-records/{record_id}/reversal` | 原记录保留，原因必填；撤销 `deduct` 时同一事务撤销配对的租金抵扣记录 |
 
-押金条目随合同确认（含续签后继）创建，每份合同一条，不提供手工创建端点；约定、持有余额和状态均派生（领域模型 §4.18）。直签终端合同由产权方收取押金，本系统只登记产权方报告，不提供抵扣操作；上游押金由本公司付给产权方，登记支付与收回。续签时押金整体转入后继合同，前驱显示已转入，不产生应退或应收回。
+押金条目随承租合同和终端合同确认（含续签后继）创建，每份合同一条，不提供手工创建端点；委托管理协议不约定保证金，没有押金条目；约定、持有余额和状态均派生（领域模型 §4.18）。直签终端合同由产权方收取押金，本系统只登记产权方报告，不提供抵扣操作；承租合同押金由本公司付给产权方，登记支付与收回。续签时押金整体转入后继合同，前驱显示已转入，不产生应退或应收回。转租押金只在合同结束阶段（已登记终止或已到期）可抵扣欠租，终止时默认自动抵扣（见 §5.6）。
 
-记录类型与收取方不匹配返回 422 `DEPOSIT_RECORD_TYPE_MISMATCH`；收入超出待收 / 待付金额或支出超出持有余额返回 409 `DEPOSIT_AMOUNT_EXCEEDS_REMAINING`；向已续签合同的押金条目登记返回 409 `DEPOSIT_ENTRY_CARRIED_FORWARD`；抵扣目标不是本合同或其续签前驱未作废、仍有剩余金额的转租终端租金义务，或金额超出其剩余金额，返回 409 `DEPOSIT_OFFSET_TARGET_INVALID`；重复撤销返回 409 `DEPOSIT_RECORD_ALREADY_REVERSED`。
+记录类型与收取方不匹配返回 422 `DEPOSIT_RECORD_TYPE_MISMATCH`；收入超出待收 / 待付金额或支出超出持有余额返回 409 `DEPOSIT_AMOUNT_EXCEEDS_REMAINING`；向已续签合同的押金条目登记返回 409 `DEPOSIT_ENTRY_CARRIED_FORWARD`；合同仍在期内时抵扣返回 409 `DEPOSIT_OFFSET_NOT_ALLOWED`；抵扣目标不是本合同或其续签前驱未作废、仍有剩余金额的转租终端租金义务，或金额超出其剩余金额，返回 409 `DEPOSIT_OFFSET_TARGET_INVALID`；重复撤销返回 409 `DEPOSIT_RECORD_ALREADY_REVERSED`。
 
 ### 5.9 委托管理费
 
@@ -223,7 +228,7 @@
 | 标记顺延 | `POST /api/v1/management-fee-statements/{statement_id}/deferrals` | 截止日前逐户标记顺延，原因必填；截止日（对账月次月最后一天）后未收余额自动顺延，无需标记 |
 | 上传盖章件 | `POST /api/v1/management-fee-statements/{statement_id}/stamped-document` | 上传双方盖章版本，确认前可替换；返回文档和当前应收费用金额 |
 | 确认 | `POST /api/v1/management-fee-statements/{statement_id}/confirmation` | 期望版本、幂等键；缺盖章件返回 422 `STAMPED_DOCUMENT_REQUIRED`；截止日前仍有未处理行返回 409 `MANAGEMENT_FEE_LINES_UNRESOLVED`；同一产权方存在更早未确认对账单返回 409 `MANAGEMENT_FEE_SEQUENCE_CONFLICT`；成功后快照行、比例和金额，并把未收余额带入下月单 |
-| 更正 | `POST /api/v1/management-fee-statements/{statement_id}/successor` | 原因、期望版本和幂等键；只能更正该产权方最近一张已确认对账单，否则返回 409 `MANAGEMENT_FEE_SEQUENCE_CONFLICT`；创建未确认的后继单，原单转 `superseded` 只读 |
+| 更正 | `POST /api/v1/management-fee-statements/{statement_id}/successor` | 原因（缺失返回 422 `CORRECTION_REASON_REQUIRED`）、期望版本和幂等键；只能更正该产权方最近一张已确认对账单，否则返回 409 `MANAGEMENT_FEE_SEQUENCE_CONFLICT`；创建未确认的后继单，原单转 `superseded` 只读 |
 
 对账单不提供创建端点：某产权方某月首次出现产权方应报到账义务时随义务生成创建，确认带出顺延余额时按需创建下月单。对 `confirmed` / `superseded` 单执行到账、顺延或上传盖章件返回 409 `MANAGEMENT_FEE_STATEMENT_LOCKED`。以上写端点均要求 `asset_ops:write`。
 
@@ -294,7 +299,7 @@
 
 ## 6. 预览—提交契约
 
-拆分、合并、上游退出、终端终止、考核范围保存、报送提交/撤回和导入提交/撤销使用统一模式。涉及“今天”的生效日校验统一按 `Asia/Shanghai` 业务日计算，不以 UTC 日期代替：
+拆分、合并、上游退出、终端终止、租金阶段更正、考核范围保存、报送提交/撤回和导入提交/撤销使用统一模式。涉及“今天”的生效日校验统一按 `Asia/Shanghai` 业务日计算，不以 UTC 日期代替：
 
 1. 预览返回影响、阻断、warning、规范化提议、`preview_token`、`expires_at` 和相关版本。
 2. token 绑定操作者、动作、目标、规范化提议、数据范围和版本，客户端不可解码。
@@ -329,10 +334,12 @@
 | 409 | `PAYMENT_AMOUNT_EXCEEDS_REMAINING` | 登记金额超出剩余义务 |
 | 409 | `PAYMENT_RECORD_ALREADY_REVERSED` | 重复撤销付款/到账记录 |
 | 409 | `RENT_LEDGER_ENTRY_VOIDED` | 对已作废租金义务登记 |
-| 409 | `RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED` | 在非 `custom` 账期段创建手工义务，或作废 `generated` 义务 |
+| 409 | `RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED` | 手工义务不满足 `custom` 账期段或补收免租条件，或作废 `generated` 义务 |
+| 409 | `RENT_SCHEDULE_HISTORY_IMMUTABLE` | 租金阶段更正改动了当前业务月首日之前的阶段内容 |
 | 409 | `RENT_LEDGER_ENTRY_LOCKED` | 作废仍有有效登记的手工义务 |
 | 409 | `DEPOSIT_AMOUNT_EXCEEDS_REMAINING` | 押金收入超出待收 / 待付金额，或支出超出持有余额 |
 | 409 | `DEPOSIT_ENTRY_CARRIED_FORWARD` | 向已续签合同的押金条目登记 |
+| 409 | `DEPOSIT_OFFSET_NOT_ALLOWED` | 合同仍在期内，押金不能抵扣 |
 | 409 | `DEPOSIT_OFFSET_TARGET_INVALID` | 押金抵扣目标或金额无效 |
 | 409 | `DEPOSIT_RECORD_ALREADY_REVERSED` | 重复撤销押金记录 |
 | 409 | `MANAGEMENT_FEE_STATEMENT_LOCKED` | 对账单已确认或已被更正不可修改，或要撤销的到账已被已确认对账单计入 |
@@ -354,6 +361,8 @@
 | 422 | `EXCLUSION_REASON_REQUIRED` | 考核排除原因缺失 |
 | 422 | `REVERSAL_REASON_REQUIRED` | 撤销原因缺失 |
 | 422 | `DEFERRAL_REASON_REQUIRED` | 委托管理费顺延原因缺失 |
+| 422 | `CORRECTION_REASON_REQUIRED` | 租金阶段更正或对账单更正原因缺失 |
+| 422 | `CONTRACT_FIELD_NOT_APPLICABLE` | 字段不适用于该合同类型（如委托管理协议填押金、承租合同填管理费比例） |
 | 422 | `RENT_RECORD_TYPE_MISMATCH` | 付款/到账记录类型与义务类型不匹配 |
 | 422 | `DEPOSIT_RECORD_TYPE_MISMATCH` | 押金记录类型与收取方不匹配 |
 | 422 | `STAMPED_DOCUMENT_REQUIRED` | 确认对账单缺双方盖章件 |
