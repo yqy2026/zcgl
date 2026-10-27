@@ -293,9 +293,11 @@
 
 | 方法与路径 | 契约 |
 |---|---|
-| `GET /api/v1/business-change-events?target_type=&target_id=&period=` | 返回操作者、时间、动作、业务可读摘要、原因和关联对象 |
+| `GET /api/v1/business-change-events?target_type=&target_id=&period=&page=&page_size=` | 按当前 Party 范围返回 `items` / `total`；`target_type` 支持 `upstream_contract` / `terminal_contract`，`target_id` 精确过滤，`period` 为上海业务月 `YYYY-MM`；分页默认 `page=1`、`page_size=50`（上限 200）；每项返回操作者、时间、动作、脱敏前后值、业务可读摘要、原因、关联对象和 `correlation_id` |
 
 变更记录是审计读取，不提供创建、更新或删除端点；由业务服务在同一事务写入。
+
+PR-0 先覆盖合同确认、修改、续签、终止、退出及撤销，动作码分别为 `confirmed` / `updated` / `renewed` / `terminated` / `exited` / `reversed`。续签的前驱与后继记录共用 `correlation_id`；幂等回放不追加第二份记录，失败事务不留下记录。无有效业务范围返回 403，范围外对象不出现在结果中；其他业务对象的变更记录随对应实施切片接入。
 
 ## 6. 预览—提交契约
 

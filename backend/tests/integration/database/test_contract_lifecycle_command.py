@@ -24,6 +24,7 @@ from src.models.asset_contract import (
 from src.models.asset_unit import AssetUnit
 from src.models.attachment import Attachment
 from src.models.auth import AccountType, User
+from src.models.business_change_event import BusinessChangeEvent
 from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from src.schemas.asset_operations import (
@@ -91,6 +92,11 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
 
     async def reset_facts() -> None:
         async with factory() as session:
+            await session.execute(
+                delete(BusinessChangeEvent).where(
+                    BusinessChangeEvent.actor_id == ACTOR_ID
+                )
+            )
             terminal_ids = select(TerminalContract.id).where(
                 TerminalContract.contract_number.like("TM-LIFECYCLE-INT%")
             )
@@ -910,6 +916,24 @@ async def test_renewals_chain_successors_atomically(
         )
     assert terminal_renewed.renewed_from_id == CONTRACT_ID
     assert terminal_renewed.upstream_contract_id == successor_id
+
+    async with session_factory() as session:
+        changes = (
+            (
+                await session.execute(
+                    select(BusinessChangeEvent).where(
+                        BusinessChangeEvent.actor_id == ACTOR_ID,
+                        BusinessChangeEvent.target_type == "upstream_contract",
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(changes) == 2
+        assert {change.action for change in changes} == {"confirmed", "renewed"}
+        assert len({change.correlation_id for change in changes}) == 1
+        assert {change.target_id for change in changes} == {UPSTREAM_ID, successor_id}
 
     async with session_factory() as session:
         with pytest.raises(ContractAlreadyRenewedError):

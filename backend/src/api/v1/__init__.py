@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from . import (
     asset_units,  # noqa: F401
     authz,  # noqa: F401
+    business_change_events,  # noqa: F401
     contract_intake_sessions,  # noqa: F401
     extraction_sessions,  # noqa: F401
     party,  # noqa: F401

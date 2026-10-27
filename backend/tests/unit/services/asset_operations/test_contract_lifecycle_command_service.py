@@ -127,8 +127,7 @@ class _Repository:
         return tuple(
             event
             for event in self.events
-            if event.contract_kind == contract_kind
-            and event.contract_id == contract_id
+            if event.contract_kind == contract_kind and event.contract_id == contract_id
         )
 
     async def list_terminal_coverages(
@@ -240,9 +239,7 @@ class _Repository:
         self, _db, *, contract_ids: tuple[str, ...]
     ) -> tuple[ContractLifecycleEvent, ...]:
         return tuple(
-            event
-            for event in self.terminal_events
-            if event.contract_id in contract_ids
+            event for event in self.terminal_events if event.contract_id in contract_ids
         )
 
     async def find_terminal_overlaps(
@@ -262,6 +259,11 @@ class _Repository:
 
 
 class _DB:
+    def add(self, event) -> None:
+        if not hasattr(self, "audit_events"):
+            self.audit_events = []
+        self.audit_events.append(event)
+
     def __init__(self) -> None:
         self.commits = 0
         self.rollbacks = 0

@@ -98,6 +98,60 @@ def _terminal_request(
     )
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"contract_type": "lease", "management_fee_rate": "0.08"},
+        {
+            "contract_type": "management_agreement",
+            "payment_cycle": None,
+            "payment_day": None,
+            "management_fee_rate": "0.08",
+            "deposit_amount": "1",
+        },
+        {
+            "contract_type": "management_agreement",
+            "payment_cycle": None,
+            "payment_day": None,
+            "management_fee_rate": "0.08",
+            "deposit_amount": "0",
+            "rent_schedules": [
+                {
+                    "stage_start": "2026-01-01",
+                    "stage_end": "2026-12-31",
+                    "base_monthly_rent": "100",
+                    "actual_monthly_rent": "100",
+                    "payment_cycle": "monthly",
+                    "due_day": 25,
+                }
+            ],
+        },
+    ],
+)
+async def test_upstream_confirmation_rejects_inapplicable_fields(changes) -> None:
+    from src.core.exception_handler import BaseBusinessError
+
+    request = UpstreamContractCreate.model_validate(
+        {**_upstream_request().model_dump(), **changes}
+    )
+    repository = _Repository()
+    db = _DB()
+    with pytest.raises(BaseBusinessError) as error:
+        await _service(repository, _UnitLocker((_unit(),))).create_upstream(
+            db,
+            request=request,
+            actor_id="user-1",
+            scope=SCOPE,
+            idempotency_key="invalid-field",
+            attachment_owner_id="intake-1",
+        )
+    assert error.value.code == "CONTRACT_FIELD_NOT_APPLICABLE"
+    assert error.value.status_code == 422
+    assert repository.writes == 0
+    assert db.commits == 0
+
+
 class _UnitLocker:
     def __init__(
         self,
@@ -149,9 +203,7 @@ class _Repository:
         assert expected_owner_id == "intake-1"
         return self.bind_allowed
 
-    async def get_upstream_for_terminal(
-        self, _db, *, contract_id, unit_ids, scope
-    ):
+    async def get_upstream_for_terminal(self, _db, *, contract_id, unit_ids, scope):
         assert unit_ids == ("unit-1",)
         assert scope is SCOPE
         return self.upstream
@@ -159,9 +211,7 @@ class _Repository:
     async def list_upstream_coverages(self, _db, *, contract_id):
         return self.upstream_coverages
 
-    async def find_terminal_overlaps(
-        self, _db, *, unit_ids, start_date, end_date
-    ):
+    async def find_terminal_overlaps(self, _db, *, unit_ids, start_date, end_date):
         return self.overlap_ids
 
     async def add_upstream(self, db, *, contract, coverages, schedules):
@@ -181,6 +231,11 @@ class _Repository:
 
 
 class _DB:
+    def add(self, event) -> None:
+        if not hasattr(self, "audit_events"):
+            self.audit_events = []
+        self.audit_events.append(event)
+
     def __init__(self) -> None:
         self.commits = 0
         self.rollbacks = 0
@@ -411,7 +466,9 @@ async def test_terminal_period_overlap_is_rejected_before_write() -> None:
 
 
 @pytest.mark.asyncio
-async def test_same_idempotency_key_replays_response_and_conflicts_on_other_body() -> None:
+async def test_same_idempotency_key_replays_response_and_conflicts_on_other_body() -> (
+    None
+):
     repository = _Repository()
     service = _service(repository, _UnitLocker((_unit(),)))
     db = _DB()

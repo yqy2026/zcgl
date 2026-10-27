@@ -17,6 +17,7 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
       previewTerminalTermination: vi.fn(),
       commitTerminalTermination: vi.fn(),
       previewUpstreamExit: vi.fn(),
+      getUpstreamContract: vi.fn(),
       createIntakeSession: vi.fn(),
       renewTerminal: vi.fn(),
       renewUpstream: vi.fn(),
@@ -95,10 +96,73 @@ beforeEach(() => {
   mockedService.createIntakeSession.mockReset();
   mockedService.renewTerminal.mockReset();
   mockedService.renewUpstream.mockReset();
+  mockedService.getUpstreamContract.mockResolvedValue({
+    id: 'upstream-1',
+    contractNumber: 'UP-001',
+    contractType: 'lease',
+    name: '承租合同',
+    ownerPartyId: 'owner-1',
+    operatorPartyId: 'operator-1',
+    startDate: '2026-01-01',
+    endDate: '2026-12-31',
+    paymentCycle: 'monthly',
+    paymentDay: 15,
+    depositAmount: 0,
+    renewedFromId: null,
+    version: 1,
+    status: 'active',
+    warnings: [],
+    terminalContractIds: [],
+    coverages: [],
+    lifecycleEvents: [],
+    renewalChain: [],
+  });
 });
 
 afterEach(() => {
   cleanup();
+});
+
+it('renews a management agreement with the correct scan type and applicable terms', async () => {
+  const lease = await mockedService.getUpstreamContract('upstream-1');
+  mockedService.getUpstreamContract.mockResolvedValue({
+    ...lease,
+    contractType: 'management_agreement',
+    paymentCycle: null,
+    paymentDay: null,
+  });
+  mockedService.createIntakeSession.mockResolvedValue({
+    id: 'renew-session',
+    documentId: 'renew-scan',
+    contractType: 'management_agreement',
+    status: 'ready_for_review',
+    candidateFields: {},
+    warnings: [],
+    expiresAt: '2026-12-31T00:00:00Z',
+  });
+  mockedService.renewUpstream.mockResolvedValue({
+    id: 'successor',
+    contractNumber: 'MG-002',
+    idempotent: false,
+  });
+  const user = userEvent.setup();
+  renderUpstreamActionsPage();
+  const fee = await screen.findByLabelText('管理费比例（0–1）');
+  await user.type(fee, '0.10');
+  const file = new File(['pdf'], 'management-renewal.pdf', { type: 'application/pdf' });
+  await user.upload(screen.getByLabelText('续签扫描件'), file);
+  await user.type(screen.getByLabelText('后继合同编号'), 'MG-002');
+  await user.type(screen.getByLabelText('后继合同名称'), '委托管理续签');
+  await user.type(screen.getByLabelText('后继起租日'), '2027-01-01');
+  await user.type(screen.getByLabelText('后继到期日'), '2027-12-31');
+  await user.type(screen.getByLabelText('覆盖资产单元 ID（由原合同带出核对）'), 'unit-1');
+  await user.click(screen.getByRole('button', { name: '登记续签' }));
+  await waitFor(() => expect(mockedService.renewUpstream).toHaveBeenCalledTimes(1));
+  expect(mockedService.createIntakeSession).toHaveBeenCalledWith('management_agreement', file);
+  const payload = mockedService.renewUpstream.mock.calls[0]?.[1];
+  expect(payload).toMatchObject({ management_fee_rate: '0.1', deposit_amount: '0' });
+  expect(payload).not.toHaveProperty('payment_cycle');
+  expect(payload).not.toHaveProperty('payment_day');
 });
 
 it.each([
@@ -110,7 +174,7 @@ it.each([
   const user = userEvent.setup();
   renderPage();
   const file = new File(['pdf'], 'renewal.pdf', { type: 'application/pdf' });
-
+  await waitFor(() => expect(screen.getByLabelText('续签扫描件')).toBeEnabled());
   await user.upload(screen.getByLabelText('续签扫描件'), file);
 
   expect(await screen.findByRole('alert')).toHaveTextContent('扫描件无效');

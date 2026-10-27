@@ -207,7 +207,16 @@ function UpstreamList(props: {
                   value: detail.contractType === 'lease' ? '承租合同' : '委托管理协议',
                 },
                 { label: '押金', value: formatMoney(detail.depositAmount) },
-                { label: '付款周期', value: detail.paymentCycle ?? '—' },
+                ...(detail.contractType === 'lease'
+                  ? [
+                      { label: '付款周期（只读）', value: detail.paymentCycle ?? '—' },
+                      {
+                        label: '付款日（只读）',
+                        value: detail.paymentDay == null ? '—' : `${detail.paymentDay} 日`,
+                      },
+                      { label: '付款方式', value: '以租金阶段为准' },
+                    ]
+                  : []),
                 {
                   label: '覆盖单元',
                   value: `${detail.coverages.length} 个`,

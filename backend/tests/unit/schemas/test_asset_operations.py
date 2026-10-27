@@ -260,13 +260,13 @@ def test_upstream_contract_terms_follow_contract_type() -> None:
     )
     assert management.management_fee_rate == Decimal("0.08")
 
-    with pytest.raises(ValidationError, match="management_agreement"):
+    # Applicability is checked by the command service with a stable business code.
+    assert (
         UpstreamContractCreate.model_validate(
-            {
-                **management.model_dump(),
-                "payment_cycle": "monthly",
-            }
-        )
+            {**management.model_dump(), "payment_cycle": "monthly"}
+        ).payment_cycle
+        == "monthly"
+    )
 
 
 def test_terminal_contract_allows_missing_upstream_and_enforces_collector_mode() -> (

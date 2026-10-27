@@ -48,6 +48,7 @@ from .boundary_command_service import (
     AssetUnitBoundaryPreviewStore,
     AssetUnitBoundaryPreviewStoreProtocol,
 )
+from .business_change_service import contract_snapshot, record_contract_change
 from .contract_command_service import (
     asset_contract_command_service as _default_contract_command,
 )
@@ -326,6 +327,10 @@ class ContractLifecycleCommandService:
             coverages=coverages,
         )
 
+        audit_before: dict[str, object] = {
+            "contract": contract_snapshot(contract),
+            "coverages": [contract_snapshot(row) for row in coverages],
+        }
         created_at = self._naive_utc(self.clock())
         event = ContractLifecycleEvent(  # type: ignore[call-arg]
             id=self.id_factory(),
@@ -348,6 +353,22 @@ class ContractLifecycleCommandService:
                 effective_date=proposal.effective_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await record_contract_change(
+                db,
+                contract=contract,
+                contract_kind=event.contract_kind,
+                action=event.event_type,
+                actor_id=actor_id,
+                before=audit_before,
+                after={
+                    "contract": contract_snapshot(contract),
+                    "coverages": [contract_snapshot(row) for row in coverages],
+                    "lifecycle_event": contract_snapshot(event),
+                },
+                reason=event.reason,
+                correlation_id=event.id,
+                occurred_at=self.clock(),
+            )
             await db.commit()
             return self._response(event, idempotent=False)
         except IntegrityError:
@@ -462,6 +483,10 @@ class ContractLifecycleCommandService:
                 blocking_contract_ids=blocking_contract_ids,
             )
 
+        audit_before: dict[str, object] = {
+            "contract": contract_snapshot(contract),
+            "coverages": [contract_snapshot(row) for row in coverages],
+        }
         created_at = self._naive_utc(self.clock())
         event = ContractLifecycleEvent(  # type: ignore[call-arg]
             id=self.id_factory(),
@@ -483,6 +508,22 @@ class ContractLifecycleCommandService:
                 until=contract.end_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await record_contract_change(
+                db,
+                contract=contract,
+                contract_kind=event.contract_kind,
+                action=event.event_type,
+                actor_id=actor_id,
+                before=audit_before,
+                after={
+                    "contract": contract_snapshot(contract),
+                    "coverages": [contract_snapshot(row) for row in coverages],
+                    "lifecycle_event": contract_snapshot(event),
+                },
+                reason=event.reason,
+                correlation_id=event.id,
+                occurred_at=self.clock(),
+            )
             await db.commit()
             return self._response(event, idempotent=False)
         except IntegrityError:
@@ -767,6 +808,10 @@ class ContractLifecycleCommandService:
             effective_date=proposal.effective_date,
         )
 
+        audit_before: dict[str, object] = {
+            "contract": contract_snapshot(contract),
+            "coverages": [contract_snapshot(row) for row in coverages],
+        }
         created_at = self._naive_utc(self.clock())
         event = ContractLifecycleEvent(  # type: ignore[call-arg]
             id=self.id_factory(),
@@ -786,6 +831,22 @@ class ContractLifecycleCommandService:
                 effective_date=proposal.effective_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await record_contract_change(
+                db,
+                contract=contract,
+                contract_kind=event.contract_kind,
+                action=event.event_type,
+                actor_id=actor_id,
+                before=audit_before,
+                after={
+                    "contract": contract_snapshot(contract),
+                    "coverages": [contract_snapshot(row) for row in coverages],
+                    "lifecycle_event": contract_snapshot(event),
+                },
+                reason=event.reason,
+                correlation_id=event.id,
+                occurred_at=self.clock(),
+            )
             await db.commit()
             return self._response(event, idempotent=False)
         except IntegrityError:
@@ -1090,6 +1151,10 @@ class ContractLifecycleCommandService:
                 blocking_contract_ids=blocking_contract_ids,
             )
 
+        audit_before: dict[str, object] = {
+            "contract": contract_snapshot(contract),
+            "coverages": [contract_snapshot(row) for row in coverages],
+        }
         created_at = self._naive_utc(self.clock())
         event = ContractLifecycleEvent(  # type: ignore[call-arg]
             id=self.id_factory(),
@@ -1111,6 +1176,22 @@ class ContractLifecycleCommandService:
                 until=contract.end_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await record_contract_change(
+                db,
+                contract=contract,
+                contract_kind=event.contract_kind,
+                action=event.event_type,
+                actor_id=actor_id,
+                before=audit_before,
+                after={
+                    "contract": contract_snapshot(contract),
+                    "coverages": [contract_snapshot(row) for row in coverages],
+                    "lifecycle_event": contract_snapshot(event),
+                },
+                reason=event.reason,
+                correlation_id=event.id,
+                occurred_at=self.clock(),
+            )
             await db.commit()
             return self._response(event, idempotent=False)
         except IntegrityError:
