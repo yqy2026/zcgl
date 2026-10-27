@@ -40,7 +40,7 @@
 | RentLedgerEntry | 业务事实 | 某合同某账期的一笔应付、应收或产权方应报到账义务 |
 | RentPaymentRecord | 业务事实 | 外部付款、到账或押金抵扣的追加登记及其撤销 |
 | DepositLedgerEntry | 业务事实 | 每份承租合同或终端合同一条押金条目；约定、持有余额和待处理方向由合同与记录派生 |
-| DepositRecord | 业务事实 | 押金收取、支付、退还、收回、抵扣或产权方报告的追加登记及其撤销 |
+| DepositRecord | 业务事实 | 押金收取、支付、退还、收回、抵扣、扣除或产权方报告的追加登记及其撤销 |
 | ManagementFeeStatement | 业务事实 | 某产权方某月委托管理费对账单 |
 | ManagementFeeStatementLine | 快照事实 | 确认时计入或顺延的逐户到账明细；确认前由义务与到账登记投影 |
 | AssessmentScopeVersion | 业务事实 | 某年度已保存考核范围版本 |
@@ -221,7 +221,7 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 
 派生状态由日期、后继合同和退出事件决定：`scheduled`、`active`、`expiring`、`expired_pending_action`、`exited`、`historical`。
 
-租金义务只读取 `ContractRentSchedule` 的阶段级 `payment_cycle` / `due_day`。合同级 `payment_cycle` / `payment_day` 只在录入时作为阶段默认值，合同确认后不可修改；付款方式以租金阶段为准。
+租金义务只读取 `ContractRentSchedule` 的阶段级 `payment_cycle` / `due_day`。合同级 `payment_cycle` / `payment_day` 只在录入时作为阶段默认值，合同确认后不可修改；付款方式以租金阶段为准。委托管理协议不约定保证金，也没有租金阶段。
 
 ### 4.11 UpstreamContractAssetUnit
 
@@ -285,7 +285,7 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 | `superseded_at` | datetime? | 被租金阶段更正替换的时间；非空的阶段只作追溯，不参与义务生成 |
 | `superseded_correlation_id` | string? | 替换它的更正命令，对应 `BusinessChangeEvent.correlation_id` |
 
-递增按阶段叠加；季付只在季初月份形成义务。租金阶段确认后只能通过“租金阶段更正”修改：当前业务月首日之前的阶段内容不可改（跨越该日的阶段在该日拆分后比较），更正只重排当月起的未锁定义务，历史义务不回写。更正不物理删除原阶段：被替换的阶段写入 `superseded_at`，新阶段追加写入；跨越当月首日的原阶段被替换后，以当月首日为界追加内容不变的前段和新的后段。义务生成、合同详情和更正比较只取未被替换的阶段。录入时阶段付款日默认月付 25 日、季付 15 日，可按合同修改。
+租金阶段只属于承租合同和终端合同；委托管理协议没有租金阶段，录入、续签和租金阶段更正时提交租金阶段一律拒绝。递增按阶段叠加；季付只在季初月份形成义务。租金阶段确认后只能通过“租金阶段更正”修改：当前业务月首日之前的阶段内容不可改（跨越该日的阶段在该日拆分后比较），更正只重排当月起的未锁定义务，历史义务不回写。更正不物理删除原阶段：被替换的阶段写入 `superseded_at`，新阶段追加写入；跨越当月首日的原阶段被替换后，以当月首日为界追加内容不变的前段和新的后段。义务生成、合同详情和更正比较只取未被替换的阶段。录入时阶段付款日默认月付 25 日、季付 15 日，可按合同修改。
 
 义务生成规则（`RentLedgerEntry` 由本表派生，锁定与重排见 §4.16）：
 
@@ -407,7 +407,7 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 ```text
 own_held = 收入记录合计 − 支出记录合计 + carried_in_amount
   收入：collect、owner_reported_collect、pay
-  支出：refund、owner_reported_refund、recover、deduct
+  支出：refund、owner_reported_refund、recover、deduct、forfeit
 carried_in_amount  = 前驱合同的 carried_out_amount（本合同为未撤销续签的后继时）
 carried_out_amount = 本合同已续签 ? own_held : 0
 held_amount        = own_held − carried_out_amount
@@ -418,7 +418,7 @@ gap                = target_amount − held_amount
 - **在期阶段**：终端合同派生状态为 `scheduled` / `active` / `expiring` 且没有未撤销的终止事件；承租合同派生状态为 `scheduled` / `active` / `expiring` / `expired_pending_action` 且没有未撤销的退出事件。其余为结束阶段，包括已登记终止 / 退出但未到生效日的合同。
 - **续签转入**：存在未撤销 `renewed` 事件时，押金整体转入后继合同，前驱 `settled` 并显示“已转入续签合同”，不产生应退或应收回。转入在续签登记时即生效，不等前驱到期；此后前驱押金条目只读，补登的收退记录登记在后继合同上。
 - **方向与状态**：`gap > 0` 时，终端为 `receivable` / `receivable_uncollected`（应收未收），承租合同为 `payable` / `payable_unpaid`（应付未付：本公司尚未付清给产权方的押金）；`gap < 0` 时，终端为 `refundable` / `refundable_unreturned`（应退未退），承租合同为 `recoverable` / `recoverable_unreceived`（应收回）；`gap = 0` 时为 `none` / `settled`。`outstanding_amount = |gap|`。
-- 合同更新押金约定后 `gap` 自动重算，调低到已持有金额以下即出现应退或应收回。生命周期事件被撤销时阶段随事件重放恢复；随终止写入的抵扣成对撤销，其余已登记的退还、收回和手工抵扣记录保留，需要追回时由用户登记反向记录。
+- 合同更新押金约定后 `gap` 自动重算，调低到已持有金额以下即出现应退或应收回。生命周期事件被撤销时阶段随事件重放恢复；随终止写入的抵扣成对撤销，其余已登记的退还、收回、手工抵扣和扣除记录保留，需要追回时由用户登记反向记录。
 - 终止事件上的 `deposit_settlement_status` 只记录终止时的声明；押金状态以本节派生为准。
 
 ### 4.18.1 DepositRecord
@@ -427,18 +427,18 @@ gap                = target_amount − held_amount
 |---|---|---|
 | `id` | UUID | 主键 |
 | `deposit_entry_id` | UUID | 对应押金条目 |
-| `record_type` | enum | `collect` / `refund` / `deduct` / `owner_reported_collect` / `owner_reported_refund` / `pay` / `recover` / `reversal` |
+| `record_type` | enum | `collect` / `refund` / `deduct` / `forfeit` / `owner_reported_collect` / `owner_reported_refund` / `pay` / `recover` / `reversal` |
 | `amount` | decimal | 正向记录大于 0；撤销引用原记录 |
 | `occurred_on` | date | 外部实际发生日期 |
 | `document_id` | UUID? | 可选凭证 |
 | `offset_ledger_entry_id` | UUID? | `deduct` 必填：被抵扣的终端租金义务 |
 | `lifecycle_event_id` | UUID? | 随终端终止写入的 `deduct` 指向该终止事件 |
 | `reverses_record_id` | UUID? | 撤销时必填，且一笔记录只能有效撤销一次 |
-| `reason` | string? | 撤销时必填 |
+| `reason` | string? | 撤销和 `forfeit` 必填 |
 | `created_by` / `created_at` | UUID / datetime | 操作审计 |
 | `idempotency_key` | string | 唯一 |
 
-记录类型与收取方匹配：`collector=operator` 的终端押金接受 `collect` / `refund` / `deduct`；`collector=owner` 的终端押金只接受 `owner_reported_collect` / `owner_reported_refund`（直签押金由产权方收退，本系统只登记产权方报告，不提供抵扣）；承租合同押金接受 `pay` / `recover`。收入记录不得超过当时 `gap` 的正值部分，支出记录不得超过 `held_amount`。已续签合同的押金条目不再接受新记录。`deduct` 只在结束阶段可用：用押金抵扣本合同或其续签前驱未作废、仍有剩余金额的转租终端租金义务（含补收免租义务），金额同时不超过该义务剩余金额；它与租金侧 `deposit_offset` 记录在同一事务成对写入，撤销任一侧时同一事务撤销另一侧。终端终止默认把可用押金按到期日从早到晚全部用于抵扣，用户可在预览中取消或调整，调整后的明细由预览 token 绑定，与终止事件同一事务写入；之后仍可在押金上手工抵扣。正向记录不得直接更新或删除。
+记录类型与收取方匹配：`collector=operator` 的终端押金接受 `collect` / `refund` / `deduct` / `forfeit`；`collector=owner` 的终端押金接受 `owner_reported_collect` / `owner_reported_refund` / `forfeit`（直签押金由产权方收退，本系统只登记产权方报告，不提供抵扣）；承租合同押金接受 `pay` / `recover` / `forfeit`。`forfeit` 记押金中不退还的部分（赔偿、违约金等）：转租由本公司扣，直签按产权方报告，承租合同由产权方扣；原因必填，只在结束阶段可用，不超过 `held_amount`，不生成租金记录。收入记录不得超过当时 `gap` 的正值部分，支出记录不得超过 `held_amount`。已续签合同的押金条目不再接受新记录。`deduct` 只在结束阶段可用：用押金抵扣本合同或其续签前驱未作废、仍有剩余金额的转租终端租金义务（含补收免租义务），金额同时不超过该义务剩余金额；它与租金侧 `deposit_offset` 记录在同一事务成对写入，撤销任一侧时同一事务撤销另一侧。终端终止默认把可用押金按到期日从早到晚用于抵扣账期首月不晚于当前业务月的未结租金（含补收免租义务，按其账期判断），用户可在预览中取消或调整，调整后的明细由预览 token 绑定，与终止事件同一事务写入；以后月份的租金到期后再在押金上手工抵扣。正向记录不得直接更新或删除。
 
 ### 4.19 ManagementFeeStatement
 
@@ -638,7 +638,7 @@ gap                = target_amount − held_amount
 | `target_type` / `target_id` | enum / UUID | 业务对象 |
 | `action` | string | 稳定动作码 |
 | `before` / `after` | JSON | 前后值；敏感字段脱敏 |
-| `reason` | string? | 撤销、退出、终止、顺延、更正和报送撤回必填 |
+| `reason` | string? | 撤销、退出、终止、顺延、更正、押金扣除和报送撤回必填 |
 | `actor_id` / `occurred_at` | UUID / datetime | 审计主体和时间 |
 | `correlation_id` | string | 串联同一业务动作 |
 
