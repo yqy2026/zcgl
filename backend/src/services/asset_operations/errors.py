@@ -175,6 +175,18 @@ class AssetUnitFieldNotEditableError(BaseBusinessError):
         )
 
 
+class ContractFieldNotApplicableError(BaseBusinessError):
+    """Submitted terms do not apply to this upstream contract type."""
+
+    def __init__(self, *, contract_type: str, field_names: list[str]) -> None:
+        super().__init__(
+            message="这些字段不适用于当前合同类型，请调整后重试",
+            code="CONTRACT_FIELD_NOT_APPLICABLE",
+            details={"contract_type": contract_type, "field_names": field_names},
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+
+
 class RentScheduleInvalidError(BaseBusinessError):
     """A rent stage falls outside the contract term or overlaps another."""
 
@@ -338,6 +350,7 @@ __all__ = [
     "AssetUnitPeriodOverlapError",
     "AssetUnitUpstreamScopeMismatchError",
     "ContractAlreadyRenewedError",
+    "ContractFieldNotApplicableError",
     "ScanDocumentAlreadyBoundError",
     "ScanDocumentRequiredError",
     "TerminalContractAlreadyTerminatedError",

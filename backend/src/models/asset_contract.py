@@ -127,6 +127,10 @@ class UpstreamContract(Base):
 
     __tablename__ = "upstream_contracts"
     __table_args__ = (
+        CheckConstraint(
+            "contract_type = 'lease' OR deposit_amount = 0",
+            name="ck_upstream_contracts_management_deposit_zero",
+        ),
         UniqueConstraint(
             "contract_number",
             name="uq_upstream_contracts_contract_number",

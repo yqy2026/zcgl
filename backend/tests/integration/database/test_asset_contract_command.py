@@ -25,6 +25,7 @@ from src.models.asset_contract import (
 from src.models.asset_unit import AssetUnit
 from src.models.attachment import Attachment
 from src.models.auth import AccountType, User
+from src.models.business_change_event import BusinessChangeEvent
 from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from src.schemas.asset_operations import (
@@ -33,6 +34,7 @@ from src.schemas.asset_operations import (
     TerminalContractTerminationProposal,
     UpstreamContractCreate,
     UpstreamContractResponse,
+    UpstreamContractUpdate,
 )
 from src.services.asset_operations.contract_command_service import (
     AssetContractCommandService,
@@ -65,6 +67,11 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
 
     async def reset_facts() -> None:
         async with factory() as session:
+            await session.execute(
+                delete(BusinessChangeEvent).where(
+                    BusinessChangeEvent.actor_id == ACTOR_ID
+                )
+            )
             await session.execute(
                 delete(AssetContractWriteReceipt).where(
                     AssetContractWriteReceipt.actor_id == ACTOR_ID
@@ -248,6 +255,7 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
             "rent_schedules": [],
         }
     )
+
     async def create_upstream_once() -> UpstreamContractResponse:
         async with session_factory() as session:
             return await service.create_upstream(
@@ -259,9 +267,7 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
                 attachment_owner_id="contract-intake-upstream",
             )
 
-    first, second = await asyncio.gather(
-        create_upstream_once(), create_upstream_once()
-    )
+    first, second = await asyncio.gather(create_upstream_once(), create_upstream_once())
     upstream = first if not first.idempotent else second
     replayed = second if not first.idempotent else first
 
@@ -363,34 +369,36 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
 
     async with session_factory() as session:
         upstream_count = await session.scalar(
-            select(func.count()).select_from(UpstreamContract).where(
-                UpstreamContract.contract_number.like("UP-ASSET-CONTRACT-INT%")
-            )
+            select(func.count())
+            .select_from(UpstreamContract)
+            .where(UpstreamContract.contract_number.like("UP-ASSET-CONTRACT-INT%"))
         )
         terminal_count = await session.scalar(
-            select(func.count()).select_from(TerminalContract).where(
-                TerminalContract.contract_number.like("TM-ASSET-CONTRACT-INT%")
-            )
+            select(func.count())
+            .select_from(TerminalContract)
+            .where(TerminalContract.contract_number.like("TM-ASSET-CONTRACT-INT%"))
         )
         receipt_count = await session.scalar(
-            select(func.count()).select_from(AssetContractWriteReceipt).where(
-                AssetContractWriteReceipt.actor_id == ACTOR_ID
-            )
+            select(func.count())
+            .select_from(AssetContractWriteReceipt)
+            .where(AssetContractWriteReceipt.actor_id == ACTOR_ID)
         )
         upstream_coverage_count = await session.scalar(
-            select(func.count()).select_from(UpstreamContractAssetUnit).where(
-                UpstreamContractAssetUnit.upstream_contract_id == upstream.id
-            )
+            select(func.count())
+            .select_from(UpstreamContractAssetUnit)
+            .where(UpstreamContractAssetUnit.upstream_contract_id == upstream.id)
         )
         terminal_coverage_count = await session.scalar(
-            select(func.count()).select_from(TerminalContractAssetUnit).where(
-                TerminalContractAssetUnit.terminal_contract_id == terminal.id
-            )
+            select(func.count())
+            .select_from(TerminalContractAssetUnit)
+            .where(TerminalContractAssetUnit.terminal_contract_id == terminal.id)
         )
         upstream_scan = await session.get(Attachment, UPSTREAM_SCAN_ID)
         terminal_scan = await session.get(Attachment, TERMINAL_SCAN_ID)
         lifecycle_event_count = await session.scalar(
-            select(func.count()).select_from(ContractLifecycleEvent).where(
+            select(func.count())
+            .select_from(ContractLifecycleEvent)
+            .where(
                 ContractLifecycleEvent.contract_id == terminal.id,
                 ContractLifecycleEvent.event_type == "terminated",
             )
@@ -404,3 +412,100 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
     assert upstream_scan is not None and upstream_scan.owner_id == upstream.id
     assert terminal_scan is not None and terminal_scan.owner_id == terminal.id
     assert lifecycle_event_count == 1
+
+    from src.services.asset_operations.business_change_service import (
+        BusinessChangeService,
+    )
+
+    async with session_factory() as session:
+        changes, total = await BusinessChangeService().list_events(session, scope=scope)
+        assert total == 3  # two confirmations + termination, despite concurrent replay
+        assert {change.action for change in changes} == {"confirmed", "terminated"}
+        assert all(change.actor_id == ACTOR_ID for change in changes)
+        outside = EffectivePartyScope(
+            user_id=ACTOR_ID,
+            source="explicit",
+            scope_mode="owner",
+            owner_party_ids=["outside-owner"],
+        )
+        assert await BusinessChangeService().list_events(session, scope=outside) == (
+            [],
+            0,
+        )
+
+    async with session_factory() as session:
+        updated = await service.update_upstream(
+            session,
+            contract_id=upstream.id,
+            request=UpstreamContractUpdate(
+                expected_version=upstream.version, name="修改后的合同名称"
+            ),
+            actor_id=ACTOR_ID,
+            scope=scope,
+        )
+    async with session_factory() as session:
+        change = await session.scalar(
+            select(BusinessChangeEvent).where(
+                BusinessChangeEvent.target_id == upstream.id,
+                BusinessChangeEvent.action == "updated",
+            )
+        )
+        assert change is not None
+        assert change.before["name"] == upstream_request.name
+        assert change.after["name"] == updated.name
+        assert change.before["version"] == upstream.version
+        assert change.after["version"] == updated.version
+        assert updated.version == upstream.version + 1
+
+
+async def test_audit_and_contract_rollback_together(session_factory, monkeypatch):
+    scope = await _seed(session_factory)
+    service = AssetContractCommandService()
+    request = UpstreamContractCreate.model_validate(
+        {
+            "contract_number": "UP-ASSET-CONTRACT-INT",
+            "contract_type": "lease",
+            "name": "事务回滚",
+            "owner_party_id": OWNER_ID,
+            "operator_party_id": OWNER_ID,
+            "start_date": "2026-01-01",
+            "end_date": "2026-12-31",
+            "payment_cycle": "monthly",
+            "payment_day": 15,
+            "scan_document_id": UPSTREAM_SCAN_ID,
+            "asset_unit_ids": [UNIT_ID],
+        }
+    )
+
+    async def fail_after_audit(db, **kwargs):
+        await db.flush()  # persist pending business event inside the doomed transaction
+        raise RuntimeError("receipt write failed")
+
+    monkeypatch.setattr(service.repository, "add_write_receipt", fail_after_audit)
+    async with session_factory() as session:
+        with pytest.raises(RuntimeError, match="receipt write failed"):
+            await service.create_upstream(
+                session,
+                request=request,
+                actor_id=ACTOR_ID,
+                scope=scope,
+                idempotency_key="audit-rollback",
+                attachment_owner_id="contract-intake-upstream",
+            )
+    async with session_factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(BusinessChangeEvent)
+                .where(BusinessChangeEvent.actor_id == ACTOR_ID)
+            )
+            == 0
+        )
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(UpstreamContract)
+                .where(UpstreamContract.contract_number == request.contract_number)
+            )
+            == 0
+        )

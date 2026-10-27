@@ -98,8 +98,7 @@ class _Repository:
         return tuple(
             event
             for event in self.events
-            if event.contract_kind == contract_kind
-            and event.contract_id == contract_id
+            if event.contract_kind == contract_kind and event.contract_id == contract_id
         )
 
     async def list_upstream_coverages(
@@ -129,14 +128,17 @@ class _Repository:
                 coverage.effective_to = cutoff
         return 1
 
-    async def add_lifecycle_event(
-        self, _db, *, event: ContractLifecycleEvent
-    ) -> None:
+    async def add_lifecycle_event(self, _db, *, event: ContractLifecycleEvent) -> None:
         self.writes += 1
         self.events.append(event)
 
 
 class _DB:
+    def add(self, event) -> None:
+        if not hasattr(self, "audit_events"):
+            self.audit_events = []
+        self.audit_events.append(event)
+
     def __init__(self) -> None:
         self.commits = 0
         self.rollbacks = 0

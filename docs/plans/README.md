@@ -8,7 +8,7 @@
 
 | 方案 | 状态 |
 |------|------|
-| [资产运营 v5 V2 租金、押金与委托管理费实施计划](2026-10-27-asset-operations-v5-v2.md) | 🔄 实施就绪（V1 已合并，未上线开发环境直接切换；无上线演练前置，分 PR-0 至 PR-C 交付） |
+| [资产运营 v5 V2 租金、押金与委托管理费实施计划](2026-10-27-asset-operations-v5-v2.md) | 🔄 实施中（PR-0 已实现，提交复核；PR-A 至 PR-C 尚未开始） |
 | [anydoc 办公文档解析引入评估](2026-08-08-anydoc-office-doc-parsing.md) | ⏸ 搁置（备选技术方案，无对应活跃 REQ） |
 
 历史方案见 [`docs/archive/backend-plans/`](../archive/backend-plans/README.md)。

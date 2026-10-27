@@ -131,6 +131,9 @@ describe('UpstreamContractsPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/版本链|当前终端合同|覆盖单元/)).toBeTruthy();
       expect(screen.getByText('1 个')).toBeTruthy();
+      expect(screen.getByText('付款周期（只读）')).toBeTruthy();
+      expect(screen.getByText('付款日（只读）')).toBeTruthy();
+      expect(screen.getByText('以租金阶段为准')).toBeTruthy();
     });
   });
 

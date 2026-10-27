@@ -146,8 +146,8 @@ export interface UpstreamContractListItem {
   operatorPartyId: string;
   startDate: string;
   endDate: string;
-  paymentCycle: string | null;
-  paymentDay: number | null;
+  readonly paymentCycle: string | null;
+  readonly paymentDay: number | null;
   depositAmount: number;
   renewedFromId: string | null;
   version: number;

@@ -7,7 +7,7 @@
  */
 
 import { useRef, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Input } from 'antd';
@@ -53,6 +53,7 @@ interface UpstreamRenewalForm {
   endDate: string;
   paymentCycle: string;
   paymentDay: string;
+  managementFeeRate: string;
   depositAmount: string;
   assetUnitIds: string;
 }
@@ -93,6 +94,7 @@ const UPSTREAM_RENEWAL_DEFAULTS: UpstreamRenewalForm = {
   endDate: '',
   paymentCycle: 'monthly',
   paymentDay: '15',
+  managementFeeRate: '',
   depositAmount: '0',
   assetUnitIds: '',
 };
@@ -499,6 +501,12 @@ export function UpstreamActionsPage(): React.ReactElement {
   const params = useParams<{ contractId: string }>();
   const navigate = useNavigate();
   const contractId = params.contractId ?? '';
+  const contractQuery = useQuery({
+    queryKey: ['upstream-contract', contractId],
+    queryFn: () => assetOperationsService.getUpstreamContract(contractId),
+    enabled: contractId !== '',
+  });
+  const isManagement = contractQuery.data?.contractType === 'management_agreement';
 
   const {
     control: exitControl,
@@ -577,7 +585,13 @@ export function UpstreamActionsPage(): React.ReactElement {
   });
 
   const renewSessionMutation = useMutation({
-    mutationFn: (file: File) => assetOperationsService.createIntakeSession('upstream_lease', file),
+    mutationFn: (file: File) => {
+      if (contractQuery.data == null || contractQuery.isError) throw new Error('请先读取原合同');
+      return assetOperationsService.createIntakeSession(
+        isManagement ? 'management_agreement' : 'upstream_lease',
+        file
+      );
+    },
     retry: false,
   });
 
@@ -600,9 +614,13 @@ export function UpstreamActionsPage(): React.ReactElement {
           operator_party_id: '',
           start_date: input.values.startDate,
           end_date: input.values.endDate,
-          payment_cycle: input.values.paymentCycle,
-          payment_day: Number(input.values.paymentDay),
-          deposit_amount: input.values.depositAmount,
+          ...(isManagement
+            ? { management_fee_rate: input.values.managementFeeRate, deposit_amount: '0' }
+            : {
+                payment_cycle: input.values.paymentCycle,
+                payment_day: Number(input.values.paymentDay),
+                deposit_amount: input.values.depositAmount,
+              }),
           asset_unit_ids: unitIds,
           rent_schedules: [],
           scan_document_id: input.session.documentId,
@@ -752,6 +770,7 @@ export function UpstreamActionsPage(): React.ReactElement {
           续签扫描件
           <input
             ref={renewFileRef}
+            disabled={contractQuery.data == null || contractQuery.isError}
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
             aria-label="续签扫描件"
@@ -786,6 +805,25 @@ export function UpstreamActionsPage(): React.ReactElement {
             render={({ field }) => <Input {...field} />}
           />
         </label>
+        {contractQuery.isPending ? <p>正在读取原合同…</p> : null}
+        {contractQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title="原合同读取失败，请重试"
+            action={<Button onClick={() => void contractQuery.refetch()}>重试</Button>}
+          />
+        ) : null}
+        {isManagement ? (
+          <label className={styles.fieldColumn}>
+            管理费比例（0–1）
+            <Controller
+              control={renewalControl}
+              name="managementFeeRate"
+              render={({ field }) => <Input {...field} type="number" min={0} max={1} step="0.01" />}
+            />
+          </label>
+        ) : null}
         <label className={styles.fieldColumn}>
           后继合同名称
           <Controller
@@ -828,6 +866,9 @@ export function UpstreamActionsPage(): React.ReactElement {
         <Button
           type="primary"
           disabled={
+            contractQuery.data == null ||
+            contractQuery.isError ||
+            (isManagement && renewalForm.managementFeeRate.trim() === '') ||
             renewSessionMutation.data == null ||
             renewalForm.contractNumber.trim() === '' ||
             renewalForm.name.trim() === '' ||

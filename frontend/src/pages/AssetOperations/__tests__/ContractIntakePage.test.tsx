@@ -67,6 +67,40 @@ afterEach(() => {
 });
 
 describe('ContractIntakePage', () => {
+  it('confirms management terms without deposit or payment inputs', async () => {
+    const session = makeSession({ contractType: 'management_agreement' });
+    mockedService.createIntakeSession.mockResolvedValue(session);
+    mockedService.getIntakeSession.mockResolvedValue(session);
+    mockedService.confirmUpstreamIntake.mockResolvedValue({
+      id: 'management-1',
+      contractNumber: 'MG-100',
+      idempotent: false,
+    });
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: '委托管理协议' }));
+    await user.upload(
+      screen.getByLabelText('已签扫描件（PDF/图片）'),
+      new File(['pdf'], 'scan.pdf', { type: 'application/pdf' })
+    );
+    await user.click(screen.getByRole('button', { name: '上传并创建会话' }));
+    await user.type(await screen.findByLabelText('合同编号'), 'MG-100');
+    expect(screen.queryByLabelText('押金金额')).toBeNull();
+    await user.type(screen.getByLabelText('合同名称'), '委托协议');
+    await user.type(screen.getByLabelText('产权方 Party ID'), 'owner-1');
+    await user.type(screen.getByLabelText('运营方 Party ID'), 'operator-1');
+    await user.type(screen.getByLabelText('起租日'), '2026-01-01');
+    await user.type(screen.getByLabelText('到期日'), '2026-12-31');
+    await user.type(screen.getByLabelText('覆盖资产单元 ID（逗号分隔）'), 'unit-1');
+    await user.type(screen.getByLabelText('管理费比例（0-1）'), '0.1');
+    await user.click(screen.getByRole('button', { name: '确认登记' }));
+    await waitFor(() => expect(mockedService.confirmUpstreamIntake).toHaveBeenCalledTimes(1));
+    const payload = mockedService.confirmUpstreamIntake.mock.calls[0]?.[1];
+    expect(payload).toMatchObject({ deposit_amount: '0', management_fee_rate: '0.1' });
+    expect(payload).not.toHaveProperty('payment_cycle');
+    expect(payload).not.toHaveProperty('payment_day');
+  });
+
   it('does not retry a rejected upload under the production mutation retry default', async () => {
     mockedService.createIntakeSession.mockRejectedValue(
       new AssetOperationsError(

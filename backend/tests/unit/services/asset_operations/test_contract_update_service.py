@@ -6,6 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 
 from src.models.asset_contract import (
     TerminalContract,
@@ -171,6 +172,10 @@ class _DB:
     def __init__(self) -> None:
         self.commits = 0
         self.rollbacks = 0
+        self.added: list[object] = []
+
+    def add(self, value: object) -> None:
+        self.added.append(value)
 
     async def flush(self) -> None:
         return None
@@ -201,6 +206,44 @@ def _terminal_update(**overrides: object) -> TerminalContractUpdate:
     values: dict[str, object] = {"expected_version": 2}
     values.update(overrides)
     return TerminalContractUpdate.model_validate(values)
+
+
+@pytest.mark.parametrize(
+    "field,value", [("payment_cycle", "quarterly"), ("payment_day", 25)]
+)
+def test_upstream_patch_rejects_contract_payment_defaults(field, value) -> None:
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        _upstream_update(**{field: value})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "contract_type,field,value",
+    [
+        ("lease", "management_fee_rate", Decimal("0.08")),
+        ("lease", "management_fee_rate", None),
+        ("management_agreement", "deposit_amount", Decimal("1")),
+    ],
+)
+async def test_upstream_update_rejects_inapplicable_fields(
+    contract_type, field, value
+) -> None:
+    from src.core.exception_handler import BaseBusinessError
+
+    repository = _Repository()
+    repository.upstream.contract_type = contract_type
+    db = _DB()
+    with pytest.raises(BaseBusinessError) as error:
+        await _service(repository).update_upstream(
+            db,
+            contract_id="upstream-1",
+            request=_upstream_update(**{field: value}),
+            actor_id="actor-1",
+            scope=SCOPE,
+        )
+    assert error.value.code == "CONTRACT_FIELD_NOT_APPLICABLE"
+    assert error.value.status_code == 422
+    assert db.commits == 0
 
 
 @pytest.mark.asyncio

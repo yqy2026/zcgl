@@ -311,15 +311,9 @@ class UpstreamContractCreate(_StrictPayload):
         if self.contract_type == "lease":
             if self.payment_cycle is None:
                 raise ValueError("lease 必须提供 payment_cycle")
-            if self.management_fee_rate is not None:
-                raise ValueError("lease 不得提供 management_fee_rate")
         else:
             if self.management_fee_rate is None:
                 raise ValueError("management_agreement 必须提供 management_fee_rate")
-            if self.payment_cycle is not None or self.payment_day is not None:
-                raise ValueError(
-                    "management_agreement 不得提供 payment_cycle 或 payment_day"
-                )
         return self
 
 
@@ -327,8 +321,6 @@ class UpstreamContractUpdate(_StrictPayload):
     expected_version: int = Field(..., ge=1)
     name: str | None = Field(None, min_length=1, max_length=200)
     end_date: date | None = None
-    payment_cycle: PaymentCycle | None = None
-    payment_day: int | None = Field(None, ge=1, le=31)
     management_fee_rate: Decimal | None = Field(None, ge=0, le=1)
     deposit_amount: Decimal | None = Field(None, ge=0)
     oa_reference: str | None = Field(None, max_length=100)

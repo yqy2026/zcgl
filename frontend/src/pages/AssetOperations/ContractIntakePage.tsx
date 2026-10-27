@@ -145,7 +145,11 @@ export function ContractIntakePage(): React.ReactElement {
           ...(contractType === 'management_agreement' && form.managementFeeRate.trim() !== ''
             ? { management_fee_rate: form.managementFeeRate }
             : {}),
-          ...(form.depositAmount.trim() !== '' ? { deposit_amount: form.depositAmount } : {}),
+          ...(contractType === 'management_agreement'
+            ? { deposit_amount: '0' }
+            : form.depositAmount.trim() !== ''
+              ? { deposit_amount: form.depositAmount }
+              : {}),
           ...(form.oaReference.trim() !== '' ? { oa_reference: form.oaReference } : {}),
           asset_unit_ids: unitIds,
           rent_schedules: [],
@@ -313,7 +317,9 @@ export function ContractIntakePage(): React.ReactElement {
                   {setUpstreamType ? renderField('运营方 Party ID', 'operatorPartyId') : null}
                   {renderField('起租日', 'startDate', { type: 'date' })}
                   {renderField('到期日', 'endDate', { type: 'date' })}
-                  {renderField('押金金额', 'depositAmount')}
+                  {contractType !== 'management_agreement'
+                    ? renderField('押金金额', 'depositAmount')
+                    : null}
                   {isTerminal ? renderField('上游合同 ID（可留空）', 'upstreamContractId') : null}
                   {contractType === 'upstream_lease'
                     ? renderField('付款周期', 'paymentCycle')

@@ -644,6 +644,8 @@ gap                = target_amount − held_amount
 
 资产运营的业务命令（合同确认、修改、续签、终止、退出、租金阶段更正及其撤销，资产单元维护与拆合，租金、押金和委托管理费登记、撤销、重排、顺延、确认与更正，考核、报送与导入）都在业务写入的同一事务写入变更记录。请求日志中间件写入的“操作日志”是请求级审计，不替代本对象。
 
+合同记录的 `target_type` 为 `upstream_contract` / `terminal_contract`；动作码为 `confirmed` / `updated` / `renewed` / `terminated` / `exited` / `reversed`。修改记录在业务写入刷新后取新值，生命周期记录保留合同、覆盖期及追加的事件；续签前驱与后继的记录共用 `correlation_id`。幂等回放不新增记录，失败事务同时回滚业务与审计。
+
 ### 4.30 MonthlyWorkItem
 
 | 字段 | 类型 | 约束 |

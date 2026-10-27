@@ -48,6 +48,7 @@ from .associations import (  # noqa: F401  # noqa: F401
 )
 from .attachment import Attachment  # noqa: F401
 from .auth import AccountType, AuditLog, User, UserSession  # noqa: F401
+from .business_change_event import BusinessChangeEvent
 from .certificate_party_relation import (  # noqa: F401
     CertificatePartyRelation,
     CertificateRelationRole,
@@ -127,6 +128,7 @@ from .user_party_scope_batch_commit import UserPartyScopeBatchCommit  # noqa: F4
 from .user_party_scope_commit import UserPartyScopeCommit  # noqa: F401
 
 __all__ = [
+    "BusinessChangeEvent",
     "Attachment",
     "Asset",
     "AssetUnit",

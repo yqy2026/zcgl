@@ -118,8 +118,7 @@ class _Repository:
         return tuple(
             event
             for event in self.events
-            if event.contract_kind == contract_kind
-            and event.contract_id == contract_id
+            if event.contract_kind == contract_kind and event.contract_id == contract_id
         )
 
 
@@ -160,6 +159,11 @@ class _ContractCommand:
 
 
 class _DB:
+    def add(self, event) -> None:
+        if not hasattr(self, "audit_events"):
+            self.audit_events = []
+        self.audit_events.append(event)
+
     async def commit(self) -> None:
         return None
 

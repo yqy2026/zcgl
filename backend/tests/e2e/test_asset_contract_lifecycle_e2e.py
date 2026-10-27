@@ -176,6 +176,26 @@ def test_terminal_termination_unlocks_upstream_exit_e2e(
         in blocked.json()["error"]["details"]["terminal_contract_ids"]
     )
 
+    upstream_before = client.get(upstream_path)
+    assert upstream_before.status_code == 200, upstream_before.text
+    for invalid_terms in (
+        {"management_fee_rate": "0.10"},
+        {"management_fee_rate": None},
+        {"payment_cycle": "quarterly"},
+        {"payment_day": 20},
+    ):
+        rejected = client.patch(
+            upstream_path,
+            json={
+                "expected_version": upstream_before.json()["version"],
+                **invalid_terms,
+            },
+            headers=csrf_headers,
+        )
+        assert rejected.status_code == 422, rejected.text
+        if "management_fee_rate" in invalid_terms:
+            assert rejected.json()["error"]["code"] == "CONTRACT_FIELD_NOT_APPLICABLE"
+
     for path, action, proposal, event_type, expected_status in (
         (
             terminal_path,
@@ -248,7 +268,34 @@ def test_terminal_termination_unlocks_upstream_exit_e2e(
         assert events[0]["id"] == event["id"]
         assert events[0]["event_type"] == event_type
 
+        changes = client.get(
+            "/api/v1/business-change-events",
+            params={
+                "target_type": (
+                    "terminal_contract"
+                    if action == "termination"
+                    else "upstream_contract"
+                ),
+                "target_id": path.rsplit("/", 1)[1],
+            },
+        )
+        assert changes.status_code == 200, changes.text
+        audit = changes.json()
+        assert audit["total"] == 1, "幂等重试不得重复写入变更记录"
+        assert len(audit["items"]) == 1
+        change = audit["items"][0]
+        assert change["action"] == event_type
+        assert change["actor_id"] == getattr(client, "_user_id")
+        assert change["reason"] == proposal["reason"]
+        assert change["correlation_id"]
+        assert change["summary"]
+
     unit_detail = client.get(f"/api/v1/asset-units/{facts['unit_id']}")
     assert unit_detail.status_code == 200, unit_detail.text
     assert unit_detail.json()["rental_status"] == "vacant"
     assert unit_detail.json()["terminal_contract_ids"] == []
+    invalid_period = client.get(
+        "/api/v1/business-change-events", params={"period": "2026-13"}
+    )
+    assert invalid_period.status_code == 400, invalid_period.text
+    assert invalid_period.json()["error"]["code"] == "INVALID_PERIOD"

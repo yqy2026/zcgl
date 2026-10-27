@@ -44,6 +44,7 @@ from ...schemas.asset_operations import (
     UpstreamContractUpdate,
 )
 from ..party_scope_resolver import EffectivePartyScope
+from .business_change_service import contract_snapshot, record_contract_change
 from .contract_projections import (
     derive_terminal_contract_status,
     derive_terminal_contract_warnings,
@@ -55,6 +56,7 @@ from .errors import (
     AssetOperationsIdempotencyConflictError,
     AssetOperationsVersionConflictError,
     AssetUnitPeriodOverlapError,
+    ContractFieldNotApplicableError,
     RentScheduleInvalidError,
     ScanDocumentAlreadyBoundError,
     ScanDocumentRequiredError,
@@ -252,6 +254,14 @@ class AssetContractCommandService:
         lifecycle_event: ContractLifecycleEvent | None = None,
     ) -> UpstreamContractResponse:
         self._require_effective_scope(scope)
+        self._validate_upstream_fields(
+            contract_type=request.contract_type,
+            management_fee_rate=request.management_fee_rate,
+            deposit_amount=request.deposit_amount,
+            rent_schedules=request.rent_schedules,
+            payment_cycle=request.payment_cycle,
+            payment_day=request.payment_day,
+        )
         fingerprint = self._fingerprint("create_upstream", request)
         existing = await self.repository.get_write_receipt(
             db, actor_id=actor_id, idempotency_key=idempotency_key
@@ -531,12 +541,24 @@ class AssetContractCommandService:
                 reason="end_date_before_start",
                 asset_unit_ids=[],
             )
+        before = contract_snapshot(contract)
         old_end = contract.end_date
+        if (
+            contract.contract_type == "lease"
+            and "management_fee_rate" in request.model_fields_set
+        ):
+            raise ContractFieldNotApplicableError(
+                contract_type=contract.contract_type,
+                field_names=["management_fee_rate"],
+            )
+        self._validate_upstream_fields(
+            contract_type=contract.contract_type,
+            management_fee_rate=request.management_fee_rate,
+            deposit_amount=request.deposit_amount,
+        )
         for field in (
             "name",
             "end_date",
-            "payment_cycle",
-            "payment_day",
             "management_fee_rate",
             "deposit_amount",
             "oa_reference",
@@ -565,6 +587,16 @@ class AssetContractCommandService:
                     old_end=old_end,
                     new_end=request.end_date,
                 )
+            await db.flush()
+            await record_contract_change(
+                db,
+                contract=contract,
+                contract_kind="upstream",
+                action="updated",
+                actor_id=actor_id,
+                before=before,
+                occurred_at=self.clock(),
+            )
             await db.flush()
             await db.commit()
         except StaleDataError as exc:
@@ -654,6 +686,7 @@ class AssetContractCommandService:
                 expected_version=request.expected_version,
                 actual_version=contract.version,
             )
+        before = contract_snapshot(contract)
         events = await self.repository.list_lifecycle_events(
             db,
             contract_kind="terminal",
@@ -717,6 +750,16 @@ class AssetContractCommandService:
                     old_end=old_end,
                     new_end=new_end,
                 )
+            await db.flush()
+            await record_contract_change(
+                db,
+                contract=contract,
+                contract_kind="terminal",
+                action="updated",
+                actor_id=actor_id,
+                before=before,
+                occurred_at=self.clock(),
+            )
             await db.flush()
             await db.commit()
         except StaleDataError as exc:
@@ -949,6 +992,34 @@ class AssetContractCommandService:
             )
 
     @staticmethod
+    def _validate_upstream_fields(
+        *,
+        contract_type: str,
+        management_fee_rate: object = None,
+        deposit_amount: object = None,
+        rent_schedules: list[ContractRentScheduleInput] | None = None,
+        payment_cycle: object = None,
+        payment_day: object = None,
+    ) -> None:
+        invalid: list[str] = []
+        if contract_type == "lease":
+            if management_fee_rate is not None:
+                invalid.append("management_fee_rate")
+        else:
+            if deposit_amount is not None and deposit_amount != 0:
+                invalid.append("deposit_amount")
+            if rent_schedules:
+                invalid.append("rent_schedules")
+            if payment_cycle is not None:
+                invalid.append("payment_cycle")
+            if payment_day is not None:
+                invalid.append("payment_day")
+        if invalid:
+            raise ContractFieldNotApplicableError(
+                contract_type=contract_type, field_names=invalid
+            )
+
+    @staticmethod
     def _validate_schedules(
         schedules: list[ContractRentScheduleInput],
         *,
@@ -1012,6 +1083,13 @@ class AssetContractCommandService:
                 )
             if lifecycle_event is not None:
                 await self.repository.add_lifecycle_event(db, event=lifecycle_event)
+            await self._record_confirmation(
+                db,
+                contract=contract,
+                contract_kind="upstream",
+                actor_id=actor_id,
+                lifecycle_event=lifecycle_event,
+            )
             await self._add_receipt(
                 db,
                 command_kind="create_upstream",
@@ -1067,6 +1145,13 @@ class AssetContractCommandService:
                 )
             if lifecycle_event is not None:
                 await self.repository.add_lifecycle_event(db, event=lifecycle_event)
+            await self._record_confirmation(
+                db,
+                contract=contract,
+                contract_kind="terminal",
+                actor_id=actor_id,
+                lifecycle_event=lifecycle_event,
+            )
             await self._add_receipt(
                 db,
                 command_kind="create_terminal",
@@ -1103,6 +1188,42 @@ class AssetContractCommandService:
         except Exception:
             await db.rollback()
             raise
+
+    async def _record_confirmation(
+        self,
+        db: AsyncSession,
+        *,
+        contract: UpstreamContract | TerminalContract,
+        contract_kind: str,
+        actor_id: str,
+        lifecycle_event: ContractLifecycleEvent | None,
+    ) -> None:
+        correlation_id = str(uuid4())
+        await record_contract_change(
+            db,
+            contract=contract,
+            contract_kind=contract_kind,
+            action="confirmed",
+            actor_id=actor_id,
+            correlation_id=correlation_id,
+            occurred_at=self.clock(),
+        )
+        if lifecycle_event is not None:
+            await record_contract_change(
+                db,
+                contract=contract,
+                target_id=lifecycle_event.contract_id,
+                contract_kind=contract_kind,
+                action="renewed",
+                actor_id=actor_id,
+                before={"successor_contract_id": None},
+                after={
+                    "successor_contract_id": contract.id,
+                    "lifecycle_event_id": lifecycle_event.id,
+                },
+                correlation_id=correlation_id,
+                occurred_at=self.clock(),
+            )
 
     async def _add_receipt(
         self,
