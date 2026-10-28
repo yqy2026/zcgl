@@ -8,7 +8,11 @@ import pytest
 
 from src.core.exception_handler import PartyScopeForbiddenError
 from src.crud.rent_ledger_queries import RentQueryFacts
-from src.models.asset_contract import ContractRentSchedule, TerminalContract
+from src.models.asset_contract import (
+    ContractLifecycleEvent,
+    ContractRentSchedule,
+    TerminalContract,
+)
 from src.models.asset_ledger import RentLedgerEntry, RentPaymentRecord
 from src.services.asset_operations.rent_ledger_query_service import (
     RentLedgerQueryService,
@@ -16,6 +20,72 @@ from src.services.asset_operations.rent_ledger_query_service import (
 from src.services.party_scope_resolver import EffectivePartyScope
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
+
+
+@pytest.mark.parametrize(
+    "origin,reverse_termination", [("manual", False), ("clawback", True)]
+)
+async def test_locked_non_generated_entry_exposes_lifecycle_mismatch(
+    origin, reverse_termination
+):
+    contract = TerminalContract(
+        id="contract",
+        contract_number="TM-001",
+        start_date=date(2026, 10, 1),
+        end_date=date(2026, 10, 31),
+    )
+    entry = RentLedgerEntry(
+        id="entry",
+        contract_kind="terminal",
+        contract_id="contract",
+        entry_type="terminal_receivable",
+        period="2026-10",
+        period_start=date(2026, 10, 15),
+        period_end=date(2026, 10, 15),
+        due_date=date(2026, 10, 15),
+        due_amount=Decimal("100"),
+        currency="CNY",
+        origin=origin,
+        basis_note="已签补充条款",
+        locked_source={"lifecycle_event_id": "termination"},
+        voided_at=None,
+        version=1,
+    )
+    payment = RentPaymentRecord(
+        id="payment",
+        ledger_entry_id="entry",
+        record_type="receipt",
+        amount=Decimal("40"),
+        occurred_on=date(2026, 10, 15),
+        created_by="actor",
+        created_at=datetime.now(UTC),
+        reverses_record_id=None,
+    )
+    termination = ContractLifecycleEvent(
+        id="termination",
+        contract_kind="terminal",
+        contract_id="contract",
+        event_type="terminated",
+        termination_type="early",
+        effective_date=date(2026, 10, 15),
+    )
+    events = (termination,)
+    if reverse_termination:
+        events += (
+            ContractLifecycleEvent(
+                id="reversal",
+                contract_kind="terminal",
+                contract_id="contract",
+                event_type="reversed",
+                effective_date=date(2026, 10, 16),
+                reversed_event_id="termination",
+            ),
+        )
+    facts = RentQueryFacts((contract,), (entry,), (payment,), (), events)
+    views, warnings = RentLedgerQueryService._views(facts, today=date(2026, 10, 20))
+    assert views["entry"].remaining_amount == Decimal("60")
+    assert views["entry"].warnings == ["RENT_LEDGER_PLAN_MISMATCH"]
+    assert "RENT_LEDGER_PLAN_MISMATCH" in warnings["contract"]
 
 
 async def test_matrix_totals_ignore_void_and_keep_partial():

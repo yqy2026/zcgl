@@ -136,13 +136,14 @@ def test_rent_schedule_has_one_polymorphic_target_and_valid_money_constraints() 
         "ck_contract_rent_schedules_amounts_nonnegative",
         "ck_contract_rent_schedules_payment_cycle",
         "ck_contract_rent_schedules_due_day",
-        "uq_contract_rent_schedules_target_stage",
     } <= names
     assert any(
-        isinstance(constraint, UniqueConstraint)
-        and tuple(constraint.columns.keys())
+        index.unique
+        and index.name == 'uq_contract_rent_schedules_active_stage'
+        and str(index.dialect_options['postgresql']['where']) == 'superseded_at IS NULL'
+        and tuple(index.columns.keys())
         == ("contract_kind", "contract_id", "stage_start")
-        for constraint in ContractRentSchedule.__table__.constraints
+        for index in ContractRentSchedule.__table__.indexes
     )
 
 

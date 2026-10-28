@@ -1,4 +1,6 @@
 import { apiClient } from '@/api/client';
+import { isAxiosError } from 'axios';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { convertBackendToFrontend, convertFrontendToBackend } from '@/utils/dataConversion';
 import { AssetOperationsError } from '@/services/assetOperationsService';
 
@@ -135,15 +137,39 @@ function unwrap<T>(result: Envelope): T {
   return convertBackendToFrontend<T>(result.data);
 }
 async function get<T>(path: string, params?: Record<string, string | number>): Promise<T> {
-  return unwrap<T>(await apiClient.get(`/api/v1${path}`, { cache: false, params }));
+  try {
+    return unwrap<T>(await apiClient.get(`/api/v1${path}`, { cache: false, params }));
+  } catch (error) {
+    throw ledgerError(error);
+  }
+}
+function ledgerError(error: unknown): AssetOperationsError {
+  if (error instanceof AssetOperationsError) return error;
+  const enhanced = ApiErrorHandler.handleError(error);
+  if (isAxiosError<{ error?: { code?: unknown; message?: unknown } }>(error)) {
+    const detail = error.response?.data?.error;
+    return new AssetOperationsError(
+      typeof detail?.message === 'string' ? detail.message : enhanced.message,
+      typeof detail?.code === 'string'
+        ? detail.code
+        : error.response?.status === 403
+          ? 'FORBIDDEN'
+          : enhanced.code
+    );
+  }
+  return new AssetOperationsError(enhanced.message, enhanced.code);
 }
 async function post<T>(path: string, payload: unknown, key?: string): Promise<T> {
-  return unwrap<T>(
-    await apiClient.post(`/api/v1${path}`, convertFrontendToBackend(payload), {
-      retry: false,
-      ...(key != null ? { headers: { 'Idempotency-Key': key } } : {}),
-    })
-  );
+  try {
+    return unwrap<T>(
+      await apiClient.post(`/api/v1${path}`, convertFrontendToBackend(payload), {
+        retry: false,
+        ...(key != null ? { headers: { 'Idempotency-Key': key } } : {}),
+      })
+    );
+  } catch (error) {
+    throw ledgerError(error);
+  }
 }
 export function businessToday(): string {
   return new Intl.DateTimeFormat('en-CA', {

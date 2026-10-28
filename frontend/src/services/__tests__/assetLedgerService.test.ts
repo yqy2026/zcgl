@@ -1,9 +1,38 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { apiClient } from '@/api/client';
-import { assetLedgerService } from '../assetLedgerService';
+import { AxiosError, AxiosHeaders } from 'axios';
+import { assetLedgerService, isLedgerForbidden } from '../assetLedgerService';
 
 vi.mock('@/api/client', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }));
 beforeEach(() => vi.clearAllMocks());
+
+it.each(['get', 'post'] as const)('normalizes a rejected HTTP 403 from %s', async method => {
+  const rejection = new AxiosError(
+    'Request failed with status code 403',
+    'ERR_BAD_REQUEST',
+    undefined,
+    undefined,
+    {
+      status: 403,
+      statusText: 'Forbidden',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { success: false, error: { code: 'PARTY_SCOPE_MISSING', message: '无有效范围' } },
+    }
+  );
+  vi.mocked(apiClient[method]).mockRejectedValueOnce(rejection);
+  const request =
+    method === 'get'
+      ? assetLedgerService.getMatrix('terminal_rent', 2026)
+      : assetLedgerService.record(
+          'entry-1',
+          { record_type: 'receipt', amount: 1, occurred_on: '2026-10-28', expected_version: 1 },
+          'key'
+        );
+  const error: unknown = await request.catch(value => value);
+  expect(error).toMatchObject({ code: 'PARTY_SCOPE_MISSING' });
+  expect(isLedgerForbidden(error)).toBe(true);
+});
 
 it('converts ledger Decimal amounts through the shared recursive converter', async () => {
   vi.mocked(apiClient.get).mockResolvedValue({

@@ -31,6 +31,7 @@ from ...schemas.rent_queries import (
 from ..party_scope_resolver import EffectivePartyScope
 from .rent_ledger_projections import effective_paid, ledger_status
 from .rent_obligation_rules import RentStage, generate_obligations
+from .rent_obligation_service import active_closures
 
 
 def business_today() -> date:
@@ -194,6 +195,11 @@ class RentLedgerQueryService:
             events = tuple(
                 row for row in facts.events if row.contract_id == contract.id
             )
+            closures = active_closures(events)
+            cutoff = min((event.effective_date for event in closures), default=None)
+            active_early_ids = {
+                event.id for event in closures if event.termination_type == "early"
+            }
             end = effective_end(contract.end_date, events)
             targets, gaps = generate_obligations(
                 start_date=contract.start_date,
@@ -209,15 +215,27 @@ class RentLedgerQueryService:
                 entry_records = tuple(records[entry.id])
                 issues: list[str] = []
                 target = by_start.get(entry.period_start)
-                if (
-                    entry.origin == "generated"
-                    and effective_paid(entry_records) > 0
-                    and (
-                        target is None
-                        or target.due_amount != entry.due_amount
-                        or target.period_end != entry.period_end
-                        or target.due_date != entry.due_date
-                    )
+                generated_mismatch = entry.origin == "generated" and (
+                    target is None
+                    or target.due_amount != entry.due_amount
+                    or target.period_end != entry.period_end
+                    or target.due_date != entry.due_date
+                    or entry.voided_at is not None
+                )
+                manual_mismatch = (
+                    entry.origin == "manual"
+                    and entry.voided_at is None
+                    and cutoff is not None
+                    and entry.period_start >= cutoff
+                )
+                clawback_mismatch = (
+                    entry.origin == "clawback"
+                    and entry.voided_at is None
+                    and entry.locked_source.get("lifecycle_event_id")
+                    not in active_early_ids
+                )
+                if effective_paid(entry_records) > 0 and (
+                    generated_mismatch or manual_mismatch or clawback_mismatch
                 ):
                     issues.append("RENT_LEDGER_PLAN_MISMATCH")
                     if "RENT_LEDGER_PLAN_MISMATCH" not in warnings[contract.id]:
