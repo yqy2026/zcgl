@@ -159,6 +159,33 @@ def test_deposit_collection_offset_and_rent_side_reversal_are_atomic(
         .count()
         == 1
     )
+    # A non-refundable deposit deduction is not a rent receipt.
+    rent_record_count = db_session.query(RentPaymentRecord).count()
+    before_forfeit = client.get(path).json()
+    forfeited = client.post(
+        f"{path}/records",
+        json={
+            "record_type": "forfeit",
+            "amount": "500",
+            "occurred_on": facts["effective_date"],
+            "reason": "合同约定损失赔偿",
+            "expected_version": before_forfeit["version"],
+        },
+        headers=csrf_headers | {"Idempotency-Key": str(uuid4())},
+    )
+    assert forfeited.status_code == 200, forfeited.text
+    after_forfeit = client.get(path).json()
+    assert Decimal(str(after_forfeit["held_amount"])) == 0
+    assert after_forfeit["status"] == "settled"
+    db_session.expire_all()
+    assert db_session.query(RentPaymentRecord).count() == rent_record_count
+    restored = client.post(
+        f"/api/v1/deposit-records/{forfeited.json()['id']}/reversal",
+        json={"expected_version": after_forfeit["version"], "reason": "赔偿事实更正"},
+        headers=csrf_headers | {"Idempotency-Key": str(uuid4())},
+    )
+    assert restored.status_code == 200, restored.text
+    assert Decimal(str(client.get(path).json()["held_amount"])) == 500
 
 
 def test_management_agreement_cannot_be_updated_to_hold_a_deposit(
