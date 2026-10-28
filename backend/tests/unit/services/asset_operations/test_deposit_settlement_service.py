@@ -125,11 +125,18 @@ async def test_ineligible_clawback_returns_contract_error(
     assert error.value.status_code == 409
 
 
-async def test_prelock_locks_all_units_before_any_contract(monkeypatch):
+@pytest.mark.parametrize("mode", ["manual", "auto"])
+async def test_prelock_locks_all_units_before_any_contract(monkeypatch, mode):
     from src.schemas.asset_operations import TerminalContractTerminationProposal
     from src.services.asset_operations import deposit_settlement_service as module
 
     order = []
+    monkeypatch.setattr(
+        deposit_settlement_service,
+        "_visible_ancestors",
+        AsyncMock(return_value=["ancestor"]),
+        raising=False,
+    )
     monkeypatch.setattr(module, "scoped_contract", AsyncMock())
     monkeypatch.setattr(
         module.asset_ledger_repository,
@@ -168,8 +175,10 @@ async def test_prelock_locks_all_units_before_any_contract(monkeypatch):
             "termination_type": "early",
             "handover_status": "pending",
             "deposit_settlement_status": "pending",
-            "deposit_offset_mode": "manual",
-            "deposit_offsets": [{"ledger_entry_id": "rent", "amount": "10"}],
+            "deposit_offset_mode": mode,
+            "deposit_offsets": [{"ledger_entry_id": "rent", "amount": "10"}]
+            if mode == "manual"
+            else [],
             "reason": "提前退租",
         }
     )
@@ -291,3 +300,110 @@ async def test_event_reversal_only_reverses_outstanding_pairs_without_committing
     assert reverse.await_args.kwargs["commit"] is False
     assert reverse.await_args.kwargs["request"].expected_version == 3
     db.commit.assert_not_awaited()
+
+
+async def test_auto_preview_prefers_ancestor_arrears(monkeypatch):
+    from src.models.asset_contract import TerminalContract
+    from src.schemas.asset_operations import TerminalContractTerminationProposal
+    from src.services.asset_operations import deposit_settlement_service as module
+    from src.services.asset_operations.rent_obligation_service import RentObligationPlan
+
+    contract = TerminalContract(
+        id="current", contract_mode="sublease", renewed_from_id="parent"
+    )
+    monkeypatch.setattr(
+        deposit_settlement_service,
+        "_visible_ancestors",
+        AsyncMock(return_value=["parent"]),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        module.deposit_ledger_repository,
+        "get_by_contract",
+        AsyncMock(return_value=SimpleNamespace(id="deposit", collector="operator")),
+    )
+    monkeypatch.setattr(
+        module.deposit_query_service,
+        "get",
+        AsyncMock(return_value=SimpleNamespace(version=1, held_amount=Decimal("100"))),
+    )
+
+    async def entries(db, *, contract_kind, contract_id):
+        month, amount = (4, "100") if contract_id == "parent" else (5, "50")
+        return [
+            SimpleNamespace(
+                id=contract_id,
+                contract_id=contract_id,
+                entry_type="terminal_receivable",
+                voided_at=None,
+                period_start=date(2026, month, 1),
+                period_end=date(2026, month, 28),
+                due_date=date(2026, month, 1),
+                due_amount=Decimal(amount),
+                version=1,
+            )
+        ]
+
+    monkeypatch.setattr(module.asset_ledger_repository, "list_entries", entries)
+    monkeypatch.setattr(
+        module.asset_ledger_repository, "list_records", AsyncMock(return_value=())
+    )
+    monkeypatch.setattr(
+        module.rent_obligation_service,
+        "preview",
+        AsyncMock(return_value=RentObligationPlan()),
+    )
+    monkeypatch.setattr(module, "business_today", lambda: date(2026, 6, 1))
+    proposal = TerminalContractTerminationProposal.model_validate(
+        dict(
+            effective_date="2026-06-30",
+            termination_type="early",
+            handover_status="pending",
+            deposit_settlement_status="pending",
+            reason="退租",
+        )
+    )
+    result = await deposit_settlement_service.preview(
+        AsyncMock(), contract=contract, scope=SimpleNamespace(), proposal=proposal
+    )
+    assert result["offsets"] == [{"ledger_entry_id": "parent", "amount": "100"}]
+    assert result["refundable_amount"] == "0"
+    assert result["additional_due_amount"] == "50"
+
+
+@pytest.mark.parametrize("visible,active", [(True, True), (False, True), (True, False)])
+async def test_ancestors_require_visible_unrevoked_renewal(
+    monkeypatch, visible, active
+):
+    from src.models.asset_contract import TerminalContract
+    from src.services.asset_operations import deposit_settlement_service as module
+
+    parent = TerminalContract(id="parent", contract_mode="sublease")
+    contract = TerminalContract(
+        id="current", contract_mode="sublease", renewed_from_id="parent"
+    )
+    facts = SimpleNamespace(
+        contracts=(parent, contract),
+        events=(
+            SimpleNamespace(
+                id="renewal",
+                event_type="renewed",
+                contract_id="parent",
+                successor_contract_id="current",
+            ),
+        )
+        if active
+        else (),
+    )
+    monkeypatch.setattr(module, "scoped_contract", AsyncMock(return_value=contract))
+    monkeypatch.setattr(
+        module.deposit_query_repository, "load_facts", AsyncMock(return_value=facts)
+    )
+    monkeypatch.setattr(
+        module.asset_contract_repository,
+        "get_terminal",
+        AsyncMock(return_value=parent if visible else None),
+    )
+    assert await deposit_settlement_service._visible_ancestors(
+        AsyncMock(), contract_id="current", scope=SimpleNamespace()
+    ) == (["parent"] if visible and active else [])

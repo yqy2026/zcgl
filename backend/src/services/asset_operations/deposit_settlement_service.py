@@ -91,6 +91,50 @@ def choose_offsets(
 
 
 class DepositSettlementService:
+    async def _visible_ancestors(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        scope: EffectivePartyScope,
+    ) -> list[str]:
+        contract = await scoped_contract(
+            db, kind="terminal", contract_id=contract_id, scope=scope
+        )
+        if contract.renewed_from_id is None:
+            return []
+        facts = await deposit_query_repository.load_facts(
+            db, scope=scope, contract_kind="terminal", contract_id=contract_id
+        )
+        by_id = {row.id: row for row in facts.contracts}
+        active = active_deposit_events(facts.events)
+        child = contract
+        seen = {contract_id}
+        ancestors = []
+        while child.renewed_from_id is not None:
+            parent_id = child.renewed_from_id
+            if parent_id in seen or not any(
+                event.contract_id == parent_id
+                and event.event_type == "renewed"
+                and event.successor_contract_id == child.id
+                for event in active
+            ):
+                break
+            parent = by_id.get(parent_id)
+            if not isinstance(parent, TerminalContract):
+                break
+            if (
+                await asset_contract_repository.get_terminal(
+                    db, contract_id=parent_id, scope=scope
+                )
+                is None
+            ):
+                break
+            ancestors.append(parent_id)
+            seen.add(parent_id)
+            child = parent
+        return ancestors
+
     async def prelock(
         self,
         db: AsyncSession,
@@ -101,6 +145,10 @@ class DepositSettlementService:
         event_id: str | None = None,
     ) -> None:
         targets = {contract_id}
+        if proposal is not None and proposal.deposit_offset_mode == "auto":
+            targets.update(
+                await self._visible_ancestors(db, contract_id=contract_id, scope=scope)
+            )
         offset_ids = (
             [row.ledger_entry_id for row in proposal.deposit_offsets]
             if proposal is not None
@@ -184,37 +232,17 @@ class DepositSettlementService:
         entries = await asset_ledger_repository.list_entries(
             db, contract_kind=kind, contract_id=contract.id
         )
-        if proposal.deposit_offset_mode == "manual":
-            facts = await deposit_query_repository.load_facts(
-                db, scope=scope, contract_kind="terminal", contract_id=contract.id
-            )
-            by_id = {row.id: row for row in facts.contracts}
-            active = active_deposit_events(facts.events)
-            child = contract
-            seen = {contract.id}
-            while child.renewed_from_id is not None:
-                parent_id = child.renewed_from_id
-                if parent_id in seen or not any(
-                    event.contract_id == parent_id
-                    and event.event_type == "renewed"
-                    and event.successor_contract_id == child.id
-                    for event in active
-                ):
-                    break
-                parent = by_id.get(parent_id)
-                if not isinstance(parent, TerminalContract):
-                    break
-                # Historical facts may inform the balance without granting access.
-                visible = await asset_contract_repository.get_terminal(
-                    db, contract_id=parent_id, scope=scope
-                )
-                if visible is None:
-                    break
+        if (
+            isinstance(contract, TerminalContract)
+            and proposal.deposit_offset_mode in {"auto", "manual"}
+            and contract.renewed_from_id is not None
+        ):
+            for parent_id in await self._visible_ancestors(
+                db, contract_id=contract.id, scope=scope
+            ):
                 entries += await asset_ledger_repository.list_entries(
                     db, contract_kind="terminal", contract_id=parent_id
                 )
-                seen.add(parent_id)
-                child = parent
         records = await asset_ledger_repository.list_records(
             db, entry_ids=tuple(row.id for row in entries)
         )

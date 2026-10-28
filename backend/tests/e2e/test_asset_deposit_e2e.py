@@ -326,3 +326,177 @@ def test_termination_offsets_and_clawback_reverse_in_one_transaction(
             .count()
             == 1
         )
+
+
+def test_renewal_termination_auto_offsets_ancestor_and_reversal_restores_pairs(
+    authenticated_client, csrf_headers, db_session
+):
+    from src.models.asset_contract import TerminalContract, TerminalContractAssetUnit
+
+    client = authenticated_client
+    facts = _seed_signed_contracts(db_session, client._user_id)
+    parent = db_session.get(TerminalContract, facts["terminal_id"])
+    today = date.fromisoformat(facts["effective_date"])
+    start = today - timedelta(days=20)
+    original_end = parent.end_date
+    values = {
+        column.name: getattr(parent, column.name)
+        for column in TerminalContract.__table__.columns
+        if column.name not in {"id", "created_at", "updated_at"}
+    }
+    child_id = str(uuid4())
+    values.update(
+        contract_number=f"TM-RENEW-{uuid4().hex[:12]}",
+        renewed_from_id=parent.id,
+        start_date=start,
+        deposit_amount=Decimal("100"),
+        version=1,
+    )
+    parent.end_date = start - timedelta(days=1)
+    parent.deposit_amount = Decimal("100")
+    coverage = (
+        db_session.query(TerminalContractAssetUnit)
+        .filter_by(terminal_contract_id=parent.id)
+        .one()
+    )
+    coverage.effective_to = parent.end_date
+    db_session.add(TerminalContract(id=child_id, **values))
+    db_session.flush()
+    db_session.add(
+        TerminalContractAssetUnit(
+            terminal_contract_id=child_id,
+            asset_unit_id=coverage.asset_unit_id,
+            effective_from=start,
+            effective_to=original_end,
+        )
+    )
+    parent_deposit = (
+        db_session.query(DepositLedgerEntry)
+        .filter_by(contract_kind="terminal", contract_id=parent.id)
+        .one()
+    )
+    child_deposit_id = str(uuid4())
+    db_session.add(
+        DepositLedgerEntry(
+            id=child_deposit_id,
+            contract_kind="terminal",
+            contract_id=child_id,
+            collector="operator",
+            version=1,
+        )
+    )
+    db_session.add(
+        DepositRecord(
+            id=str(uuid4()),
+            deposit_entry_id=parent_deposit.id,
+            record_type="collect",
+            amount=Decimal("100"),
+            occurred_on=parent.start_date,
+            created_by=client._user_id,
+            idempotency_key=str(uuid4()),
+        )
+    )
+    db_session.add(
+        ContractLifecycleEvent(
+            id=str(uuid4()),
+            contract_kind="terminal",
+            contract_id=parent.id,
+            event_type="renewed",
+            successor_contract_id=child_id,
+            effective_date=start,
+            created_by=client._user_id,
+            reason="续签",
+            idempotency_key=str(uuid4()),
+        )
+    )
+    rent_ids = [str(uuid4()), str(uuid4())]
+    for rent_id, cid, when, amount in [
+        (rent_ids[0], parent.id, start - timedelta(days=10), "100"),
+        (rent_ids[1], child_id, start, "50"),
+    ]:
+        db_session.add(
+            RentLedgerEntry(
+                id=rent_id,
+                contract_kind="terminal",
+                contract_id=cid,
+                entry_type="terminal_receivable",
+                period=when.strftime("%Y-%m"),
+                period_start=when,
+                period_end=when,
+                due_date=when,
+                due_amount=Decimal(amount),
+                origin="manual",
+                basis_note="续签欠租",
+                version=1,
+            )
+        )
+    db_session.commit()
+    path = f"/api/v1/terminal-contracts/{child_id}"
+    proposal = dict(
+        effective_date=facts["effective_date"],
+        termination_type="early",
+        handover_status="completed",
+        deposit_settlement_status="pending",
+        reason="提前退租",
+    )
+    preview = client.post(
+        f"{path}/termination/preview", json=proposal, headers=csrf_headers
+    )
+    assert preview.status_code == 200, preview.text
+    settlement = preview.json()["deposit_settlement"]
+    assert settlement["offsets"] == [
+        {"ledger_entry_id": rent_ids[0], "amount": "100.00"}
+    ]
+    committed = client.post(
+        f"{path}/termination",
+        json=dict(
+            preview_token=preview.json()["preview_token"],
+            expected_version=preview.json()["contract_version"],
+        ),
+        headers=csrf_headers | {"Idempotency-Key": str(uuid4())},
+    )
+    assert committed.status_code == 200, committed.text
+    assert (
+        Decimal(
+            str(
+                client.get(f"/api/v1/deposits/{child_deposit_id}").json()["held_amount"]
+            )
+        )
+        == 0
+    )
+    reversed_response = client.post(
+        f"{path}/termination-reversal",
+        json=dict(
+            target_event_id=committed.json()["id"],
+            effective_date=facts["effective_date"],
+            reason="撤销终止",
+        ),
+        headers=csrf_headers | {"Idempotency-Key": str(uuid4())},
+    )
+    assert reversed_response.status_code == 200, reversed_response.text
+    assert (
+        Decimal(
+            str(
+                client.get(f"/api/v1/deposits/{child_deposit_id}").json()["held_amount"]
+            )
+        )
+        == 100
+    )
+    db_session.expire_all()
+    paired = (
+        db_session.query(RentPaymentRecord)
+        .filter_by(ledger_entry_id=rent_ids[0], record_type="deposit_offset")
+        .one()
+    )
+    assert (
+        db_session.query(RentPaymentRecord)
+        .filter_by(reverses_record_id=paired.id)
+        .count()
+        == 1
+    )
+    assert (
+        db_session.query(RentPaymentRecord)
+        .filter_by(ledger_entry_id=rent_ids[1])
+        .count()
+        == 0
+    )
