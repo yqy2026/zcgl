@@ -1,10 +1,10 @@
 .mobileLayout {
+  --mobile-header-height: calc(var(--spacing-xxl) + var(--spacing-xl));
   min-height: 100%;
   background: var(--color-bg-tertiary);
 }
 
 .mobileHeader {
-  --mobile-header-height: calc(var(--spacing-xxl) + var(--spacing-xl));
   --mobile-header-touch-size: calc(var(--button-height-lg) + var(--spacing-xs));
   padding: 0 var(--spacing-lg);
   background: var(--color-bg-primary);

@@ -72,6 +72,7 @@
 }
 .panel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   border: var(--border-width-thin) solid var(--color-border);
