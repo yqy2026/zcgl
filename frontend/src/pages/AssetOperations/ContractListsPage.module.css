@@ -28,7 +28,7 @@
   justify-content: space-between;
   gap: var(--spacing-md);
   padding: 0.25rem 0;
-  font-size: 13rem;
+  font-size: var(--font-size-sm);
 }
 
 .fieldLabel {
