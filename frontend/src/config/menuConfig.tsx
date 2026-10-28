@@ -43,6 +43,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
     label: '资产运营',
     children: [
       {
+        key: '/asset-operations/ledgers',
+        icon: <BookOutlined />,
+        label: '台账',
+      },
+      {
         key: '/asset-operations/units',
         icon: <DatabaseOutlined />,
         label: '资产单元',

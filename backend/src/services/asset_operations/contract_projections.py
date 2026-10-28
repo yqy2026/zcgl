@@ -83,6 +83,14 @@ def derive_terminal_contract_warnings(
 
 
 _PUBLIC_WARNINGS: dict[str, tuple[str, str]] = {
+    "RENT_SCHEDULE_GAP": (
+        "RENT_SCHEDULE_GAP",
+        "合同期限内存在未覆盖的租金阶段，请补录核对",
+    ),
+    "RENT_LEDGER_PLAN_MISMATCH": (
+        "RENT_LEDGER_PLAN_MISMATCH",
+        "已登记的租金义务与当前合同条款不一致，请核对登记",
+    ),
     "upstream_missing": (
         "UPSTREAM_CONTRACT_MISSING",
         "尚未关联上游合同，已保留风险提示",

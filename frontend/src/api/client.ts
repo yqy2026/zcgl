@@ -667,17 +667,28 @@ export class ApiClient {
     data?: unknown,
     config?: AxiosRequestConfig & {
       retry?: boolean | RetryConfig;
+      skipAuthRefresh?: boolean;
+      suppressAuthRedirect?: boolean;
       smartExtract?: boolean;
     }
   ): Promise<ExtractResult<T>> {
     const {
       retry = this.config.enableAutoRetry,
+      skipAuthRefresh = false,
+      suppressAuthRedirect = false,
       smartExtract = true,
       ...axiosConfig
     } = config || {};
 
     const executeRequest = async (): Promise<AxiosResponse> => {
-      return await this.instance.post(url, data, axiosConfig);
+      const requestConfig: AxiosRequestConfig = { ...axiosConfig };
+      if (skipAuthRefresh === true) {
+        (requestConfig as ExtendedAxiosRequestConfig)._skipAuthRefresh = true;
+      }
+      if (suppressAuthRedirect === true) {
+        (requestConfig as ExtendedAxiosRequestConfig)._suppressAuthRedirect = true;
+      }
+      return await this.instance.post(url, data, requestConfig);
     };
 
     // 处理重试

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -24,6 +26,7 @@ from src.services.asset_operations.errors import (
     AssetUnitPeriodOverlapError,
     ScanDocumentAlreadyBoundError,
 )
+from src.services.asset_operations.rent_obligation_service import RentObligationPlan
 from src.services.party_scope_resolver import EffectivePartyScope
 
 NOW = datetime(2026, 10, 24, 4, 0, tzinfo=UTC)
@@ -257,7 +260,31 @@ def _service(
         clock=lambda: NOW,
         business_today=lambda: date(2026, 10, 24),
         id_factory=lambda: next(ids),
+        rent_obligations=SimpleNamespace(
+            replan=AsyncMock(return_value=RentObligationPlan())
+        ),
     )
+
+
+@pytest.mark.asyncio
+async def test_confirmation_rolls_back_when_rent_replanning_fails() -> None:
+    repository = _Repository()
+    service = _service(repository, _UnitLocker((_unit(),)))
+    service.rent_obligations = SimpleNamespace(
+        replan=AsyncMock(side_effect=RuntimeError("rent failure"))
+    )
+    db = _DB()
+    with pytest.raises(RuntimeError, match="rent failure"):
+        await service.create_upstream(
+            db,
+            request=_upstream_request(),
+            actor_id="user-1",
+            scope=SCOPE,
+            idempotency_key="rent-replan-failure",
+            attachment_owner_id="intake-1",
+        )
+    assert db.commits == 0
+    assert db.rollbacks == 1
 
 
 @pytest.mark.asyncio

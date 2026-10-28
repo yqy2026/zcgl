@@ -92,6 +92,7 @@ describe('ContractIntakePage', () => {
     await user.type(screen.getByLabelText('起租日'), '2026-01-01');
     await user.type(screen.getByLabelText('到期日'), '2026-12-31');
     await user.type(screen.getByLabelText('覆盖资产单元 ID（逗号分隔）'), 'unit-1');
+    expect(screen.queryByRole('button', { name: '添加租金阶段' })).toBeNull();
     await user.type(screen.getByLabelText('管理费比例（0-1）'), '0.1');
     await user.click(screen.getByRole('button', { name: '确认登记' }));
     await waitFor(() => expect(mockedService.confirmUpstreamIntake).toHaveBeenCalledTimes(1));
@@ -178,6 +179,11 @@ describe('ContractIntakePage', () => {
     await user.type(screen.getByLabelText('起租日'), '2026-01-01');
     await user.type(screen.getByLabelText('到期日'), '2026-12-31');
     await user.type(screen.getByLabelText('覆盖资产单元 ID（逗号分隔）'), 'unit-1');
+    await user.click(screen.getByRole('button', { name: '添加租金阶段' }));
+    await user.clear(screen.getByLabelText('原定月租'));
+    await user.type(screen.getByLabelText('原定月租'), '1200');
+    await user.clear(screen.getByLabelText('实际月租'));
+    await user.type(screen.getByLabelText('实际月租'), '1000');
     await user.click(screen.getByRole('button', { name: '确认登记' }));
 
     await waitFor(() => {
@@ -193,7 +199,15 @@ describe('ContractIntakePage', () => {
         end_date: '2026-12-31',
         deposit_amount: '0',
         asset_unit_ids: ['unit-1'],
-        rent_schedules: [],
+        rent_schedules: expect.arrayContaining([
+          expect.objectContaining({
+            stage_start: '2026-01-01',
+            stage_end: '2026-12-31',
+            actual_monthly_rent: 1000,
+            payment_cycle: 'monthly',
+            due_day: 25,
+          }),
+        ]),
       },
       expect.stringMatching(/.+/)
     );

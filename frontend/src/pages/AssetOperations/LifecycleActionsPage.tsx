@@ -16,6 +16,9 @@ import { assetOperationsService, AssetOperationsError } from '@/services/assetOp
 import type { ExitPreview, TerminationPreview } from '@/services/assetOperationsService';
 
 import styles from './LifecycleActionsPage.module.css';
+import RentScheduleEditor from './RentScheduleEditor';
+import { RentImpactSummary } from './LedgersPage';
+import type { RentScheduleInput } from '@/services/assetLedgerService';
 
 interface TerminalTerminationForm {
   effectiveDate: string;
@@ -32,6 +35,7 @@ interface ReversalForm {
 }
 
 interface TerminalRenewalForm {
+  rentSchedules: RentScheduleInput[];
   contractNumber: string;
   tenantPartyId: string;
   lessorPartyId: string;
@@ -47,6 +51,7 @@ interface UpstreamExitForm {
 }
 
 interface UpstreamRenewalForm {
+  rentSchedules: RentScheduleInput[];
   contractNumber: string;
   name: string;
   startDate: string;
@@ -73,6 +78,7 @@ const REVERSAL_DEFAULTS: ReversalForm = {
 };
 
 const TERMINAL_RENEWAL_DEFAULTS: TerminalRenewalForm = {
+  rentSchedules: [],
   contractNumber: '',
   tenantPartyId: '',
   lessorPartyId: '',
@@ -88,12 +94,13 @@ const UPSTREAM_EXIT_DEFAULTS: UpstreamExitForm = {
 };
 
 const UPSTREAM_RENEWAL_DEFAULTS: UpstreamRenewalForm = {
+  rentSchedules: [],
   contractNumber: '',
   name: '',
   startDate: '',
   endDate: '',
   paymentCycle: 'monthly',
-  paymentDay: '15',
+  paymentDay: '25',
   managementFeeRate: '',
   depositAmount: '0',
   assetUnitIds: '',
@@ -138,10 +145,12 @@ export function TerminalActionsPage(): React.ReactElement {
   const [preview, setPreview] = useState<TerminationPreview | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const renewFileRef = useRef<HTMLInputElement>(null);
+  const [scheduleValid, setScheduleValid] = useState(true);
   const {
     control: renewalControl,
     handleSubmit: handleRenewalSubmit,
     watch: watchRenewal,
+    setValue: setRenewalValue,
   } = useForm<TerminalRenewalForm>({
     defaultValues: TERMINAL_RENEWAL_DEFAULTS,
   });
@@ -225,7 +234,7 @@ export function TerminalActionsPage(): React.ReactElement {
           end_date: input.values.endDate,
           deposit_amount: input.values.depositAmount,
           asset_unit_ids: unitIds,
-          rent_schedules: [],
+          rent_schedules: input.values.rentSchedules,
           scan_document_id: input.session.documentId,
           scan_owner_id: input.session.id,
         },
@@ -290,6 +299,7 @@ export function TerminalActionsPage(): React.ReactElement {
               showIcon
               title={`最后有效日 ${preview.lastValidDay}；请核对以下覆盖截止变化后确认。`}
             />
+            {preview.rentImpact != null ? <RentImpactSummary impact={preview.rentImpact} /> : null}
             {preview.coverageImpact.map(impact => (
               <div className={styles.impactRow} key={impact.assetUnitId}>
                 <span>{impact.assetUnitId}</span>
@@ -377,6 +387,12 @@ export function TerminalActionsPage(): React.ReactElement {
 
       <div className={styles.actionCard}>
         <h2 className={styles.actionTitle}>登记续签（创建后继合同，不改原合同）</h2>
+        <RentScheduleEditor
+          startDate={renewalForm.startDate}
+          endDate={renewalForm.endDate}
+          onChange={stages => setRenewalValue('rentSchedules', stages)}
+          onValidityChange={setScheduleValid}
+        />
         <label className={styles.fieldColumn}>
           续签扫描件（新签署的合同）
           <input
@@ -465,6 +481,7 @@ export function TerminalActionsPage(): React.ReactElement {
         <Button
           type="primary"
           disabled={
+            !scheduleValid ||
             renewSessionMutation.data == null ||
             renewalForm.contractNumber.trim() === '' ||
             renewalForm.startDate === '' ||
@@ -525,10 +542,12 @@ export function UpstreamActionsPage(): React.ReactElement {
   const [preview, setPreview] = useState<ExitPreview | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const renewFileRef = useRef<HTMLInputElement>(null);
+  const [scheduleValid, setScheduleValid] = useState(true);
   const {
     control: renewalControl,
     handleSubmit: handleRenewalSubmit,
     watch: watchRenewal,
+    setValue: setRenewalValue,
   } = useForm<UpstreamRenewalForm>({
     defaultValues: UPSTREAM_RENEWAL_DEFAULTS,
   });
@@ -622,7 +641,7 @@ export function UpstreamActionsPage(): React.ReactElement {
                 deposit_amount: input.values.depositAmount,
               }),
           asset_unit_ids: unitIds,
-          rent_schedules: [],
+          rent_schedules: isManagement ? [] : input.values.rentSchedules,
           scan_document_id: input.session.documentId,
           scan_owner_id: input.session.id,
         },
@@ -679,6 +698,7 @@ export function UpstreamActionsPage(): React.ReactElement {
               showIcon
               title={`最后有效日 ${preview.lastValidDay}；请核对覆盖截止变化后确认。`}
             />
+            {preview.rentImpact != null ? <RentImpactSummary impact={preview.rentImpact} /> : null}
             {preview.coverageImpact.map(impact => (
               <div className={styles.impactRow} key={impact.assetUnitId}>
                 <span>{impact.assetUnitId}</span>
@@ -766,6 +786,14 @@ export function UpstreamActionsPage(): React.ReactElement {
 
       <div className={styles.actionCard}>
         <h2 className={styles.actionTitle}>登记续签</h2>
+        {!isManagement ? (
+          <RentScheduleEditor
+            startDate={renewalForm.startDate}
+            endDate={renewalForm.endDate}
+            onChange={stages => setRenewalValue('rentSchedules', stages)}
+            onValidityChange={setScheduleValid}
+          />
+        ) : null}
         <label className={styles.fieldColumn}>
           续签扫描件
           <input
@@ -866,6 +894,7 @@ export function UpstreamActionsPage(): React.ReactElement {
         <Button
           type="primary"
           disabled={
+            !scheduleValid ||
             contractQuery.data == null ||
             contractQuery.isError ||
             (isManagement && renewalForm.managementFeeRate.trim() === '') ||

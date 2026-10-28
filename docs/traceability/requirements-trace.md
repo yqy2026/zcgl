@@ -41,7 +41,7 @@
 
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |
 |---|---|---|---|---|---|
-| REQ-LED-001 | MVP | 未开始 | — | — | 应付/应收义务、部分登记、跨月结转、凭证和有原因撤销；录入与续签核对租金阶段、租金阶段更正（往月已有阶段不改，往月缺口可补录）与提前退租补收免租 |
+| REQ-LED-001 | MVP | 开发中 | `backend/src/models/asset_ledger.py`, `backend/src/services/asset_operations/rent_obligation_service.py`, `backend/src/services/asset_operations/rent_payment_command_service.py`, `backend/src/services/asset_operations/rent_schedule_correction_service.py`, `backend/src/services/asset_operations/rent_ledger_query_service.py`, `frontend/src/pages/AssetOperations/LedgersPage.tsx` | `backend/tests/unit/services/asset_operations/test_rent_obligation_rules.py`, `backend/tests/integration/database/test_rent_commands.py`, `backend/tests/e2e/test_asset_rent_ledger_e2e.py`, `frontend/src/pages/AssetOperations/__tests__/LedgersPage.test.tsx` | 应付/应收义务、部分登记、跨月结转、凭证和有原因撤销；录入与续签核对租金阶段、租金阶段更正（往月已有阶段不改，往月缺口可补录）与提前退租补收免租 |
 | REQ-DEP-001 | MVP | 未开始 | — | — | 应收未收、应付未付、应退未退、应收回四类方向；续签转入；合同结束后转租押金抵扣欠租（终止默认自动抵扣截至当月的欠租）；不退部分登记为押金扣除；委托管理协议无保证金 |
 | REQ-FEE-001 | MVP | 未开始 | — | — | 产权方实际到账 × 协议比例，双方盖章后锁定月度对账 |
 
@@ -60,7 +60,7 @@
 
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |
 |---|---|---|---|---|---|
-| REQ-AUTH-001 | MVP | 已有证据 | `backend/src/api/v1/auth/`, `backend/src/services/authz/`, `frontend/src/routes/AppRoutes.tsx` | `backend/tests/e2e/test_auth_flow_e2e.py` | 会话、CSRF、受保护路由和统一鉴权继续保留 |
+| REQ-AUTH-001 | MVP | 已有证据 | `backend/src/api/v1/auth/`, `backend/src/services/authz/`, `frontend/src/routes/AppRoutes.tsx`, `frontend/src/pages/ExpiredPasswordForm.tsx` | `backend/tests/e2e/test_auth_flow_e2e.py`, `backend/tests/e2e/test_expired_password_e2e.py`, `frontend/src/pages/__tests__/ExpiredPasswordForm.test.tsx` | 会话、CSRF、受保护路由和统一鉴权继续保留；过期账号可在登录前验证当前密码并改密，成功后重新登录 |
 | REQ-AUTH-002 | MVP | 已有证据 | `backend/src/services/party_scope.py`, `backend/src/middleware/data_scope.py`, `backend/src/services/authz/context_builder.py`, `backend/src/services/authz/service.py`, `backend/src/services/authz/resource_perspective_registry.py`, `backend/src/crud/asset_unit.py`, `backend/src/crud/asset_contract.py`, `backend/src/services/asset_operations/query_service.py`, `backend/src/api/v1/asset_units.py`, `backend/alembic/versions/20261024_asset_operations_v5_permissions.py` | `backend/tests/e2e/test_party_binding_scope_e2e.py`, `backend/tests/unit/crud/test_asset_unit_v5.py`, `backend/tests/unit/crud/test_asset_contract_v5.py`, `backend/tests/unit/services/asset_operations/test_query_service.py`, `backend/tests/unit/services/test_authz_service.py`, `backend/tests/unit/api/v1/test_asset_unit_boundary_api.py`, `backend/tests/unit/migration/test_asset_operations_v5_permissions_migration.py`, `backend/tests/integration/database/test_asset_operations_permissions.py` | 有效 Party 范围失败关闭，403 不伪装为空；资产按产权方/项目运营方、上游合同按合同双方、终端合同按覆盖资产范围查询；拆分/合并 API 强制 `asset_ops:write` 并由服务端解析 Party 范围，五类 `asset_ops` 能力已映射到内建运营/系统管理员且有 PostgreSQL 种子证据 |
 | REQ-AUTH-003 | MVP | 已有证据 | `backend/src/services/authz/`, `backend/src/api/v1/auth/roles.py` | `backend/tests/e2e/test_role_authorization_e2e.py` | 平台角色授予边界与业务能力声明 |
 | REQ-SYS-001 | MVP | 已有证据 | `backend/src/api/v1/auth/auth_modules/users.py`, `backend/src/services/core/user_management_service.py`, `frontend/src/pages/System/UserManagement/` | `backend/tests/e2e/test_user_lifecycle_e2e.py` | 用户、角色和组织管理作为平台基础保留 |
@@ -108,7 +108,7 @@
 | 切片 | REQ | 状态 |
 |---|---|---|
 | V1 资产单元与合同链 | REQ-UNT-001、REQ-CTR-001、REQ-CTR-002 | 本实施切片已有证据；V1-0 至 V1-4 已形成模型、迁移、CRUD、服务、API 和约定的前端列表/详情/录入/生命周期纵向切片，V1-T01–V1-T10 均有自动化或真实 PostgreSQL/浏览器证据，旧业务路由和导航已清零。REQ-UNT-001 的生产端空置备注、拆合操作/历史与合同时间轴仍是合并后跟进项；证照/考核/台账依赖项分别进入 V4/V3/V2；未上线开发基线已直接切到 v5，旧域物理清理单独跟进 |
-| V2 租金、押金与管理费 | REQ-LED-001、REQ-DEP-001、REQ-FEE-001 | 实施中：PR-0 已实现合同字段校验、委托协议录入/续签适用字段与扫描件类型、合同级付款字段只读，以及合同命令同事务脱敏变更记录和 Party 范围读取；合同审计已具有单元、真实 PostgreSQL 事务与 HTTP 证据。计划见 `docs/plans/2026-10-27-asset-operations-v5-v2.md`；PR-A 至 PR-C 的租金、押金与管理费功能尚未开始，资金类验收状态不推进 |
+| V2 租金、押金与管理费 | REQ-LED-001、REQ-DEP-001、REQ-FEE-001 | 实施中：PR-0 已合并合同字段规则与脱敏变更记录；PR-A #98 已接入租金义务生成/重排、登记/撤销、手工账期、阶段更正和台账，具有单元、真实 PostgreSQL 与 HTTP 证据，仍待最新 CI 与剩余浏览器验收。计划见 `docs/plans/2026-10-27-asset-operations-v5-v2.md`；PR-B 押金与 PR-C 管理费尚未开始，资金类整体验收状态不推进 |
 | V3 考核范围与报送 | REQ-RPT-001、REQ-RPT-002 | S0 规格已建立，迁移与测试清单待完成 |
 | V4 档案与导入 | REQ-ARC-001、REQ-IMP-001 | S0 规格已建立，迁移与测试清单待完成 |
 | V5 本月工作台 | REQ-WBK-001 | 依赖 V1–V4 投影 |

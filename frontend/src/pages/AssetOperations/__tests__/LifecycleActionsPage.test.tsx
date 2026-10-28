@@ -97,6 +97,8 @@ beforeEach(() => {
   mockedService.renewTerminal.mockReset();
   mockedService.renewUpstream.mockReset();
   mockedService.getUpstreamContract.mockResolvedValue({
+    rentSchedules: [],
+    rentSummary: null,
     id: 'upstream-1',
     contractNumber: 'UP-001',
     contractType: 'lease',

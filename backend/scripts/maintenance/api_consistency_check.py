@@ -9,6 +9,7 @@ API一致性检查脚本
 4. 参数验证一致性
 """
 
+import ast
 import json
 import re
 import sys
@@ -79,52 +80,187 @@ class APIConsistencyChecker:
         return self.issues
 
     def extract_backend_endpoints(self) -> dict[str, APIEndpoint]:
-        """提取后端API端点"""
-        endpoints = {}
-
-        # 查找所有API路由文件
-        api_files = list(self.backend_path.glob("src/api/v1/*.py"))
-        api_files = [f for f in api_files if f.name != "__init__.py"]
-
-        for api_file in api_files:
+        """静态解析已挂载的路由图，组合模块、路由器和挂载前缀。"""
+        modules = {}
+        for source in self.backend_path.glob("src/api/v1/**/*.py"):
+            parts = source.relative_to(self.backend_path).with_suffix("").parts
+            module = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
             try:
-                with open(api_file, encoding="utf-8") as f:
-                    content = f.read()
-
-                # 使用正则表达式提取路由定义
-                router_pattern = (
-                    r'@router\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
+                modules[module] = (
+                    source,
+                    ast.parse(source.read_text(encoding="utf-8")),
                 )
-                matches = re.finditer(router_pattern, content)
-
-                for match in matches:
-                    method = match.group(1).upper()
-                    path = match.group(2)
-
-                    # 查找响应模型
-                    response_model_match = re.search(
-                        rf"@router\.{method.lower()}\s*\([^)]*response_model=([A-Za-z_][A-Za-z0-9_]*)",
-                        content[match.start() : match.start() + 500],
-                    )
-                    response_model = (
-                        response_model_match.group(1) if response_model_match else None
-                    )
-
-                    endpoint_key = f"{method}:{path}"
-                    endpoints[endpoint_key] = APIEndpoint(
-                        path=path, method=method, response_model=response_model
-                    )
-
-            except Exception as e:
+            except (OSError, UnicodeError, SyntaxError) as exc:
                 self.issues.append(
                     ConsistencyIssue(
-                        issue_type="extraction_error",
-                        severity="warning",
-                        message=f"无法解析后端API文件 {api_file}: {str(e)}",
-                        backend_file=str(api_file),
+                        "extraction_error",
+                        "critical",
+                        f"无法解析路由模块 {source}: {exc}",
+                        backend_file=str(source),
                     )
                 )
 
+        bindings = {}
+        imports = {}
+        prefixes = {}
+        routes = {}
+        includes = {}
+        registrations = []
+
+        def reference(module, expression):
+            if isinstance(expression, ast.Name):
+                return bindings.get((module, expression.id), (module, expression.id))
+            if isinstance(expression, ast.Attribute):
+                parent = reference(module, expression.value)
+                if parent is not None and parent[1] == "":
+                    return (parent[0], expression.attr)
+            return None
+
+        def keyword(call, name, default=""):
+            for item in call.keywords:
+                if item.arg == name:
+                    if not isinstance(item.value, ast.Constant) or not isinstance(
+                        item.value.value, str
+                    ):
+                        raise ValueError(f"无法静态解析路由参数 {name}")
+                    return item.value.value
+            return default
+
+        for module, (source, tree) in modules.items():
+            imports[module] = set()
+            package = (
+                module if source.name == "__init__.py" else module.rsplit(".", 1)[0]
+            )
+            for node in tree.body:
+                if isinstance(node, ast.ImportFrom):
+                    base = node.module or ""
+                    if node.level:
+                        base = ".".join(
+                            package.split(".")[
+                                : len(package.split(".")) - node.level + 1
+                            ]
+                        ) + ("." + base if base else "")
+                    for alias in node.names:
+                        candidate = f"{base}.{alias.name}"
+                        target = (
+                            (candidate, "")
+                            if candidate in modules
+                            else (base, alias.name)
+                        )
+                        bindings[(module, alias.asname or alias.name)] = target
+                        imports[module].add(target[0])
+
+        for module, (source, tree) in modules.items():
+            for node in tree.body:
+                if (
+                    isinstance(node, ast.Assign)
+                    and len(node.targets) == 1
+                    and isinstance(node.targets[0], ast.Name)
+                ):
+                    key = (module, node.targets[0].id)
+                    if isinstance(node.value, ast.Call) and reference(
+                        module, node.value.func
+                    ) == ("fastapi", "APIRouter"):
+                        prefixes[key] = keyword(node.value, "prefix")
+                    elif isinstance(node.value, (ast.Name, ast.Attribute)):
+                        target = reference(module, node.value)
+                        if target is not None:
+                            bindings[key] = target
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    for decorator in node.decorator_list:
+                        if not isinstance(decorator, ast.Call) or not isinstance(
+                            decorator.func, ast.Attribute
+                        ):
+                            continue
+                        method = decorator.func.attr.upper()
+                        if method not in {
+                            "GET",
+                            "POST",
+                            "PUT",
+                            "DELETE",
+                            "PATCH",
+                            "HEAD",
+                            "OPTIONS",
+                        }:
+                            continue
+                        if not decorator.args or not isinstance(
+                            decorator.args[0], ast.Constant
+                        ):
+                            raise ValueError(
+                                f"无法静态解析路由路径: {source}:{node.lineno}"
+                            )
+                        path = decorator.args[0].value
+                        if not isinstance(path, str):
+                            raise ValueError(
+                                f"路由路径不是字符串: {source}:{node.lineno}"
+                            )
+                        model = next(
+                            (
+                                ast.unparse(k.value)
+                                for k in decorator.keywords
+                                if k.arg == "response_model"
+                            ),
+                            None,
+                        )
+                        owner = reference(module, decorator.func.value)
+                        routes.setdefault(owner, []).append(
+                            APIEndpoint(path, method, model)
+                        )
+                if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+                    call = node.value
+                    if not isinstance(call.func, ast.Attribute) or not call.args:
+                        continue
+                    if call.func.attr == "include_router":
+                        parent = reference(module, call.func.value)
+                        includes.setdefault(parent, []).append(
+                            (reference(module, call.args[0]), keyword(call, "prefix"))
+                        )
+                    elif call.func.attr == "register_router":
+                        registrations.append(
+                            (
+                                module,
+                                reference(module, call.args[0]),
+                                keyword(call, "prefix"),
+                            )
+                        )
+
+        reachable = set()
+
+        def visit(module):
+            if module in reachable:
+                return
+            reachable.add(module)
+            for child in imports.get(module, ()):
+                visit(child)
+
+        visit("src.api.v1")
+        endpoints = {}
+
+        def collect(key, prefix, ancestors):
+            if key in ancestors:
+                raise ValueError(f"循环路由挂载: {key}")
+            ancestors = ancestors | {key}
+            alias = bindings.get(key)
+            if alias is not None and alias != key:
+                collect(alias, prefix, ancestors)
+                return
+            if key not in prefixes:
+                raise ValueError(f"无法解析已挂载的路由器: {key}")
+            prefix += prefixes.get(key, "")
+            for route in routes.get(key, ()):
+                path = prefix + route.path
+                if path == "/api/v1" or path.startswith("/api/v1/"):
+                    path = path[len("/api/v1") :]
+                endpoints[f"{route.method}:{path}"] = APIEndpoint(
+                    path, route.method, route.response_model
+                )
+            for child, mount_prefix in includes.get(key, ()):
+                collect(child, prefix + mount_prefix, ancestors)
+
+        collect(("src.api.v1", "api_router"), "", set())
+        for module, router, prefix in registrations:
+            if module in reachable:
+                collect(router, prefix, set())
         return endpoints
 
     def extract_frontend_api_calls(self) -> dict[str, APIEndpoint]:

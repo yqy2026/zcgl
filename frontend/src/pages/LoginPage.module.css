@@ -170,7 +170,8 @@
 .login-card {
   position: relative;
   width: 100%;
-  height: 40rem;
+  height: auto;
+  min-height: 40rem;
   border: 0.0625rem solid #f8fafc;
   border-radius: 1rem;
   background: #ffffff;
@@ -183,15 +184,14 @@
 .view-stack {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: auto;
 }
 
 .login-view,
 .login-view {
-  position: absolute;
-  inset: 0;
+  position: relative;
   width: 100%;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
   padding: 2.5rem 2.5rem 2rem;

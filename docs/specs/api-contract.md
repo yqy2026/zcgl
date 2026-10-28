@@ -108,11 +108,14 @@
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 登录 | `POST /api/v1/auth/login` | 建立会话；资产工作台不提供角色选择器 |
+| 过期密码更新 | `POST /api/v1/auth/expired-password` | 未登录时仅凭账号、当前密码与符合策略的新密码更新已过期凭据；校验账号启用/锁定、旧密码、强度和历史；沿用登录限流与失败审计；不创建完整登录会话，成功后重新登录 |
 | 当前用户 | `GET /api/v1/auth/me` | 返回用户、业务能力和组织摘要 |
 | 当前范围 | `GET /api/v1/auth/me/party-scope` | 返回来源、owner/manager Party、异常和下一时间边界 |
 | 退出 | `POST /api/v1/auth/logout` | 销毁当前会话 |
 
 用户、角色、组织、Party 和范围变更沿用平台端点；资产运营模块不新增第二套管理入口。
+
+登录在当前密码校验通过但凭据过期时返回稳定 `PASSWORD_EXPIRED`，登录页展示更新入口。过期密码更新不允许绕过账号锁定或密码策略，不返回登录令牌；非过期账号继续使用已认证的个人资料改密流程。
 
 ### 5.2 本月工作台
 
@@ -202,6 +205,8 @@
 | 作废手工义务 | `POST /api/v1/rent-ledger-entries/{entry_id}/void` | 仅限无有效登记的 `manual` / `clawback` 义务；原因、期望版本和幂等键 |
 
 金额默认等于剩余义务但允许减少形成部分完成。超出剩余金额默认返回 409 `PAYMENT_AMOUNT_EXCEEDS_REMAINING`。记录类型与义务类型不匹配返回 422 `RENT_RECORD_TYPE_MISMATCH`（`deposit_offset` 只能经押金抵扣创建）；对 `void` 义务登记返回 409 `RENT_LEDGER_ENTRY_VOIDED`；手工义务不满足上述条件或作废 `generated` 义务返回 409 `RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED`；作废有有效登记的手工义务返回 409 `RENT_LEDGER_ENTRY_LOCKED`；撤销已被确认对账单计入的产权方到账返回 409 `MANAGEMENT_FEE_STATEMENT_LOCKED`。
+
+PR-A 矩阵响应为 `ledger_type` / `year` / `current_month` / `rows` 和三项金额合计；每合同行包含 12 个 `months`、warning 与应付/应收、有效登记、剩余金额合计。月份内的 `entries` 保留原始登记与撤销链，作废义务不参与合计。合同详情 `rent_summary` 返回本月金额、未结余额、已结账期数、下一到期日与条目；生命周期预览 `rent_impact` 返回新建/更新/作废/恢复数量及锁定不一致条目，提交指纹同时绑定义务与登记事实。`management_fee` 页签随 PR-C 接入。
 
 `generated` 义务由合同确认、续签、期限更新、租金阶段更正、终止 / 退出及其撤销和登记撤销在同一事务内重排（规则见领域模型 §4.14、§4.16），不提供生成或重算端点；派生字段（`status`、`effective_paid_amount`、`remaining_amount`）不可写。终端终止和上游退出的预览在原有影响之外，返回租金义务的新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和押金状态变化；预览 token 同时绑定受影响义务的版本。
 
@@ -375,6 +380,7 @@ PR-0 先覆盖合同确认、修改、续签、终止、退出及撤销，动作
 | 422 | `ASSET_UNIT_FIELD_NOT_EDITABLE` | 归属字段不可直接修改（走拆合） |
 | 422 | `RENT_SCHEDULE_INVALID` | 租金阶段越出合同期限或互相重叠 |
 | 422 | `DERIVED_FIELD_NOT_WRITABLE` | 请求试图写出租状态、合计等派生字段 |
+| 422 | `REVERSAL_REASON_REQUIRED` | 租金登记撤销或手工义务作废未提供原因 |
 
 以下是 warning，不作为错误码阻止登记：`UPSTREAM_CONTRACT_MISSING`、`TERMINAL_TERM_EXCEEDS_UPSTREAM`、`ARCHIVE_DOCUMENT_MISSING`、`RENT_SCHEDULE_GAP`（合同期限内有日期没有租金阶段覆盖）、`RENT_LEDGER_PLAN_MISMATCH`（已锁定义务与当前合同条款不一致）。
 

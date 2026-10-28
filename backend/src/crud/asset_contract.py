@@ -148,7 +148,9 @@ class AssetContractRepository:
             scope=scope,
         ).where(UpstreamContract.id == contract_id)
         if for_update:
-            statement = statement.with_for_update()
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
         return (await db.execute(statement)).scalars().one_or_none()
 
     async def list_terminal(
@@ -161,6 +163,7 @@ class AssetContractRepository:
         query: str | None = None,
         offset: int = 0,
         limit: int = 50,
+        contract_ids: set[str] | None = None,
     ) -> tuple[list[TerminalContract], int]:
         if self._scope_is_empty(scope):
             return [], 0
@@ -168,6 +171,8 @@ class AssetContractRepository:
             select(TerminalContract),
             scope=scope,
         )
+        if contract_ids is not None:
+            statement = statement.where(TerminalContract.id.in_(contract_ids))
         if contract_mode is not None:
             statement = statement.where(TerminalContract.contract_mode == contract_mode)
         if upstream_contract_id is not None:
@@ -242,7 +247,9 @@ class AssetContractRepository:
             scope=scope,
         ).where(TerminalContract.id == contract_id)
         if for_update:
-            statement = statement.with_for_update()
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
         return (await db.execute(statement)).scalars().one_or_none()
 
     async def get_upstreams_by_ids(
@@ -297,6 +304,7 @@ class AssetContractRepository:
             .where(
                 ContractRentSchedule.contract_kind == contract_kind,
                 ContractRentSchedule.contract_id.in_(contract_ids),
+                ContractRentSchedule.superseded_at.is_(None),
             )
             .order_by(
                 ContractRentSchedule.contract_id,

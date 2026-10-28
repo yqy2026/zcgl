@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
 from ...crud.auth import UserCRUD, UserSessionCRUD
-from ...exceptions import BusinessLogicError
+from ...exceptions import BusinessLogicError, PasswordExpiredError
 from ...models.auth import User, UserSession
 from ...security.token_blacklist import blacklist_manager
 from .password_service import PasswordService
@@ -122,7 +122,9 @@ class AsyncAuthenticationService:
             return False
         return self.token_blacklist.is_blacklisted(jti=jti, user_id=user_id)
 
-    async def authenticate_user(self, identifier: str, password: str) -> User | None:
+    async def authenticate_user(
+        self, identifier: str, password: str, *, allow_expired: bool = False
+    ) -> User | None:
         user = await _user_crud.find_active_by_identifier_async(self.db, identifier)
 
         if not user:
@@ -144,8 +146,8 @@ class AsyncAuthenticationService:
             await self.db.commit()
             return None
 
-        if self.password_service.is_password_expired(user):
-            raise BusinessLogicError("密码已过期，请修改密码后重新登录")
+        if self.password_service.is_password_expired(user) and not allow_expired:
+            raise PasswordExpiredError()
 
         if user.failed_login_attempts > 0:
             user.failed_login_attempts = 0
@@ -155,6 +157,25 @@ class AsyncAuthenticationService:
 
         await self.db.commit()
         return user
+
+    async def change_expired_password(
+        self, identifier: str, current_password: str, new_password: str
+    ) -> None:
+        from ...core.exception_handler import unauthorized
+
+        try:
+            user = await self.authenticate_user(
+                identifier, current_password, allow_expired=True
+            )
+        except BusinessLogicError as exc:
+            raise unauthorized("账号或当前密码无效") from exc
+        if user is None:
+            raise unauthorized("账号或当前密码无效")
+        if not self.password_service.is_password_expired(user):
+            raise BusinessLogicError("当前账号不适用过期改密，请使用个人资料页")
+        if self.password_service.verify_password(new_password, user.password_hash):
+            raise BusinessLogicError("新密码不能与当前密码相同")
+        await self.user_service.change_password(user, current_password, new_password)
 
     def create_tokens(
         self, user: User, device_info: dict[str, Any] | None = None

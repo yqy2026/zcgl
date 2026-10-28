@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { LoginFormData } from '@/types/auth';
 import styles from './LoginPage.module.css';
+import ExpiredPasswordForm from './ExpiredPasswordForm';
 
 type FieldErrors = {
   identifier: string | null;
@@ -69,7 +70,9 @@ const validateForm = (values: LoginFormData): FieldErrors => {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loading, error } = useAuth();
+  const { login, loading, error, clearError } = useAuth();
+  const [changingExpiredPassword, setChangingExpiredPassword] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const [formData, setFormData] = useState<LoginFormData>({
     identifier: '',
     password: '',
@@ -171,109 +174,137 @@ const LoginPage: React.FC = () => {
           <div className={styles['login-card']}>
             <div className={styles['view-stack']}>
               <div className={styles['login-view']}>
-                <header className={styles['login-header']}>
-                  <h2 className={styles['login-title']}>欢迎回来</h2>
-                  <p className={styles['login-subtitle']}>请输入您的账号密码以继续</p>
-                </header>
+                {changingExpiredPassword ? (
+                  <ExpiredPasswordForm
+                    identifier={formData.identifier}
+                    onCancel={() => setChangingExpiredPassword(false)}
+                    onComplete={() => {
+                      clearError?.();
+                      setChangingExpiredPassword(false);
+                      setPasswordChanged(true);
+                      setFormData(previous => ({ ...previous, password: '' }));
+                    }}
+                  />
+                ) : (
+                  <>
+                    <header className={styles['login-header']}>
+                      <h2 className={styles['login-title']}>欢迎回来</h2>
+                      <p className={styles['login-subtitle']}>请输入您的账号密码以继续</p>
+                    </header>
 
-                <form className={styles['login-form']} onSubmit={handleSubmit} noValidate>
-                  <div className={styles['field-list']}>
-                    <div className={styles['field-group']}>
-                      <label className={styles['field-label']} htmlFor="identifier">
-                        用户名 / 手机号
-                      </label>
-                      <div
-                        className={[
-                          styles['input-shell'],
-                          hasIdentifierFieldError ? styles['input-shell-error'] : '',
-                        ].join(' ')}
-                      >
-                        <span className={styles['input-icon']}>
-                          <MaterialSymbol name="person" />
-                        </span>
-                        <input
-                          id="identifier"
-                          name="identifier"
-                          type="text"
-                          className={styles['input-control']}
-                          placeholder="请输入用户名或手机号"
-                          value={formData.identifier}
-                          onChange={handleIdentifierChange}
-                          autoComplete="username"
-                        />
+                    {passwordChanged ? <p role="status">密码已修改，请使用新密码重新登录</p> : null}
+                    <form className={styles['login-form']} onSubmit={handleSubmit} noValidate>
+                      <div className={styles['field-list']}>
+                        <div className={styles['field-group']}>
+                          <label className={styles['field-label']} htmlFor="identifier">
+                            用户名 / 手机号
+                          </label>
+                          <div
+                            className={[
+                              styles['input-shell'],
+                              hasIdentifierFieldError ? styles['input-shell-error'] : '',
+                            ].join(' ')}
+                          >
+                            <span className={styles['input-icon']}>
+                              <MaterialSymbol name="person" />
+                            </span>
+                            <input
+                              id="identifier"
+                              name="identifier"
+                              type="text"
+                              className={styles['input-control']}
+                              placeholder="请输入用户名或手机号"
+                              value={formData.identifier}
+                              onChange={handleIdentifierChange}
+                              autoComplete="username"
+                            />
+                          </div>
+                          {hasIdentifierFieldError && (
+                            <p className={styles['field-error']}>{fieldErrors.identifier}</p>
+                          )}
+                        </div>
+
+                        <div className={styles['field-group']}>
+                          <label className={styles['field-label']} htmlFor="password">
+                            密码
+                          </label>
+                          <div
+                            className={[
+                              styles['input-shell'],
+                              hasPasswordFieldError ? styles['input-shell-error'] : '',
+                            ].join(' ')}
+                          >
+                            <span className={styles['input-icon']}>
+                              <MaterialSymbol name="lock" />
+                            </span>
+                            <input
+                              id="password"
+                              name="password"
+                              type={showPassword ? 'text' : 'password'}
+                              className={styles['input-control']}
+                              placeholder="••••••••"
+                              value={formData.password}
+                              onChange={handlePasswordChange}
+                              autoComplete="current-password"
+                            />
+                            <button
+                              type="button"
+                              className={styles['password-visibility']}
+                              onClick={togglePasswordVisibility}
+                              aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                            >
+                              <MaterialSymbol
+                                name={showPassword ? 'visibility' : 'visibility_off'}
+                              />
+                            </button>
+                          </div>
+                          {hasPasswordFieldError && (
+                            <p className={styles['field-error']}>{fieldErrors.password}</p>
+                          )}
+                        </div>
                       </div>
-                      {hasIdentifierFieldError && (
-                        <p className={styles['field-error']}>{fieldErrors.identifier}</p>
-                      )}
-                    </div>
 
-                    <div className={styles['field-group']}>
-                      <label className={styles['field-label']} htmlFor="password">
-                        密码
-                      </label>
-                      <div
-                        className={[
-                          styles['input-shell'],
-                          hasPasswordFieldError ? styles['input-shell-error'] : '',
-                        ].join(' ')}
-                      >
-                        <span className={styles['input-icon']}>
-                          <MaterialSymbol name="lock" />
-                        </span>
-                        <input
-                          id="password"
-                          name="password"
-                          type={showPassword ? 'text' : 'password'}
-                          className={styles['input-control']}
-                          placeholder="••••••••"
-                          value={formData.password}
-                          onChange={handlePasswordChange}
-                          autoComplete="current-password"
-                        />
-                        <button
-                          type="button"
-                          className={styles['password-visibility']}
-                          onClick={togglePasswordVisibility}
-                          aria-label={showPassword ? '隐藏密码' : '显示密码'}
-                        >
-                          <MaterialSymbol name={showPassword ? 'visibility' : 'visibility_off'} />
-                        </button>
+                      <div className={styles['login-meta']}>
+                        <label className={styles['remember-label']} htmlFor="remember-me">
+                          <input
+                            id="remember-me"
+                            name="remember-me"
+                            type="checkbox"
+                            checked={formData.remember}
+                            onChange={handleRememberChange}
+                            className={styles['remember-checkbox']}
+                          />
+                          <span>记住登录状态</span>
+                        </label>
                       </div>
-                      {hasPasswordFieldError && (
-                        <p className={styles['field-error']}>{fieldErrors.password}</p>
+
+                      {hasError && (
+                        <div className={styles['login-error']} role="alert">
+                          <p className={styles['login-error-title']}>登录失败</p>
+                          <p className={styles['login-error-message']}>{error}</p>
+                        </div>
                       )}
-                    </div>
-                  </div>
 
-                  <div className={styles['login-meta']}>
-                    <label className={styles['remember-label']} htmlFor="remember-me">
-                      <input
-                        id="remember-me"
-                        name="remember-me"
-                        type="checkbox"
-                        checked={formData.remember}
-                        onChange={handleRememberChange}
-                        className={styles['remember-checkbox']}
-                      />
-                      <span>记住登录状态</span>
-                    </label>
-                  </div>
-
-                  {hasError && (
-                    <div className={styles['login-error']} role="alert">
-                      <p className={styles['login-error-title']}>登录失败</p>
-                      <p className={styles['login-error-message']}>{error}</p>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className={styles['login-button']}
-                    disabled={loading === true}
-                  >
-                    {loading === true ? '登录中...' : '立即登录'}
-                  </button>
-                </form>
+                      <button
+                        type="submit"
+                        className={styles['login-button']}
+                        disabled={loading === true}
+                      >
+                        {loading === true ? '登录中...' : '立即登录'}
+                      </button>
+                    </form>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChangingExpiredPassword(true);
+                        setPasswordChanged(false);
+                      }}
+                      disabled={loading}
+                    >
+                      密码过期？修改密码
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

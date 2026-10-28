@@ -661,9 +661,7 @@ class TestAdminResetPassword:
         assert result == sample_user
         assert sample_user.password_hash == "admin_reset_hash"
         assert sample_user.updated_at is not None
-        mock_password_service.get_password_hash.assert_called_once_with(
-            new_password
-        )
+        mock_password_service.get_password_hash.assert_called_once_with(new_password)
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once_with(sample_user)
 
@@ -707,9 +705,9 @@ class TestPasswordChange:
         assert sample_user.password_hash == "new_hash"
         mock_password_service.verify_password.assert_called_once()
         mock_password_service.validate_password_strength.assert_called_once()
-        mock_password_service.is_password_in_history.assert_called_once()
+        assert mock_password_service.is_password_in_history.call_count == 2
         mock_password_service.get_password_hash.assert_called_once_with("NewPass456!")
-        mock_password_service.add_password_to_history.assert_called_once()
+        assert mock_password_service.add_password_to_history.call_count == 2
         mock_db.commit.assert_awaited_once()
         mock_session_service.revoke_all_user_sessions.assert_awaited_once_with(
             sample_user.id

@@ -16,6 +16,8 @@ import { assetOperationsService, AssetOperationsError } from '@/services/assetOp
 import type { ContractIntakeSession, ContractIntakeType } from '@/services/assetOperationsService';
 
 import styles from './ContractIntakePage.module.css';
+import RentScheduleEditor from './RentScheduleEditor';
+import type { RentScheduleInput } from '@/services/assetLedgerService';
 
 const TYPE_LABELS: Record<ContractIntakeType, string> = {
   upstream_lease: '上游承租合同',
@@ -31,6 +33,7 @@ const WARNING_LABELS: Record<string, string> = {
 };
 
 interface FormState {
+  rentSchedules: RentScheduleInput[];
   contractNumber: string;
   name: string;
   ownerPartyId: string;
@@ -49,6 +52,7 @@ interface FormState {
 }
 
 const EMPTY_FORM: FormState = {
+  rentSchedules: [],
   contractNumber: '',
   name: '',
   ownerPartyId: '',
@@ -77,7 +81,7 @@ export function ContractIntakePage(): React.ReactElement {
   const [contractType, setContractType] = useState<ContractIntakeType>('terminal');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [session, setSession] = useState<ContractIntakeSession | null>(null);
-  const { control, getValues, handleSubmit, reset, watch } = useForm<FormState>({
+  const { control, getValues, handleSubmit, reset, watch, setValue } = useForm<FormState>({
     defaultValues: EMPTY_FORM,
   });
   const [created, setCreated] = useState<{
@@ -85,6 +89,7 @@ export function ContractIntakePage(): React.ReactElement {
     idempotencyKey: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [scheduleValid, setScheduleValid] = useState(true);
 
   const sessionQuery = useQuery({
     queryKey: ['contract-intake-session', session?.id],
@@ -122,7 +127,7 @@ export function ContractIntakePage(): React.ReactElement {
             end_date: form.endDate,
             ...(form.depositAmount.trim() !== '' ? { deposit_amount: form.depositAmount } : {}),
             asset_unit_ids: unitIds,
-            rent_schedules: [],
+            rent_schedules: form.rentSchedules,
           },
           idempotencyKey
         );
@@ -152,7 +157,7 @@ export function ContractIntakePage(): React.ReactElement {
               : {}),
           ...(form.oaReference.trim() !== '' ? { oa_reference: form.oaReference } : {}),
           asset_unit_ids: unitIds,
-          rent_schedules: [],
+          rent_schedules: contractType === 'management_agreement' ? [] : form.rentSchedules,
         },
         idempotencyKey
       );
@@ -181,6 +186,7 @@ export function ContractIntakePage(): React.ReactElement {
   const form = watch();
 
   const confirmDisabled =
+    !scheduleValid ||
     confirmMutation.isPending ||
     form.contractNumber.trim() === '' ||
     form.startDate === '' ||
@@ -192,7 +198,7 @@ export function ContractIntakePage(): React.ReactElement {
 
   const renderField = (
     label: string,
-    field: keyof FormState,
+    field: Exclude<keyof FormState, 'rentSchedules'>,
     options: { placeholder?: string; type?: string } = {}
   ): React.ReactElement => (
     <label className={styles.fieldColumn}>
@@ -333,8 +339,17 @@ export function ContractIntakePage(): React.ReactElement {
                     placeholder: 'unit-1, unit-2',
                   })}
                 </div>
+                {contractType !== 'management_agreement' ? (
+                  <RentScheduleEditor
+                    key={currentSession.id}
+                    startDate={form.startDate}
+                    endDate={form.endDate}
+                    onChange={stages => setValue('rentSchedules', stages)}
+                    onValidityChange={setScheduleValid}
+                  />
+                ) : null}
                 <p className={styles.hintText}>
-                  合同类型与扫描件由会话携带，确认时不重复提交；租金阶段可在合同 创建后维护。
+                  合同类型与扫描件由会话携带，租金阶段与合同一起确认。
                 </p>
                 {confirmMutation.isError ? (
                   <Alert

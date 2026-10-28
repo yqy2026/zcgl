@@ -6,6 +6,7 @@
 // 静态路由映射 (精确匹配)
 export const staticBreadcrumbMap: Record<string, string> = {
   // 资产运营
+  '/asset-operations/ledgers': '台账',
   '/asset-operations/units': '资产单元',
   '/asset-operations/contracts/intake': '录入已签合同',
   '/asset-operations/contracts/upstream': '上游合同',

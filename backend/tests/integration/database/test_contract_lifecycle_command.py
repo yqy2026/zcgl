@@ -21,6 +21,7 @@ from src.models.asset_contract import (
     UpstreamContract,
     UpstreamContractAssetUnit,
 )
+from src.models.asset_ledger import RentLedgerEntry, RentPaymentRecord
 from src.models.asset_unit import AssetUnit
 from src.models.attachment import Attachment
 from src.models.auth import AccountType, User
@@ -106,6 +107,24 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             await session.execute(
                 delete(AssetContractWriteReceipt).where(
                     AssetContractWriteReceipt.actor_id == ACTOR_ID
+                )
+            )
+            record_ids = select(RentPaymentRecord.id).where(
+                RentPaymentRecord.created_by == ACTOR_ID
+            )
+            await session.execute(
+                delete(RentPaymentRecord).where(
+                    RentPaymentRecord.reverses_record_id.in_(record_ids)
+                )
+            )
+            await session.execute(
+                delete(RentPaymentRecord).where(
+                    RentPaymentRecord.created_by == ACTOR_ID
+                )
+            )
+            await session.execute(
+                delete(RentLedgerEntry).where(
+                    RentLedgerEntry.contract_id.in_(terminal_ids.union(upstream_ids))
                 )
             )
             await session.execute(
@@ -295,7 +314,7 @@ async def test_termination_closes_coverage_and_allows_successor(
     assert preview.last_valid_day == date(2026, 6, 29)
     assert len(preview.coverage_impact) == 1
     assert preview.coverage_impact[0].new_effective_to == date(2026, 6, 29)
-    assert list(preview.warnings) == ["deposit_unsettled"]
+    assert list(preview.warnings) == ["deposit_unsettled", "RENT_SCHEDULE_GAP"]
 
     request = TerminalContractTerminationCommitRequest.model_validate(
         {"preview_token": preview.preview_token, "expected_version": 1}
@@ -930,8 +949,12 @@ async def test_renewals_chain_successors_atomically(
             .scalars()
             .all()
         )
-        assert len(changes) == 2
-        assert {change.action for change in changes} == {"confirmed", "renewed"}
+        assert len(changes) == 3
+        assert {change.action for change in changes} == {
+            "confirmed",
+            "renewed",
+            "rent_obligations_replanned",
+        }
         assert len({change.correlation_id for change in changes}) == 1
         assert {change.target_id for change in changes} == {UPSTREAM_ID, successor_id}
 

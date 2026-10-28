@@ -32,6 +32,7 @@ from .....models.auth import User
 from .....schemas.auth import (
     CookieAuthResponse,
     CookieRefreshResponse,
+    ExpiredPasswordRequest,
     LoginRequest,
     PermissionSchema,
     UserResponse,
@@ -148,6 +149,40 @@ def _build_legacy_services(
         session_service=session_service,
     )
     return auth_service, session_service, user_service, rbac_service
+
+
+@router.post("/expired-password", summary="更新已过期密码")
+async def change_expired_password(
+    request: Request,
+    payload: ExpiredPasswordRequest,
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, object]:
+    service = AsyncAuthenticationService(db)
+    try:
+        await service.change_expired_password(
+            payload.username, payload.current_password, payload.new_password
+        )
+    except BaseBusinessError:
+        existing = await UserCRUD().find_by_identifier_async(db, payload.username)
+        if existing is not None:
+            await _create_audit_log(
+                db,
+                user_id=str(existing.id),
+                action="expired_password_change_failed",
+                resource_type="authentication",
+                ip_address=get_client_ip(request),
+            )
+        raise
+    existing = await UserCRUD().find_active_by_identifier_async(db, payload.username)
+    if existing is not None:
+        await _create_audit_log(
+            db,
+            user_id=str(existing.id),
+            action="expired_password_changed",
+            resource_type="authentication",
+            ip_address=get_client_ip(request),
+        )
+    return {"success": True, "message": "密码已更新，请重新登录"}
 
 
 @router.post("/login", response_model=CookieAuthResponse, summary="用户登录")
@@ -327,6 +362,8 @@ async def login(
         }
 
     except BusinessLogicError as e:
+        if e.code == "PASSWORD_EXPIRED":
+            raise
         raise bad_request(str(e))
     except Exception as e:
         if isinstance(e, BaseBusinessError):

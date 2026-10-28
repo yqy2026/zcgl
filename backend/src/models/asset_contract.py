@@ -102,7 +102,7 @@ class AssetContractWriteReceipt(Base):
             name="uq_asset_contract_write_receipts_actor_request",
         ),
         CheckConstraint(
-            "command_kind IN ('create_upstream', 'create_terminal')",
+            "command_kind IN ('create_upstream', 'create_terminal', 'correct_rent_schedule', 'create_manual_rent_entry', 'void_manual_rent_entry')",
             name="ck_asset_contract_write_receipts_command_kind",
         ),
     )
@@ -353,11 +353,14 @@ class ContractRentSchedule(Base):
 
     __tablename__ = "contract_rent_schedules"
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_contract_rent_schedules_active_stage",
             "contract_kind",
             "contract_id",
             "stage_start",
-            name="uq_contract_rent_schedules_target_stage",
+            unique=True,
+            postgresql_where=literal_column("superseded_at IS NULL"),
+            sqlite_where=literal_column("superseded_at IS NULL"),
         ),
         CheckConstraint(
             "contract_kind IN ('upstream', 'terminal')",
@@ -408,6 +411,8 @@ class ContractRentSchedule(Base):
     actual_monthly_rent: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     payment_cycle: Mapped[str] = mapped_column(String(20), nullable=False)
     due_day: Mapped[int] = mapped_column(Integer, nullable=False)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    superseded_correlation_id: Mapped[str | None] = mapped_column(String(100))
 
 
 class ContractLifecycleEvent(Base):
