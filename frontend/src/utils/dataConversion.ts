@@ -39,6 +39,7 @@ const DECIMAL_FIELDS = [
   'held_amount',
   'clawback_amount',
   'refundable_amount',
+  'additional_due_amount',
   'recoverable_amount',
   'remaining',
   'carried_in_amount',

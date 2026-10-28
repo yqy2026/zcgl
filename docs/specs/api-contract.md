@@ -193,6 +193,8 @@
 
 上游缺失和租期越界返回 warning，不阻止登记；同一资产单元同日终端合同重叠返回 409。
 
+终止请求的押金字段为 `deposit_offset_mode`（`auto` / `none` / `manual`，默认 `auto`）、`deposit_offsets`（`ledger_entry_id/amount` 明细）、`clawback_amount` 和 `clawback_basis`。预览 `deposit_settlement` 返回押金版本、持有金额、候选与规范化分配、`refundable_amount`（分配后待退押金）和 `additional_due_amount`（候选未结租金与补收金额合计减本次分配，最低为 0）。尚未落库的租金及本次补收候选使用本次预览内稳定的标识，客户端在终止提议中原样回传；它们不能用于独立的押金抵租端点，提交时才解析成实际租金条目。
+
 ### 5.7 租金台账与登记
 
 | 能力 | 方法与路径 | 契约 |

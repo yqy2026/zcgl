@@ -14,8 +14,20 @@ from src.services.asset_operations.deposit_settlement_service import (
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.parametrize(
+    "held,clawback,additional,refundable",
+    [
+        ("100", "0", "50", "0"),
+        ("100", "20", "70", "0"),
+        ("200", "20", "0", "30"),
+    ],
+)
 async def test_preview_allocates_not_yet_created_obligation_with_stable_key(
     monkeypatch,
+    held,
+    clawback,
+    additional,
+    refundable,
 ):
     from src.models.asset_contract import TerminalContract
     from src.schemas.asset_operations import TerminalContractTerminationProposal
@@ -31,6 +43,8 @@ async def test_preview_allocates_not_yet_created_obligation_with_stable_key(
             "handover_status": "pending",
             "deposit_settlement_status": "pending",
             "reason": "提前退租",
+            "clawback_amount": clawback,
+            "clawback_basis": "优惠免租补收",
         }
     )
     monkeypatch.setattr(
@@ -41,7 +55,7 @@ async def test_preview_allocates_not_yet_created_obligation_with_stable_key(
     monkeypatch.setattr(
         module.deposit_query_service,
         "get",
-        AsyncMock(return_value=SimpleNamespace(version=1, held_amount=Decimal("100"))),
+        AsyncMock(return_value=SimpleNamespace(version=1, held_amount=Decimal(held))),
     )
     monkeypatch.setattr(
         module.asset_ledger_repository, "list_entries", AsyncMock(return_value=())
@@ -61,10 +75,54 @@ async def test_preview_allocates_not_yet_created_obligation_with_stable_key(
     result = await deposit_settlement_service.preview(
         AsyncMock(), contract=contract, scope=SimpleNamespace(), proposal=proposal
     )
-    assert result["offsets"] == [
-        {"ledger_entry_id": "generated:2026-05-01", "amount": "100"}
-    ]
-    assert result["refundable_amount"] == "0"
+    assert result["offsets"][0]["ledger_entry_id"] == "generated:2026-05-01"
+    assert result["refundable_amount"] == refundable
+    assert result["additional_due_amount"] == additional
+
+
+@pytest.mark.parametrize(
+    "mode,termination_type,basis",
+    [
+        ("direct_lease", "early", "依据"),
+        ("sublease", "expiry", "依据"),
+        ("sublease", "early", ""),
+    ],
+)
+async def test_ineligible_clawback_returns_contract_error(
+    monkeypatch, mode, termination_type, basis
+):
+    from src.models.asset_contract import TerminalContract
+    from src.schemas.asset_operations import TerminalContractTerminationProposal
+    from src.services.asset_operations import deposit_settlement_service as module
+
+    monkeypatch.setattr(
+        module.deposit_ledger_repository,
+        "get_by_contract",
+        AsyncMock(return_value=SimpleNamespace(id="deposit", collector="operator")),
+    )
+    monkeypatch.setattr(
+        module.deposit_query_service,
+        "get",
+        AsyncMock(return_value=SimpleNamespace(version=1, held_amount=Decimal("100"))),
+    )
+    contract = TerminalContract(id="contract", contract_mode=mode)
+    proposal = TerminalContractTerminationProposal.model_validate(
+        {
+            "effective_date": "2026-06-30",
+            "termination_type": termination_type,
+            "handover_status": "pending",
+            "deposit_settlement_status": "pending",
+            "reason": "退租",
+            "clawback_amount": "20",
+            "clawback_basis": basis,
+        }
+    )
+    with pytest.raises(BaseBusinessError) as error:
+        await deposit_settlement_service.preview(
+            AsyncMock(), contract=contract, scope=SimpleNamespace(), proposal=proposal
+        )
+    assert error.value.code == "RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED"
+    assert error.value.status_code == 409
 
 
 async def test_prelock_locks_all_units_before_any_contract(monkeypatch):

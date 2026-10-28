@@ -383,6 +383,9 @@ export function TerminalActionsPage(): React.ReactElement {
                   元；待退还 {preview.depositSettlement.refundable_amount.toFixed(2)} 元。
                 </p>
                 <p>
+                  租户仍需补缴租金 {preview.depositSettlement.additional_due_amount.toFixed(2)} 元。
+                </p>
+                <p>
                   补收免租 {preview.depositSettlement.clawback_amount.toFixed(2)} 元
                   {preview.depositSettlement.clawback_basis !== ''
                     ? ` · ${preview.depositSettlement.clawback_basis}`

@@ -61,6 +61,7 @@ function makePreview(): TerminationPreview {
       clawback_amount: 0,
       clawback_basis: '',
       refundable_amount: 60,
+      additional_due_amount: 20,
       recoverable_amount: 0,
     },
   };
@@ -270,6 +271,7 @@ describe('TerminalActionsPage', () => {
     });
     expect(screen.getByText(/最后有效日 2026-06-29/)).toBeTruthy();
     expect(screen.getByText(/本次抵扣 40.00 元；待退还 60.00 元/)).toBeTruthy();
+    expect(screen.getByText('租户仍需补缴租金 20.00 元。')).toBeTruthy();
     expect(screen.getByText(/2026-12-31 → 2026-06-29/)).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: '确认终止' }));

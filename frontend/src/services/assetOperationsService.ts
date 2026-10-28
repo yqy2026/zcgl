@@ -491,6 +491,7 @@ export interface DepositSettlementPreview {
   clawback_amount: number;
   clawback_basis: string;
   refundable_amount: number;
+  additional_due_amount: number;
   recoverable_amount: number;
 }
 

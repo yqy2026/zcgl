@@ -178,9 +178,8 @@ class DepositSettlementService:
             or proposal.clawback_basis.strip() == ""
         ):
             raise rent_error(
-                "DEPOSIT_OFFSET_NOT_ALLOWED",
+                "RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED",
                 "补收免租仅用于提前终止的转租合同，且须填写依据",
-                status=422,
             )
         entries = await asset_ledger_repository.list_entries(
             db, contract_kind=kind, contract_id=contract.id
@@ -320,6 +319,13 @@ class DepositSettlementService:
             clawback_basis=proposal.clawback_basis,
             refundable_amount=str(
                 view.held_amount - sum((row["amount"] for row in offsets), Decimal(0))
+            ),
+            additional_due_amount=str(
+                max(
+                    Decimal(0),
+                    sum((row["remaining"] for row in candidates), Decimal(0))
+                    - sum((row["amount"] for row in offsets), Decimal(0)),
+                )
             ),
         )
         return result

@@ -36,7 +36,7 @@
 | ContractAssetUnit | 关系事实 | 合同在期间内覆盖的资产单元 |
 | ContractRentSchedule | 业务事实 | 合同分阶段租金、账期、递增和免租条款 |
 | ContractLifecycleEvent | 业务事实 | 续签、终止、退出和撤销等追加事件 |
-| AssetContractWriteReceipt | 技术事实 | 资产运营高后果命令（合同确认与续签、租金阶段更正、手工义务、管理费对账）的幂等请求指纹与首次响应 |
+| AssetContractWriteReceipt | 技术事实 | 资产运营高后果命令（合同确认与续签、终止结算、租金阶段更正、手工义务、管理费对账）的幂等请求指纹与首次响应 |
 | RentLedgerEntry | 业务事实 | 某合同某账期的一笔应付、应收或产权方应报到账义务 |
 | RentPaymentRecord | 业务事实 | 外部付款、到账或押金抵扣的追加登记及其撤销 |
 | DepositLedgerEntry | 业务事实 | 每份承租合同或终端合同一条押金条目；约定、持有余额和待处理方向由合同与记录派生 |
@@ -669,13 +669,13 @@ gap                = target_amount − held_amount
 |---|---|---|
 | `id` | UUID | 主键 |
 | `actor_id` | UUID | 发起命令的用户 |
-| `command_kind` | enum | `create_upstream` / `create_terminal` / `correct_rent_schedule` / `create_manual_rent_entry` / `void_manual_rent_entry` / `defer_management_fee_line` / `confirm_management_fee_statement` / `supersede_management_fee_statement` |
+| `command_kind` | enum | `create_upstream` / `create_terminal` / `terminate_terminal` / `correct_rent_schedule` / `create_manual_rent_entry` / `void_manual_rent_entry` / `defer_management_fee_line` / `confirm_management_fee_statement` / `supersede_management_fee_statement` |
 | `idempotency_key` | string | 与 `actor_id` 联合唯一 |
 | `request_fingerprint` | string | 规范化确认请求的 SHA-256 |
 | `result_data` | object | 首次成功响应快照 |
 | `created_at` | datetime | 首次成功时间 |
 
-回执与命令的业务写入在同一事务提交（合同确认时即合同、资产单元覆盖及租金阶段）。同一操作者以同键重试同一规范化请求时返回首次响应；同键改写合同条款、覆盖单元或命令类型时返回 `IDEMPOTENCY_CONFLICT`。回执是命令可靠性事实，不作为合同业务状态或审计事件的替代。
+回执与命令的业务写入在同一事务提交（合同确认时即合同、资产单元覆盖及租金阶段；终止时包括覆盖截止、事件、租金重排、免租补收和押金抵扣）。同一操作者以同键重试同一规范化请求时返回首次响应；同键改写合同条款、覆盖单元、终止抵扣分配、补收免租或命令类型时返回 `IDEMPOTENCY_CONFLICT`。回执是命令可靠性事实，不作为合同业务状态或审计事件的替代。
 
 ## 5. 状态机
 
