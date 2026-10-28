@@ -26,6 +26,7 @@ from src.models.asset_unit import AssetUnit
 from src.models.attachment import Attachment
 from src.models.auth import AccountType, User
 from src.models.business_change_event import BusinessChangeEvent
+from src.models.deposit_ledger import DepositLedgerEntry, DepositRecord
 from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from src.schemas.asset_operations import (
@@ -120,6 +121,28 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             await session.execute(
                 delete(RentPaymentRecord).where(
                     RentPaymentRecord.created_by == ACTOR_ID
+                )
+            )
+            deposit_entry_ids = select(DepositLedgerEntry.id).where(
+                DepositLedgerEntry.contract_id.in_(terminal_ids.union(upstream_ids))
+            )
+            deposit_record_ids = select(DepositRecord.id).where(
+                DepositRecord.deposit_entry_id.in_(deposit_entry_ids)
+            )
+            await session.execute(
+                delete(DepositRecord).where(
+                    DepositRecord.deposit_entry_id.in_(deposit_entry_ids),
+                    DepositRecord.reverses_record_id.in_(deposit_record_ids),
+                )
+            )
+            await session.execute(
+                delete(DepositRecord).where(
+                    DepositRecord.deposit_entry_id.in_(deposit_entry_ids)
+                )
+            )
+            await session.execute(
+                delete(DepositLedgerEntry).where(
+                    DepositLedgerEntry.id.in_(deposit_entry_ids)
                 )
             )
             await session.execute(
@@ -273,6 +296,15 @@ async def _seed(factory: async_sessionmaker[AsyncSession]) -> None:
                 asset_unit_id=UNIT_ID,
                 effective_from=date(2026, 1, 1),
                 effective_to=date(2026, 12, 31),
+            )
+        )
+        session.add(
+            DepositLedgerEntry(
+                id="lifecycle-int-terminal-deposit",
+                contract_kind="terminal",
+                contract_id=CONTRACT_ID,
+                collector="operator",
+                version=1,
             )
         )
         await session.commit()
@@ -614,6 +646,15 @@ async def test_upstream_exit_blocks_on_active_terminal_then_commits_and_reverses
         )
         await session.flush()
         session.add(
+            DepositLedgerEntry(
+                id="lifecycle-int-upstream-deposit",
+                contract_kind="upstream",
+                contract_id=UPSTREAM_ID,
+                collector="owner",
+                version=1,
+            )
+        )
+        session.add(
             UpstreamContractAssetUnit(  # type: ignore[call-arg]
                 upstream_contract_id=UPSTREAM_ID,
                 asset_unit_id=UNIT_ID,
@@ -767,6 +808,15 @@ async def test_renewals_chain_successors_atomically(
             )
         )
         await session.flush()
+        session.add(
+            DepositLedgerEntry(
+                id="lifecycle-int-upstream-deposit",
+                contract_kind="upstream",
+                contract_id=UPSTREAM_ID,
+                collector="owner",
+                version=1,
+            )
+        )
         session.add(
             UpstreamContractAssetUnit(  # type: ignore[call-arg]
                 upstream_contract_id=UPSTREAM_ID,
@@ -994,6 +1044,15 @@ async def test_query_views_replay_events_over_real_postgresql(
             )
         )
         await session.flush()
+        session.add(
+            DepositLedgerEntry(
+                id="lifecycle-int-upstream-deposit",
+                contract_kind="upstream",
+                contract_id=UPSTREAM_ID,
+                collector="owner",
+                version=1,
+            )
+        )
         session.add(
             UpstreamContractAssetUnit(  # type: ignore[call-arg]
                 upstream_contract_id=UPSTREAM_ID,

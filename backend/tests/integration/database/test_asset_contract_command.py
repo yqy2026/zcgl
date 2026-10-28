@@ -27,6 +27,7 @@ from src.models.asset_unit import AssetUnit
 from src.models.attachment import Attachment
 from src.models.auth import AccountType, User
 from src.models.business_change_event import BusinessChangeEvent
+from src.models.deposit_ledger import DepositLedgerEntry, DepositRecord
 from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from src.schemas.asset_operations import (
@@ -95,6 +96,22 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             await session.execute(
                 delete(RentPaymentRecord).where(
                     RentPaymentRecord.created_by == ACTOR_ID
+                )
+            )
+            deposit_record_ids = select(DepositRecord.id).where(
+                DepositRecord.created_by == ACTOR_ID
+            )
+            await session.execute(
+                delete(DepositRecord).where(
+                    DepositRecord.reverses_record_id.in_(deposit_record_ids)
+                )
+            )
+            await session.execute(
+                delete(DepositRecord).where(DepositRecord.created_by == ACTOR_ID)
+            )
+            await session.execute(
+                delete(DepositLedgerEntry).where(
+                    DepositLedgerEntry.contract_id.in_(terminal_ids.union(upstream_ids))
                 )
             )
             await session.execute(
@@ -403,6 +420,15 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
             .select_from(AssetContractWriteReceipt)
             .where(AssetContractWriteReceipt.actor_id == ACTOR_ID)
         )
+        deposit_entries = tuple(
+            (
+                await session.execute(
+                    select(DepositLedgerEntry).where(
+                        DepositLedgerEntry.contract_id.in_((upstream.id, terminal.id))
+                    )
+                )
+            ).scalars()
+        )
         upstream_coverage_count = await session.scalar(
             select(func.count())
             .select_from(UpstreamContractAssetUnit)
@@ -426,7 +452,13 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
 
     assert upstream_count == 1
     assert terminal_count == 1
-    assert receipt_count == 2
+    assert receipt_count == 3  # two confirmations and the termination; replays add none
+    assert {
+        (row.contract_kind, row.contract_id, row.collector) for row in deposit_entries
+    } == {
+        ("upstream", upstream.id, "owner"),
+        ("terminal", terminal.id, "operator"),
+    }
     assert upstream_coverage_count == 1
     assert terminal_coverage_count == 1
     assert upstream_scan is not None and upstream_scan.owner_id == upstream.id
@@ -496,7 +528,8 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
 
 async def test_audit_and_contract_rollback_together(session_factory, monkeypatch):
     scope = await _seed(session_factory)
-    service = AssetContractCommandService()
+    rolled_back_contract_id = "deposit-confirmation-rollback"
+    service = AssetContractCommandService(id_factory=lambda: rolled_back_contract_id)
     request = UpstreamContractCreate.model_validate(
         {
             "contract_number": "UP-ASSET-CONTRACT-INT",
@@ -529,6 +562,14 @@ async def test_audit_and_contract_rollback_together(session_factory, monkeypatch
                 attachment_owner_id="contract-intake-upstream",
             )
     async with session_factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(DepositLedgerEntry)
+                .where(DepositLedgerEntry.contract_id == rolled_back_contract_id)
+            )
+            == 0
+        )
         assert (
             await session.scalar(
                 select(func.count())
