@@ -42,7 +42,7 @@
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |
 |---|---|---|---|---|---|
 | REQ-LED-001 | MVP | 开发中 | `backend/src/models/asset_ledger.py`, `backend/src/services/asset_operations/rent_obligation_service.py`, `backend/src/services/asset_operations/rent_payment_command_service.py`, `backend/src/services/asset_operations/rent_schedule_correction_service.py`, `backend/src/services/asset_operations/rent_ledger_query_service.py`, `frontend/src/pages/AssetOperations/LedgersPage.tsx` | `backend/tests/unit/services/asset_operations/test_rent_obligation_rules.py`, `backend/tests/integration/database/test_rent_commands.py`, `backend/tests/e2e/test_asset_rent_ledger_e2e.py`, `frontend/src/pages/AssetOperations/__tests__/LedgersPage.test.tsx` | 应付/应收义务、部分登记、跨月结转、凭证和有原因撤销；录入与续签核对租金阶段、租金阶段更正（往月已有阶段不改，往月缺口可补录）与提前退租补收免租 |
-| REQ-DEP-001 | MVP | 开发中（规则层） | `backend/src/services/asset_operations/deposit_rules.py` | `backend/tests/unit/services/asset_operations/test_deposit_rules.py`, `backend/tests/e2e/test_asset_deposit_e2e.py` | 已验证四类方向、续签余额转入转出和结束阶段；HTTP 证据仅覆盖委托协议拒绝非零押金。押金持久化、登记/抵扣/撤销、终止结算与前端尚未接入 |
+| REQ-DEP-001 | MVP | 开发中（PR-B 验收中） | `backend/src/models/deposit_ledger.py`, `backend/src/services/asset_operations/deposit_command_service.py`, `backend/src/services/asset_operations/deposit_query_service.py`, `backend/src/services/asset_operations/deposit_settlement_service.py`, `backend/src/api/v1/deposits.py`, `frontend/src/pages/AssetOperations/ContractDepositPanel.tsx` | `backend/tests/unit/services/asset_operations/test_deposit_rules.py`, `backend/tests/unit/services/asset_operations/test_deposit_query_service.py`, `backend/tests/unit/services/asset_operations/test_deposit_settlement_service.py`, `backend/tests/e2e/test_asset_deposit_e2e.py`, `frontend/src/pages/AssetOperations/__tests__/ContractDepositPanel.test.tsx` | 已接入条目创建、四类方向、续签结转、追加登记、抵扣与成对撤销、终止自动/手工分配和免租补收；具备真实 HTTP 抵扣及终止撤销证据；PR #99 门禁与前端整体验收仍在进行 |
 | REQ-FEE-001 | MVP | 未开始 | — | — | 产权方实际到账 × 协议比例，双方盖章后锁定月度对账 |
 
 ### 3.4 报送、档案与导入
@@ -108,7 +108,7 @@
 | 切片 | REQ | 状态 |
 |---|---|---|
 | V1 资产单元与合同链 | REQ-UNT-001、REQ-CTR-001、REQ-CTR-002 | 本实施切片已有证据；V1-0 至 V1-4 已形成模型、迁移、CRUD、服务、API 和约定的前端列表/详情/录入/生命周期纵向切片，V1-T01–V1-T10 均有自动化或真实 PostgreSQL/浏览器证据，旧业务路由和导航已清零。REQ-UNT-001 的生产端空置备注、拆合操作/历史与合同时间轴仍是合并后跟进项；证照/考核/台账依赖项分别进入 V4/V3/V2；未上线开发基线已直接切到 v5，旧域物理清理单独跟进 |
-| V2 租金、押金与管理费 | REQ-LED-001、REQ-DEP-001、REQ-FEE-001 | 实施中：PR-0 与租金 PR-A #98 已合并；PR-A 已通过 CI 及约定的浏览器验证。PR-B 已开始押金纯规则与准入边界验证，登记 API、持久化和终止结算待接入；PR-C 管理费尚未开始。计划见 `docs/plans/2026-10-27-asset-operations-v5-v2.md`，资金类整体验收状态不推进 |
+| V2 租金、押金与管理费 | REQ-LED-001、REQ-DEP-001、REQ-FEE-001 | 实施中：PR-0 与租金 PR-A #98 已合并；PR-A 已通过 CI 及约定的浏览器验证。PR-B #99 已接入押金持久化、四个接口、成对抵扣撤销及终止结算，正在完成门禁与验收；PR-C 管理费尚未开始。计划见 `docs/plans/2026-10-27-asset-operations-v5-v2.md`，资金类整体验收状态不推进 |
 | V3 考核范围与报送 | REQ-RPT-001、REQ-RPT-002 | S0 规格已建立，迁移与测试清单待完成 |
 | V4 档案与导入 | REQ-ARC-001、REQ-IMP-001 | S0 规格已建立，迁移与测试清单待完成 |
 | V5 本月工作台 | REQ-WBK-001 | 依赖 V1–V4 投影 |

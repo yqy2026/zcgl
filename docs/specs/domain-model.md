@@ -437,7 +437,8 @@ gap                = target_amount − held_amount
 | `lifecycle_event_id` | UUID? | 随终端终止写入的 `deduct` 指向该终止事件 |
 | `reverses_record_id` | UUID? | 撤销时必填，且一笔记录只能有效撤销一次 |
 | `reason` | string? | 撤销和 `forfeit` 必填 |
-| `created_by` / `created_at` | UUID / datetime | 操作审计 |
+| `created_by` | UUID | 操作人 |
+| `created_at` | datetime | 操作时间 |
 | `idempotency_key` | string | 唯一 |
 
 记录类型与收取方匹配：`collector=operator` 的终端押金接受 `collect` / `refund` / `deduct` / `forfeit`；`collector=owner` 的终端押金接受 `owner_reported_collect` / `owner_reported_refund` / `forfeit`（直签押金由产权方收退，本系统只登记产权方报告，不提供抵扣）；承租合同押金接受 `pay` / `recover` / `forfeit`。`forfeit` 记押金中不退还的部分（赔偿、违约金等）：转租由本公司扣，直签按产权方报告，承租合同由产权方扣；原因必填，只在结束阶段可用，不超过 `held_amount`，不生成租金记录。收入记录不得超过当时 `gap` 的正值部分，支出记录不得超过 `held_amount`。已续签合同的押金条目不再接受新记录。`deduct` 只在结束阶段可用：用押金抵扣本合同或其续签前驱未作废、仍有剩余金额的转租终端租金义务（含补收免租义务），金额同时不超过该义务剩余金额；它与租金侧 `deposit_offset` 记录在同一事务成对写入，撤销任一侧时同一事务撤销另一侧。终端终止默认把可用押金按到期日从早到晚用于抵扣账期首月不晚于当前业务月的未结租金（含补收免租义务，按其账期判断），用户可在预览中取消或调整，调整后的明细由预览 token 绑定，与终止事件同一事务写入；以后月份的租金到期后再在押金上手工抵扣。正向记录不得直接更新或删除。

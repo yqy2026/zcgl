@@ -296,6 +296,46 @@ def _proposal(*, reason: str = "提前退租") -> TerminalContractTerminationPro
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"deposit_offset_mode": "none"},
+        {"clawback_amount": Decimal("100"), "clawback_basis": "免租优惠补收"},
+        {
+            "deposit_offset_mode": "manual",
+            "deposit_offsets": [{"ledger_entry_id": "rent", "amount": "1"}],
+        },
+    ],
+)
+async def test_termination_replay_rejects_changed_settlement_source(change):
+    repository = _Repository()
+    service = _service(repository)
+    db = _DB()
+    proposal = _proposal()
+    await service.terminate_terminal(
+        db,
+        contract_id="terminal-1",
+        proposal=proposal,
+        actor_id="actor-1",
+        scope=SCOPE,
+        idempotency_key="settlement-key",
+    )
+    changed = TerminalContractTerminationProposal.model_validate(
+        {**proposal.model_dump(), **change}
+    )
+    with pytest.raises(AssetOperationsIdempotencyConflictError):
+        await service.terminate_terminal(
+            db,
+            contract_id="terminal-1",
+            proposal=changed,
+            actor_id="actor-1",
+            scope=SCOPE,
+            idempotency_key="settlement-key",
+        )
+    assert repository.writes == 1
+
+
+@pytest.mark.asyncio
 async def test_terminal_termination_replays_same_key_without_second_event() -> None:
     repository = _Repository()
     service = _service(repository)

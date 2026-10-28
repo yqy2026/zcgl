@@ -267,6 +267,40 @@ def _service(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("fails", [False, True])
+async def test_confirmation_deposit_creation_shares_contract_transaction(
+    monkeypatch, fails
+):
+    from src.services.asset_operations.deposit_entry_service import (
+        deposit_entry_service,
+    )
+
+    ensure = AsyncMock(side_effect=RuntimeError("deposit failed") if fails else None)
+    monkeypatch.setattr(deposit_entry_service, "ensure_entry", ensure)
+    db = _DB()
+    service = _service(_Repository(), _UnitLocker((_unit(),)))
+    operation = service.create_upstream(
+        db,
+        request=_upstream_request(),
+        actor_id="user-1",
+        scope=SCOPE,
+        idempotency_key="deposit-confirmation",
+        attachment_owner_id="intake-1",
+    )
+    if fails:
+        with pytest.raises(RuntimeError, match="deposit failed"):
+            await operation
+        assert db.commits == 0
+        assert db.rollbacks == 1
+    else:
+        await operation
+        assert db.commits == 1
+    ensure.assert_awaited_once()
+    assert ensure.await_args.kwargs["contract_kind"] == "upstream"
+    assert ensure.await_args.kwargs["contract"].id == "contract-1"
+
+
+@pytest.mark.asyncio
 async def test_confirmation_rolls_back_when_rent_replanning_fails() -> None:
     repository = _Repository()
     service = _service(repository, _UnitLocker((_unit(),)))

@@ -21,6 +21,7 @@ from src.models.asset_contract import (
 )
 from src.models.asset_unit import AssetUnit
 from src.models.attachment import Attachment
+from src.models.deposit_ledger import DepositLedgerEntry
 from src.models.project import Project
 from tests.e2e.factories import create_approved_legal_party
 
@@ -133,6 +134,24 @@ def _seed_signed_contracts(db_session: Session, actor_id: str) -> dict[str, str]
                 asset_unit_id=unit.id,
                 effective_from=start,
                 effective_to=end,
+            ),
+        ]
+    )
+    db_session.add_all(
+        [
+            DepositLedgerEntry(
+                id=str(uuid4()),
+                contract_kind="upstream",
+                contract_id=upstream_id,
+                collector="owner",
+                version=1,
+            ),
+            DepositLedgerEntry(
+                id=str(uuid4()),
+                contract_kind="terminal",
+                contract_id=terminal_id,
+                collector="operator",
+                version=1,
             ),
         ]
     )

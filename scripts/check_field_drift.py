@@ -34,6 +34,8 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "AssetUnitBoundarySource": ("asset_unit.py", "AssetUnitBoundarySource"),
     "ContractLifecycleEvent": ("asset_contract.py", "ContractLifecycleEvent"),
     "ContractRentSchedule": ("asset_contract.py", "ContractRentSchedule"),
+    "DepositLedgerEntry": ("deposit_ledger.py", "DepositLedgerEntry"),
+    "DepositRecord": ("deposit_ledger.py", "DepositRecord"),
     "Project": ("project.py", "Project"),
     "PropertyCertificate": ("property_certificate.py", "PropertyCertificate"),
     "PropertyCertificateAssetUnit": (

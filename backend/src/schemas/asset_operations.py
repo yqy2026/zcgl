@@ -626,6 +626,11 @@ class ContractLifecycleEventCreate(_StrictPayload):
         return self
 
 
+class TerminationDepositOffset(_StrictPayload):
+    ledger_entry_id: str = Field(min_length=1, max_length=36)
+    amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
+
+
 class TerminalContractTerminationProposal(_StrictPayload):
     """Human-reviewed facts bound into a terminal termination preview."""
 
@@ -633,6 +638,10 @@ class TerminalContractTerminationProposal(_StrictPayload):
     termination_type: TerminationType
     handover_status: HandoverStatus
     deposit_settlement_status: DepositSettlementStatus
+    deposit_offset_mode: Literal["auto", "none", "manual"] = "auto"
+    deposit_offsets: list[TerminationDepositOffset] = Field(default_factory=list)
+    clawback_amount: Decimal = Field(default=Decimal("0"), ge=0, max_digits=14, decimal_places=2)
+    clawback_basis: str = Field(default="", max_length=500)
     reason: str = Field(..., min_length=1, max_length=500)
 
 
@@ -745,6 +754,7 @@ class TerminalContractTerminationPreviewResponse(_StrictPayload):
     last_valid_day: date
     coverage_impact: list[TerminalContractTerminationCoverageImpact]
     rent_impact: dict[str, object] = Field(default_factory=dict)
+    deposit_settlement: dict[str, object] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     proposal: TerminalContractTerminationProposal
     preview_token: str = Field(..., min_length=1)
@@ -778,6 +788,7 @@ class UpstreamContractExitPreviewResponse(_StrictPayload):
     last_valid_day: date
     coverage_impact: list[UpstreamContractExitCoverageImpact]
     rent_impact: dict[str, object] = Field(default_factory=dict)
+    deposit_settlement: dict[str, object] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     proposal: UpstreamContractExitProposal
     preview_token: str = Field(..., min_length=1)

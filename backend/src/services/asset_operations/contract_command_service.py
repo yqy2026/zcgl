@@ -51,6 +51,7 @@ from .contract_projections import (
     derive_upstream_contract_status,
     public_warning,
 )
+from .deposit_entry_service import DepositEntryService, deposit_entry_service
 from .errors import (
     AssetContractCoverageInvalidError,
     AssetOperationsIdempotencyConflictError,
@@ -241,6 +242,7 @@ class AssetContractCommandService:
         business_today: Callable[[], date] = _business_today,
         id_factory: Callable[[], str] = lambda: str(uuid4()),
         rent_obligations: RentObligationService | None = None,
+        deposit_entries: DepositEntryService | None = None,
     ) -> None:
         self.repository = repository or default_contract_repository
         self.unit_repository = unit_repository or default_unit_repository
@@ -248,6 +250,9 @@ class AssetContractCommandService:
         self.business_today = business_today
         self.id_factory = id_factory
         self.rent_obligations = rent_obligations or rent_obligation_service
+        self.deposit_entries = (
+            deposit_entries if deposit_entries is not None else deposit_entry_service
+        )
 
     async def create_upstream(
         self,
@@ -1246,6 +1251,9 @@ class AssetContractCommandService:
         lifecycle_event: ContractLifecycleEvent | None,
     ) -> None:
         correlation_id = str(uuid4())
+        await self.deposit_entries.ensure_entry(
+            db, contract_kind=contract_kind, contract=contract
+        )
         rent_plan = await self.rent_obligations.replan(
             db,
             contract_kind=contract_kind,

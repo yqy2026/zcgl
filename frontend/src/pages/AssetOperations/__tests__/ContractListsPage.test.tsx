@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 
 import { UpstreamContractsPage, TerminalContractsPage } from '../ContractListsPage';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
@@ -25,6 +26,11 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
 });
 
 const mockedService = vi.mocked(assetOperationsService);
+vi.mock('@/services/assetDepositService', () => ({
+  assetDepositService: {
+    list: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20 }),
+  },
+}));
 vi.mock('@/components/System/CapabilityGuard', () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -189,4 +195,23 @@ describe('TerminalContractsPage', () => {
       expect(screen.getByText(/上游合同/)).toBeTruthy();
     });
   });
+});
+
+it('filters unsettled deposits separately from unpaid rent and resets pagination', async () => {
+  mockedService.listTerminalContracts.mockResolvedValue({ items: [], total: 0 });
+  renderPage(<TerminalContractsPage />);
+  const user = userEvent.setup();
+  await user.click(screen.getByLabelText('押金未结清'));
+  await waitFor(() =>
+    expect(mockedService.listTerminalContracts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filter: 'deposit_unsettled', offset: 0 })
+    )
+  );
+  await user.click(screen.getByLabelText('租金未到账'));
+  expect(screen.getByLabelText('押金未结清')).not.toBeChecked();
+  await waitFor(() =>
+    expect(mockedService.listTerminalContracts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filter: 'rent_unpaid' })
+    )
+  );
 });

@@ -75,6 +75,7 @@ from .contract_group import (  # noqa: F401
     RevenueMode,
     ServiceFeeLedger,
 )
+from .deposit_ledger import DepositLedgerEntry, DepositRecord
 from .enum_field import (  # noqa: F401
     EnumFieldHistory,
     EnumFieldType,
@@ -129,6 +130,8 @@ from .user_party_scope_batch_commit import UserPartyScopeBatchCommit  # noqa: F4
 from .user_party_scope_commit import UserPartyScopeCommit  # noqa: F401
 
 __all__ = [
+    "DepositLedgerEntry",
+    "DepositRecord",
     "BusinessChangeEvent",
     "RentLedgerEntry",
     "RentPaymentRecord",
