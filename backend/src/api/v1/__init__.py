@@ -11,6 +11,8 @@ from . import (
     extraction_sessions,  # noqa: F401
     party,  # noqa: F401
     property_certificate_attachments,  # noqa: F401
+    rent_ledger_queries,  # noqa: F401
+    rent_ledgers,  # noqa: F401
     terminal_contracts,  # noqa: F401
     upstream_contracts,  # noqa: F401
 )

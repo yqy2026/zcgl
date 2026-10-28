@@ -11,6 +11,7 @@ describe('AppRoutes authz metadata', () => {
   it('keeps v5 route resource mappings aligned', () => {
     const expectedByPath = new Map<string, string>([
       [ASSET_OPERATIONS_V5_ROUTES.UNITS, 'asset_ops:read'],
+      [ASSET_OPERATIONS_V5_ROUTES.LEDGERS, 'asset_ops:read'],
       [ASSET_OPERATIONS_V5_ROUTES.UPSTREAM_CONTRACTS, 'asset_ops:read'],
       [ASSET_OPERATIONS_V5_ROUTES.TERMINAL_CONTRACTS, 'asset_ops:read'],
       [ASSET_OPERATIONS_V5_ROUTES.INTAKE, 'asset_ops:write'],

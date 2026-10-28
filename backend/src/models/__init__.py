@@ -29,6 +29,7 @@ from .asset_contract import (  # noqa: F401
     UpstreamContractType,
 )
 from .asset_history import AssetHistory  # noqa: F401
+from .asset_ledger import RentLedgerEntry, RentPaymentRecord
 from .asset_review_log import AssetReviewLog  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
 from .asset_unit import (  # noqa: F401
@@ -129,6 +130,8 @@ from .user_party_scope_commit import UserPartyScopeCommit  # noqa: F401
 
 __all__ = [
     "BusinessChangeEvent",
+    "RentLedgerEntry",
+    "RentPaymentRecord",
     "Attachment",
     "Asset",
     "AssetUnit",

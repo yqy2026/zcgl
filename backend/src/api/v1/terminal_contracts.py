@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,11 +28,20 @@ from ...schemas.asset_operations import (
     TerminalContractTerminationReversalProposal,
     TerminalContractUpdate,
 )
+from ...schemas.rent_commands import (
+    RentScheduleCorrectionCommit,
+    RentScheduleCorrectionPreview,
+    RentScheduleCorrectionProposal,
+    RentScheduleCorrectionResponse,
+)
 from ...services.asset_operations import (
     AssetOperationsPermissionDeniedError,
     asset_contract_command_service,
     asset_operations_query_service,
     contract_lifecycle_command_service,
+)
+from ...services.asset_operations.rent_schedule_correction_service import (
+    rent_schedule_correction_service,
 )
 from ...services.party_scope_resolver import party_scope_resolver
 
@@ -50,6 +59,7 @@ async def list_terminal_contracts(
     q: str | None = Query(None, max_length=100, description="编号搜索"),
     offset: int = Query(0, ge=0, description="跳过条数"),
     limit: int = Query(50, ge=1, le=200, description="返回条数"),
+    filter: Literal["rent_unpaid"] | None = Query(None, description="租金未到账"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz: Annotated[
@@ -74,6 +84,7 @@ async def list_terminal_contracts(
             contract_mode=contract_mode,
             upstream_contract_id=upstream_contract_id,
             query=q,
+            rent_unpaid=filter == "rent_unpaid",
             offset=offset,
             limit=limit,
         )
@@ -352,6 +363,81 @@ async def renew_terminal_contract(
         raise
     except Exception as exc:
         raise internal_error("登记终端合同续签失败", original_error=exc) from exc
+
+
+@router.post(
+    "/terminal-contracts/{contract_id}/rent-schedule-correction/preview",
+    response_model=RentScheduleCorrectionPreview,
+    summary="预览终端租金阶段更正",
+)
+async def preview_terminal_rent_schedule_correction(
+    contract_id: str,
+    payload: RentScheduleCorrectionProposal,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="write",
+                resource_type="asset_ops",
+                resource_id="{contract_id}",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> RentScheduleCorrectionPreview:
+    actor_id = str(current_user.id)
+    scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+    return await rent_schedule_correction_service.preview(
+        db,
+        contract_kind="terminal",
+        contract_id=contract_id,
+        request=payload,
+        actor_id=actor_id,
+        scope=scope,
+    )
+
+
+@router.post(
+    "/terminal-contracts/{contract_id}/rent-schedule-correction",
+    response_model=RentScheduleCorrectionResponse,
+    summary="更正终端租金阶段",
+)
+async def commit_terminal_rent_schedule_correction(
+    contract_id: str,
+    payload: RentScheduleCorrectionCommit,
+    idempotency_key: Annotated[
+        str,
+        Header(
+            alias="Idempotency-Key", min_length=1, max_length=100, pattern=r".*\S.*"
+        ),
+    ],
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="write",
+                resource_type="asset_ops",
+                resource_id="{contract_id}",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> RentScheduleCorrectionResponse:
+    actor_id = str(current_user.id)
+    scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+    return await rent_schedule_correction_service.commit(
+        db,
+        contract_kind="terminal",
+        contract_id=contract_id,
+        request=payload,
+        actor_id=actor_id,
+        scope=scope,
+        idempotency_key=idempotency_key.strip(),
+    )
 
 
 route_registry.register_router(

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
@@ -26,6 +28,7 @@ from src.services.asset_operations.errors import (
     AssetContractCoverageInvalidError,
     AssetOperationsVersionConflictError,
 )
+from src.services.asset_operations.rent_obligation_service import RentObligationPlan
 from src.services.party_scope_resolver import EffectivePartyScope
 
 NOW = datetime(2026, 10, 25, 1, 0)
@@ -193,6 +196,9 @@ def _service(repository: _Repository) -> AssetContractCommandService:
         unit_repository=_UnitRepository(),  # type: ignore[arg-type]
         clock=lambda: datetime(2026, 10, 25, 1, 0),
         business_today=lambda: date(2026, 10, 25),
+        rent_obligations=SimpleNamespace(
+            replan=AsyncMock(return_value=RentObligationPlan())
+        ),
     )
 
 
@@ -206,6 +212,37 @@ def _terminal_update(**overrides: object) -> TerminalContractUpdate:
     values: dict[str, object] = {"expected_version": 2}
     values.update(overrides)
     return TerminalContractUpdate.model_validate(values)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["upstream", "terminal"])
+async def test_update_locks_units_before_contract(kind, monkeypatch):
+    repository = _Repository()
+    service = _service(repository)
+    order = []
+    original_get = getattr(repository, f"get_{kind}")
+    original_lock = service.unit_repository.lock_for_write
+
+    async def tracked_get(db, **kwargs):
+        if kwargs.get("for_update"):
+            order.append("contract")
+        return await original_get(db, **kwargs)
+
+    async def tracked_lock(db, **kwargs):
+        order.append("units")
+        return await original_lock(db, **kwargs)
+
+    monkeypatch.setattr(repository, f"get_{kind}", tracked_get)
+    monkeypatch.setattr(service.unit_repository, "lock_for_write", tracked_lock)
+    request = (
+        _upstream_update(name="新名称")
+        if kind == "upstream"
+        else _terminal_update(deposit_amount="10")
+    )
+    await getattr(service, f"update_{kind}")(
+        _DB(), contract_id=f"{kind}-1", request=request, actor_id="actor-1", scope=SCOPE
+    )
+    assert order[:2] == ["units", "contract"]
 
 
 @pytest.mark.parametrize(

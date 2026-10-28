@@ -63,6 +63,11 @@ from .errors import (
     TerminalContractAlreadyTerminatedError,
     UpstreamContractAlreadyExitedError,
 )
+from .rent_obligation_service import (
+    RentObligationPlan,
+    RentObligationService,
+    rent_obligation_service,
+)
 
 
 class AssetContractWriter(Protocol):
@@ -235,12 +240,14 @@ class AssetContractCommandService:
         clock: Callable[[], datetime] = _utcnow,
         business_today: Callable[[], date] = _business_today,
         id_factory: Callable[[], str] = lambda: str(uuid4()),
+        rent_obligations: RentObligationService | None = None,
     ) -> None:
         self.repository = repository or default_contract_repository
         self.unit_repository = unit_repository or default_unit_repository
         self.clock = clock
         self.business_today = business_today
         self.id_factory = id_factory
+        self.rent_obligations = rent_obligations or rent_obligation_service
 
     async def create_upstream(
         self,
@@ -514,7 +521,18 @@ class AssetContractCommandService:
             db,
             contract_id=contract_id,
             scope=scope,
-            for_update=True,
+            for_update=False,
+        )
+        if contract is None:
+            raise ResourceNotFoundError("UpstreamContract", contract_id)
+        initial_coverages = await self.repository.list_upstream_coverages(
+            db, contract_id=contract_id
+        )
+        units = await self._lock_exact_units(
+            db, sorted({row.asset_unit_id for row in initial_coverages}), scope
+        )
+        contract = await self.repository.get_upstream(
+            db, contract_id=contract_id, scope=scope, for_update=True
         )
         if contract is None:
             raise ResourceNotFoundError("UpstreamContract", contract_id)
@@ -543,6 +561,8 @@ class AssetContractCommandService:
             )
         before = contract_snapshot(contract)
         old_end = contract.end_date
+        correlation_id = str(uuid4())
+        rent_plan = RentObligationPlan()
         if (
             contract.contract_type == "lease"
             and "management_fee_rate" in request.model_fields_set
@@ -568,11 +588,6 @@ class AssetContractCommandService:
                 setattr(contract, field, value)
         try:
             if request.end_date is not None and request.end_date != old_end:
-                units = await self._lock_exact_units(
-                    db,
-                    sorted({coverage.asset_unit_id for coverage in upstream_coverages}),
-                    scope,
-                )
                 units_by_id = {unit.id: unit for unit in units}
                 for coverage in upstream_coverages:
                     if coverage.effective_to == old_end:
@@ -588,6 +603,14 @@ class AssetContractCommandService:
                     new_end=request.end_date,
                 )
             await db.flush()
+            if request.end_date is not None and request.end_date != old_end:
+                rent_plan = await self.rent_obligations.replan(
+                    db,
+                    contract_kind="upstream",
+                    contract_id=contract.id,
+                    actor_id=actor_id,
+                    correlation_id=correlation_id,
+                )
             await record_contract_change(
                 db,
                 contract=contract,
@@ -596,6 +619,7 @@ class AssetContractCommandService:
                 actor_id=actor_id,
                 before=before,
                 occurred_at=self.clock(),
+                correlation_id=correlation_id,
             )
             await db.flush()
             await db.commit()
@@ -656,7 +680,7 @@ class AssetContractCommandService:
                     as_of=self.business_today(),
                     lifecycle_events=events,
                 ),
-                "warnings": [],
+                "warnings": [self._warning(code) for code in rent_plan.warnings],
                 "idempotent": False,
             }
         )
@@ -676,7 +700,18 @@ class AssetContractCommandService:
             db,
             contract_id=contract_id,
             scope=scope,
-            for_update=True,
+            for_update=False,
+        )
+        if contract is None:
+            raise ResourceNotFoundError("TerminalContract", contract_id)
+        initial_coverages = await self.repository.list_terminal_coverages(
+            db, contract_id=contract_id
+        )
+        units = await self._lock_exact_units(
+            db, sorted({row.asset_unit_id for row in initial_coverages}), scope
+        )
+        contract = await self.repository.get_terminal(
+            db, contract_id=contract_id, scope=scope, for_update=True
         )
         if contract is None:
             raise ResourceNotFoundError("TerminalContract", contract_id)
@@ -706,6 +741,8 @@ class AssetContractCommandService:
             )
         upstream: UpstreamContract | None = None
         old_end = contract.end_date
+        correlation_id = str(uuid4())
+        rent_plan = RentObligationPlan()
         for field in ("deposit_months", "deposit_amount"):
             value = getattr(request, field)
             if value is not None:
@@ -731,11 +768,6 @@ class AssetContractCommandService:
                 )
                 contract.upstream_contract_id = request.upstream_contract_id
             if extends:
-                units = await self._lock_exact_units(
-                    db,
-                    sorted({coverage.asset_unit_id for coverage in terminal_coverages}),
-                    scope,
-                )
                 units_by_id = {unit.id: unit for unit in units}
                 for coverage in terminal_coverages:
                     if coverage.effective_to == old_end:
@@ -751,6 +783,14 @@ class AssetContractCommandService:
                     new_end=new_end,
                 )
             await db.flush()
+            if request.end_date is not None and request.end_date != old_end:
+                rent_plan = await self.rent_obligations.replan(
+                    db,
+                    contract_kind="terminal",
+                    contract_id=contract.id,
+                    actor_id=actor_id,
+                    correlation_id=correlation_id,
+                )
             await record_contract_change(
                 db,
                 contract=contract,
@@ -759,6 +799,7 @@ class AssetContractCommandService:
                 actor_id=actor_id,
                 before=before,
                 occurred_at=self.clock(),
+                correlation_id=correlation_id,
             )
             await db.flush()
             await db.commit()
@@ -837,7 +878,10 @@ class AssetContractCommandService:
                     as_of=self.business_today(),
                     lifecycle_events=events,
                 ),
-                "warnings": [self._warning(code) for code in warning_codes],
+                "warnings": [
+                    self._warning(code)
+                    for code in [*warning_codes, *rent_plan.warnings]
+                ],
                 "idempotent": False,
             }
         )
@@ -1088,6 +1132,7 @@ class AssetContractCommandService:
                 contract=contract,
                 contract_kind="upstream",
                 actor_id=actor_id,
+                response=response,
                 lifecycle_event=lifecycle_event,
             )
             await self._add_receipt(
@@ -1150,6 +1195,7 @@ class AssetContractCommandService:
                 contract=contract,
                 contract_kind="terminal",
                 actor_id=actor_id,
+                response=response,
                 lifecycle_event=lifecycle_event,
             )
             await self._add_receipt(
@@ -1196,9 +1242,18 @@ class AssetContractCommandService:
         contract: UpstreamContract | TerminalContract,
         contract_kind: str,
         actor_id: str,
+        response: UpstreamContractResponse | TerminalContractResponse,
         lifecycle_event: ContractLifecycleEvent | None,
     ) -> None:
         correlation_id = str(uuid4())
+        rent_plan = await self.rent_obligations.replan(
+            db,
+            contract_kind=contract_kind,
+            contract_id=contract.id,
+            actor_id=actor_id,
+            correlation_id=correlation_id,
+        )
+        response.warnings.extend(self._warning(code) for code in rent_plan.warnings)
         await record_contract_change(
             db,
             contract=contract,

@@ -552,6 +552,7 @@ class UpstreamContractDetail(UpstreamContractResponse):
     renewal_chain: list[RenewalChainItem] = Field(default_factory=list)
     terminal_contract_ids: list[str] = Field(default_factory=list)
     lifecycle_events: list[LifecycleEventItem] = Field(default_factory=list)
+    rent_summary: dict[str, object] = Field(default_factory=dict)
 
 
 class TerminalContractDetail(TerminalContractResponse):
@@ -564,6 +565,7 @@ class TerminalContractDetail(TerminalContractResponse):
     coverages: list[ContractCoverageItem] = Field(default_factory=list)
     renewal_chain: list[RenewalChainItem] = Field(default_factory=list)
     lifecycle_events: list[LifecycleEventItem] = Field(default_factory=list)
+    rent_summary: dict[str, object] = Field(default_factory=dict)
 
 
 class ContractIntakeSessionResponse(_StrictPayload):
@@ -742,6 +744,7 @@ class TerminalContractTerminationPreviewResponse(_StrictPayload):
     effective_date: date
     last_valid_day: date
     coverage_impact: list[TerminalContractTerminationCoverageImpact]
+    rent_impact: dict[str, object] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     proposal: TerminalContractTerminationProposal
     preview_token: str = Field(..., min_length=1)
@@ -774,6 +777,7 @@ class UpstreamContractExitPreviewResponse(_StrictPayload):
     effective_date: date
     last_valid_day: date
     coverage_impact: list[UpstreamContractExitCoverageImpact]
+    rent_impact: dict[str, object] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     proposal: UpstreamContractExitProposal
     preview_token: str = Field(..., min_length=1)

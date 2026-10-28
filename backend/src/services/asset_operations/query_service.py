@@ -111,6 +111,7 @@ class AssetContractReader(Protocol):
         query: str | None = None,
         offset: int = 0,
         limit: int = 50,
+        contract_ids: set[str] | None = None,
     ) -> tuple[list[TerminalContract], int]: ...
 
     async def get_terminal(
@@ -420,7 +421,7 @@ class AssetOperationsQueryService:
             scope=scope,
             upstream_contract_id=contract.id,
         )
-        return self._upstream_detail(
+        detail = self._upstream_detail(
             contract,
             events=events,
             coverages=coverages,
@@ -432,6 +433,18 @@ class AssetOperationsQueryService:
             today=self.business_today(),
         )
 
+        from .rent_ledger_query_service import rent_ledger_query_service
+
+        detail.rent_summary = await rent_ledger_query_service.contract_summary(
+            db,
+            contract=contract,
+            contract_kind="upstream",
+            schedules=schedules,
+            events=events,
+            today=self.business_today(),
+        )
+        return detail
+
     async def list_terminal_contracts(
         self,
         db: AsyncSession,
@@ -442,8 +455,18 @@ class AssetOperationsQueryService:
         query: str | None = None,
         offset: int = 0,
         limit: int = 50,
+        rent_unpaid: bool = False,
     ) -> tuple[list[TerminalContractDetail], int]:
         self._require_effective_scope(scope)
+        extra_filters: dict[str, set[str]] = {}
+        if rent_unpaid:
+            from .rent_ledger_query_service import rent_ledger_query_service
+
+            extra_filters[
+                "contract_ids"
+            ] = await rent_ledger_query_service.unpaid_contract_ids(
+                db, today=self.business_today()
+            )
         contracts, total = await self.asset_contract_repository.list_terminal(
             db,
             scope=scope,
@@ -452,6 +475,7 @@ class AssetOperationsQueryService:
             query=query,
             offset=offset,
             limit=limit,
+            **extra_filters,
         )
         events_by_id = await self._events_by_contract(
             db, contract_kind="terminal", contracts=contracts
@@ -529,7 +553,7 @@ class AssetOperationsQueryService:
                 contract_id=contract.upstream_contract_id,
                 scope=scope,
             )
-        return self._terminal_detail(
+        detail = self._terminal_detail(
             contract,
             events=events,
             upstream=upstream,
@@ -538,6 +562,18 @@ class AssetOperationsQueryService:
             chain=chain,
             today=self.business_today(),
         )
+
+        from .rent_ledger_query_service import rent_ledger_query_service
+
+        detail.rent_summary = await rent_ledger_query_service.contract_summary(
+            db,
+            contract=contract,
+            contract_kind="terminal",
+            schedules=schedules,
+            events=events,
+            today=self.business_today(),
+        )
+        return detail
 
     async def _events_by_contract(
         self,

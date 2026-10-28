@@ -22,6 +22,7 @@ from src.models.asset_contract import (
     UpstreamContract,
     UpstreamContractAssetUnit,
 )
+from src.models.asset_ledger import RentLedgerEntry, RentPaymentRecord
 from src.models.asset_unit import AssetUnit
 from src.models.attachment import Attachment
 from src.models.auth import AccountType, User
@@ -82,6 +83,24 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             )
             upstream_ids = select(UpstreamContract.id).where(
                 UpstreamContract.contract_number == "UP-ASSET-CONTRACT-INT"
+            )
+            record_ids = select(RentPaymentRecord.id).where(
+                RentPaymentRecord.created_by == ACTOR_ID
+            )
+            await session.execute(
+                delete(RentPaymentRecord).where(
+                    RentPaymentRecord.reverses_record_id.in_(record_ids)
+                )
+            )
+            await session.execute(
+                delete(RentPaymentRecord).where(
+                    RentPaymentRecord.created_by == ACTOR_ID
+                )
+            )
+            await session.execute(
+                delete(RentLedgerEntry).where(
+                    RentLedgerEntry.contract_id.in_(terminal_ids.union(upstream_ids))
+                )
             )
             await session.execute(
                 delete(ContractLifecycleEvent).where(
@@ -316,7 +335,8 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
         )
 
     assert [warning.code for warning in terminal.warnings] == [
-        "TERMINAL_TERM_EXCEEDS_UPSTREAM"
+        "TERMINAL_TERM_EXCEEDS_UPSTREAM",
+        "RENT_SCHEDULE_GAP",
     ]
 
     overlapping = terminal_request.model_copy(
@@ -419,8 +439,24 @@ async def test_confirmed_contracts_persist_atomically_warn_and_replay(
 
     async with session_factory() as session:
         changes, total = await BusinessChangeService().list_events(session, scope=scope)
-        assert total == 3  # two confirmations + termination, despite concurrent replay
-        assert {change.action for change in changes} == {"confirmed", "terminated"}
+        assert (
+            total == 6
+        )  # each business command and its reconciliation, no replay duplicates
+        assert {change.action for change in changes} == {
+            "confirmed",
+            "terminated",
+            "rent_obligations_replanned",
+        }
+        assert (
+            len(
+                [
+                    change
+                    for change in changes
+                    if change.action == "rent_obligations_replanned"
+                ]
+            )
+            == 3
+        )
         assert all(change.actor_id == ACTOR_ID for change in changes)
         outside = EffectivePartyScope(
             user_id=ACTOR_ID,

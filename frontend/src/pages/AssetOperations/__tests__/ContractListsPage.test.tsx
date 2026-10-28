@@ -25,9 +25,14 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
 });
 
 const mockedService = vi.mocked(assetOperationsService);
+vi.mock('@/components/System/CapabilityGuard', () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 function makeUpstream(overrides: Partial<UpstreamContractListItem> = {}): UpstreamContractListItem {
   return {
+    rentSchedules: [],
+    rentSummary: null,
     id: 'upstream-1',
     contractNumber: 'UP-001',
     contractType: 'lease',
@@ -65,6 +70,8 @@ function makeUpstream(overrides: Partial<UpstreamContractListItem> = {}): Upstre
 
 function makeTerminal(overrides: Partial<TerminalContractListItem> = {}): TerminalContractListItem {
   return {
+    rentSchedules: [],
+    rentSummary: null,
     id: 'terminal-1',
     contractNumber: 'TM-001',
     contractMode: 'sublease',

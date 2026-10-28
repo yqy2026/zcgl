@@ -138,6 +138,8 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
 }
 
 export interface UpstreamContractListItem {
+  rentSummary: import('@/services/assetLedgerService').RentSummary | null;
+  rentSchedules: import('@/services/assetLedgerService').RentScheduleInput[];
   id: string;
   contractNumber: string;
   contractType: 'lease' | 'management_agreement';
@@ -169,6 +171,8 @@ export interface UpstreamContractListItem {
 }
 
 export interface TerminalContractListItem {
+  rentSummary: import('@/services/assetLedgerService').RentSummary | null;
+  rentSchedules: import('@/services/assetLedgerService').RentScheduleInput[];
   id: string;
   contractNumber: string;
   contractMode: 'sublease' | 'direct_lease';
@@ -322,6 +326,10 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
   ] as const;
   const statusValue = String(raw.status ?? '');
   return {
+    rentSummary: raw.rent_summary == null ? null : convertBackendToFrontend(raw.rent_summary),
+    rentSchedules: convertBackendToFrontend(
+      Array.isArray(raw.rent_schedules) ? raw.rent_schedules : []
+    ),
     id: String(raw.id ?? ''),
     contractNumber: String(raw.contract_number ?? ''),
     contractType: raw.contract_type === 'management_agreement' ? 'management_agreement' : 'lease',
@@ -353,6 +361,10 @@ function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
   const allowedTerminalStatus = ['scheduled', 'active', 'expiring', 'ended', 'historical'] as const;
   const statusValue = String(raw.status ?? '');
   return {
+    rentSummary: raw.rent_summary == null ? null : convertBackendToFrontend(raw.rent_summary),
+    rentSchedules: convertBackendToFrontend(
+      Array.isArray(raw.rent_schedules) ? raw.rent_schedules : []
+    ),
     id: String(raw.id ?? ''),
     contractNumber: String(raw.contract_number ?? ''),
     contractMode: raw.contract_mode === 'direct_lease' ? 'direct_lease' : 'sublease',
@@ -452,6 +464,7 @@ export interface TerminationCoverageImpact {
 }
 
 export interface TerminationPreview {
+  rentImpact?: import('@/services/assetLedgerService').RentImpact;
   contractId: string;
   contractVersion: number;
   effectiveDate: string;
@@ -473,6 +486,7 @@ export interface LifecycleEventRecord {
 }
 
 export interface ExitPreview {
+  rentImpact?: import('@/services/assetLedgerService').RentImpact;
   contractId: string;
   contractVersion: number;
   depositAmount: number;
@@ -636,6 +650,7 @@ export class AssetOperationsService {
 
   async listTerminalContracts(
     params: {
+      filter?: 'rent_unpaid';
       contractMode?: string;
       upstreamContractId?: string;
       q?: string;
@@ -649,6 +664,7 @@ export class AssetOperationsService {
         total: number;
       }>(`${API_BASE}/terminal-contracts`, {
         params: {
+          ...(params.filter != null ? { filter: params.filter } : {}),
           ...(params.contractMode != null ? { contract_mode: params.contractMode } : {}),
           ...(params.upstreamContractId != null
             ? { upstream_contract_id: params.upstreamContractId }
@@ -891,6 +907,13 @@ export class AssetOperationsService {
           };
         }),
         warnings: Array.isArray(data.warnings) ? data.warnings.map(String) : [],
+        ...(data.rent_impact != null
+          ? {
+              rentImpact: convertBackendToFrontend<
+                import('@/services/assetLedgerService').RentImpact
+              >(data.rent_impact),
+            }
+          : {}),
         previewToken: String(data.preview_token ?? ''),
         expiresAt: String(data.expires_at ?? ''),
       };
@@ -991,6 +1014,13 @@ export class AssetOperationsService {
             newEffectiveTo: String(impact.new_effective_to ?? ''),
           };
         }),
+        ...(data.rent_impact != null
+          ? {
+              rentImpact: convertBackendToFrontend<
+                import('@/services/assetLedgerService').RentImpact
+              >(data.rent_impact),
+            }
+          : {}),
         previewToken: String(data.preview_token ?? ''),
         expiresAt: String(data.expires_at ?? ''),
       };

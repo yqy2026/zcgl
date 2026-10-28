@@ -118,7 +118,7 @@ class _Repository:
     ):
         assert contract_id == "terminal-1"
         assert scope is SCOPE
-        assert for_update is True
+        self.read_lock_modes = [*getattr(self, "read_lock_modes", []), for_update]
         return self.terminal
 
     async def list_lifecycle_events(
@@ -180,7 +180,7 @@ class _Repository:
     ) -> UpstreamContract | None:
         if contract_id != "upstream-1" or scope is not SCOPE:
             return None
-        assert for_update is True
+        self.read_lock_modes = [*getattr(self, "read_lock_modes", []), for_update]
         return self.upstream
 
     async def list_upstream_coverages(

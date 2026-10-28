@@ -41,7 +41,7 @@
 
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |
 |---|---|---|---|---|---|
-| REQ-LED-001 | MVP | 未开始 | — | — | 应付/应收义务、部分登记、跨月结转、凭证和有原因撤销；录入与续签核对租金阶段、租金阶段更正（往月已有阶段不改，往月缺口可补录）与提前退租补收免租 |
+| REQ-LED-001 | MVP | 开发中 | `backend/src/models/asset_ledger.py`, `backend/src/services/asset_operations/rent_obligation_service.py`, `backend/src/services/asset_operations/rent_payment_command_service.py`, `backend/src/services/asset_operations/rent_schedule_correction_service.py`, `backend/src/services/asset_operations/rent_ledger_query_service.py`, `frontend/src/pages/AssetOperations/LedgersPage.tsx` | `backend/tests/unit/services/asset_operations/test_rent_obligation_rules.py`, `backend/tests/integration/database/test_rent_commands.py`, `backend/tests/e2e/test_asset_rent_ledger_e2e.py`, `frontend/src/pages/AssetOperations/__tests__/LedgersPage.test.tsx` | 应付/应收义务、部分登记、跨月结转、凭证和有原因撤销；录入与续签核对租金阶段、租金阶段更正（往月已有阶段不改，往月缺口可补录）与提前退租补收免租 |
 | REQ-DEP-001 | MVP | 未开始 | — | — | 应收未收、应付未付、应退未退、应收回四类方向；续签转入；合同结束后转租押金抵扣欠租（终止默认自动抵扣截至当月的欠租）；不退部分登记为押金扣除；委托管理协议无保证金 |
 | REQ-FEE-001 | MVP | 未开始 | — | — | 产权方实际到账 × 协议比例，双方盖章后锁定月度对账 |
 

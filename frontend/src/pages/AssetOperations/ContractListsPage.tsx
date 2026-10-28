@@ -18,6 +18,7 @@ import type {
 } from '@/services/assetOperationsService';
 
 import styles from './ContractListsPage.module.css';
+import ContractRentPanel from './ContractRentPanel';
 
 const PAGE_SIZE = 20;
 
@@ -235,6 +236,18 @@ function UpstreamList(props: {
               ]}
             />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            {detail.contractType === 'lease' ? (
+              <ContractRentPanel
+                key={`${detail.id}-${detail.version}`}
+                kind="upstream"
+                contractId={detail.id}
+                startDate={detail.startDate}
+                endDate={detail.endDate}
+                schedules={detail.rentSchedules}
+                summary={detail.rentSummary}
+                canCorrect={detail.status !== 'exited' && detail.status !== 'historical'}
+              />
+            ) : null}
             <p style={{ marginTop: 8 }}>
               <Link to={`/asset-operations/contracts/upstream/${detail.id}/actions`}>
                 退出 / 撤销 / 续签操作
@@ -252,14 +265,21 @@ function TerminalList(props: {
   statusLabels: Record<TerminalContractListItem['status'], string>;
 }): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [rentUnpaid, setRentUnpaid] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: PAGE_SIZE });
 
   const listQuery = useQuery({
-    queryKey: ['asset-operations-terminal-contracts', appliedSearch, pagination.current],
+    queryKey: [
+      'asset-operations-terminal-contracts',
+      appliedSearch,
+      pagination.current,
+      rentUnpaid,
+    ],
     queryFn: () =>
       assetOperationsService.listTerminalContracts({
+        ...(rentUnpaid ? { filter: 'rent_unpaid' } : {}),
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
         offset: (pagination.current - 1) * pagination.pageSize,
         limit: pagination.pageSize,
@@ -313,6 +333,19 @@ function TerminalList(props: {
   return (
     <ContractPageShell
       title={props.title}
+      extra={
+        <label>
+          <input
+            type="checkbox"
+            checked={rentUnpaid}
+            onChange={event => {
+              setRentUnpaid(event.target.checked);
+              setPagination(previous => ({ ...previous, current: 1 }));
+            }}
+          />
+          租金未到账
+        </label>
+      }
       searchProps={{
         searchText,
         setSearchText,
@@ -376,6 +409,16 @@ function TerminalList(props: {
                 终止 / 撤销 / 续签操作
               </Link>
             </p>
+            <ContractRentPanel
+              key={`${detail.id}-${detail.version}`}
+              kind="terminal"
+              contractId={detail.id}
+              startDate={detail.startDate}
+              endDate={detail.endDate}
+              schedules={detail.rentSchedules}
+              summary={detail.rentSummary}
+              canCorrect={detail.status !== 'ended' && detail.status !== 'historical'}
+            />
           </div>
         )
       }
@@ -399,6 +442,7 @@ interface ListQueryState {
 }
 
 function ContractPageShell<T extends { id: string }>(props: {
+  extra?: React.ReactNode;
   title: string;
   searchProps: SearchState;
   listQueryState: ListQueryState;
@@ -418,6 +462,7 @@ function ContractPageShell<T extends { id: string }>(props: {
   return (
     <div className={styles.page}>
       <h1 style={{ margin: 0, fontSize: 20 }}>{props.title}</h1>
+      {props.extra}
 
       {props.listQueryState.isError ? (
         <Alert

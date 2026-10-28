@@ -120,7 +120,7 @@ def test_compute_drifts_should_include_v5_contract_entities() -> None:
         assert drift.orm_only == []
 
 
-def test_rent_schedule_drift_is_limited_to_planned_v2_supersession_fields() -> None:
+def test_rent_schedule_supersession_fields_have_zero_drift() -> None:
     module = _load_module()
     drift = next(
         drift
@@ -128,7 +128,6 @@ def test_rent_schedule_drift_is_limited_to_planned_v2_supersession_fields() -> N
         if drift.entity == "ContractRentSchedule"
     )
 
-    # V2 PR-A plans these fields; retain the exact gap until its ORM migration.
     assert drift.model_file == "asset_contract.py::ContractRentSchedule"
-    assert drift.spec_only == ["superseded_at", "superseded_correlation_id"]
+    assert drift.spec_only == []
     assert drift.orm_only == []

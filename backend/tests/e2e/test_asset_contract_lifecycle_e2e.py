@@ -281,9 +281,10 @@ def test_terminal_termination_unlocks_upstream_exit_e2e(
         )
         assert changes.status_code == 200, changes.text
         audit = changes.json()
-        assert audit["total"] == 1, "幂等重试不得重复写入变更记录"
-        assert len(audit["items"]) == 1
-        change = audit["items"][0]
+        assert audit["total"] == 2, "命令和重排各一条，幂等重试不得重复写入"
+        assert len(audit["items"]) == 2
+        change = next(item for item in audit["items"] if item["action"] == event_type)
+        assert len({item["correlation_id"] for item in audit["items"]}) == 1
         assert change["action"] == event_type
         assert change["actor_id"] == getattr(client, "_user_id")
         assert change["reason"] == proposal["reason"]

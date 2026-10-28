@@ -32,6 +32,12 @@ _PRIVATE_FIELDS = {
     "email",
 }
 _ACTION_LABELS = {
+    "rent_obligations_replanned": "重排租金义务",
+    "rent_payment_registered": "登记租金",
+    "rent_payment_reversed": "撤销租金登记",
+    "manual_rent_created": "登记手工租金义务",
+    "manual_rent_voided": "作废手工租金义务",
+    "rent_schedule_corrected": "更正租金阶段",
     "confirmed": "确认合同",
     "updated": "修改合同",
     "renewed": "续签合同",

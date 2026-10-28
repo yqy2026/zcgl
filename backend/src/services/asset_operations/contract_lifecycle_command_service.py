@@ -6,7 +6,7 @@ import hashlib
 import json
 from collections.abc import Callable, Iterable
 from datetime import UTC, date, datetime, timedelta
-from typing import Protocol
+from typing import Protocol, cast
 from uuid import uuid4
 
 from sqlalchemy.exc import IntegrityError
@@ -16,6 +16,7 @@ from ...core.exception_handler import PartyScopeForbiddenError, ResourceNotFound
 from ...crud.asset_contract import (
     asset_contract_repository as default_contract_repository,
 )
+from ...crud.asset_unit import asset_unit_repository as default_unit_repository
 from ...models.asset_contract import (
     AssetContractWriteReceipt,
     ContractLifecycleEvent,
@@ -50,6 +51,9 @@ from .boundary_command_service import (
 )
 from .business_change_service import contract_snapshot, record_contract_change
 from .contract_command_service import (
+    AssetUnitWriter,
+)
+from .contract_command_service import (
     asset_contract_command_service as _default_contract_command,
 )
 from .errors import (
@@ -66,6 +70,7 @@ from .errors import (
     UpstreamExitReversalTargetInvalidError,
 )
 from .lifecycle_rules import validate_upstream_exit
+from .rent_obligation_service import RentObligationService, rent_obligation_service
 
 
 class ContractLifecycleWriter(Protocol):
@@ -260,12 +265,16 @@ class ContractLifecycleCommandService:
         contract_command: ContractCreator | None = None,
         clock: Callable[[], datetime] = _utcnow,
         id_factory: Callable[[], str] = lambda: str(uuid4()),
+        rent_obligations: RentObligationService = rent_obligation_service,
+        unit_repository: AssetUnitWriter | None = None,
     ) -> None:
         self.repository = repository or default_contract_repository
         self.preview_store = preview_store or ContractLifecyclePreviewStore()
         self.contract_command = contract_command or _default_contract_command
         self.clock = clock
         self.id_factory = id_factory
+        self.rent_obligations = rent_obligations
+        self.unit_repository = unit_repository or default_unit_repository
 
     async def terminate_terminal(
         self,
@@ -353,6 +362,13 @@ class ContractLifecycleCommandService:
                 effective_date=proposal.effective_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await self.rent_obligations.replan(
+                db,
+                contract_kind=event.contract_kind,
+                contract_id=contract_id,
+                actor_id=actor_id,
+                correlation_id=event.id,
+            )
             await record_contract_change(
                 db,
                 contract=contract,
@@ -508,6 +524,13 @@ class ContractLifecycleCommandService:
                 until=contract.end_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await self.rent_obligations.replan(
+                db,
+                contract_kind=event.contract_kind,
+                contract_id=contract_id,
+                actor_id=actor_id,
+                correlation_id=event.id,
+            )
             await record_contract_change(
                 db,
                 contract=contract,
@@ -597,6 +620,17 @@ class ContractLifecycleCommandService:
             and contract.deposit_amount > 0
         ):
             warnings.append("deposit_unsettled")
+        rent_plan = await self.rent_obligations.preview(
+            db, contract_kind="terminal", contract_id=contract_id, effective_end=cutoff
+        )
+        rent_fingerprint = await self.rent_obligations.fingerprint(
+            db, contract_kind="terminal", contract_id=contract_id
+        )
+        warnings.extend(
+            code
+            for code in cast(list[str], rent_plan.summary()["warnings"])
+            if code not in warnings
+        )
         token, expires_at = self.preview_store.issue(
             {
                 "actor_id": actor_id,
@@ -610,6 +644,7 @@ class ContractLifecycleCommandService:
                     contract_version=contract.version,
                     coverage_rows=self._coverage_fingerprint_rows(coverages),
                     events=events,
+                    rent_fingerprint=rent_fingerprint,
                 ),
             }
         )
@@ -620,6 +655,7 @@ class ContractLifecycleCommandService:
             effective_date=proposal.effective_date,
             last_valid_day=cutoff,
             coverage_impact=impact,
+            rent_impact=rent_plan.summary(),
             warnings=warnings,
             proposal=proposal,
             preview_token=token,
@@ -713,6 +749,9 @@ class ContractLifecycleCommandService:
             contract_version=contract.version,
             coverage_rows=self._coverage_fingerprint_rows(coverages),
             events=events,
+            rent_fingerprint=await self.rent_obligations.fingerprint(
+                db, contract_kind="terminal", contract_id=contract_id
+            ),
         ):
             raise AssetOperationsPreviewStaleError("state_changed")
 
@@ -831,6 +870,13 @@ class ContractLifecycleCommandService:
                 effective_date=proposal.effective_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await self.rent_obligations.replan(
+                db,
+                contract_kind=event.contract_kind,
+                contract_id=contract_id,
+                actor_id=actor_id,
+                correlation_id=event.id,
+            )
             await record_contract_change(
                 db,
                 contract=contract,
@@ -919,6 +965,18 @@ class ContractLifecycleCommandService:
             )
             for coverage in coverages
         ]
+        rent_plan = await self.rent_obligations.preview(
+            db, contract_kind="upstream", contract_id=contract_id, effective_end=cutoff
+        )
+        rent_fingerprint = await self.rent_obligations.fingerprint(
+            db, contract_kind="upstream", contract_id=contract_id
+        )
+        warnings: list[str] = []
+        warnings.extend(
+            code
+            for code in cast(list[str], rent_plan.summary()["warnings"])
+            if code not in warnings
+        )
         token, expires_at = self.preview_store.issue(
             {
                 "actor_id": actor_id,
@@ -932,6 +990,7 @@ class ContractLifecycleCommandService:
                     contract_version=contract.version,
                     coverage_rows=self._coverage_fingerprint_rows(coverages),
                     events=events,
+                    rent_fingerprint=rent_fingerprint,
                 ),
             }
         )
@@ -943,6 +1002,8 @@ class ContractLifecycleCommandService:
             effective_date=proposal.effective_date,
             last_valid_day=cutoff,
             coverage_impact=impact,
+            rent_impact=rent_plan.summary(),
+            warnings=warnings,
             proposal=proposal,
             preview_token=token,
             expires_at=expires_at,
@@ -1033,6 +1094,9 @@ class ContractLifecycleCommandService:
             contract_version=contract.version,
             coverage_rows=self._coverage_fingerprint_rows(coverages),
             events=events,
+            rent_fingerprint=await self.rent_obligations.fingerprint(
+                db, contract_kind="upstream", contract_id=contract_id
+            ),
         ):
             raise AssetOperationsPreviewStaleError("state_changed")
 
@@ -1176,6 +1240,13 @@ class ContractLifecycleCommandService:
                 until=contract.end_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await self.rent_obligations.replan(
+                db,
+                contract_kind=event.contract_kind,
+                contract_id=contract_id,
+                actor_id=actor_id,
+                correlation_id=event.id,
+            )
             await record_contract_change(
                 db,
                 contract=contract,
@@ -1481,7 +1552,21 @@ class ContractLifecycleCommandService:
             db,
             contract_id=contract_id,
             scope=scope,
-            for_update=True,
+            for_update=False,
+        )
+        if contract is None:
+            raise ResourceNotFoundError("TerminalContract", contract_id)
+        coverages = await self.repository.list_terminal_coverages(
+            db, contract_id=contract_id
+        )
+        unit_ids = sorted({row.asset_unit_id for row in coverages})
+        units = await self.unit_repository.lock_for_write(
+            db, unit_ids=unit_ids, scope=scope
+        )
+        if sorted(unit.id for unit in units) != unit_ids:
+            raise ResourceNotFoundError("TerminalContract", contract_id)
+        contract = await self.repository.get_terminal(
+            db, contract_id=contract_id, scope=scope, for_update=True
         )
         if contract is None:
             raise ResourceNotFoundError("TerminalContract", contract_id)
@@ -1498,7 +1583,21 @@ class ContractLifecycleCommandService:
             db,
             contract_id=contract_id,
             scope=scope,
-            for_update=True,
+            for_update=False,
+        )
+        if contract is None:
+            raise ResourceNotFoundError("UpstreamContract", contract_id)
+        coverages = await self.repository.list_upstream_coverages(
+            db, contract_id=contract_id
+        )
+        unit_ids = sorted({row.asset_unit_id for row in coverages})
+        units = await self.unit_repository.lock_for_write(
+            db, unit_ids=unit_ids, scope=scope
+        )
+        if sorted(unit.id for unit in units) != unit_ids:
+            raise ResourceNotFoundError("UpstreamContract", contract_id)
+        contract = await self.repository.get_upstream(
+            db, contract_id=contract_id, scope=scope, for_update=True
         )
         if contract is None:
             raise ResourceNotFoundError("UpstreamContract", contract_id)
@@ -1771,10 +1870,12 @@ class ContractLifecycleCommandService:
         contract_version: int,
         coverage_rows: Iterable[tuple[str, str, str]],
         events: tuple[ContractLifecycleEvent, ...],
+        rent_fingerprint: str = "",
     ) -> str:
         payload = {
             "contract_id": contract_id,
             "contract_version": contract_version,
+            "rent_fingerprint": rent_fingerprint,
             "coverages": sorted(coverage_rows),
             "lifecycle_events": sorted(
                 (event.event_type, event.id) for event in events
