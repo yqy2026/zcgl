@@ -640,7 +640,9 @@ class TerminalContractTerminationProposal(_StrictPayload):
     deposit_settlement_status: DepositSettlementStatus
     deposit_offset_mode: Literal["auto", "none", "manual"] = "auto"
     deposit_offsets: list[TerminationDepositOffset] = Field(default_factory=list)
-    clawback_amount: Decimal = Field(default=Decimal("0"), ge=0, max_digits=14, decimal_places=2)
+    clawback_amount: Decimal = Field(
+        default=Decimal("0"), ge=0, max_digits=14, decimal_places=2
+    )
     clawback_basis: str = Field(default="", max_length=500)
     reason: str = Field(..., min_length=1, max_length=500)
 

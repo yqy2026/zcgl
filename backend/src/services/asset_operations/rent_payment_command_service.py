@@ -352,7 +352,9 @@ class RentPaymentCommandService:
 
         deposit_record_id = original.paired_deposit_record_id
         if deposit_record_id is None:
-            raise rent_error("DEPOSIT_OFFSET_TARGET_INVALID", "租金抵扣缺少押金登记关联")
+            raise rent_error(
+                "DEPOSIT_OFFSET_TARGET_INVALID", "租金抵扣缺少押金登记关联"
+            )
         deposit = await deposit_ledger_repository.get_record(
             db, record_id=deposit_record_id
         )
