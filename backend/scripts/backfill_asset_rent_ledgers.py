@@ -11,12 +11,11 @@ import json
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from src.crud.auth import UserCRUD
+from src.crud.rent_backfill import rent_backfill_repository
 from src.database import get_async_database_url
-from src.models.asset_contract import TerminalContract, UpstreamContract
-from src.models.auth import User
 from src.services.asset_operations.rent_obligation_service import (
     rent_obligation_service,
 )
@@ -28,23 +27,13 @@ async def run(*, apply: bool, actor_id: str | None) -> None:
     try:
         async with factory() as session:
             if apply and (
-                actor_id is None or await session.get(User, actor_id) is None
+                actor_id is None
+                or await UserCRUD().get_async(session, actor_id) is None
             ):
                 raise ValueError(
                     "--apply requires an existing --actor-id for the audit trail"
                 )
-            contracts = [
-                (kind, contract)
-                for kind, model in [
-                    ("upstream", UpstreamContract),
-                    ("terminal", TerminalContract),
-                ]
-                for contract in (
-                    await session.execute(select(model).order_by(model.id))
-                )
-                .scalars()
-                .all()
-            ]
+            contracts = await rent_backfill_repository.list_contracts(session)
             report: dict[str, object] = {
                 "mode": "apply" if apply else "dry-run",
                 "contract_count": len(contracts),
@@ -55,7 +44,7 @@ async def run(*, apply: bool, actor_id: str | None) -> None:
             details = []
             for kind, contract in contracts:
                 if apply:
-                    await session.refresh(contract, with_for_update=True)
+                    await rent_backfill_repository.lock_contract(session, contract)
                 plan = await rent_obligation_service.preview(
                     session, contract_kind=kind, contract_id=contract.id
                 )

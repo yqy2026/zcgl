@@ -96,6 +96,22 @@ def validate_history(
     return tuple(gaps)
 
 
+def split_at_current_month(
+    stages: Sequence[ContractRentScheduleInput], first_month: date
+) -> list[ContractRentScheduleInput]:
+    """Keep a separate immutable history segment without changing cycle contents."""
+    result = []
+    for stage in stages:
+        if stage.stage_start < first_month <= stage.stage_end:
+            result.append(
+                stage.model_copy(update={"stage_end": first_month - timedelta(days=1)})
+            )
+            result.append(stage.model_copy(update={"stage_start": first_month}))
+        else:
+            result.append(stage)
+    return result
+
+
 class RentSchedulePreviewStore(AssetUnitBoundaryPreviewStore):
     NAMESPACE = "rent_schedule_correction_preview"
 
@@ -192,7 +208,7 @@ class RentScheduleCorrectionService:
                 contract_id=contract_id,
                 **stage.model_dump(),
             )
-            for stage in request.rent_schedules
+            for stage in split_at_current_month(request.rent_schedules, first)
         ]
         return contract, old, new, first, gaps
 
@@ -241,7 +257,10 @@ class RentScheduleCorrectionService:
         return RentScheduleCorrectionPreview(
             contract_id=contract_id,
             contract_version=contract.version,
-            rent_schedules=request.rent_schedules,
+            rent_schedules=[
+                ContractRentScheduleInput.model_validate(stage, from_attributes=True)
+                for stage in new
+            ],
             impact=plan.summary(),
             preview_token=token,
             expires_at=expires_at,

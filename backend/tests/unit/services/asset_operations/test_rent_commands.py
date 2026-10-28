@@ -14,6 +14,7 @@ from src.services.asset_operations.rent_payment_command_service import (
     validate_payment,
 )
 from src.services.asset_operations.rent_schedule_correction_service import (
+    split_at_current_month,
     validate_history,
 )
 from src.services.party_scope_resolver import EffectivePartyScope
@@ -73,6 +74,42 @@ def test_history_allows_splitting_an_unchanged_stage_at_current_month():
         stage("2026-03-01", "2026-12-31", "110"),
     ]
     assert validate_history(old, proposed, date(2026, 3, 1)) == ()
+
+
+@pytest.mark.parametrize("cycle", ["monthly", "quarterly", "yearly", "custom"])
+def test_cross_month_split_preserves_rent_and_payment_anchor(cycle):
+    from src.services.asset_operations.rent_obligation_rules import (
+        RentStage,
+        generate_obligations,
+    )
+
+    original = stage("2026-02-12", "2027-02-11").model_copy(
+        update={"payment_cycle": cycle}
+    )
+    split = split_at_current_month([original], date(2026, 10, 1))
+    assert [(s.stage_start, s.stage_end) for s in split] == [
+        (date(2026, 2, 12), date(2026, 9, 30)),
+        (date(2026, 10, 1), date(2027, 2, 11)),
+    ]
+
+    def targets(stages):
+        return generate_obligations(
+            start_date=original.stage_start,
+            end_date=original.stage_end,
+            stages=[
+                RentStage(
+                    s.stage_start,
+                    s.stage_end,
+                    s.actual_monthly_rent,
+                    s.payment_cycle,
+                    s.due_day,
+                )
+                for s in stages
+            ],
+        )
+
+    assert targets(split) == targets([original])
+    assert split_at_current_month(split, date(2026, 10, 1)) == split
 
 
 @pytest.mark.parametrize(

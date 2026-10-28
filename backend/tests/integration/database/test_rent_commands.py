@@ -289,6 +289,10 @@ async def test_correction_backfills_old_gap_and_retains_superseded_stage(
             scope=scope,
         )
         assert preview.impact["created_count"] == 12
+        assert [(s.stage_start, s.stage_end) for s in preview.rent_schedules] == [
+            (date(2026, 1, 1), date(2026, 2, 28)),
+            (date(2026, 3, 1), date(2026, 12, 31)),
+        ]
     async with factory() as db:
         first = await service.commit(
             db,
@@ -350,8 +354,8 @@ async def test_correction_backfills_old_gap_and_retains_superseded_stage(
             .scalars()
             .all()
         )
-        assert len(schedules) == 3
-        assert sum(row.superseded_at is not None for row in schedules) == 1
+        assert len(schedules) == 4
+        assert sum(row.superseded_at is not None for row in schedules) == 2
         january = (
             (
                 await db.execute(

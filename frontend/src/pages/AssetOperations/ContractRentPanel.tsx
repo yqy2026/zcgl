@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
@@ -108,14 +108,23 @@ function RentScheduleCorrection({
   const values = form.watch();
   const [valid, setValid] = useState(true);
   const [preview, setPreview] = useState<CorrectionPreview | null>(null);
+  const proposalRevision = useRef(0);
+  const invalidatePreview = (): void => {
+    proposalRevision.current += 1;
+    setPreview(null);
+  };
   const previewMutation = useMutation({
-    mutationFn: () =>
-      assetLedgerService.previewCorrection(kind, contractId, {
+    mutationFn: async (revision: number) => ({
+      revision,
+      result: await assetLedgerService.previewCorrection(kind, contractId, {
         reason: values.reason.trim(),
         rent_schedules: values.rentSchedules,
       }),
+    }),
     retry: false,
-    onSuccess: setPreview,
+    onSuccess: ({ revision, result }) => {
+      if (revision === proposalRevision.current) setPreview(result);
+    },
   });
   const commit = useMutation({
     mutationFn: () => {
@@ -155,15 +164,18 @@ function RentScheduleCorrection({
         startDate={startDate}
         endDate={endDate}
         initialSchedules={schedules}
-        onValidityChange={setValid}
+        onValidityChange={next => {
+          setValid(next);
+          if (!next) invalidatePreview();
+        }}
         onChange={next => {
           form.setValue('rentSchedules', next);
-          setPreview(null);
+          invalidatePreview();
         }}
       />
       <label className={styles.field}>
         更正原因
-        <input {...form.register('reason', { onChange: () => setPreview(null) })} />
+        <input {...form.register('reason', { onChange: invalidatePreview })} />
       </label>
       {previewMutation.isError ? (
         <Alert
@@ -178,7 +190,10 @@ function RentScheduleCorrection({
       <Button
         disabled={!valid || values.reason.trim() === ''}
         loading={previewMutation.isPending}
-        onClick={() => previewMutation.mutate()}
+        onClick={() => {
+          setPreview(null);
+          previewMutation.mutate(proposalRevision.current);
+        }}
       >
         预览更正影响
       </Button>
