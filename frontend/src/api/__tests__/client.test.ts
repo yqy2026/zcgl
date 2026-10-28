@@ -4,7 +4,7 @@
  */
 
 import type { AxiosError, AxiosResponse } from 'axios';
-import { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
+import { AxiosError as HttpError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { Logger } from '@/utils/logger';
@@ -444,6 +444,34 @@ describe('ApiClient', () => {
         configurable: true,
         writable: true,
       });
+    });
+
+    it('expired password POST preserves a 401 without refresh or redirect', async () => {
+      setTestLocation('/login', '', '');
+      const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => {
+        throw new HttpError('Invalid credentials', 'ERR_BAD_REQUEST', config, undefined, {
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: {},
+          config,
+          data: { message: 'Invalid credentials' },
+        });
+      });
+      await expect(
+        client.post(
+          '/auth/expired-password',
+          {},
+          {
+            adapter,
+            retry: false,
+            skipAuthRefresh: true,
+            suppressAuthRedirect: true,
+          }
+        )
+      ).rejects.toBeDefined();
+      expect(adapter).toHaveBeenCalledTimes(1);
+      expect(mockClearAuthData).not.toHaveBeenCalled();
+      expect(window.location.href).toBe('');
     });
 
     it('refresh接口返回401时应直接登出，避免递归刷新', async () => {

@@ -22,6 +22,24 @@ interface Permission {
 }
 
 export class AuthService {
+  static async changeExpiredPassword(payload: {
+    username: string;
+    current_password: string;
+    new_password: string;
+  }): Promise<void> {
+    try {
+      const requestOptions = {
+        retry: false,
+        skipAuthRefresh: true,
+        suppressAuthRedirect: true,
+      };
+      const result = await apiClient.post('/auth/expired-password', payload, requestOptions);
+      if (!result.success)
+        throw new Error(typeof result.error === 'string' ? result.error : '修改密码失败');
+    } catch (error) {
+      throw new Error(ApiErrorHandler.handleError(error).message);
+    }
+  }
   // 用户登录
   static async login(credentials: LoginCredentials): Promise<StandardApiResponse<AuthResponse>> {
     try {

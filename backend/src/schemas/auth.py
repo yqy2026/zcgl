@@ -268,6 +268,24 @@ class PasswordChangeRequest(BaseModel):
         return v
 
 
+class ExpiredPasswordRequest(PasswordChangeRequest):
+    username: str = Field(min_length=1, max_length=100)
+
+    @field_validator("username")
+    @classmethod
+    def clean_username(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("请输入账号")
+        return value.strip()
+
+    @field_validator("current_password", "new_password")
+    @classmethod
+    def bcrypt_byte_limit(cls, value: str) -> str:
+        if not 0 < len(value.encode("utf-8")) <= 72:
+            raise ValueError("密码UTF-8长度须为1至72字节")
+        return value
+
+
 # 会话相关模型
 class UserSessionResponse(BaseModel):
     """用户会话响应模型"""

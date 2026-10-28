@@ -32,3 +32,9 @@ class BusinessLogicError(BaseBusinessError):
             code="BUSINESS_LOGIC_ERROR",
             status_code=400,
         )
+
+
+class PasswordExpiredError(BusinessLogicError):
+    def __init__(self) -> None:
+        super().__init__("密码已过期，请修改密码后重新登录")
+        self.code = "PASSWORD_EXPIRED"

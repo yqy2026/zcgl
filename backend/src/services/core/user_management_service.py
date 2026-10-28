@@ -352,6 +352,8 @@ class AsyncUserManagementService:
             raise BusinessLogicError("新密码不能与最近使用过的密码相同")
 
         new_password_hash = self.password_service.get_password_hash(new_password)
+        if not self.password_service.is_password_in_history(user, current_password):
+            self.password_service.add_password_to_history(user, user.password_hash)
         user.password_hash = new_password_hash
 
         self.password_service.add_password_to_history(user, new_password_hash)
