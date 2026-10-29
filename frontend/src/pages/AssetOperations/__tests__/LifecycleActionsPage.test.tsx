@@ -44,6 +44,26 @@ function makePreview(): TerminationPreview {
     warnings: [],
     previewToken: 'token-1',
     expiresAt: '2026-10-25T10:00:00',
+    depositSettlement: {
+      entry_id: 'deposit',
+      version: 2,
+      held_amount: 100,
+      candidates: [
+        {
+          ledger_entry_id: 'rent-one',
+          remaining: 100,
+          period_start: '2026-01-01',
+          period_end: '2026-01-31',
+          contract_id: 'terminal-1',
+        },
+      ],
+      offsets: [{ ledger_entry_id: 'rent', amount: 40 }],
+      clawback_amount: 0,
+      clawback_basis: '',
+      refundable_amount: 60,
+      additional_due_amount: 20,
+      recoverable_amount: 0,
+    },
   };
 }
 
@@ -243,10 +263,15 @@ describe('TerminalActionsPage', () => {
         termination_type: 'early',
         handover_status: 'pending',
         deposit_settlement_status: 'pending',
+        deposit_offset_mode: 'auto',
+        clawback_amount: '0',
+        clawback_basis: '',
         reason: '提前退租',
       });
     });
     expect(screen.getByText(/最后有效日 2026-06-29/)).toBeTruthy();
+    expect(screen.getByText(/本次抵扣 40.00 元；待退还 60.00 元/)).toBeTruthy();
+    expect(screen.getByText('租户仍需补缴租金 20.00 元。')).toBeTruthy();
     expect(screen.getByText(/2026-12-31 → 2026-06-29/)).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: '确认终止' }));
@@ -281,4 +306,29 @@ describe('TerminalActionsPage', () => {
       expect(screen.getByText('预览已失效或版本已变化，请重新预览后再提交。')).toBeTruthy();
     });
   });
+});
+
+it('re-previews manual offset allocations and hides the previous confirmation', async () => {
+  mockedService.previewTerminalTermination.mockResolvedValue(makePreview());
+  const user = userEvent.setup();
+  renderActionsPage();
+  await user.type(screen.getByLabelText('终止生效日（该日起合同不再有效）'), '2026-06-30');
+  await user.type(screen.getAllByLabelText('原因')[0], '提前退租');
+  await user.click(screen.getByRole('button', { name: '预览终止影响' }));
+  await screen.findByRole('button', { name: '确认终止' });
+  await user.selectOptions(screen.getByLabelText('押金抵扣'), 'manual');
+  expect(screen.queryByRole('button', { name: '确认终止' })).toBeNull();
+  const amount = screen.getByLabelText(/2026-01-01 至 2026-01-31/);
+  await user.clear(amount);
+  await user.type(amount, '30');
+  await user.click(screen.getByRole('button', { name: '预览终止影响' }));
+  await waitFor(() =>
+    expect(mockedService.previewTerminalTermination).toHaveBeenLastCalledWith(
+      'terminal-1',
+      expect.objectContaining({
+        deposit_offset_mode: 'manual',
+        deposit_offsets: [{ ledger_entry_id: 'rent-one', amount: '30' }],
+      })
+    )
+  );
 });

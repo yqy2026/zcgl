@@ -464,6 +464,7 @@ export interface TerminationCoverageImpact {
 }
 
 export interface TerminationPreview {
+  depositSettlement?: DepositSettlementPreview;
   rentImpact?: import('@/services/assetLedgerService').RentImpact;
   contractId: string;
   contractVersion: number;
@@ -473,6 +474,25 @@ export interface TerminationPreview {
   warnings: string[];
   previewToken: string;
   expiresAt: string;
+}
+
+export interface DepositSettlementPreview {
+  entry_id: string;
+  version: number;
+  held_amount: number;
+  offsets: { ledger_entry_id: string; amount: number }[];
+  candidates: {
+    ledger_entry_id: string;
+    remaining: number;
+    period_start: string;
+    period_end: string;
+    contract_id: string;
+  }[];
+  clawback_amount: number;
+  clawback_basis: string;
+  refundable_amount: number;
+  additional_due_amount: number;
+  recoverable_amount: number;
 }
 
 export interface LifecycleEventRecord {
@@ -486,6 +506,7 @@ export interface LifecycleEventRecord {
 }
 
 export interface ExitPreview {
+  depositSettlement?: { applicable?: boolean; recoverable_amount?: number };
   rentImpact?: import('@/services/assetLedgerService').RentImpact;
   contractId: string;
   contractVersion: number;
@@ -650,7 +671,7 @@ export class AssetOperationsService {
 
   async listTerminalContracts(
     params: {
-      filter?: 'rent_unpaid';
+      filter?: 'rent_unpaid' | 'deposit_unsettled';
       contractMode?: string;
       upstreamContractId?: string;
       q?: string;
@@ -877,6 +898,10 @@ export class AssetOperationsService {
       termination_type: string;
       handover_status: string;
       deposit_settlement_status: string;
+      deposit_offset_mode?: 'auto' | 'none' | 'manual';
+      deposit_offsets?: { ledger_entry_id: string; amount: number | string }[];
+      clawback_amount?: number | string;
+      clawback_basis?: string;
       reason: string;
     }
   ): Promise<TerminationPreview> {
@@ -896,6 +921,13 @@ export class AssetOperationsService {
         contractVersion: Number(data.contract_version ?? 1),
         effectiveDate: String(data.effective_date ?? ''),
         lastValidDay: String(data.last_valid_day ?? ''),
+        ...(data.deposit_settlement != null
+          ? {
+              depositSettlement: convertBackendToFrontend<DepositSettlementPreview>(
+                data.deposit_settlement
+              ),
+            }
+          : {}),
         coverageImpact: impacts.map(item => {
           const impact = item as RawUnitRecord;
           return {
@@ -1002,6 +1034,14 @@ export class AssetOperationsService {
         contractId: String(data.contract_id ?? contractId),
         contractVersion: Number(data.contract_version ?? 1),
         depositAmount: requireDecimal(data, 'deposit_amount'),
+        ...(data.deposit_settlement != null
+          ? {
+              depositSettlement: convertBackendToFrontend<{
+                applicable?: boolean;
+                recoverable_amount?: number;
+              }>(data.deposit_settlement),
+            }
+          : {}),
         effectiveDate: String(data.effective_date ?? ''),
         lastValidDay: String(data.last_valid_day ?? ''),
         coverageImpact: impacts.map(item => {

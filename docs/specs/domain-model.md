@@ -36,7 +36,7 @@
 | ContractAssetUnit | 关系事实 | 合同在期间内覆盖的资产单元 |
 | ContractRentSchedule | 业务事实 | 合同分阶段租金、账期、递增和免租条款 |
 | ContractLifecycleEvent | 业务事实 | 续签、终止、退出和撤销等追加事件 |
-| AssetContractWriteReceipt | 技术事实 | 资产运营高后果命令（合同确认与续签、租金阶段更正、手工义务、管理费对账）的幂等请求指纹与首次响应 |
+| AssetContractWriteReceipt | 技术事实 | 资产运营高后果命令（合同确认与续签、终止结算、租金阶段更正、手工义务、管理费对账）的幂等请求指纹与首次响应 |
 | RentLedgerEntry | 业务事实 | 某合同某账期的一笔应付、应收或产权方应报到账义务 |
 | RentPaymentRecord | 业务事实 | 外部付款、到账或押金抵扣的追加登记及其撤销 |
 | DepositLedgerEntry | 业务事实 | 每份承租合同或终端合同一条押金条目；约定、持有余额和待处理方向由合同与记录派生 |
@@ -437,7 +437,8 @@ gap                = target_amount − held_amount
 | `lifecycle_event_id` | UUID? | 随终端终止写入的 `deduct` 指向该终止事件 |
 | `reverses_record_id` | UUID? | 撤销时必填，且一笔记录只能有效撤销一次 |
 | `reason` | string? | 撤销和 `forfeit` 必填 |
-| `created_by` / `created_at` | UUID / datetime | 操作审计 |
+| `created_by` | UUID | 操作人 |
+| `created_at` | datetime | 操作时间 |
 | `idempotency_key` | string | 唯一 |
 
 记录类型与收取方匹配：`collector=operator` 的终端押金接受 `collect` / `refund` / `deduct` / `forfeit`；`collector=owner` 的终端押金接受 `owner_reported_collect` / `owner_reported_refund` / `forfeit`（直签押金由产权方收退，本系统只登记产权方报告，不提供抵扣）；承租合同押金接受 `pay` / `recover` / `forfeit`。`forfeit` 记押金中不退还的部分（赔偿、违约金等）：转租由本公司扣，直签按产权方报告，承租合同由产权方扣；原因必填，只在结束阶段可用，不超过 `held_amount`，不生成租金记录。收入记录不得超过当时 `gap` 的正值部分，支出记录不得超过 `held_amount`。已续签合同的押金条目不再接受新记录。`deduct` 只在结束阶段可用：用押金抵扣本合同或其续签前驱未作废、仍有剩余金额的转租终端租金义务（含补收免租义务），金额同时不超过该义务剩余金额；它与租金侧 `deposit_offset` 记录在同一事务成对写入，撤销任一侧时同一事务撤销另一侧。终端终止默认把可用押金按到期日从早到晚用于抵扣账期首月不晚于当前业务月的未结租金（含补收免租义务，按其账期判断），用户可在预览中取消或调整，调整后的明细由预览 token 绑定，与终止事件同一事务写入；以后月份的租金到期后再在押金上手工抵扣。正向记录不得直接更新或删除。
@@ -668,13 +669,13 @@ gap                = target_amount − held_amount
 |---|---|---|
 | `id` | UUID | 主键 |
 | `actor_id` | UUID | 发起命令的用户 |
-| `command_kind` | enum | `create_upstream` / `create_terminal` / `correct_rent_schedule` / `create_manual_rent_entry` / `void_manual_rent_entry` / `defer_management_fee_line` / `confirm_management_fee_statement` / `supersede_management_fee_statement` |
+| `command_kind` | enum | `create_upstream` / `create_terminal` / `terminate_terminal` / `correct_rent_schedule` / `create_manual_rent_entry` / `void_manual_rent_entry` / `defer_management_fee_line` / `confirm_management_fee_statement` / `supersede_management_fee_statement` |
 | `idempotency_key` | string | 与 `actor_id` 联合唯一 |
 | `request_fingerprint` | string | 规范化确认请求的 SHA-256 |
 | `result_data` | object | 首次成功响应快照 |
 | `created_at` | datetime | 首次成功时间 |
 
-回执与命令的业务写入在同一事务提交（合同确认时即合同、资产单元覆盖及租金阶段）。同一操作者以同键重试同一规范化请求时返回首次响应；同键改写合同条款、覆盖单元或命令类型时返回 `IDEMPOTENCY_CONFLICT`。回执是命令可靠性事实，不作为合同业务状态或审计事件的替代。
+回执与命令的业务写入在同一事务提交（合同确认时即合同、资产单元覆盖及租金阶段；终止时包括覆盖截止、事件、租金重排、免租补收和押金抵扣）。同一操作者以同键重试同一规范化请求时返回首次响应；同键改写合同条款、覆盖单元、终止抵扣分配、补收免租或命令类型时返回 `IDEMPOTENCY_CONFLICT`。回执是命令可靠性事实，不作为合同业务状态或审计事件的替代。
 
 ## 5. 状态机
 

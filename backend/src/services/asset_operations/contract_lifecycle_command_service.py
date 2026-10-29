@@ -56,6 +56,7 @@ from .contract_command_service import (
 from .contract_command_service import (
     asset_contract_command_service as _default_contract_command,
 )
+from .deposit_settlement_service import deposit_settlement_service
 from .errors import (
     AssetContractCoverageInvalidError,
     AssetOperationsIdempotencyConflictError,
@@ -70,6 +71,7 @@ from .errors import (
     UpstreamExitReversalTargetInvalidError,
 )
 from .lifecycle_rules import validate_upstream_exit
+from .rent_command_support import fingerprint, receipt, replay_receipt
 from .rent_obligation_service import RentObligationService, rent_obligation_service
 
 
@@ -288,13 +290,17 @@ class ContractLifecycleCommandService:
     ) -> ContractLifecycleEventResponse:
         self._require_actor_scope(actor_id=actor_id, scope=scope)
         self._require_effective_scope(scope)
+        await deposit_settlement_service.prelock(
+            db, contract_id=contract_id, scope=scope, proposal=proposal
+        )
         existing = await self.repository.get_lifecycle_event_by_idempotency_key(
             db,
             idempotency_key=idempotency_key,
         )
         if existing is not None:
             await self._require_terminal(db, contract_id=contract_id, scope=scope)
-            return self._replay_termination(
+            return await self._replay_termination(
+                db,
                 existing,
                 contract_id=contract_id,
                 proposal=proposal,
@@ -311,7 +317,8 @@ class ContractLifecycleCommandService:
             idempotency_key=idempotency_key,
         )
         if existing is not None:
-            return self._replay_termination(
+            return await self._replay_termination(
+                db,
                 existing,
                 contract_id=contract_id,
                 proposal=proposal,
@@ -336,6 +343,9 @@ class ContractLifecycleCommandService:
             coverages=coverages,
         )
 
+        settlement = await deposit_settlement_service.preview(
+            db, contract=contract, scope=scope, proposal=proposal
+        )
         audit_before: dict[str, object] = {
             "contract": contract_snapshot(contract),
             "coverages": [contract_snapshot(row) for row in coverages],
@@ -369,6 +379,15 @@ class ContractLifecycleCommandService:
                 actor_id=actor_id,
                 correlation_id=event.id,
             )
+            await deposit_settlement_service.apply(
+                db,
+                contract=contract,
+                event=event,
+                proposal=proposal,
+                settlement=settlement,
+                actor_id=actor_id,
+                scope=scope,
+            )
             await record_contract_change(
                 db,
                 contract=contract,
@@ -385,6 +404,16 @@ class ContractLifecycleCommandService:
                 correlation_id=event.id,
                 occurred_at=self.clock(),
             )
+            await receipt(
+                db,
+                actor_id=actor_id,
+                key=idempotency_key,
+                action="terminate_terminal",
+                request_fingerprint=fingerprint(
+                    "terminate_terminal", contract_id, proposal
+                ),
+                result=self._response(event, idempotent=False),
+            )
             await db.commit()
             return self._response(event, idempotent=False)
         except IntegrityError:
@@ -395,7 +424,8 @@ class ContractLifecycleCommandService:
             )
             if existing is None:
                 raise
-            return self._replay_termination(
+            return await self._replay_termination(
+                db,
                 existing,
                 contract_id=contract_id,
                 proposal=proposal,
@@ -423,6 +453,9 @@ class ContractLifecycleCommandService:
         """
         self._require_actor_scope(actor_id=actor_id, scope=scope)
         self._require_effective_scope(scope)
+        await deposit_settlement_service.prelock(
+            db, contract_id=contract_id, scope=scope, event_id=proposal.target_event_id
+        )
         existing = await self.repository.get_lifecycle_event_by_idempotency_key(
             db,
             idempotency_key=idempotency_key,
@@ -524,6 +557,13 @@ class ContractLifecycleCommandService:
                 until=contract.end_date,
             )
             await self.repository.add_lifecycle_event(db, event=event)
+            await deposit_settlement_service.reverse(
+                db,
+                event_id=target.id,
+                actor_id=actor_id,
+                scope=scope,
+                reason=proposal.reason,
+            )
             await self.rent_obligations.replan(
                 db,
                 contract_kind=event.contract_kind,
@@ -631,6 +671,9 @@ class ContractLifecycleCommandService:
             for code in cast(list[str], rent_plan.summary()["warnings"])
             if code not in warnings
         )
+        settlement = await deposit_settlement_service.preview(
+            db, contract=contract, scope=scope, proposal=proposal
+        )
         token, expires_at = self.preview_store.issue(
             {
                 "actor_id": actor_id,
@@ -639,6 +682,7 @@ class ContractLifecycleCommandService:
                 "proposal": proposal.model_dump(mode="json"),
                 "scope_signature": self._scope_signature(scope),
                 "versions": {contract_id: contract.version},
+                "deposit_settlement": settlement,
                 "state_fingerprint": self._lifecycle_state_fingerprint(
                     contract_id=contract.id,
                     contract_version=contract.version,
@@ -656,6 +700,7 @@ class ContractLifecycleCommandService:
             last_valid_day=cutoff,
             coverage_impact=impact,
             rent_impact=rent_plan.summary(),
+            deposit_settlement=settlement,
             warnings=warnings,
             proposal=proposal,
             preview_token=token,
@@ -690,7 +735,8 @@ class ContractLifecycleCommandService:
                     scope=scope,
                     contract_id=contract_id,
                 )
-                self._replay_termination(
+                await self._replay_termination(
+                    db,
                     existing,
                     contract_id=contract_id,
                     proposal=proposal,
@@ -722,6 +768,9 @@ class ContractLifecycleCommandService:
                 actual_version=token_version if isinstance(token_version, int) else -1,
             )
 
+        await deposit_settlement_service.prelock(
+            db, contract_id=contract_id, scope=scope, proposal=proposal
+        )
         contract = await self._require_terminal(
             db,
             contract_id=contract_id,
@@ -733,6 +782,11 @@ class ContractLifecycleCommandService:
                 expected_version=request.expected_version,
                 actual_version=contract.version,
             )
+        settlement = await deposit_settlement_service.preview(
+            db, contract=contract, scope=scope, proposal=proposal
+        )
+        if preview_payload.get("deposit_settlement") != settlement:
+            raise AssetOperationsPreviewStaleError("deposit_state_changed")
         coverages = await self.repository.list_terminal_coverages(
             db,
             contract_id=contract_id,
@@ -760,7 +814,8 @@ class ContractLifecycleCommandService:
             idempotency_key=idempotency_key,
         )
         if existing is not None:
-            self._replay_termination(
+            await self._replay_termination(
+                db,
                 existing,
                 contract_id=contract_id,
                 proposal=proposal,
@@ -977,6 +1032,9 @@ class ContractLifecycleCommandService:
             for code in cast(list[str], rent_plan.summary()["warnings"])
             if code not in warnings
         )
+        settlement = await deposit_settlement_service.preview(
+            db, contract=contract, scope=scope
+        )
         token, expires_at = self.preview_store.issue(
             {
                 "actor_id": actor_id,
@@ -985,6 +1043,7 @@ class ContractLifecycleCommandService:
                 "proposal": proposal.model_dump(mode="json"),
                 "scope_signature": self._scope_signature(scope),
                 "versions": {contract_id: contract.version},
+                "deposit_settlement": settlement,
                 "state_fingerprint": self._lifecycle_state_fingerprint(
                     contract_id=contract.id,
                     contract_version=contract.version,
@@ -1003,6 +1062,7 @@ class ContractLifecycleCommandService:
             last_valid_day=cutoff,
             coverage_impact=impact,
             rent_impact=rent_plan.summary(),
+            deposit_settlement=settlement,
             warnings=warnings,
             proposal=proposal,
             preview_token=token,
@@ -1078,6 +1138,11 @@ class ContractLifecycleCommandService:
                 expected_version=request.expected_version,
                 actual_version=contract.version,
             )
+        settlement = await deposit_settlement_service.preview(
+            db, contract=contract, scope=scope
+        )
+        if preview_payload.get("deposit_settlement") != settlement:
+            raise AssetOperationsPreviewStaleError("deposit_state_changed")
         coverages = await self.repository.list_upstream_coverages(
             db,
             contract_id=contract_id,
@@ -1701,14 +1766,23 @@ class ContractLifecycleCommandService:
         except ValueError as exc:
             raise AssetOperationsPreviewStaleError("proposal_invalid") from exc
 
-    def _replay_termination(
+    async def _replay_termination(
         self,
+        db: AsyncSession,
         event: ContractLifecycleEvent,
         *,
         contract_id: str,
         proposal: TerminalContractTerminationProposal,
         actor_id: str,
     ) -> ContractLifecycleEventResponse:
+        durable = await default_contract_repository.get_write_receipt(
+            db, actor_id=actor_id, idempotency_key=event.idempotency_key
+        )
+        if durable is None or durable.command_kind != "terminate_terminal":
+            raise AssetOperationsIdempotencyConflictError()
+        replay_receipt(
+            durable, fingerprint("terminate_terminal", contract_id, proposal)
+        )
         expected = (
             "terminal",
             contract_id,

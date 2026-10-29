@@ -102,7 +102,7 @@ class AssetContractWriteReceipt(Base):
             name="uq_asset_contract_write_receipts_actor_request",
         ),
         CheckConstraint(
-            "command_kind IN ('create_upstream', 'create_terminal', 'correct_rent_schedule', 'create_manual_rent_entry', 'void_manual_rent_entry')",
+            "command_kind IN ('create_upstream', 'create_terminal', 'correct_rent_schedule', 'create_manual_rent_entry', 'void_manual_rent_entry', 'terminate_terminal')",
             name="ck_asset_contract_write_receipts_command_kind",
         ),
     )

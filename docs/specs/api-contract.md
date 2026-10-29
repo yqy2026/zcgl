@@ -193,6 +193,8 @@
 
 上游缺失和租期越界返回 warning，不阻止登记；同一资产单元同日终端合同重叠返回 409。
 
+终止请求的押金字段为 `deposit_offset_mode`（`auto` / `none` / `manual`，默认 `auto`）、`deposit_offsets`（`ledger_entry_id/amount` 明细）、`clawback_amount` 和 `clawback_basis`。预览 `deposit_settlement` 返回押金版本、持有金额、候选与规范化分配、`refundable_amount`（分配后待退押金）和 `additional_due_amount`（候选未结租金与补收金额合计减本次分配，最低为 0）。尚未落库的租金及本次补收候选使用本次预览内稳定的标识，客户端在终止提议中原样回传；它们不能用于独立的押金抵租端点，提交时才解析成实际租金条目。
+
 ### 5.7 租金台账与登记
 
 | 能力 | 方法与路径 | 契约 |
@@ -220,6 +222,8 @@ PR-A 矩阵响应为 `ledger_type` / `year` / `current_month` / `rows` 和三项
 | 撤销处理 | `POST /api/v1/deposit-records/{record_id}/reversal` | 原记录保留，原因必填；撤销 `deduct` 时同一事务撤销配对的租金抵扣记录 |
 
 押金条目随承租合同和终端合同确认（含续签后继）创建，每份合同一条，不提供手工创建端点；委托管理协议不约定保证金，没有押金条目；约定、持有余额和状态均派生（领域模型 §4.18）。直签终端合同由产权方收取押金，本系统只登记产权方报告，不提供抵扣操作；承租合同押金由本公司付给产权方，登记支付与收回。续签时押金整体转入后继合同，前驱显示已转入，不产生应退或应收回。转租押金只在合同结束阶段（已登记终止或已到期）可抵扣欠租，终止时默认自动抵扣截至当月的欠租（见 §5.6）。押金中不退还的部分（赔偿、违约金或产权方扣留）登记为 `forfeit`：只在合同结束阶段可用，原因必填，不生成租金记录；转租由本公司扣，直签按产权方报告，承租合同由产权方扣。
+
+列表接受 `contract_kind`、`contract_id`、`party_id`、`project_id` 以及 `page`（默认 1）和 `page_size`（默认 20，上限 200）；返回 `items/total/page/page_size`。详情另返回 `ended`、`read_only` 与 `offset_candidates`；候选仅为结束阶段、未续签转出的转租押金提供，包含本合同及有效续签祖先中当前数据范围可见的未作废、未结清租金（`id/contract_id/period_start/period_end/due_date/remaining_amount`），用于界面选择而不扩展写权限。列表不加载候选，候选返回空数组。登记写入使用请求头 `Idempotency-Key`；金额以 Decimal 契约传输。
 
 记录类型与收取方不匹配返回 422 `DEPOSIT_RECORD_TYPE_MISMATCH`；收入超出待收 / 待付金额或支出超出持有余额返回 409 `DEPOSIT_AMOUNT_EXCEEDS_REMAINING`；向已续签合同的押金条目登记返回 409 `DEPOSIT_ENTRY_CARRIED_FORWARD`；合同仍在期内时抵扣或扣除返回 409 `DEPOSIT_OFFSET_NOT_ALLOWED`；扣除缺原因返回 422 `FORFEIT_REASON_REQUIRED`；抵扣目标不是本合同或其续签前驱未作废、仍有剩余金额的转租终端租金义务，或金额超出其剩余金额，返回 409 `DEPOSIT_OFFSET_TARGET_INVALID`；重复撤销返回 409 `DEPOSIT_RECORD_ALREADY_REVERSED`。
 

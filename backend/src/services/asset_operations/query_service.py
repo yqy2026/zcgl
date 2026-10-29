@@ -456,6 +456,7 @@ class AssetOperationsQueryService:
         offset: int = 0,
         limit: int = 50,
         rent_unpaid: bool = False,
+        deposit_unsettled: bool = False,
     ) -> tuple[list[TerminalContractDetail], int]:
         self._require_effective_scope(scope)
         extra_filters: dict[str, set[str]] = {}
@@ -466,6 +467,23 @@ class AssetOperationsQueryService:
                 "contract_ids"
             ] = await rent_ledger_query_service.unpaid_contract_ids(
                 db, today=self.business_today()
+            )
+        if deposit_unsettled:
+            from ...crud.deposit_queries import deposit_query_repository
+            from .deposit_query_service import project_deposit_facts
+
+            facts = await deposit_query_repository.load_facts(
+                db, scope=scope, contract_kind="terminal"
+            )
+            unsettled_ids = {
+                view.contract_id
+                for view in project_deposit_facts(facts, today=self.business_today())
+                if view.status != "settled"
+            }
+            extra_filters["contract_ids"] = (
+                extra_filters["contract_ids"] & unsettled_ids
+                if "contract_ids" in extra_filters
+                else unsettled_ids
             )
         contracts, total = await self.asset_contract_repository.list_terminal(
             db,

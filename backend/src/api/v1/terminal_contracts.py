@@ -59,7 +59,9 @@ async def list_terminal_contracts(
     q: str | None = Query(None, max_length=100, description="编号搜索"),
     offset: int = Query(0, ge=0, description="跳过条数"),
     limit: int = Query(50, ge=1, le=200, description="返回条数"),
-    filter: Literal["rent_unpaid"] | None = Query(None, description="租金未到账"),
+    filter: Literal["rent_unpaid", "deposit_unsettled"] | None = Query(
+        None, description="租金未到账或押金未结清"
+    ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz: Annotated[
@@ -85,6 +87,7 @@ async def list_terminal_contracts(
             upstream_contract_id=upstream_contract_id,
             query=q,
             rent_unpaid=filter == "rent_unpaid",
+            deposit_unsettled=filter == "deposit_unsettled",
             offset=offset,
             limit=limit,
         )

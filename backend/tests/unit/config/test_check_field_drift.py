@@ -131,3 +131,25 @@ def test_rent_schedule_supersession_fields_have_zero_drift() -> None:
     assert drift.model_file == "asset_contract.py::ContractRentSchedule"
     assert drift.spec_only == []
     assert drift.orm_only == []
+
+
+def test_deposit_source_fields_match_orm_without_persisting_derived_balances() -> None:
+    module = _load_module()
+    drifts = {drift.entity: drift for drift in module.compute_drifts()}
+    for entity in ("DepositLedgerEntry", "DepositRecord"):
+        assert drifts[entity].spec_only == []
+        assert drifts[entity].orm_only == []
+    source_columns = module.parse_orm_columns(
+        module.MODELS_DIR / "deposit_ledger.py", "DepositLedgerEntry"
+    )
+    assert source_columns.isdisjoint(
+        {
+            "agreed_amount",
+            "held_amount",
+            "carried_in_amount",
+            "carried_out_amount",
+            "outstanding_amount",
+            "direction",
+            "status",
+        }
+    )

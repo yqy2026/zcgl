@@ -19,6 +19,7 @@ import type {
 
 import styles from './ContractListsPage.module.css';
 import ContractRentPanel from './ContractRentPanel';
+import ContractDepositPanel from './ContractDepositPanel';
 
 const PAGE_SIZE = 20;
 
@@ -236,6 +237,11 @@ function UpstreamList(props: {
               ]}
             />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <ContractDepositPanel
+              kind="upstream"
+              contractId={detail.id}
+              contractType={detail.contractType}
+            />
             {detail.contractType === 'lease' ? (
               <ContractRentPanel
                 key={`${detail.id}-${detail.version}`}
@@ -266,6 +272,7 @@ function TerminalList(props: {
 }): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const [rentUnpaid, setRentUnpaid] = useState(false);
+  const [depositUnsettled, setDepositUnsettled] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: PAGE_SIZE });
@@ -276,10 +283,15 @@ function TerminalList(props: {
       appliedSearch,
       pagination.current,
       rentUnpaid,
+      depositUnsettled,
     ],
     queryFn: () =>
       assetOperationsService.listTerminalContracts({
-        ...(rentUnpaid ? { filter: 'rent_unpaid' } : {}),
+        ...(depositUnsettled
+          ? { filter: 'deposit_unsettled' }
+          : rentUnpaid
+            ? { filter: 'rent_unpaid' }
+            : {}),
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
         offset: (pagination.current - 1) * pagination.pageSize,
         limit: pagination.pageSize,
@@ -334,17 +346,32 @@ function TerminalList(props: {
     <ContractPageShell
       title={props.title}
       extra={
-        <label>
-          <input
-            type="checkbox"
-            checked={rentUnpaid}
-            onChange={event => {
-              setRentUnpaid(event.target.checked);
-              setPagination(previous => ({ ...previous, current: 1 }));
-            }}
-          />
-          租金未到账
-        </label>
+        <div>
+          <label>
+            <input
+              type="checkbox"
+              checked={rentUnpaid}
+              onChange={event => {
+                setRentUnpaid(event.target.checked);
+                setDepositUnsettled(false);
+                setPagination(previous => ({ ...previous, current: 1 }));
+              }}
+            />
+            租金未到账
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={depositUnsettled}
+              onChange={event => {
+                setDepositUnsettled(event.target.checked);
+                setRentUnpaid(false);
+                setPagination(previous => ({ ...previous, current: 1 }));
+              }}
+            />
+            押金未结清
+          </label>
+        </div>
       }
       searchProps={{
         searchText,
@@ -419,6 +446,7 @@ function TerminalList(props: {
               summary={detail.rentSummary}
               canCorrect={detail.status !== 'ended' && detail.status !== 'historical'}
             />
+            <ContractDepositPanel kind="terminal" contractId={detail.id} />
           </div>
         )
       }

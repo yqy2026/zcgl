@@ -242,6 +242,15 @@ class RentPaymentCommandService:
             original = await asset_ledger_repository.get_record(db, record_id=record_id)
             if original is None:
                 raise ResourceNotFoundError("RentPaymentRecord", record_id)
+            if original.record_type == "deposit_offset":
+                return await self._reverse_deposit_offset(
+                    db,
+                    original=original,
+                    request=request,
+                    actor_id=actor_id,
+                    scope=scope,
+                    idempotency_key=idempotency_key,
+                )
             entry = await self._entry(
                 db, entry_id=original.ledger_entry_id, scope=scope, lock=True
             )
@@ -263,12 +272,6 @@ class RentPaymentCommandService:
                 is not None
             ):
                 raise rent_error("PAYMENT_RECORD_ALREADY_REVERSED", "该登记已撤销")
-            if original.record_type == "deposit_offset":
-                raise rent_error(
-                    "RENT_RECORD_TYPE_MISMATCH",
-                    "押金抵扣须通过押金处理成对撤销",
-                    status=422,
-                )
             record = RentPaymentRecord(  # type: ignore[call-arg]
                 id=str(uuid4()),
                 ledger_entry_id=entry.id,
@@ -332,6 +335,74 @@ class RentPaymentCommandService:
         except Exception:
             await db.rollback()
             raise
+
+    async def _reverse_deposit_offset(
+        self,
+        db: AsyncSession,
+        *,
+        original: RentPaymentRecord,
+        request: RentReversalRequest,
+        actor_id: str,
+        scope: EffectivePartyScope,
+        idempotency_key: str,
+    ) -> RentRecordCommandResponse:
+        from ...crud.deposit_ledger import deposit_ledger_repository
+        from ...schemas.deposit_commands import DepositReversalRequest
+        from .deposit_command_service import deposit_command_service
+
+        deposit_record_id = original.paired_deposit_record_id
+        if deposit_record_id is None:
+            raise rent_error(
+                "DEPOSIT_OFFSET_TARGET_INVALID", "租金抵扣缺少押金登记关联"
+            )
+        deposit = await deposit_ledger_repository.get_record(
+            db, record_id=deposit_record_id
+        )
+        if deposit is None:
+            raise ResourceNotFoundError("DepositRecord", deposit_record_id)
+        deposit_entry, rent = await deposit_command_service._lock(
+            db,
+            entry_id=deposit.deposit_entry_id,
+            scope=scope,
+            offset_id=original.ledger_entry_id,
+        )
+        if rent is None:
+            raise ResourceNotFoundError("RentLedgerEntry", original.ledger_entry_id)
+        # Check replay before the optimistic version: a successful retry keeps its original version.
+        existing = await asset_ledger_repository.get_record_by_idempotency(
+            db, key=idempotency_key
+        )
+        if existing is not None:
+            if (
+                existing.reverses_record_id != original.id
+                or existing.created_by != actor_id
+                or existing.reason != request.reason
+            ):
+                raise AssetOperationsIdempotencyConflictError()
+            return self._result(existing, rent, idempotent=True)
+        check_version(rent.id, rent.version, request.expected_version)
+        result = await deposit_command_service.reverse(
+            db,
+            record_id=deposit.id,
+            request=DepositReversalRequest(
+                reason=request.reason, expected_version=deposit_entry.version
+            ),
+            actor_id=actor_id,
+            scope=scope,
+            idempotency_key=idempotency_key,
+            commit=False,
+        )
+        paired = await asset_ledger_repository.get_record_by_idempotency(
+            db, key=f"deposit:{result.id}"
+        )
+        if paired is None:
+            raise ResourceNotFoundError("RentPaymentRecord", result.id)
+        # The public rent key belongs to this rent-side reversal as well.
+        paired.idempotency_key = idempotency_key
+        await db.flush()
+        response = self._result(paired, rent, idempotent=result.idempotent)
+        await db.commit()
+        return response
 
     async def create_manual(
         self,

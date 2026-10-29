@@ -25,6 +25,10 @@ interface TerminalTerminationForm {
   terminationType: string;
   handoverStatus: string;
   depositSettlementStatus: string;
+  depositOffsetMode: 'auto' | 'none' | 'manual';
+  depositOffsets: Record<string, string>;
+  clawbackAmount: string;
+  clawbackBasis: string;
   reason: string;
 }
 
@@ -68,6 +72,10 @@ const TERMINAL_TERMINATION_DEFAULTS: TerminalTerminationForm = {
   terminationType: 'early',
   handoverStatus: 'pending',
   depositSettlementStatus: 'pending',
+  depositOffsetMode: 'auto',
+  depositOffsets: {},
+  clawbackAmount: '0',
+  clawbackBasis: '',
   reason: '',
 };
 
@@ -143,6 +151,9 @@ export function TerminalActionsPage(): React.ReactElement {
     defaultValues: REVERSAL_DEFAULTS,
   });
   const [preview, setPreview] = useState<TerminationPreview | null>(null);
+  const [offsetCandidates, setOffsetCandidates] = useState<
+    NonNullable<TerminationPreview['depositSettlement']>['candidates']
+  >([]);
   const [notice, setNotice] = useState<string | null>(null);
   const renewFileRef = useRef<HTMLInputElement>(null);
   const [scheduleValid, setScheduleValid] = useState(true);
@@ -165,10 +176,21 @@ export function TerminalActionsPage(): React.ReactElement {
         termination_type: values.terminationType,
         handover_status: values.handoverStatus,
         deposit_settlement_status: values.depositSettlementStatus,
+        deposit_offset_mode: values.depositOffsetMode,
+        ...(values.depositOffsetMode === 'manual'
+          ? {
+              deposit_offsets: Object.entries(values.depositOffsets)
+                .filter(([, amount]) => Number(amount) > 0)
+                .map(([ledger_entry_id, amount]) => ({ ledger_entry_id, amount })),
+            }
+          : {}),
+        clawback_amount: values.clawbackAmount,
+        clawback_basis: values.clawbackBasis.trim(),
         reason: values.reason.trim(),
       }),
     onSuccess: result => {
       setPreview(result);
+      setOffsetCandidates(result.depositSettlement?.candidates ?? []);
       setNotice(null);
     },
   });
@@ -254,7 +276,7 @@ export function TerminalActionsPage(): React.ReactElement {
       <h1 style={{ margin: 0, fontSize: 20 }}>终端合同 · 生命周期操作</h1>
       {notice != null ? <Alert type="success" showIcon title={notice} /> : null}
 
-      <div className={styles.actionCard}>
+      <div className={styles.actionCard} onChangeCapture={() => setPreview(null)}>
         <h2 className={styles.actionTitle}>终止</h2>
         <label className={styles.fieldColumn}>
           终止生效日（该日起合同不再有效）
@@ -280,6 +302,57 @@ export function TerminalActionsPage(): React.ReactElement {
             render={({ field }) => <Input {...field} />}
           />
         </label>
+        <label className={styles.fieldColumn}>
+          押金抵扣
+          <Controller
+            control={terminationControl}
+            name="depositOffsetMode"
+            render={({ field }) => (
+              <select {...field}>
+                <option value="auto">自动抵扣本月及以前的未收租金</option>
+                <option value="none">本次不抵扣</option>
+                <option value="manual">手工分配抵扣金额</option>
+              </select>
+            )}
+          />
+        </label>
+        {terminationForm.depositOffsetMode === 'manual' ? (
+          <div>
+            <p>先预览读取可抵扣账期，再填写各期金额并重新预览；金额为 0 的账期不抵扣。</p>
+            {offsetCandidates.map(candidate => (
+              <label className={styles.fieldColumn} key={candidate.ledger_entry_id}>
+                {candidate.ledger_entry_id === 'clawback'
+                  ? '补收免租'
+                  : `${candidate.period_start} 至 ${candidate.period_end}`}{' '}
+                · 未收 {candidate.remaining.toFixed(2)} 元
+                <Controller
+                  control={terminationControl}
+                  name={`depositOffsets.${candidate.ledger_entry_id}`}
+                  defaultValue="0"
+                  render={({ field }) => (
+                    <Input type="number" min="0" max={candidate.remaining} step="0.01" {...field} />
+                  )}
+                />
+              </label>
+            ))}
+          </div>
+        ) : null}
+        <label className={styles.fieldColumn}>
+          补收免租金额
+          <Controller
+            control={terminationControl}
+            name="clawbackAmount"
+            render={({ field }) => <Input type="number" min="0" step="0.01" {...field} />}
+          />
+        </label>
+        <label className={styles.fieldColumn}>
+          补收免租依据（金额大于 0 时必填）
+          <Controller
+            control={terminationControl}
+            name="clawbackBasis"
+            render={({ field }) => <Input {...field} />}
+          />
+        </label>
         <Button
           disabled={
             terminationForm.effectiveDate === '' ||
@@ -300,6 +373,26 @@ export function TerminalActionsPage(): React.ReactElement {
               title={`最后有效日 ${preview.lastValidDay}；请核对以下覆盖截止变化后确认。`}
             />
             {preview.rentImpact != null ? <RentImpactSummary impact={preview.rentImpact} /> : null}
+            {preview.depositSettlement != null ? (
+              <div>
+                <p>
+                  当前持有押金 {preview.depositSettlement.held_amount.toFixed(2)} 元；本次抵扣{' '}
+                  {preview.depositSettlement.offsets
+                    .reduce((sum, row) => sum + row.amount, 0)
+                    .toFixed(2)}{' '}
+                  元；待退还 {preview.depositSettlement.refundable_amount.toFixed(2)} 元。
+                </p>
+                <p>
+                  租户仍需补缴租金 {preview.depositSettlement.additional_due_amount.toFixed(2)} 元。
+                </p>
+                <p>
+                  补收免租 {preview.depositSettlement.clawback_amount.toFixed(2)} 元
+                  {preview.depositSettlement.clawback_basis !== ''
+                    ? ` · ${preview.depositSettlement.clawback_basis}`
+                    : ''}
+                </p>
+              </div>
+            ) : null}
             {preview.coverageImpact.map(impact => (
               <div className={styles.impactRow} key={impact.assetUnitId}>
                 <span>{impact.assetUnitId}</span>
@@ -698,6 +791,9 @@ export function UpstreamActionsPage(): React.ReactElement {
               showIcon
               title={`最后有效日 ${preview.lastValidDay}；请核对覆盖截止变化后确认。`}
             />
+            {preview.depositSettlement?.recoverable_amount != null ? (
+              <p>待收回押金 {preview.depositSettlement.recoverable_amount.toFixed(2)} 元。</p>
+            ) : null}
             {preview.rentImpact != null ? <RentImpactSummary impact={preview.rentImpact} /> : null}
             {preview.coverageImpact.map(impact => (
               <div className={styles.impactRow} key={impact.assetUnitId}>

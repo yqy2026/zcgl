@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from src.crud.auth import UserCRUD
 from src.crud.rent_backfill import rent_backfill_repository
 from src.database import get_async_database_url
+from src.services.asset_operations.deposit_entry_service import deposit_entry_service
 from src.services.asset_operations.rent_obligation_service import (
     rent_obligation_service,
 )
@@ -38,11 +39,14 @@ async def run(*, apply: bool, actor_id: str | None) -> None:
                 "mode": "apply" if apply else "dry-run",
                 "contract_count": len(contracts),
                 "target_obligation_count": 0,
+                "target_deposit_entry_count": 0,
                 "target_amount": Decimal("0"),
                 "contracts": [],
             }
             details = []
             for kind, contract in contracts:
+                if deposit_entry_service.collector_for(kind, contract) is not None:
+                    report["target_deposit_entry_count"] += 1
                 if apply:
                     await rent_backfill_repository.lock_contract(session, contract)
                 plan = await rent_obligation_service.preview(
@@ -70,6 +74,9 @@ async def run(*, apply: bool, actor_id: str | None) -> None:
                         contract_id=contract.id,
                         actor_id=actor_id,
                         correlation_id=str(uuid4()),
+                    )
+                    await deposit_entry_service.ensure_entry(
+                        session, contract_kind=kind, contract=contract
                     )
             report["contracts"] = details
             if apply:
