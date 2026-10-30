@@ -92,8 +92,8 @@ importers:
         specifier: ^7.28.5
         version: 7.28.5(@babel/core@7.29.7)
       '@faker-js/faker':
-        specifier: ^10.1.0
-        version: 10.2.0
+        specifier: ^10.5.0
+        version: 10.5.0
       '@playwright/test':
         specifier: ^1.53.2
         version: 1.58.2
@@ -1173,8 +1173,8 @@ packages:
       '@exodus/crypto':
         optional: true
 
-  '@faker-js/faker@10.2.0':
-    resolution: {integrity: sha512-rTXwAsIxpCqzUnZvrxVh3L0QA0NzToqWBLAhV+zDV3MIIwiQhAZHMdPCIaj5n/yADu/tyk12wIPgL6YHGXJP+g==}
+  '@faker-js/faker@10.5.0':
+    resolution: {integrity: sha512-bsxD8WLS5lIj7aaoCx1YJkktqYj5vlBUE6HWzu2Q51ksrGJ0H737ECCKlFU7Yf8Br45z9t99frBp/J7kzbMPAg==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
 
   '@fast-csv/format@4.3.5':
@@ -1924,6 +1924,7 @@ packages:
     resolution: {integrity: sha512-77PpsFQUCOiZR9+LQEFg9GClyfkNXj1MP6wRnzYs0EeWbPcHs02AXu4xuUbM1zhwn3wqaizle3AEYg5aeoohhg==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-x64-musl@4.59.0':
     resolution: {integrity: sha512-2UdiwS/9cTAx7qIUZB/fWtToJwvt0Vbo0zmnYt7ED35KPg13Q0ym1g442THLC7VyI6JfYTP4PiSOWyoMdV2/xg==}
@@ -5457,7 +5458,7 @@ snapshots:
 
   '@exodus/bytes@1.8.0': {}
 
-  '@faker-js/faker@10.2.0': {}
+  '@faker-js/faker@10.5.0': {}
 
   '@fast-csv/format@4.3.5':
     dependencies:
