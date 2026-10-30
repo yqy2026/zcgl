@@ -505,7 +505,9 @@ jobs:
   # ===========================
   frontend-e2e:
     name: Frontend E2E Tests
-    runs-on: ubuntu-latest
+    # ubuntu-latest 滚动到 26.04 后，锁定的 Playwright 无该平台 chromium 二进制；
+    # 固定 24.04 直至升级 Playwright。
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     needs: [backend-test, frontend-test]
     env:

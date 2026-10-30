@@ -9,6 +9,11 @@ import userEvent from '@testing-library/user-event';
 import { waitFor } from '@testing-library/react';
 import { assetLedgerService } from '@/services/assetLedgerService';
 import { AssetOperationsError } from '@/services/assetOperationsService';
+import { managementFeeService } from '@/services/managementFeeService';
+
+vi.mock('@/services/managementFeeService', () => ({
+  managementFeeService: { matrix: vi.fn() },
+}));
 
 vi.mock('@/services/assetLedgerService', async original => ({
   ...(await original<typeof import('@/services/assetLedgerService')>()),
@@ -19,17 +24,56 @@ vi.mock('@/components/System/CapabilityGuard', () => ({
 }));
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
-function show(): void {
+function show(path = '/'): void {
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <LedgersPage />
       </MemoryRouter>
     </QueryClientProvider>
   );
 }
+it('opens the fee ledger from its URL and links to the statement without fetching rent', async () => {
+  vi.mocked(managementFeeService.matrix).mockResolvedValue({
+    ledger_type: 'management_fee',
+    year: 2026,
+    current_month: 10,
+    rows: [
+      {
+        owner_party_id: 'owner',
+        owner_name: '产权公司',
+        total_confirmed_amount: 100,
+        months: Array.from({ length: 12 }, (_, index) => ({
+          month: index + 1,
+          statement_id: index === 9 ? 'st/1' : null,
+          status: index === 9 ? 'pending_stamp' : index > 9 ? 'upcoming' : 'missing',
+          fee_amount: index === 9 ? 50 : null,
+        })),
+      },
+    ],
+    total_confirmed_amount: 100,
+  });
+  show('/asset-operations/ledgers?ledger_type=management_fee');
+  expect(await screen.findByText('产权公司')).toBeVisible();
+  expect(screen.getByRole('link', { name: /待盖章/ })).toHaveAttribute(
+    'href',
+    '/asset-operations/management-fees/st%2F1'
+  );
+  expect(screen.getByText(/全年已确认/, { selector: 'strong' })).toHaveTextContent('100.00');
+  expect(assetLedgerService.getMatrix).not.toHaveBeenCalled();
+  expect(screen.queryByText('登记自定义账期或补收免租')).toBeNull();
+});
+
+it('does not show stale fee rows after a scope denial', async () => {
+  vi.mocked(managementFeeService.matrix).mockRejectedValue(
+    new AssetOperationsError('无权限', 'PARTY_SCOPE_MISSING')
+  );
+  show('/asset-operations/ledgers?ledger_type=management_fee');
+  expect(await screen.findByText('暂无管理费台账访问权限')).toBeVisible();
+  expect(screen.queryByText('本年暂无管理费对账单')).toBeNull();
+});
 it('renders scope denial without calling it an empty ledger', async () => {
   vi.mocked(assetLedgerService.getMatrix).mockRejectedValue(
     new AssetOperationsError('无有效范围', 'PARTY_SCOPE_MISSING')

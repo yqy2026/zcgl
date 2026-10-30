@@ -32,6 +32,10 @@ _PRIVATE_FIELDS = {
     "email",
 }
 _ACTION_LABELS = {
+    "defer_management_fee_line": "标记管理费顺延",
+    "confirm_management_fee_statement": "确认管理费对账单",
+    "supersede_management_fee_statement": "更正管理费对账单",
+    "management_fee_stamp_bound": "绑定管理费盖章件",
     "rent_obligations_replanned": "重排租金义务",
     "rent_payment_registered": "登记租金",
     "rent_payment_reversed": "撤销租金登记",

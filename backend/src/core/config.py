@@ -7,7 +7,7 @@
 import logging
 import os
 from json import JSONDecodeError, loads
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -71,10 +71,11 @@ class Settings(
 ):
     """应用配置"""
 
-    if TYPE_CHECKING:
-        # pydantic-settings 在运行时通过环境变量填充字段；
-        # 该 stub 仅用于静态类型检查，避免将必填字段误判为构造参数。
-        def __init__(self, **kwargs: Any) -> None: ...
+    def __init__(self, **values: Any) -> None:
+        # Disable the source before Pydantic constructs/reads dotenv settings.
+        if os.getenv("PYDANTIC_SETTINGS_IGNORE_DOT_ENV") == "1":
+            values["_env_file"] = None
+        super().__init__(**values)
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"

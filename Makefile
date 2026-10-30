@@ -109,9 +109,11 @@ test-backend:
 
 test-frontend:
 	cd frontend && pnpm test
+	cd frontend && pnpm test:bootstrap
 
 test-frontend-ci:
 	cd frontend && CI=true pnpm test
+	cd frontend && pnpm test:bootstrap
 
 test-e2e: test-e2e-backend test-e2e-frontend
 

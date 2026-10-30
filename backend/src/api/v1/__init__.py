@@ -10,6 +10,7 @@ from . import (
     contract_intake_sessions,  # noqa: F401
     deposits,  # noqa: F401
     extraction_sessions,  # noqa: F401
+    management_fee_statements,  # noqa: F401
     party,  # noqa: F401
     property_certificate_attachments,  # noqa: F401
     rent_ledger_queries,  # noqa: F401

@@ -30,6 +30,9 @@ from .errors import (
     AssetOperationsIdempotencyConflictError,
     AssetOperationsVersionConflictError,
 )
+from .management_fee_entry_service import management_fee_entry_service
+from .management_fee_query_service import management_fee_query_service
+from .management_fee_write_guard import management_fee_write_guard
 from .rent_command_support import (
     audit,
     check_version,
@@ -134,6 +137,7 @@ class RentPaymentCommandService:
         actor_id: str,
         scope: EffectivePartyScope,
         idempotency_key: str,
+        management_fee_statement_id: str | None = None,
     ) -> RentRecordCommandResponse:
         require_scope(scope, actor_id)
         try:
@@ -173,6 +177,22 @@ class RentPaymentCommandService:
                     )
                 if document is None:
                     raise ResourceNotFoundError("Attachment", request.document_id)
+            if entry.entry_type == "owner_receipt_expected":
+                await management_fee_write_guard.before_change(db, entry=entry)
+            if management_fee_statement_id is not None:
+                detail = await management_fee_query_service.detail(
+                    db, statement_id=management_fee_statement_id, scope=scope
+                )
+                if detail.statement.status is not None:
+                    raise rent_error(
+                        "MANAGEMENT_FEE_STATEMENT_LOCKED",
+                        "已确认或已更正的对账单不可修改",
+                    )
+                if detail.projection is None or not any(
+                    line.rent_ledger_entry_id == entry.id
+                    for line in detail.projection.lines
+                ):
+                    raise ResourceNotFoundError("ManagementFeeStatementLine", entry.id)
             record = RentPaymentRecord(  # type: ignore[call-arg]
                 id=str(uuid4()),
                 ledger_entry_id=entry.id,
@@ -272,6 +292,10 @@ class RentPaymentCommandService:
                 is not None
             ):
                 raise rent_error("PAYMENT_RECORD_ALREADY_REVERSED", "该登记已撤销")
+            if original.record_type == "owner_reported_receipt":
+                await management_fee_write_guard.before_change(
+                    db, entry=entry, reversing_record_id=original.id
+                )
             record = RentPaymentRecord(  # type: ignore[call-arg]
                 id=str(uuid4()),
                 ledger_entry_id=entry.id,
@@ -565,6 +589,10 @@ class RentPaymentCommandService:
             )
             await asset_ledger_repository.add_entry(db, entry=entry)
             await db.flush()
+            if entry.entry_type == "owner_receipt_expected":
+                await management_fee_entry_service.ensure_bound_contract(
+                    db, terminal_contract_id=entry.contract_id
+                )
             await audit(
                 db,
                 kind=request.contract_kind,
@@ -641,6 +669,8 @@ class RentPaymentCommandService:
             )
             if effective_paid(records) > 0:
                 raise rent_error("RENT_LEDGER_ENTRY_LOCKED", "存在有效登记，不能作废")
+            if entry.entry_type == "owner_receipt_expected":
+                await management_fee_write_guard.before_change(db, entry=entry)
             correlation_id = str(uuid4())
             entry.voided_at = datetime.now(UTC)
             entry.void_correlation_id = correlation_id

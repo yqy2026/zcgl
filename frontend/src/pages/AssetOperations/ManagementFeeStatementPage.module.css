@@ -1,0 +1,158 @@
+.page {
+  display: grid;
+  gap: var(--spacing-lg);
+  min-inline-size: 0;
+}
+.toolbar,
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+.paper,
+.controls {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  inline-size: 100%;
+  max-inline-size: 47.5rem;
+  margin-inline: auto;
+  padding: var(--spacing-xl);
+  background: var(--color-bg-primary);
+  border: var(--border-width-thin) solid var(--color-border);
+}
+.header {
+  text-align: center;
+  margin-block-end: var(--spacing-xl);
+}
+.header h1 {
+  font-size: var(--font-size-xl);
+  margin: 0;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+}
+.meta dt {
+  color: var(--color-text-secondary);
+}
+.meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.scroll {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+.table {
+  border-collapse: collapse;
+  inline-size: 100%;
+  min-inline-size: 40rem;
+  font-variant-numeric: tabular-nums;
+  table-layout: auto;
+}
+.table th,
+.table td {
+  padding: var(--spacing-sm);
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-block-end: var(--border-width-thin) solid var(--color-border);
+}
+.table th {
+  font-weight: 600;
+}
+.table td {
+  white-space: nowrap;
+}
+.total {
+  margin-block: var(--spacing-xl);
+  font-variant-numeric: tabular-nums;
+}
+.paper p {
+  overflow-wrap: anywhere;
+}
+.stamps {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-xl);
+  min-block-size: 6rem;
+  border-block-start: var(--border-width-thin) solid var(--color-border);
+}
+.controls {
+  display: grid;
+  gap: var(--spacing-md);
+}
+.controls h2 {
+  font-size: var(--font-size-lg);
+  margin: 0;
+}
+.field {
+  display: grid;
+  gap: var(--spacing-xs);
+  min-inline-size: 0;
+}
+.field input,
+.field select {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  font: inherit;
+  padding: var(--spacing-sm);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+}
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--spacing-md);
+  align-items: end;
+}
+.page :focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--spacing-xs);
+}
+@media print {
+  /* Keep the paper in normal page flow and remove only its application shell. */
+  :global(body):has(.paper) :global(*):has(.paper) {
+    display: block !important;
+    position: static !important;
+    transform: none !important;
+    opacity: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-block-size: 0 !important;
+    block-size: auto !important;
+    inline-size: auto !important;
+    overflow: visible !important;
+  }
+  :global(body):has(.paper) :global(*):has(.paper) > :global(*):not(:has(.paper)):not(.paper) {
+    display: none !important;
+  }
+  .paper {
+    max-inline-size: none;
+    border: none;
+  }
+  .toolbar,
+  .controls {
+    display: none;
+  }
+  .scroll {
+    overflow: visible;
+  }
+  .table {
+    min-inline-size: 0;
+  }
+  .table thead {
+    display: table-header-group;
+  }
+  .table tr,
+  .stamps,
+  .total {
+    break-inside: avoid;
+  }
+}

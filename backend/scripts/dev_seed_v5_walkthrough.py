@@ -20,6 +20,10 @@ UNIT_B = "v5-walkthrough-unit-b"
 OTHER_OWNER_UNIT = "v5-walkthrough-other-owner-unit"
 UPSTREAM_ID = "v5-walkthrough-upstream"
 TERMINAL_ID = "v5-walkthrough-terminal"
+MGMT_ID = "v5-walkthrough-mgmt"
+FEE_TERMINAL_ID = "v5-walkthrough-terminal-owner"
+SCAN_MGMT = "v5-walkthrough-scan-mgmt"
+SCAN_FEE_TM = "v5-walkthrough-scan-fee-tm"
 SCAN_UP = "v5-walkthrough-scan-up"
 SCAN_TM = "v5-walkthrough-scan-tm"
 USERNAME = "v5-walkthrough"
@@ -32,6 +36,7 @@ async def main() -> None:
 
     from src.database import get_async_database_url
     from src.models.asset_contract import (
+        ContractRentSchedule,
         TerminalContract,
         TerminalContractAssetUnit,
         UpstreamContract,
@@ -277,6 +282,115 @@ async def main() -> None:
         if assignment is None:
             session.add(UserRoleAssignment(user_id=USER_ID, role_id=role.id))
             print("role assigned")
+
+        # Management fee chain: a management agreement plus an owner-collected
+        # direct lease. Seeded after the user because the replan hook writes
+        # obligations and audit rows that reference users.id. Fee statements
+        # themselves come from the production replan hook, never from direct
+        # statement inserts.
+        if await session.get(UpstreamContract, MGMT_ID) is None:
+            session.add(
+                Attachment(
+                    id=SCAN_MGMT,
+                    owner_type="contract",
+                    owner_id=MGMT_ID,
+                    file_name="walk-mgmt.pdf",
+                    file_type="pdf",
+                    file_size=1,
+                    storage_key="walkthrough/mgmt.pdf",
+                    created_by=USER_ID,
+                )
+            )
+            await session.flush()
+            session.add(
+                UpstreamContract(
+                    id=MGMT_ID,
+                    contract_number="UP-WALK-MGMT",
+                    contract_type="management_agreement",
+                    name="走查委托管理协议",
+                    owner_party_id=OWNER_ID,
+                    operator_party_id=OPERATOR_ID,
+                    start_date=date(2026, 1, 1),
+                    end_date=date(2027, 12, 31),
+                    deposit_amount=Decimal("0"),
+                    management_fee_rate=Decimal("0.10"),
+                    scan_document_id=SCAN_MGMT,
+                    version=1,
+                ),
+            )
+            session.add(
+                UpstreamContractAssetUnit(
+                    upstream_contract_id=MGMT_ID,
+                    asset_unit_id=UNIT_B,
+                    effective_from=date(2026, 1, 1),
+                    effective_to=date(2027, 12, 31),
+                )
+            )
+        if await session.get(TerminalContract, FEE_TERMINAL_ID) is None:
+            session.add(
+                Attachment(
+                    id=SCAN_FEE_TM,
+                    owner_type="contract",
+                    owner_id=FEE_TERMINAL_ID,
+                    file_name="walk-fee-terminal.pdf",
+                    file_type="pdf",
+                    file_size=1,
+                    storage_key="walkthrough/fee-terminal.pdf",
+                    created_by=USER_ID,
+                )
+            )
+            await session.flush()
+            session.add(
+                TerminalContract(
+                    id=FEE_TERMINAL_ID,
+                    contract_number="TM-WALK-OWNER",
+                    contract_mode="direct_lease",
+                    tenant_party_id=TENANT_ID,
+                    lessor_party_id=OWNER_ID,
+                    upstream_contract_id=MGMT_ID,
+                    start_date=date(2026, 1, 1),
+                    end_date=date(2027, 6, 30),
+                    deposit_amount=Decimal("0"),
+                    rent_collector="owner",
+                    scan_document_id=SCAN_FEE_TM,
+                    version=1,
+                )
+            )
+            session.add(
+                TerminalContractAssetUnit(
+                    terminal_contract_id=FEE_TERMINAL_ID,
+                    asset_unit_id=UNIT_B,
+                    effective_from=date(2026, 1, 1),
+                    effective_to=date(2027, 6, 30),
+                )
+            )
+            session.add(
+                ContractRentSchedule(
+                    contract_kind="terminal",
+                    contract_id=FEE_TERMINAL_ID,
+                    stage_start=date(2026, 1, 1),
+                    stage_end=date(2027, 6, 30),
+                    base_monthly_rent=Decimal("10000"),
+                    actual_monthly_rent=Decimal("10000"),
+                    payment_cycle="monthly",
+                    due_day=15,
+                )
+            )
+            await session.flush()
+            from uuid import uuid4
+
+            from src.services.asset_operations.rent_obligation_service import (
+                rent_obligation_service,
+            )
+
+            await rent_obligation_service.replan(
+                session,
+                contract_kind="terminal",
+                contract_id=FEE_TERMINAL_ID,
+                actor_id=USER_ID,
+                correlation_id=str(uuid4()),
+            )
+            print("v5 management fee facts seeded")
 
         await session.commit()
     await engine.dispose()

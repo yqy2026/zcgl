@@ -12,6 +12,7 @@ import {
 } from '@/services/assetLedgerService';
 import type { LedgerType, RentEntry, LedgerRow, RentImpact } from '@/services/assetLedgerService';
 import styles from './LedgersPage.module.css';
+import ManagementFeeLedger from './ManagementFeeLedger';
 
 const STATUS: Record<RentEntry['status'], string> = {
   upcoming: '未到付款月',
@@ -322,16 +323,72 @@ function ManualEntryForm({
 
 export default function LedgersPage(): React.ReactElement {
   const [params, setParams] = useSearchParams();
-  const [yearText, setYearText] = useState(businessToday().slice(0, 4));
-  const year = Number(yearText);
-  const [ledgerType, setLedgerType] = useState<LedgerType>(
-    params.get('ledger_type') === 'upstream_rent' ? 'upstream_rent' : 'terminal_rent'
+  const period = params.get('period');
+  const [yearText, setYearText] = useState(
+    period != null && /^[1-9][0-9]{3}-(0[1-9]|1[0-2])$/.test(period)
+      ? period.slice(0, 4)
+      : businessToday().slice(0, 4)
   );
+  const selected = params.get('ledger_type');
+  const ledgerType =
+    selected === 'management_fee' || selected === 'upstream_rent' ? selected : 'terminal_rent';
+  return (
+    <div className={styles.page}>
+      <h1>{ledgerType === 'management_fee' ? '委托管理费台账' : '租金台账'}</h1>
+      <div className={styles.toolbar}>
+        <label className={styles.field}>
+          台账类型
+          <select
+            value={ledgerType}
+            onChange={event => {
+              const next = new URLSearchParams(params);
+              next.set('ledger_type', event.target.value);
+              next.delete('entry_id');
+              setParams(next);
+            }}
+          >
+            <option value="upstream_rent">承租租金（应付）</option>
+            <option value="terminal_rent">终端租金（应收）</option>
+            <option value="management_fee">委托管理费</option>
+          </select>
+        </label>
+        <label className={styles.field}>
+          年份
+          <input
+            type="number"
+            min={1000}
+            max={9998}
+            value={yearText}
+            onChange={event => setYearText(event.target.value)}
+          />
+        </label>
+      </div>
+      {!/^[1-9][0-9]{3}$/.test(yearText) || Number(yearText) > 9998 ? (
+        <Alert type="warning" title="请输入 1000 至 9998 的年份" />
+      ) : null}
+      {ledgerType === 'management_fee' ? (
+        <ManagementFeeLedger yearText={yearText} />
+      ) : (
+        <RentLedgerContents ledgerType={ledgerType} yearText={yearText} />
+      )}
+    </div>
+  );
+}
+
+function RentLedgerContents({
+  ledgerType,
+  yearText,
+}: {
+  ledgerType: LedgerType;
+  yearText: string;
+}): React.ReactElement {
+  const [params, setParams] = useSearchParams();
+  const year = Number(yearText);
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['rent-ledgers', ledgerType, year],
     queryFn: () => assetLedgerService.getMatrix(ledgerType, year),
-    enabled: /^[1-9][0-9]{3}$/.test(yearText),
+    enabled: /^[1-9][0-9]{3}$/.test(yearText) && year <= 9998,
   });
   const entryId = params.get('entry_id') ?? '';
   const detail = useQuery({
@@ -351,36 +408,13 @@ export default function LedgersPage(): React.ReactElement {
   const rows = query.data?.rows ?? [];
   return (
     <div className={styles.page}>
-      <h1>租金台账</h1>
-      <div className={styles.toolbar}>
-        <label className={styles.field}>
-          台账类型
-          <select
-            value={ledgerType}
-            onChange={event => {
-              setLedgerType(
-                event.target.value === 'upstream_rent' ? 'upstream_rent' : 'terminal_rent'
-              );
-              setParams({});
-            }}
-          >
-            <option value="upstream_rent">承租租金（应付）</option>
-            <option value="terminal_rent">终端租金（应收）</option>
-          </select>
-        </label>
-        <label className={styles.field}>
-          年份
-          <input
-            type="number"
-            min={1900}
-            max={9998}
-            value={yearText}
-            onChange={event => {
-              setYearText(event.target.value);
-            }}
-          />
-        </label>
-        <Button onClick={() => void query.refetch()}>刷新台账</Button>
+      <div>
+        <Button
+          onClick={() => void query.refetch()}
+          disabled={!/^[1-9][0-9]{3}$/.test(yearText) || year > 9998}
+        >
+          刷新台账
+        </Button>
       </div>
       {query.isLoading ? <p role="status">正在读取租金台账…</p> : null}
       {query.isError ? (

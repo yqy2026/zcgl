@@ -24,6 +24,7 @@ class UploadPurpose(StrEnum):
     PROPERTY_CERTIFICATE_EXTRACTION = "property_certificate_extraction"
     ASSET_ATTACHMENT = "asset_attachment"
     PAYMENT_VOUCHER = "payment_voucher"
+    MANAGEMENT_FEE_STAMP = "management_fee_stamp"
     EXCEL_PREVIEW = "excel_preview"
     EXCEL_IMPORT = "excel_import"
     SYSTEM_SETTINGS_RESTORE = "system_settings_restore"
@@ -90,6 +91,12 @@ UPLOAD_PROFILES: Final[Mapping[UploadPurpose, UploadProfile]] = MappingProxyType
         ),
         UploadPurpose.PAYMENT_VOUCHER: UploadProfile(
             UploadPurpose.PAYMENT_VOUCHER,
+            20 * MIB,
+            _formats(pdf=PDF, jpg=JPEG, jpeg=JPEG, png=PNG),
+            max_image_pixels=50_000_000,
+        ),
+        UploadPurpose.MANAGEMENT_FEE_STAMP: UploadProfile(
+            UploadPurpose.MANAGEMENT_FEE_STAMP,
             20 * MIB,
             _formats(pdf=PDF, jpg=JPEG, jpeg=JPEG, png=PNG),
             max_image_pixels=50_000_000,

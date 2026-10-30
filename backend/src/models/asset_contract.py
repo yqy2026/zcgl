@@ -102,7 +102,7 @@ class AssetContractWriteReceipt(Base):
             name="uq_asset_contract_write_receipts_actor_request",
         ),
         CheckConstraint(
-            "command_kind IN ('create_upstream', 'create_terminal', 'correct_rent_schedule', 'create_manual_rent_entry', 'void_manual_rent_entry', 'terminate_terminal')",
+            "command_kind IN ('create_upstream', 'create_terminal', 'correct_rent_schedule', 'create_manual_rent_entry', 'void_manual_rent_entry', 'terminate_terminal', 'defer_management_fee_line', 'confirm_management_fee_statement', 'supersede_management_fee_statement')",
             name="ck_asset_contract_write_receipts_command_kind",
         ),
     )
@@ -113,7 +113,7 @@ class AssetContractWriteReceipt(Base):
     actor_id: Mapped[str] = mapped_column(
         String, ForeignKey("users.id"), nullable=False
     )
-    command_kind: Mapped[str] = mapped_column(String(30), nullable=False)
+    command_kind: Mapped[str] = mapped_column(String(64), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
     request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     result_data: Mapped[dict[str, object]] = mapped_column(_JSON_TYPE, nullable=False)
