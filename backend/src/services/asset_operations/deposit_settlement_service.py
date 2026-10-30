@@ -348,11 +348,20 @@ class DepositSettlementService:
             refundable_amount=str(
                 view.held_amount - sum((row["amount"] for row in offsets), Decimal(0))
             ),
+            # #102: 补收免租恒计入租户待补缴展示；被 D-23 月份门槛挡在
+            # 抵扣候选之外时，这里单独加回（抵扣行为不变）。
             additional_due_amount=str(
                 max(
                     Decimal(0),
                     sum((row["remaining"] for row in candidates), Decimal(0))
-                    - sum((row["amount"] for row in offsets), Decimal(0)),
+                    - sum((row["amount"] for row in offsets), Decimal(0))
+                    + (
+                        Decimal(0)
+                        if any(
+                            row["ledger_entry_id"] == "clawback" for row in candidates
+                        )
+                        else proposal.clawback_amount
+                    ),
                 )
             ),
         )

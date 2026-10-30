@@ -80,6 +80,60 @@ async def test_preview_allocates_not_yet_created_obligation_with_stable_key(
     assert result["additional_due_amount"] == additional
 
 
+async def test_clawback_counts_toward_additional_due_beyond_current_month(
+    monkeypatch,
+):
+    """#102: 补收免租恒计入租户待补缴；是否可被押金抵扣仍按 D-23 门槛。"""
+    from src.models.asset_contract import TerminalContract
+    from src.schemas.asset_operations import TerminalContractTerminationProposal
+    from src.services.asset_operations import deposit_settlement_service as module
+    from src.services.asset_operations.rent_obligation_rules import ObligationTarget
+    from src.services.asset_operations.rent_obligation_service import RentObligationPlan
+
+    contract = TerminalContract(id="contract", contract_mode="sublease")
+    proposal = TerminalContractTerminationProposal.model_validate(
+        {
+            "effective_date": "2026-07-31",
+            "termination_type": "early",
+            "handover_status": "pending",
+            "deposit_settlement_status": "pending",
+            "reason": "提前退租",
+            "clawback_amount": "20",
+            "clawback_basis": "优惠免租补收",
+        }
+    )
+    monkeypatch.setattr(
+        module.deposit_ledger_repository,
+        "get_by_contract",
+        AsyncMock(return_value=SimpleNamespace(id="deposit", collector="operator")),
+    )
+    monkeypatch.setattr(
+        module.deposit_query_service,
+        "get",
+        AsyncMock(return_value=SimpleNamespace(version=1, held_amount=Decimal("100"))),
+    )
+    monkeypatch.setattr(
+        module.asset_ledger_repository, "list_entries", AsyncMock(return_value=())
+    )
+    monkeypatch.setattr(
+        module.asset_ledger_repository, "list_records", AsyncMock(return_value=())
+    )
+    target = ObligationTarget(
+        "2026-05", date(2026, 5, 1), date(2026, 5, 31), date(2026, 5, 1), Decimal("150")
+    )
+    monkeypatch.setattr(
+        module.rent_obligation_service,
+        "preview",
+        AsyncMock(return_value=RentObligationPlan(created=[target])),
+    )
+    monkeypatch.setattr(module, "business_today", lambda: date(2026, 6, 1))
+    result = await deposit_settlement_service.preview(
+        AsyncMock(), contract=contract, scope=SimpleNamespace(), proposal=proposal
+    )
+    assert result["additional_due_amount"] == "70"
+    assert all(row["ledger_entry_id"] != "clawback" for row in result["offsets"])
+
+
 @pytest.mark.parametrize(
     "mode,termination_type,basis",
     [
