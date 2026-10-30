@@ -374,7 +374,6 @@ async def main() -> None:
                     actual_monthly_rent=Decimal("10000"),
                     payment_cycle="monthly",
                     due_day=15,
-                    created_by=USER_ID,
                 )
             )
             await session.flush()
