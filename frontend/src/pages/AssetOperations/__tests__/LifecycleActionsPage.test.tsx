@@ -306,6 +306,40 @@ describe('TerminalActionsPage', () => {
       expect(screen.getByText('预览已失效或版本已变化，请重新预览后再提交。')).toBeTruthy();
     });
   });
+
+  it('shows a business error when the termination preview is rejected', async () => {
+    mockedService.previewTerminalTermination.mockRejectedValue(
+      new AssetOperationsError('补收免租缺少依据', 'CLAWBACK_BASIS_REQUIRED')
+    );
+    const user = userEvent.setup();
+
+    renderActionsPage();
+
+    await user.type(screen.getByLabelText('终止生效日（该日起合同不再有效）'), '2026-06-30');
+    await user.type(screen.getAllByLabelText('原因')[0], '提前退租');
+    await user.click(screen.getByRole('button', { name: '预览终止影响' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('补收免租缺少依据');
+    expect(screen.queryByText(/最后有效日/)).toBeNull();
+  });
+});
+
+describe('preview business errors', () => {
+  it('shows a business error when the upstream exit preview is rejected', async () => {
+    mockedService.previewUpstreamExit.mockRejectedValue(
+      new AssetOperationsError('退出生效日无效', 'EXIT_DATE_INVALID')
+    );
+    const user = userEvent.setup();
+
+    renderUpstreamActionsPage();
+
+    await user.type(screen.getByLabelText('退出生效日（该日起合同不再有效）'), '2027-01-01');
+    await user.type(screen.getAllByLabelText('原因')[0], '提前退出');
+    await user.click(screen.getByRole('button', { name: '预览退出影响' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('退出生效日无效');
+    expect(screen.queryByText(/最后有效日/)).toBeNull();
+  });
 });
 
 it('re-previews manual offset allocations and hides the previous confirmation', async () => {
