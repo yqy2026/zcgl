@@ -64,6 +64,8 @@ from .errors import (
     TerminalContractAlreadyTerminatedError,
     UpstreamContractAlreadyExitedError,
 )
+from .management_fee_entry_service import management_fee_entry_service
+from .management_fee_rate_service import management_fee_rate_service
 from .rent_obligation_service import (
     RentObligationPlan,
     RentObligationService,
@@ -566,6 +568,7 @@ class AssetContractCommandService:
             )
         before = contract_snapshot(contract)
         old_end = contract.end_date
+        old_fee_rate = contract.management_fee_rate
         correlation_id = str(uuid4())
         rent_plan = RentObligationPlan()
         if (
@@ -592,6 +595,13 @@ class AssetContractCommandService:
             if value is not None:
                 setattr(contract, field, value)
         try:
+            if (
+                contract.contract_type == "management_agreement"
+                and contract.management_fee_rate != old_fee_rate
+            ):
+                await management_fee_rate_service.invalidate(
+                    db, owner_party_id=contract.owner_party_id
+                )
             if request.end_date is not None and request.end_date != old_end:
                 units_by_id = {unit.id: unit for unit in units}
                 for coverage in upstream_coverages:
@@ -746,6 +756,7 @@ class AssetContractCommandService:
             )
         upstream: UpstreamContract | None = None
         old_end = contract.end_date
+        old_upstream_id = contract.upstream_contract_id
         correlation_id = str(uuid4())
         rent_plan = RentObligationPlan()
         for field in ("deposit_months", "deposit_amount"):
@@ -795,6 +806,14 @@ class AssetContractCommandService:
                     contract_id=contract.id,
                     actor_id=actor_id,
                     correlation_id=correlation_id,
+                )
+            if (
+                contract.contract_mode == "direct_lease"
+                and request.upstream_contract_id is not None
+                and contract.upstream_contract_id != old_upstream_id
+            ):
+                await management_fee_entry_service.ensure_bound_contract(
+                    db, terminal_contract_id=contract.id
                 )
             await record_contract_change(
                 db,

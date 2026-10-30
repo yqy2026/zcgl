@@ -10,12 +10,126 @@ from src.crud.asset_ledger import AssetLedgerRepository
 from src.models.asset_contract import (
     ContractLifecycleEvent,
     ContractRentSchedule,
+    TerminalContract,
     UpstreamContract,
 )
 from src.models.asset_ledger import RentLedgerEntry, RentPaymentRecord
 from src.services.asset_operations.rent_obligation_service import RentObligationService
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.asyncio
+async def test_direct_rent_replan_ensures_statements_before_final_flush(
+    setup, monkeypatch
+):
+    from src.services.asset_operations import rent_obligation_service as module
+
+    service, repo, db = setup
+    repo.contract = TerminalContract(
+        id="contract",
+        contract_mode="direct_lease",
+        upstream_contract_id="up-1",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 3, 31),
+        version=1,
+    )
+    fees = MagicMock(reconcile=AsyncMock())
+    owner = AsyncMock(return_value="owner-1")
+    monkeypatch.setattr(module, "management_fee_entry_service", fees)
+    monkeypatch.setattr(
+        module.management_fee_statement_repository, "bound_owner", owner
+    )
+    await service.replan(
+        db,
+        contract_kind="terminal",
+        contract_id="contract",
+        actor_id="actor",
+        correlation_id="new",
+    )
+    fees.reconcile.assert_awaited_once()
+    assert fees.reconcile.await_args.kwargs["owner_party_id"] == "owner-1"
+    assert fees.reconcile.await_args.kwargs["new_periods"] == (
+        "2026-01",
+        "2026-02",
+        "2026-03",
+    )
+    db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fee_creation_error_is_not_swallowed_by_rent_replan(setup, monkeypatch):
+    from src.services.asset_operations import rent_obligation_service as module
+
+    service, repo, db = setup
+    repo.contract = TerminalContract(
+        id="contract",
+        contract_mode="direct_lease",
+        upstream_contract_id="up-1",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 3, 31),
+        version=1,
+    )
+    monkeypatch.setattr(
+        module.management_fee_statement_repository,
+        "bound_owner",
+        AsyncMock(return_value="owner-1"),
+    )
+    monkeypatch.setattr(
+        module,
+        "management_fee_entry_service",
+        MagicMock(reconcile=AsyncMock(side_effect=RuntimeError("fee write failed"))),
+    )
+    with pytest.raises(RuntimeError, match="fee write failed"):
+        await service.replan(
+            db,
+            contract_kind="terminal",
+            contract_id="contract",
+            actor_id="actor",
+            correlation_id="new",
+        )
+    db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_binding_upstream_after_generation_creates_missing_fee_statement(
+    setup, monkeypatch
+):
+    from src.services.asset_operations import rent_obligation_service as module
+
+    service, repo, db = setup
+    repo.contract = TerminalContract(
+        id="contract",
+        contract_mode="direct_lease",
+        upstream_contract_id=None,
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 3, 31),
+        version=1,
+    )
+    owner = AsyncMock(return_value=None)
+    fees = MagicMock(reconcile=AsyncMock())
+    monkeypatch.setattr(
+        module.management_fee_statement_repository, "bound_owner", owner
+    )
+    monkeypatch.setattr(module, "management_fee_entry_service", fees)
+    kwargs = dict(
+        contract_kind="terminal",
+        contract_id="contract",
+        actor_id="actor",
+        correlation_id="binding",
+    )
+    await service.replan(db, **kwargs)
+    fees.reconcile.assert_not_awaited()
+    repo.contract.upstream_contract_id = "up-1"
+    owner.return_value = "owner-1"
+    plan = await service.replan(db, **kwargs)
+    assert len(plan.updated) == 3
+    assert plan.created == []
+    assert fees.reconcile.await_args.kwargs["new_periods"] == (
+        "2026-01",
+        "2026-02",
+        "2026-03",
+    )
 
 
 class Repository(AssetLedgerRepository):

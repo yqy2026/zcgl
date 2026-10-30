@@ -26,26 +26,8 @@ import pytest
 
 
 def _resolve_test_database_url() -> str | None:
-    """Resolve TEST_DATABASE_URL from env first, then backend/.env as fallback."""
-    env_value = os.getenv("TEST_DATABASE_URL")
-    if env_value:
-        return env_value
-
-    env_file = Path(__file__).resolve().parents[1] / ".env"
-    if not env_file.exists():
-        return None
-
-    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if line == "" or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        if key.strip() != "TEST_DATABASE_URL":
-            continue
-        parsed_value = value.strip().strip("\"'")
-        if parsed_value:
-            return parsed_value
-    return None
+    """Use explicit process configuration; never inspect local secret files."""
+    return os.getenv("TEST_DATABASE_URL") or os.getenv("E2E_TEST_DATABASE_URL")
 
 
 def _is_safe_test_database(database_url: str) -> bool:
@@ -325,39 +307,6 @@ def pytest_collection_modifyitems(items, config):
         elif "/tests/api/" in test_path or "\\tests\\api\\" in test_path:
             if "api" not in existing_marks:
                 item.add_marker(pytest.mark.api)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def hide_env_file():
-    """
-    Session-scoped fixture to temporarily hide .env file during tests.
-    This prevents Pydantic Settings from reading DATA_ENCRYPTION_KEY from .env,
-    allowing tests to control the encryption key via environment variables.
-
-    The .env file is renamed to .env.backup before tests and restored after.
-    """
-    import shutil
-
-    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-    backup_path = env_path + ".backup"
-
-    # Self-heal previous interrupted test runs that left only .env.backup
-    if not os.path.exists(env_path) and os.path.exists(backup_path):
-        shutil.move(backup_path, env_path)
-        print("[*] Recovered orphaned .env from .env.backup before tests")
-
-    # Check if .env file exists
-    if os.path.exists(env_path):
-        # Rename .env to .env.backup
-        shutil.move(env_path, backup_path)
-        print("[*] Temporarily hid .env file for tests (backed up as .env.backup)")
-
-    yield
-
-    # Restore .env file after all tests complete
-    if os.path.exists(backup_path):
-        shutil.move(backup_path, env_path)
-        print("[*] Restored .env file after tests")
 
 
 @pytest.fixture(scope="session", autouse=True)

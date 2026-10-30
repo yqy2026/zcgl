@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError
 from ...crud.asset_ledger import AssetLedgerRepository, asset_ledger_repository
+from ...crud.management_fee_statement import management_fee_statement_repository
 from ...models.asset_contract import (
     ContractLifecycleEvent,
     ContractRentSchedule,
@@ -21,6 +22,7 @@ from ...models.asset_contract import (
 )
 from ...models.asset_ledger import RentLedgerEntry
 from .business_change_service import contract_snapshot, record_contract_change
+from .management_fee_entry_service import management_fee_entry_service
 from .rent_ledger_projections import effective_paid
 from .rent_obligation_rules import ObligationTarget, RentStage, generate_obligations
 
@@ -371,6 +373,28 @@ class RentObligationService:
             entry = by_id[entry_id]
             entry.voided_at = now
             entry.void_correlation_id = correlation_id
+        changed_ids = [*plan.updated, *plan.restored, *plan.voided]
+        if entry_type == "owner_receipt_expected" and (plan.created or changed_ids):
+            owner_party_id = await management_fee_statement_repository.bound_owner(
+                db, terminal_contract_id=contract_id
+            )
+            if owner_party_id is not None:
+                await management_fee_entry_service.reconcile(
+                    db,
+                    owner_party_id=owner_party_id,
+                    new_periods=tuple(
+                        sorted(
+                            {target.period for target in plan.created}
+                            | {
+                                by_id[entry_id].period
+                                for entry_id in [*plan.updated, *plan.restored]
+                            }
+                        )
+                    ),
+                    changed_periods=tuple(
+                        sorted({by_id[entry_id].period for entry_id in changed_ids})
+                    ),
+                )
         await record_contract_change(
             db,
             contract=contract,

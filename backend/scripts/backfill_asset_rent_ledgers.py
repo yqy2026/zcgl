@@ -3,6 +3,8 @@
 Run from backend with uv run --frozen --extra dev python
 scripts/backfill_asset_rent_ledgers.py [--apply --actor-id USER_ID].
 The default only reports the target obligations and missing rent schedules.
+Deposit entries and management fee statements ride the same replan
+transactions; apply mode reports how many fee statements were created.
 """
 
 import argparse
@@ -11,11 +13,13 @@ import json
 from decimal import Decimal
 from uuid import uuid4
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.crud.auth import UserCRUD
 from src.crud.rent_backfill import rent_backfill_repository
 from src.database import get_async_database_url
+from src.models.management_fee_statement import ManagementFeeStatement
 from src.services.asset_operations.deposit_entry_service import deposit_entry_service
 from src.services.asset_operations.rent_obligation_service import (
     rent_obligation_service,
@@ -35,7 +39,13 @@ async def run(*, apply: bool, actor_id: str | None) -> None:
                     "--apply requires an existing --actor-id for the audit trail"
                 )
             contracts = await rent_backfill_repository.list_contracts(session)
+            statement_count = (
+                await session.scalar(
+                    select(func.count()).select_from(ManagementFeeStatement)
+                )
+            ) or 0
             report: dict[str, object] = {
+                "management_fee_statement_count": statement_count,
                 "mode": "apply" if apply else "dry-run",
                 "contract_count": len(contracts),
                 "target_obligation_count": 0,
@@ -80,6 +90,14 @@ async def run(*, apply: bool, actor_id: str | None) -> None:
                     )
             report["contracts"] = details
             if apply:
+                report["management_fee_statements_created"] = (
+                    (
+                        await session.scalar(
+                            select(func.count()).select_from(ManagementFeeStatement)
+                        )
+                    )
+                    or 0
+                ) - statement_count
                 await session.commit()
             else:
                 await session.rollback()
