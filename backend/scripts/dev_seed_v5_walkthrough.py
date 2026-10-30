@@ -20,6 +20,8 @@ UNIT_B = "v5-walkthrough-unit-b"
 OTHER_OWNER_UNIT = "v5-walkthrough-other-owner-unit"
 UPSTREAM_ID = "v5-walkthrough-upstream"
 TERMINAL_ID = "v5-walkthrough-terminal"
+MGMT_ID = "v5-walkthrough-mgmt"
+FEE_TERMINAL_ID = "v5-walkthrough-terminal-owner"
 SCAN_UP = "v5-walkthrough-scan-up"
 SCAN_TM = "v5-walkthrough-scan-tm"
 USERNAME = "v5-walkthrough"
@@ -32,6 +34,7 @@ async def main() -> None:
 
     from src.database import get_async_database_url
     from src.models.asset_contract import (
+        ContractRentSchedule,
         TerminalContract,
         TerminalContractAssetUnit,
         UpstreamContract,
@@ -238,6 +241,85 @@ async def main() -> None:
                 )
             )
             print("v5 other-owner fact seeded")
+
+        # Management fee chain: a management agreement plus an owner-collected
+        # direct lease. Fee statements themselves come from the production
+        # replan hook below, never from direct statement inserts.
+        if await session.get(UpstreamContract, MGMT_ID) is None:
+            session.add(
+                UpstreamContract(
+                    id=MGMT_ID,
+                    contract_number="UP-WALK-MGMT",
+                    contract_type="management_agreement",
+                    name="走查委托管理协议",
+                    owner_party_id=OWNER_ID,
+                    operator_party_id=OPERATOR_ID,
+                    start_date=date(2026, 1, 1),
+                    end_date=date(2027, 12, 31),
+                    deposit_amount=Decimal("0"),
+                    management_fee_rate=Decimal("0.10"),
+                    version=1,
+                ),
+            )
+            session.add(
+                UpstreamContractAssetUnit(
+                    upstream_contract_id=MGMT_ID,
+                    asset_unit_id=UNIT_B,
+                    effective_from=date(2026, 1, 1),
+                    effective_to=date(2027, 12, 31),
+                )
+            )
+        if await session.get(TerminalContract, FEE_TERMINAL_ID) is None:
+            session.add(
+                TerminalContract(
+                    id=FEE_TERMINAL_ID,
+                    contract_number="TM-WALK-OWNER",
+                    contract_mode="direct_lease",
+                    tenant_party_id=TENANT_ID,
+                    lessor_party_id=OWNER_ID,
+                    upstream_contract_id=MGMT_ID,
+                    start_date=date(2026, 1, 1),
+                    end_date=date(2027, 6, 30),
+                    deposit_amount=Decimal("0"),
+                    rent_collector="owner",
+                    version=1,
+                )
+            )
+            session.add(
+                TerminalContractAssetUnit(
+                    terminal_contract_id=FEE_TERMINAL_ID,
+                    asset_unit_id=UNIT_B,
+                    effective_from=date(2026, 1, 1),
+                    effective_to=date(2027, 6, 30),
+                )
+            )
+            session.add(
+                ContractRentSchedule(
+                    contract_kind="terminal",
+                    contract_id=FEE_TERMINAL_ID,
+                    stage_start=date(2026, 1, 1),
+                    stage_end=date(2027, 6, 30),
+                    base_monthly_rent=Decimal("10000"),
+                    actual_monthly_rent=Decimal("10000"),
+                    payment_cycle="monthly",
+                    due_day=15,
+                )
+            )
+            await session.flush()
+            from uuid import uuid4
+
+            from src.services.asset_operations.rent_obligation_service import (
+                rent_obligation_service,
+            )
+
+            await rent_obligation_service.replan(
+                session,
+                contract_kind="terminal",
+                contract_id=FEE_TERMINAL_ID,
+                actor_id=USER_ID,
+                correlation_id=str(uuid4()),
+            )
+            print("v5 management fee facts seeded")
 
         user = await session.get(User, USER_ID)
         if user is None:
