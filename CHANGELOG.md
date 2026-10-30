@@ -5,6 +5,7 @@
 
 ## 未发布
 
+- fix(asset-ops): 管理费矩阵调用改用裸路径，消除 API 一致性检查的全前缀字面量误报并统一服务内 URL 风格（REQ-FEE-001）。
 - test(e2e): v5 走查种子补委托管理费链路（管理协议 + 业主收租直签终端经真实 replan 生成对账单），修复打印冒烟用例在 CI 种子库找不到对账单的确定性失败。
 - ci: Frontend E2E job 固定 ubuntu-24.04，规避 ubuntu-latest 滚动至 26.04 后锁定版 Playwright 无浏览器二进制（develop 定时任务同因失败）。
 - fix(asset-ops): 整体差异复核清零管理费新增代码 48 处 mypy 错误，删除引用已演进 `voiding_entry` 参数的两条过期守卫测试，按现行撤销契约对齐（REQ-FEE-001）。

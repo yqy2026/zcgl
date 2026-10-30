@@ -145,7 +145,7 @@ function command<T>(id: string, action: string, payload: unknown, key: string): 
 export const managementFeeService = {
   matrix: (year: number) =>
     response<ManagementFeeMatrix>(
-      apiClient.get('/api/v1/rent-ledgers', {
+      apiClient.get('/rent-ledgers', {
         cache: false,
         params: { ledger_type: 'management_fee', year },
       })

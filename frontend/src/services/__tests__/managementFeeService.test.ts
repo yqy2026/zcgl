@@ -24,7 +24,7 @@ it('loads the yearly fee matrix and converts confirmed totals', async () => {
     },
   });
   const result = await managementFeeService.matrix(2026);
-  expect(apiClient.get).toHaveBeenCalledWith('/api/v1/rent-ledgers', {
+  expect(apiClient.get).toHaveBeenCalledWith('/rent-ledgers', {
     cache: false,
     params: { ledger_type: 'management_fee', year: 2026 },
   });
