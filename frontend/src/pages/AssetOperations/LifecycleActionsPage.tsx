@@ -364,6 +364,17 @@ export function TerminalActionsPage(): React.ReactElement {
         >
           预览终止影响
         </Button>
+        {previewMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              previewMutation.error instanceof Error
+                ? previewMutation.error.message
+                : '预览失败，请稍后重试'
+            }
+          />
+        ) : null}
 
         {preview != null ? (
           <div style={{ marginTop: 12 }}>
@@ -783,6 +794,17 @@ export function UpstreamActionsPage(): React.ReactElement {
         >
           预览退出影响
         </Button>
+        {previewMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              previewMutation.error instanceof Error
+                ? previewMutation.error.message
+                : '预览失败，请稍后重试'
+            }
+          />
+        ) : null}
 
         {preview != null ? (
           <div style={{ marginTop: 12 }}>

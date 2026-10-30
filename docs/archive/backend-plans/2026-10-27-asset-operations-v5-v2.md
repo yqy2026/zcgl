@@ -260,7 +260,8 @@ HTTP 检查点（2026-10-29）：`backend/src/api/v1/management_fee_statements.p
 
 ## 9. 实施记录
 
-- 2026-10-30：用户完成 PR-C 产品验收（管理费台账与纸面单据业务口径走查通过），V2 四个 PR（#97/#98/#99/#100）全部合入，本计划标记 ✅ 并移入 `docs/archive/backend-plans/`。收口同时把「补收免租计入 additional_due_amount 口径模式间不一致」移交 GitHub issue 跟踪（产品裁决），PR-B 待修①（预览错误无 UI 反馈）已由独立 PR #101 交付。资金类需求（REQ-LED-001 / REQ-DEP-001 / REQ-FEE-001）实现状态见 requirements-trace。
+- 2026-10-30：用户完成 PR-C 产品验收（管理费台账与纸面单据业务口径走查通过），V2 四个 PR（#97/#98/#99/#100）全部合入，本计划标记 ✅ 并移入 `docs/archive/backend-plans/`。收口同时把「补收免租计入 additional_due_amount 口径模式间不一致」移交 GitHub issue #102 跟踪（产品裁决），PR-B 待修①（预览错误无 UI 反馈）已由独立 PR #101 交付。资金类需求（REQ-LED-001 / REQ-DEP-001 / REQ-FEE-001）实现状态见 requirements-trace。
+- 2026-10-30：待修①已修：`LifecycleActionsPage` 终止与退出预览失败时显示业务错误 Alert（终端、上游两处），此前 `previewMutation` 失败无任何渲染路径——冲突提示块在 `preview != null` 内，预览失败时恰为 null。两条先红后绿回归覆盖业务错误码场景（补收依据缺失等），文件内既有用例全绿；独立分支交付，不混入 PR #100。待修②（补收免租计入口径模式间不一致）移交 issue #102 待产品裁决。
 - 2026-10-29：PR-B #99 以 `100804ab` squash 合入 develop，功能分支已清理；合并前走查记录与最新 CI（14 项 pass，CodeQL 按配置跳过）均实际通过。走查发现两项转后续处理：终止预览业务错误无 UI 反馈（前端）、补收免租计入 additional_due_amount 口径模式间不一致（需产品裁决）。PR-C 从最新 develop 独立分支开工，V2 整体仍实施中。
 - 2026-10-29：PR-B #99 前端走查完成（走查种子合同 + dev 库，记录见 PR 评论）。通过项：押金收取/部分退还/撤销的追加式记录链与方向默认联动（终端与上游）、押金未结清筛选（含「未撤销终止事件即时结清押金」排除核实）、租金阶段补录生成 18 期义务、终止自动抵扣预览/提交/撤销恢复全链路（DB 验证 deduct 挂 offset、reversal 对冲、义务与覆盖行回滚）、手工分配两步流与本次不抵扣、320px / 640px 程序化几何检测无溢出。发现两项待修：① 终止预览/提交的业务错误（如补收依据缺失 409）无 UI 反馈，LifecycleActionsPage 错误提示仅覆盖 PREVIEW_STALE / VERSION_CONFLICT；② 补收免租计入 additional_due_amount 的口径模式间不一致（manual 恒计入、auto/none 仅生效月≤当月计入，`deposit_settlement_service.py` candidates 条件），需产品裁决统一。真实浏览器 200% 缩放人工确认后 PR-B 收口。
 - 2026-10-28：PR-B #99 已有提交的 CI 全部执行通过（CodeQL 按配置跳过）。后续复核采纳并修复终止自动抵扣遗漏有效续签前驱欠租的问题，自动预锁覆盖前驱单元与合同，祖先查询仍受有效续签链与 Party 范围约束。新增用例先红后绿；结算单测 18 条、前驱欠租优先抵扣及撤销恢复的真实 PostgreSQL/Redis HTTP 用例通过，既有押金 HTTP 3 条、前端定向 12 条、类型检查、lint 与 UI 门禁通过。本机无 make，未运行完整 make check；新增修复尚待 CI 与前端整体验收，不标 PR-B 完成。
