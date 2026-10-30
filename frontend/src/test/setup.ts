@@ -19,19 +19,20 @@ let mswServer: MswServer | null = null;
 // MSW 服务器设置
 // =============================================================================
 
-// 在所有测试之前启动MSW服务器
-beforeAll(async () => {
-  try {
-    const { mswServer: resolvedServer } = await import('@/mocks/server');
-    mswServer = resolvedServer;
-    mswServer.listen({
-      onUnhandledRequest: 'warn', // 对未处理的请求警告（不阻止测试）
-    });
-  } catch (error) {
-    // 某些测试会 mock handlers 依赖模块，导致 MSW 入口不可用；降级为无 MSW 运行
-    mswServer = null;
-    console.warn('[test/setup] MSW server bootstrap skipped:', error);
-  }
+// 模块转换与冷加载属于 setup 阶段，不占用每个 suite 的 hook 超时预算。
+try {
+  const { mswServer: resolvedServer } = await import('@/mocks/server');
+  mswServer = resolvedServer;
+} catch (error) {
+  // 某些测试会 mock handlers 依赖模块，导致 MSW 入口不可用；降级为无 MSW 运行
+  console.warn('[test/setup] MSW server bootstrap skipped:', error);
+}
+
+// 服务器启动失败须直接使 suite 失败。
+beforeAll(() => {
+  mswServer?.listen({
+    onUnhandledRequest: 'warn', // 对未处理的请求警告（不阻止测试）
+  });
 });
 
 // 在每个测试之后重置handlers，确保测试隔离

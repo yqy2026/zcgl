@@ -82,6 +82,8 @@ from .enum_field import (  # noqa: F401
     EnumFieldUsage,
     EnumFieldValue,
 )
+from .management_fee_deferral import ManagementFeeDeferral
+from .management_fee_statement import ManagementFeeStatement, ManagementFeeStatementLine
 from .notification import (  # noqa: F401
     Notification,
     NotificationPriority,
@@ -130,6 +132,9 @@ from .user_party_scope_batch_commit import UserPartyScopeBatchCommit  # noqa: F4
 from .user_party_scope_commit import UserPartyScopeCommit  # noqa: F401
 
 __all__ = [
+    "ManagementFeeDeferral",
+    "ManagementFeeStatement",
+    "ManagementFeeStatementLine",
     "DepositLedgerEntry",
     "DepositRecord",
     "BusinessChangeEvent",

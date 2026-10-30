@@ -2,13 +2,59 @@
 
 from datetime import datetime
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import (
+    ColumnElement,
+    Select,
+    and_,
+    exists,
+    false,
+    func,
+    or_,
+    select,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset_contract import TerminalContract, UpstreamContract
 from ..models.business_change_event import BusinessChangeEvent
+from ..models.management_fee_statement import ManagementFeeStatement
 from ..services.party_scope_resolver import EffectivePartyScope
 from .asset_contract import AssetContractRepository
+
+
+def fee_statement_ids_for_scope(scope: EffectivePartyScope) -> Select[tuple[str]]:
+    """Audit uses the same whole-owner boundary as management fee detail.
+
+    Keep the manager "covers every agreement of the owner" rule in sync with
+    the Python twin in services/asset_operations/management_fee_query_service.
+    """
+    query = select(ManagementFeeStatement.id)
+    if scope.scope_mode == "unrestricted":
+        return query
+    if scope.error_code is not None:
+        return query.where(false())
+    conditions: list[ColumnElement[bool]] = []
+    if scope.scope_mode in {"owner", "all"} and scope.owner_party_ids:
+        conditions.append(
+            ManagementFeeStatement.owner_party_id.in_(scope.owner_party_ids)
+        )
+    if scope.scope_mode in {"manager", "all"} and scope.manager_party_ids:
+        agreement = select(UpstreamContract.id).where(
+            UpstreamContract.owner_party_id == ManagementFeeStatement.owner_party_id,
+            UpstreamContract.contract_type == "management_agreement",
+        )
+        conditions.append(
+            and_(
+                exists(agreement),
+                ~exists(
+                    agreement.where(
+                        UpstreamContract.operator_party_id.not_in(
+                            scope.manager_party_ids
+                        )
+                    )
+                ),
+            )
+        )
+    return query.where(or_(*conditions) if conditions else false())
 
 
 class BusinessChangeRepository:
@@ -42,6 +88,12 @@ class BusinessChangeRepository:
                 and_(
                     BusinessChangeEvent.target_type == "terminal_contract",
                     BusinessChangeEvent.target_id.in_(terminal_ids),
+                ),
+                and_(
+                    BusinessChangeEvent.target_type == "management_fee_statement",
+                    BusinessChangeEvent.target_id.in_(
+                        fee_statement_ids_for_scope(scope)
+                    ),
                 ),
             )
         )

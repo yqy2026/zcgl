@@ -208,7 +208,7 @@
 
 金额默认等于剩余义务但允许减少形成部分完成。超出剩余金额默认返回 409 `PAYMENT_AMOUNT_EXCEEDS_REMAINING`。记录类型与义务类型不匹配返回 422 `RENT_RECORD_TYPE_MISMATCH`（`deposit_offset` 只能经押金抵扣创建）；对 `void` 义务登记返回 409 `RENT_LEDGER_ENTRY_VOIDED`；手工义务不满足上述条件或作废 `generated` 义务返回 409 `RENT_LEDGER_MANUAL_ENTRY_NOT_ALLOWED`；作废有有效登记的手工义务返回 409 `RENT_LEDGER_ENTRY_LOCKED`；撤销已被确认对账单计入的产权方到账返回 409 `MANAGEMENT_FEE_STATEMENT_LOCKED`。
 
-PR-A 矩阵响应为 `ledger_type` / `year` / `current_month` / `rows` 和三项金额合计；每合同行包含 12 个 `months`、warning 与应付/应收、有效登记、剩余金额合计。月份内的 `entries` 保留原始登记与撤销链，作废义务不参与合计。合同详情 `rent_summary` 返回本月金额、未结余额、已结账期数、下一到期日与条目；生命周期预览 `rent_impact` 返回新建/更新/作废/恢复数量及锁定不一致条目，提交指纹同时绑定义务与登记事实。`management_fee` 页签随 PR-C 接入。
+PR-A 矩阵响应为 `ledger_type` / `year` / `current_month` / `rows` 和三项金额合计；每合同行包含 12 个 `months`、warning 与应付/应收、有效登记、剩余金额合计。月份内的 `entries` 保留原始登记与撤销链，作废义务不参与合计。合同详情 `rent_summary` 返回本月金额、未结余额、已结账期数、下一到期日与条目；生命周期预览 `rent_impact` 返回新建/更新/作废/恢复数量及锁定不一致条目，提交指纹同时绑定义务与登记事实。PR-C 的 `management_fee` 分支返回 `ledger_type` / `year` / `current_month` / `rows` / `total_confirmed_amount`；每行按产权方包含 `owner_party_id`、`owner_name`、12 个 `months` 及 `total_confirmed_amount`，每月包含 `month`、可空 `statement_id`、`status` 与可空 `fee_amount`。有单状态为 `collecting` / `pending_stamp` / `confirmed`，无单的未来月为 `upcoming`、其他月为 `missing`；更正历史不占活动月份。全年及行合计只累加已确认金额，Decimal 精确计算，其他状态金额为试算。非当前年 `current_month=0`，按整单产权方范围读取，管理方不可读取部分协议拼出的整单。
 
 `generated` 义务由合同确认、续签、期限更新、租金阶段更正、终止 / 退出及其撤销和登记撤销在同一事务内重排（规则见领域模型 §4.14、§4.16），不提供生成或重算端点；派生字段（`status`、`effective_paid_amount`、`remaining_amount`）不可写。终端终止和上游退出的预览在原有影响之外，返回租金义务的新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和押金状态变化；预览 token 同时绑定受影响义务的版本。
 
@@ -240,6 +240,18 @@ PR-A 矩阵响应为 `ledger_type` / `year` / `current_month` / `rows` 和三项
 | 更正 | `POST /api/v1/management-fee-statements/{statement_id}/successor` | 原因（缺失返回 422 `CORRECTION_REASON_REQUIRED`）、期望版本和幂等键；只能更正该产权方最近一张已确认对账单，否则返回 409 `MANAGEMENT_FEE_SEQUENCE_CONFLICT`；创建未确认的后继单，原单转 `superseded` 只读 |
 
 对账单不提供创建端点：某产权方某月首次出现产权方应报到账义务时随义务生成创建，确认带出顺延余额时按需创建下月单。对 `confirmed` / `superseded` 单执行到账、顺延或上传盖章件返回 409 `MANAGEMENT_FEE_STATEMENT_LOCKED`。以上写端点均要求 `asset_ops:write`。
+
+整单读取不能将可见的部分协议重算为产权方整单：产权方范围覆盖该产权方或全局范围可读；管理方范围须覆盖该产权方全部委托管理协议的运营方，否则按不可见返回 404。已确认及已更正历史只读取确认快照。未绑定上游的待补录警告还须单独通过终端合同的数据范围校验，不因可读该产权方其他协议而扩大可见范围。
+
+顺延请求使用 `rent_ledger_entry_id`、`reason` 和 `expected_version`，幂等键按写命令公共约定提供；只接受本单投影中仍有未收余额的义务。对已收足行返回 409 `MANAGEMENT_FEE_LINE_NOT_DEFERRABLE`，另键重复标记同一户返回 409 `MANAGEMENT_FEE_LINE_ALREADY_DEFERRED`；同键同请求回放首次版本，不重复写标记、审计或增加版本。同键改变原因返回 `IDEMPOTENCY_CONFLICT`。持有产权方锁后刷新事实再校验余额，避免沿用等待锁前的旧投影。
+
+盖章绑定服务使用已存储且归属于本单的 `document_id` 与 `expected_version`，回执包含 `statement_id`、`version`、`document_id`、当前 `fee_amount`；文件接收上传的 HTTP 边界另按文件上传契约实现。确认与更正均先验证当前整单权限，再重放幂等回执；首次写入才检查期望版本。历史补录单若有顺延余额而紧接次月已确认，返回 `MANAGEMENT_FEE_SEQUENCE_CONFLICT`，要求先更正后续确认单。更正创建同月份的新单，新单须重新上传盖章件。
+
+HTTP 请求与响应细则：
+- 列表 `period` 必填，格式为 `YYYY-MM`；非法业务月份返回 400 `INVALID_PERIOD`，只返回当前范围内非 `superseded` 单。详情可读取被更正历史。公开响应包含单据身份/版本、派生或历史状态、截止日、协议 ID、基数/费用、盖章件 ID、确认审计、更正链、强类型明细及待补录上游提示；金额为十进制字符串，不暴露草稿存储的空状态/空金额。
+- 产权方到账请求为 `rent_ledger_entry_id`、`amount`、`occurred_on`、可选 `document_id` 和租金义务的 `expected_version`；服务固定写 `owner_reported_receipt`，客户端不可指定 `record_type`。与租金登记端点共用回执；先校验当前单据权限，首次写入在租金/产权方锁后重查状态和行归属，幂等回放不因原行后来作废而被当前投影阻断。
+- 盖章端点使用 `multipart/form-data`，字段为 `file` 与对账单 `expected_version`，不接收 JSON 文档 ID。独立 `management_fee_stamp` 上传配置接受 PDF/JPG/JPEG/PNG，最大 20 MiB，图片最大 5000 万像素；复用文件类型/内容验证。文件暂存、晋升及元数据与盖章绑定协作，失败只补偿本次新文件并回滚元数据，旧盖章附件留存。
+- 到账、顺延、确认及更正要求非空 `Idempotency-Key`（最长 100 字符，去除首尾空白）；上传使用期望版本。七个端点只做参数/身份传递，业务校验和事务由服务负责。
 
 ### 5.10 年度考核范围
 

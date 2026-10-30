@@ -17,7 +17,7 @@ class Attachment(Base):
     __tablename__ = "attachments"
     __table_args__ = (
         CheckConstraint(
-            "owner_type IN ('asset', 'contract', 'property_certificate', 'payment_flow')",
+            "owner_type IN ('asset', 'contract', 'property_certificate', 'payment_flow', 'management_fee_statement')",
             name="ck_attachment_owner_type",
         ),
         CheckConstraint(

@@ -811,7 +811,11 @@ jobs:
 **Notes**
 - E2E jobs are configured as **blocking gates** for pull requests.
 - Frontend E2E uses Playwright `tests/e2e` with role-specific `storageState`.
-- Backend E2E requires PostgreSQL and should run with `E2E_TEST_DATABASE_URL`.
+- Management-fee printing regression: `cd frontend && corepack pnpm exec playwright test tests/e2e/smoke/management-fee-print.spec.ts --project=chromium`. The test environment must contain a current-year statement readable by the authenticated account; missing seed data fails explicitly. The test only reads business data and simulates an unfinished page animation before checking print geometry, opacity, and hidden application controls.
+- MSW module loading belongs to Vitest setup; `beforeAll` starts the server only. Run `pnpm test:bootstrap` for the startup-order regression (200 ms module delay against a 50 ms hook budget). It runs after the ordinary suite in `make test-frontend`, `make test-frontend-ci`, and the coverage CI script `pnpm test:ci`; do not raise the regular hook timeout to hide cold-import failures.
+- Backend E2E requires PostgreSQL. Set `TEST_DATABASE_URL` explicitly in the process environment, or use `E2E_TEST_DATABASE_URL` when the former is absent; never point either at a development or production database.
+- Test bootstrap does not read, move, restore, or create backups of local `.env` files. Tests set `PYDANTIC_SETTINGS_IGNORE_DOT_ENV=1` to disable the dotenv source; normal application runs retain their configured dotenv behavior.
+- Independent management-fee concurrency tests create and remove only their own `fee_race_<uuid>` PostgreSQL schema, use separate committed connections and verify actual lock waits. Existing database schemas and Redis data must not be reset to run these focused tests.
 
 ---
 
