@@ -5,6 +5,7 @@
 
 ## 未发布
 
+- ci: Frontend E2E job 固定 ubuntu-24.04，规避 ubuntu-latest 滚动至 26.04 后锁定版 Playwright 无浏览器二进制（develop 定时任务同因失败）。
 - fix(asset-ops): 整体差异复核清零管理费新增代码 48 处 mypy 错误，删除引用已演进 `voiding_entry` 参数的两条过期守卫测试，按现行撤销契约对齐（REQ-FEE-001）。
 - test(asset-ops): 补 V2-T24 对账单合计与行合计、矩阵合计与已确认月度交叉断言；回填脚本 apply 模式报告对账单创建数（REQ-FEE-001）。
 - chore(security): `.gitignore` 覆盖 `.env.backup` 密钥备份文件，防止测试事故产物误提交。
