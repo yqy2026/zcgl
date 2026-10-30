@@ -170,11 +170,7 @@ function StatementActions({
               <div className={styles.buttons}>
                 <Button
                   type="primary"
-                  disabled={
-                    file == null ||
-                    mutation.isPending ||
-                    file.size > MAX_STAMP_FILE_BYTES
-                  }
+                  disabled={file == null || mutation.isPending || file.size > MAX_STAMP_FILE_BYTES}
                   onClick={() => mutation.mutate('upload')}
                 >
                   {statement.stamped_document_id == null ? '上传盖章件' : '替换盖章件'}
