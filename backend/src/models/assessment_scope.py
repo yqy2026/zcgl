@@ -92,9 +92,7 @@ class AssessmentScopeVersion(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive
     )
-    activated_by: Mapped[str | None] = mapped_column(
-        String, ForeignKey("users.id")
-    )
+    activated_by: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"))
     activated_at: Mapped[datetime | None] = mapped_column(DateTime)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -123,9 +121,7 @@ class AssessmentScopeItem(Base):
     )
     included: Mapped[bool] = mapped_column(Boolean, nullable=False)
     exclusion_reason: Mapped[str | None] = mapped_column(Text)
-    unit_snapshot: Mapped[dict[str, object]] = mapped_column(
-        _JSON_TYPE, nullable=False
-    )
+    unit_snapshot: Mapped[dict[str, object]] = mapped_column(_JSON_TYPE, nullable=False)
 
 
 def build_unit_snapshot(unit: AssetUnit) -> dict[str, object]:

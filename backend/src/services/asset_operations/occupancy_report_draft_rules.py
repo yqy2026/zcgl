@@ -115,9 +115,7 @@ def build_report_lines(
                 land_area=unit.land_area,
                 building_area=unit.building_area,
                 rentable_area=unit.rentable_area,
-                rented_area=(
-                    unit.rentable_area if unit.rented else Decimal("0")
-                ),
+                rented_area=(unit.rentable_area if unit.rented else Decimal("0")),
                 unit_count=1,
                 rented_unit_count=1 if unit.rented else 0,
                 rental_status=rental_status,
@@ -135,9 +133,7 @@ def aggregates_from_lines(lines: Sequence[ReportLine]) -> ReportAggregates:
         unit_count=unit_count,
         rented_unit_count=rented_unit_count,
         occupancy_rate=(
-            Decimal(rented_unit_count) / Decimal(unit_count)
-            if unit_count > 0
-            else None
+            Decimal(rented_unit_count) / Decimal(unit_count) if unit_count > 0 else None
         ),
         land_area=sum((line.land_area for line in lines), Decimal(0)),
         building_area=sum((line.building_area for line in lines), Decimal(0)),
@@ -150,7 +146,13 @@ def aggregates_from_lines(lines: Sequence[ReportLine]) -> ReportAggregates:
 # scale so a full-precision 1/3 rate equals its stored counterpart instead
 # of producing a phantom change every period.
 _AGGREGATE_SCALE = Decimal("1E-10")
-_QUANTIZED_FIELDS = ("occupancy_rate", "land_area", "building_area", "rentable_area", "rented_area")
+_QUANTIZED_FIELDS = (
+    "occupancy_rate",
+    "land_area",
+    "building_area",
+    "rentable_area",
+    "rented_area",
+)
 
 
 def compare_with_baseline(

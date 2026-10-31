@@ -133,9 +133,7 @@ class OccupancyReportRepository:
         if len(owner_party_ids) > 0:
             rows = (
                 await db.execute(
-                    select(Party.id, Party.name).where(
-                        Party.id.in_(owner_party_ids)
-                    )
+                    select(Party.id, Party.name).where(Party.id.in_(owner_party_ids))
                 )
             ).all()
             owners = {party_id: name for party_id, name in rows}

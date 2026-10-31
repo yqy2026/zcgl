@@ -172,9 +172,7 @@ class AssetUnitCommandService:
         )
         originals = {field: getattr(unit, field) for field in editable_fields}
         changed_fields = [
-            field
-            for field in editable_fields
-            if getattr(request, field) is not None
+            field for field in editable_fields if getattr(request, field) is not None
         ]
         for field in editable_fields:
             value = getattr(request, field)
@@ -187,8 +185,7 @@ class AssetUnitCommandService:
             action="update",
             actor_id=actor_id,
             before={
-                field: _render_audit_value(originals[field])
-                for field in changed_fields
+                field: _render_audit_value(originals[field]) for field in changed_fields
             },
             after={
                 field: _render_audit_value(getattr(unit, field))
@@ -241,8 +238,7 @@ class AssetUnitCommandService:
             action="update_vacancy_note",
             actor_id=actor_id,
             before={
-                field: _render_audit_value(originals[field])
-                for field in changed_fields
+                field: _render_audit_value(originals[field]) for field in changed_fields
             },
             after={
                 field: _render_audit_value(getattr(unit, field))

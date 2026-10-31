@@ -128,9 +128,7 @@ class OccupancyReportPreviewStore:
         token = str(raw_token).strip()
         if token == "":  # nosec B105 - empty-token guard
             return None
-        payload = cache_manager.get(
-            self._token_hash(token), namespace=self.NAMESPACE
-        )
+        payload = cache_manager.get(self._token_hash(token), namespace=self.NAMESPACE)
         if not isinstance(payload, dict):
             return None
         expires_at_raw = payload.get("expires_at")
@@ -148,9 +146,7 @@ class OccupancyReportPreviewStore:
         token = str(raw_token).strip()
         if token == "":  # nosec B105 - empty-token guard
             return False
-        return cache_manager.delete(
-            self._token_hash(token), namespace=self.NAMESPACE
-        )
+        return cache_manager.delete(self._token_hash(token), namespace=self.NAMESPACE)
 
     @staticmethod
     def _token_hash(token: str) -> str:
@@ -225,9 +221,7 @@ class OccupancyReportSubmissionService:
         if len(pending) > 0:
             gate_reasons.append("pending_units_unconfirmed")
         change_note = chain.change_note if chain is not None else None
-        normalized_note = (
-            change_note.strip() if change_note is not None else None
-        )
+        normalized_note = change_note.strip() if change_note is not None else None
         if normalized_note == "":
             normalized_note = None
         baseline_row = await self._baseline_row(
@@ -383,9 +377,7 @@ class OccupancyReportSubmissionService:
         if len(pending) > 0:
             raise AssetOperationsPreviewStaleError("pending_units_unconfirmed")
         change_note = chain.change_note if chain is not None else None
-        normalized_note = (
-            change_note.strip() if change_note is not None else None
-        )
+        normalized_note = change_note.strip() if change_note is not None else None
         baseline_row = await self._baseline_row(
             db, operator_party_id=operator_party_id, period=period
         )
@@ -415,9 +407,7 @@ class OccupancyReportSubmissionService:
         chain.status = "submitted"
         chain.scope_version_id = scope_version.id
         chain.project_count = facts.project_counts.project_count
-        chain.operating_project_count = (
-            facts.project_counts.operating_project_count
-        )
+        chain.operating_project_count = facts.project_counts.operating_project_count
         chain.non_operating_project_count = (
             facts.project_counts.non_operating_project_count
         )
@@ -507,9 +497,7 @@ class OccupancyReportSubmissionService:
                 )
                 self.preview_store.delete(request.preview_token)
                 return replay
-            raise AssetOperationsPreviewStaleError(
-                "concurrent_modification"
-            ) from exc
+            raise AssetOperationsPreviewStaleError("concurrent_modification") from exc
         self.preview_store.delete(request.preview_token)
         return response
 
@@ -526,9 +514,7 @@ class OccupancyReportSubmissionService:
         report = await self.repository.get_any_status(db, report_id=report_id)
         if report is None:
             raise ResourceNotFoundError("MonthlyOccupancyReport", report_id)
-        require_operator_access(
-            scope, operator_party_id=report.operator_party_id
-        )
+        require_operator_access(scope, operator_party_id=report.operator_party_id)
         if report.status == "draft":
             raise OccupancyReportNotSubmittedError(report_id=report.id)
         lines = await self.repository.list_lines(db, report_id=report.id)
@@ -554,9 +540,7 @@ class OccupancyReportSubmissionService:
             operator_party_id=report.operator_party_id,
             period=report.period,
         )
-        differences = diff_snapshot_against_current(
-            snapshot_lines, current_lines
-        )
+        differences = diff_snapshot_against_current(snapshot_lines, current_lines)
         scope_version = None
         if report.scope_version_id is not None:
             scope_version = await assessment_scope_repository.get_version(
@@ -588,9 +572,7 @@ class OccupancyReportSubmissionService:
             project_counts=OccupancyReportProjectCounts(
                 project_count=report.project_count or 0,
                 operating_project_count=report.operating_project_count or 0,
-                non_operating_project_count=(
-                    report.non_operating_project_count or 0
-                ),
+                non_operating_project_count=(report.non_operating_project_count or 0),
             ),
             lines=[
                 OccupancyReportLineSnapshot(
@@ -640,9 +622,7 @@ class OccupancyReportSubmissionService:
         report = await self.repository.get_any_status(db, report_id=report_id)
         if report is None:
             raise ResourceNotFoundError("MonthlyOccupancyReport", report_id)
-        require_operator_access(
-            scope, operator_party_id=report.operator_party_id
-        )
+        require_operator_access(scope, operator_party_id=report.operator_party_id)
         if report.status == "draft":
             raise OccupancyReportNotSubmittedError(report_id=report.id)
         if report.status == "withdrawn":
@@ -705,9 +685,7 @@ class OccupancyReportSubmissionService:
             if previewed.status == "draft":
                 raise OccupancyReportNotSubmittedError(report_id=previewed.id)
             if previewed.status == "withdrawn":
-                raise OccupancyReportAlreadyWithdrawnError(
-                    report_id=previewed.id
-                )
+                raise OccupancyReportAlreadyWithdrawnError(report_id=previewed.id)
         payload = self._peek_token(
             request.preview_token,
             action=_WITHDRAW_ACTION,
@@ -736,9 +714,7 @@ class OccupancyReportSubmissionService:
         )
         if report is None:
             raise ResourceNotFoundError("MonthlyOccupancyReport", report_id)
-        require_operator_access(
-            scope, operator_party_id=report.operator_party_id
-        )
+        require_operator_access(scope, operator_party_id=report.operator_party_id)
         if report.status == "draft":
             raise OccupancyReportNotSubmittedError(report_id=report.id)
         if report.status == "withdrawn":
@@ -826,9 +802,7 @@ class OccupancyReportSubmissionService:
                 )
                 self.preview_store.delete(request.preview_token)
                 return replay
-            raise AssetOperationsPreviewStaleError(
-                "concurrent_modification"
-            ) from exc
+            raise AssetOperationsPreviewStaleError("concurrent_modification") from exc
         self.preview_store.delete(request.preview_token)
         return response
 
@@ -845,9 +819,7 @@ class OccupancyReportSubmissionService:
         report = await self.repository.get_any_status(db, report_id=report_id)
         if report is None:
             raise ResourceNotFoundError("MonthlyOccupancyReport", report_id)
-        require_operator_access(
-            scope, operator_party_id=report.operator_party_id
-        )
+        require_operator_access(scope, operator_party_id=report.operator_party_id)
         if report.status == "draft":
             raise OccupancyReportNotSubmittedError(report_id=report.id)
         from ...enums.task import TaskType
@@ -934,9 +906,9 @@ class OccupancyReportSubmissionService:
             completed_at=self._database_datetime(self._clock()),
             result_data={
                 "file_name": f"occupancy-report-{report.period}.csv",
-                "content_base64": base64.b64encode(
-                    content.encode("utf-8")
-                ).decode("ascii"),
+                "content_base64": base64.b64encode(content.encode("utf-8")).decode(
+                    "ascii"
+                ),
                 "line_count": len(lines),
             },
         )
@@ -977,9 +949,7 @@ class OccupancyReportSubmissionService:
             if unit.managed_from <= end_of_month
             and (unit.managed_to is None or unit.managed_to >= end_of_month)
         ]
-        counts = project_counts(
-            self._full_set_facts(full_set_units)
-        )
+        counts = project_counts(self._full_set_facts(full_set_units))
         return _ReportFacts(
             scope_version=scope_version,
             chain=chain,
@@ -1067,9 +1037,7 @@ class OccupancyReportSubmissionService:
         period: str,
     ) -> MonthlyOccupancyReport | None:
         year, month = int(period[:4]), int(period[5:7])
-        previous_period = (
-            f"{year - 1}-12" if month == 1 else f"{year}-{month - 1:02d}"
-        )
+        previous_period = f"{year - 1}-12" if month == 1 else f"{year}-{month - 1:02d}"
         return await self.repository.get_submitted_report(
             db,
             operator_party_id=operator_party_id,
@@ -1126,9 +1094,7 @@ class OccupancyReportSubmissionService:
             for line in derived.lines
         )
 
-    async def _require_party(
-        self, db: AsyncSession, operator_party_id: str
-    ) -> None:
+    async def _require_party(self, db: AsyncSession, operator_party_id: str) -> None:
         if not await assessment_scope_repository.party_exists(
             db, party_id=operator_party_id
         ):
@@ -1160,13 +1126,9 @@ class OccupancyReportSubmissionService:
         from .occupancy_report_draft_rules import month_end as _month_end
 
         if re.fullmatch(r"^[0-9]{4}-(0[1-9]|1[0-2])$", period) is None:
-            raise OccupancyReportPeriodInvalidError(
-                period=period, reason="format"
-            )
+            raise OccupancyReportPeriodInvalidError(period=period, reason="format")
         if _month_end(period) > _business_today():
-            raise OccupancyReportPeriodInvalidError(
-                period=period, reason="future"
-            )
+            raise OccupancyReportPeriodInvalidError(period=period, reason="future")
 
     def _peek_token(
         self,
@@ -1306,7 +1268,6 @@ class OccupancyReportSubmissionService:
     async def _get_receipt(
         db: AsyncSession, *, actor_id: str, idempotency_key: str
     ) -> AssetContractWriteReceipt | None:
-
         return await asset_contract_repository.get_write_receipt(
             db, actor_id=actor_id, idempotency_key=idempotency_key
         )
@@ -1321,7 +1282,6 @@ class OccupancyReportSubmissionService:
         result: OccupancyReportSubmitResponse | OccupancyReportWithdrawResponse,
         command_kind: str,
     ) -> None:
-
         await rent_command_repository.add_receipt(
             db,
             receipt=AssetContractWriteReceipt(  # type: ignore[call-arg]
@@ -1347,7 +1307,6 @@ class OccupancyReportSubmissionService:
         occurred_at: datetime,
         correlation_id: str,
     ) -> None:
-
         await business_change_repository.add(
             db,
             event=BusinessChangeEvent(  # type: ignore[call-arg]
@@ -1386,7 +1345,7 @@ class OccupancyReportSubmissionService:
 
     @staticmethod
     def _scope_summary(
-        version: AssessmentScopeVersion | None
+        version: AssessmentScopeVersion | None,
     ) -> AssessmentScopeVersionSummary | None:
         return summarize_version(version)
 

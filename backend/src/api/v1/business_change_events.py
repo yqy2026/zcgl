@@ -29,7 +29,8 @@ async def list_business_change_events(
         "management_fee_statement",
         "asset_unit",
         "asset_unit_boundary_change",
-    ] | None = None,
+    ]
+    | None = None,
     target_id: str | None = Query(None, max_length=36),
     period: str | None = Query(None, description="上海业务月 YYYY-MM"),
     page: int = Query(1, ge=1),

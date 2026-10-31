@@ -166,9 +166,7 @@ def affected_periods(effective_from_period: str, year: int) -> tuple[str, ...]:
     )
     if head_year != year or not 1 <= head_month <= 12:
         raise ValueError(f"Invalid effective_from_period: {effective_from_period}")
-    return tuple(
-        f"{year}-{month:02d}" for month in range(head_month, 13)
-    )
+    return tuple(f"{year}-{month:02d}" for month in range(head_month, 13))
 
 
 def _has_reason(reason: str | None) -> bool:

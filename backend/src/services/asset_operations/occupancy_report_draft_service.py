@@ -276,9 +276,7 @@ class OccupancyReportDraftService:
             period=previous_period,
         )
 
-    async def _require_party(
-        self, db: AsyncSession, operator_party_id: str
-    ) -> None:
+    async def _require_party(self, db: AsyncSession, operator_party_id: str) -> None:
         if not await assessment_scope_repository.party_exists(
             db, party_id=operator_party_id
         ):
@@ -287,13 +285,9 @@ class OccupancyReportDraftService:
     @staticmethod
     def _validate_period(period: str) -> None:
         if _PERIOD_PATTERN.fullmatch(period) is None:
-            raise OccupancyReportPeriodInvalidError(
-                period=period, reason="format"
-            )
+            raise OccupancyReportPeriodInvalidError(period=period, reason="format")
         if month_end(period) > _business_today():
-            raise OccupancyReportPeriodInvalidError(
-                period=period, reason="future"
-            )
+            raise OccupancyReportPeriodInvalidError(period=period, reason="future")
 
 
 def _business_today() -> date:

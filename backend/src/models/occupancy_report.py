@@ -183,9 +183,7 @@ class MonthlyOccupancyReportLine(Base):
     unit_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     rented_unit_count: Mapped[int] = mapped_column(Integer, nullable=False)
     rental_status: Mapped[str] = mapped_column(String(20), nullable=False)
-    terminal_contract_ids: Mapped[list[str]] = mapped_column(
-        _JSON_TYPE, nullable=False
-    )
+    terminal_contract_ids: Mapped[list[str]] = mapped_column(_JSON_TYPE, nullable=False)
 
 
 __all__ = ["MonthlyOccupancyReport", "MonthlyOccupancyReportLine"]

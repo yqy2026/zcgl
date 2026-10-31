@@ -109,9 +109,7 @@ class AssessmentScopePreviewStore:
         token = str(raw_token).strip()
         if token == "":  # nosec B105 - empty-token guard
             return None
-        payload = cache_manager.get(
-            self._token_hash(token), namespace=self.NAMESPACE
-        )
+        payload = cache_manager.get(self._token_hash(token), namespace=self.NAMESPACE)
         if not isinstance(payload, dict):
             return None
         expires_at_raw = payload.get("expires_at")
@@ -129,9 +127,7 @@ class AssessmentScopePreviewStore:
         token = str(raw_token).strip()
         if token == "":  # nosec B105 - empty-token guard
             return False
-        return cache_manager.delete(
-            self._token_hash(token), namespace=self.NAMESPACE
-        )
+        return cache_manager.delete(self._token_hash(token), namespace=self.NAMESPACE)
 
     @staticmethod
     def _token_hash(token: str) -> str:
@@ -212,14 +208,10 @@ class AssessmentScopeCommandService:
     ) -> AssessmentScopeDraftResponse:
         require_scope(scope, actor_id)
         draft = await self._require_draft(db, draft_id=draft_id)
-        self._require_operator_access(
-            scope, operator_party_id=draft.operator_party_id
-        )
+        self._require_operator_access(scope, operator_party_id=draft.operator_party_id)
         if draft.status != "draft":
             raise AssessmentScopeDraftStateError(draft_status=draft.status)
-        draft_items = tuple(
-            await self.repository.list_items(db, version_id=draft.id)
-        )
+        draft_items = tuple(await self.repository.list_items(db, version_id=draft.id))
         candidates = await self.repository.list_managed_units(
             db,
             operator_party_id=draft.operator_party_id,
@@ -283,9 +275,7 @@ class AssessmentScopeCommandService:
             self._scope_facts(candidates),
             prior_decisions,
         )
-        snapshot_by_unit = {
-            unit.id: build_unit_snapshot(unit) for unit in candidates
-        }
+        snapshot_by_unit = {unit.id: build_unit_snapshot(unit) for unit in candidates}
         occurred_at = self._clock()
         draft = AssessmentScopeVersion(  # type: ignore[call-arg]
             id=str(uuid.uuid4()),
@@ -336,9 +326,7 @@ class AssessmentScopeCommandService:
         """Apply explicit include/exclude decisions to one editable draft."""
         require_scope(scope, actor_id)
         draft = await self._require_draft(db, draft_id=draft_id)
-        self._require_operator_access(
-            scope, operator_party_id=draft.operator_party_id
-        )
+        self._require_operator_access(scope, operator_party_id=draft.operator_party_id)
         if draft.status != "draft":
             raise AssessmentScopeDraftStateError(draft_status=draft.status)
         # Serialize concurrent edits of the same draft: without the advisory
@@ -349,10 +337,8 @@ class AssessmentScopeCommandService:
             operator_party_id=draft.operator_party_id,
             year=draft.year,
         )
-        locked_draft: AssessmentScopeVersion | None = (
-            await self.repository.get_version(
-                db, version_id=draft_id, for_update=True
-            )
+        locked_draft: AssessmentScopeVersion | None = await self.repository.get_version(
+            db, version_id=draft_id, for_update=True
         )
         if locked_draft is None:
             raise ResourceNotFoundError("AssessmentScopeVersion", draft_id)
@@ -363,9 +349,7 @@ class AssessmentScopeCommandService:
             draft_id, actual=draft.version, expected=request.expected_version
         )
 
-        draft_items = tuple(
-            await self.repository.list_items(db, version_id=draft.id)
-        )
+        draft_items = tuple(await self.repository.list_items(db, version_id=draft.id))
         candidates = await self.repository.list_managed_units(
             db,
             operator_party_id=draft.operator_party_id,
@@ -376,16 +360,12 @@ class AssessmentScopeCommandService:
         known_units = {item.asset_unit_id for item in draft_items} | {
             unit_id for unit_id, _ in current_view.pending
         }
-        requested_units = {
-            decision.asset_unit_id for decision in request.decisions
-        }
+        requested_units = {decision.asset_unit_id for decision in request.decisions}
         unknown = sorted(requested_units - known_units)
         if unknown:
             raise ResourceNotFoundError("AssetUnit", unknown[0])
 
-        snapshot_by_unit = {
-            unit.id: build_unit_snapshot(unit) for unit in candidates
-        }
+        snapshot_by_unit = {unit.id: build_unit_snapshot(unit) for unit in candidates}
         persisted_snapshot = {
             item.asset_unit_id: item.unit_snapshot for item in draft_items
         }
@@ -444,14 +424,10 @@ class AssessmentScopeCommandService:
         """Compare the draft with the active version and bind a commit token."""
         require_scope(scope, actor_id)
         draft = await self._require_draft(db, draft_id=draft_id)
-        self._require_operator_access(
-            scope, operator_party_id=draft.operator_party_id
-        )
+        self._require_operator_access(scope, operator_party_id=draft.operator_party_id)
         if draft.status != "draft":
             raise AssessmentScopeDraftStateError(draft_status=draft.status)
-        draft_items = tuple(
-            await self.repository.list_items(db, version_id=draft.id)
-        )
+        draft_items = tuple(await self.repository.list_items(db, version_id=draft.id))
         candidates = await self.repository.list_managed_units(
             db,
             operator_party_id=draft.operator_party_id,
@@ -502,16 +478,12 @@ class AssessmentScopeCommandService:
             current_version_number=(
                 active.version_number if active is not None else None
             ),
-            current_included_count=sum(
-                1 for item in current_items if item.included
-            ),
+            current_included_count=sum(1 for item in current_items if item.included),
             current_excluded_count=sum(
                 1 for item in current_items if not item.included
             ),
             new_included_count=sum(1 for item in draft_items if item.included),
-            new_excluded_count=sum(
-                1 for item in draft_items if not item.included
-            ),
+            new_excluded_count=sum(1 for item in draft_items if not item.included),
             pending_count=pending_count,
             occupancy_period=period,
             occupancy_rate_current=(
@@ -552,9 +524,7 @@ class AssessmentScopeCommandService:
             return self._replay(existing, request_fingerprint=request_fingerprint)
 
         draft = await self._require_draft(db, draft_id=draft_id)
-        self._require_operator_access(
-            scope, operator_party_id=draft.operator_party_id
-        )
+        self._require_operator_access(scope, operator_party_id=draft.operator_party_id)
 
         preview_payload = self.preview_store.peek(request.preview_token)
         if preview_payload is None:
@@ -565,9 +535,7 @@ class AssessmentScopeCommandService:
             raise AssetOperationsPreviewStaleError("action_mismatch")
         if preview_payload.get("draft_id") != draft.id:
             raise AssetOperationsPreviewStaleError("target_mismatch")
-        if (
-            preview_payload.get("scope_signature") != self._scope_signature(scope)
-        ):
+        if preview_payload.get("scope_signature") != self._scope_signature(scope):
             raise AssetOperationsPreviewStaleError("scope_changed")
         token_versions = preview_payload.get("versions")
         if not isinstance(token_versions, dict):
@@ -593,9 +561,7 @@ class AssessmentScopeCommandService:
         if locked is None:
             raise ResourceNotFoundError("AssessmentScopeVersion", draft_id)
         draft = locked
-        self._require_operator_access(
-            scope, operator_party_id=draft.operator_party_id
-        )
+        self._require_operator_access(scope, operator_party_id=draft.operator_party_id)
         if draft.status != "draft":
             raise AssetOperationsPreviewStaleError("state_changed")
         if draft.version != request.expected_version:
@@ -613,9 +579,7 @@ class AssessmentScopeCommandService:
                 year=draft.year,
             )
 
-        draft_items = tuple(
-            await self.repository.list_items(db, version_id=draft.id)
-        )
+        draft_items = tuple(await self.repository.list_items(db, version_id=draft.id))
         active = await self.repository.get_active_version(
             db,
             operator_party_id=draft.operator_party_id,
@@ -652,9 +616,7 @@ class AssessmentScopeCommandService:
             # unique index.
             active.status = "superseded"
             await db.flush()
-        snapshot_by_unit = {
-            unit.id: build_unit_snapshot(unit) for unit in candidates
-        }
+        snapshot_by_unit = {unit.id: build_unit_snapshot(unit) for unit in candidates}
         for item in draft_items:
             refreshed = snapshot_by_unit.get(item.asset_unit_id)
             if refreshed is not None:
@@ -689,9 +651,7 @@ class AssessmentScopeCommandService:
                 after={
                     "version_number": version_number,
                     "effective_from_period": request.effective_from_period,
-                    "included_count": sum(
-                        1 for item in draft_items if item.included
-                    ),
+                    "included_count": sum(1 for item in draft_items if item.included),
                     "excluded_count": sum(
                         1 for item in draft_items if not item.included
                     ),
@@ -726,9 +686,7 @@ class AssessmentScopeCommandService:
                 )
                 self.preview_store.delete(request.preview_token)
                 return replay
-            raise AssetOperationsPreviewStaleError(
-                "concurrent_modification"
-            ) from exc
+            raise AssetOperationsPreviewStaleError("concurrent_modification") from exc
         self.preview_store.delete(request.preview_token)
         return response
 
@@ -786,9 +744,7 @@ class AssessmentScopeCommandService:
             raise ResourceNotFoundError("AssessmentScopeVersion", draft_id)
         return version
 
-    async def _require_party(
-        self, db: AsyncSession, operator_party_id: str
-    ) -> None:
+    async def _require_party(self, db: AsyncSession, operator_party_id: str) -> None:
         if not await self.repository.party_exists(db, party_id=operator_party_id):
             raise ResourceNotFoundError("Party", operator_party_id)
 
@@ -807,7 +763,9 @@ class AssessmentScopeCommandService:
         """
         included_ids = {item.asset_unit_id for item in items if item.included}
         units_by_id = {unit.id: unit for unit in units}
-        facts = [units_by_id[unit_id] for unit_id in included_ids if unit_id in units_by_id]
+        facts = [
+            units_by_id[unit_id] for unit_id in included_ids if unit_id in units_by_id
+        ]
         if len(facts) == 0:
             return None
         rented_ids = await asset_contract_repository.list_rented_unit_ids_by_units(
@@ -843,7 +801,7 @@ class AssessmentScopeCommandService:
 
     @staticmethod
     def _scope_facts(
-        units: list[AssetUnit] | tuple[AssetUnit, ...]
+        units: list[AssetUnit] | tuple[AssetUnit, ...],
     ) -> tuple[ScopeUnitFact, ...]:
         return tuple(
             ScopeUnitFact(
@@ -858,7 +816,7 @@ class AssessmentScopeCommandService:
 
     @staticmethod
     def _item_responses(
-        items: tuple[AssessmentScopeItem, ...]
+        items: tuple[AssessmentScopeItem, ...],
     ) -> list[AssessmentScopeItemResponse]:
         return [
             AssessmentScopeItemResponse(
@@ -870,9 +828,7 @@ class AssessmentScopeCommandService:
             for item in sorted(items, key=lambda row: row.asset_unit_id)
         ]
 
-    def _pending_responses(
-        self, view: _ScopeView
-    ) -> list[AssessmentScopePendingItem]:
+    def _pending_responses(self, view: _ScopeView) -> list[AssessmentScopePendingItem]:
         units_by_id = {unit.id: unit for unit in view.candidates}
         result: list[AssessmentScopePendingItem] = []
         for unit_id, reason in sorted(view.pending):
@@ -904,7 +860,7 @@ class AssessmentScopeCommandService:
 
     @staticmethod
     def _summary(
-        version: AssessmentScopeVersion | None
+        version: AssessmentScopeVersion | None,
     ) -> AssessmentScopeVersionSummary | None:
         return summarize_version(version)
 
@@ -1052,9 +1008,7 @@ def require_operator_access(
         operator_party_id in scope.manager_party_ids
     ):
         return
-    raise AssessmentScopeOperatorForbiddenError(
-        operator_party_id=operator_party_id
-    )
+    raise AssessmentScopeOperatorForbiddenError(operator_party_id=operator_party_id)
 
 
 def summarize_version(
@@ -1090,9 +1044,7 @@ def view_for(
         pending=tuple(
             (
                 unit.id,
-                "boundary_uncertain"
-                if unit.predecessor_unit_ids
-                else "new_takeover",
+                "boundary_uncertain" if unit.predecessor_unit_ids else "new_takeover",
             )
             for unit in sorted(candidates, key=lambda row: row.id)
             if unit.id not in decided

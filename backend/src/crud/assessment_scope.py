@@ -148,8 +148,7 @@ class AssessmentScopeRepository:
             .select_from(UpstreamContractAssetUnit)
             .join(
                 UpstreamContract,
-                UpstreamContract.id
-                == UpstreamContractAssetUnit.upstream_contract_id,
+                UpstreamContract.id == UpstreamContractAssetUnit.upstream_contract_id,
             )
             .where(
                 UpstreamContractAssetUnit.asset_unit_id == AssetUnit.id,
@@ -159,7 +158,8 @@ class AssessmentScopeRepository:
         )
         any_coverage = exists(
             select(1)
-            .select_from(UpstreamContractAssetUnit).where(
+            .select_from(UpstreamContractAssetUnit)
+            .where(
                 UpstreamContractAssetUnit.asset_unit_id == AssetUnit.id,
                 active_coverage,
             )

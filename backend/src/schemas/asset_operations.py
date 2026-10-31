@@ -887,8 +887,7 @@ class AssessmentScopeDecisionInput(_StrictPayload):
         if self.included and self.exclusion_reason is not None:
             raise ValueError("纳入决定不得填写排除原因")
         has_reason = (
-            self.exclusion_reason is not None
-            and self.exclusion_reason.strip() != ""
+            self.exclusion_reason is not None and self.exclusion_reason.strip() != ""
         )
         if not self.included and not has_reason:
             raise ValueError("排除决定必须填写原因")
@@ -928,9 +927,7 @@ class AssessmentScopePreviewResponse(_StrictPayload):
 class AssessmentScopeCommitRequest(_StrictPayload):
     preview_token: str = Field(..., min_length=1, max_length=512)
     expected_version: int = Field(..., ge=1)
-    effective_from_period: str = Field(
-        ..., pattern=r"^[0-9]{4}-(0[1-9]|1[0-2])$"
-    )
+    effective_from_period: str = Field(..., pattern=r"^[0-9]{4}-(0[1-9]|1[0-2])$")
 
 
 class AssessmentScopeCommitResponse(_StrictPayload):
@@ -1127,8 +1124,6 @@ class OccupancyReportExportResponse(_StrictPayload):
 
 
 __all__ = [
-
-
     "AssessmentScopeCommitRequest",
     "AssessmentScopeCommitResponse",
     "AssessmentScopeDecisionInput",

@@ -10,9 +10,7 @@ from typing import TypeVar
 # Stored line columns are Numeric(14,2); identity comparisons quantize to
 # that scale so formatting differences never surface as phantom changes.
 _AREA_SCALE = Decimal("1E-2")
-_AREA_FIELDS = frozenset(
-    {"land_area", "building_area", "rentable_area", "rented_area"}
-)
+_AREA_FIELDS = frozenset({"land_area", "building_area", "rentable_area", "rented_area"})
 
 
 @dataclass(frozen=True)
@@ -66,12 +64,8 @@ def diff_snapshot_against_current(
     current_lines: Iterable[CurrentLine],
 ) -> tuple[UnitDiff, ...]:
     """Per-unit field differences; snapshot values always stay untouched."""
-    snapshots = _materialize_unique(
-        snapshot_lines, key=lambda line: line.asset_unit_id
-    )
-    currents = _materialize_unique(
-        current_lines, key=lambda line: line.asset_unit_id
-    )
+    snapshots = _materialize_unique(snapshot_lines, key=lambda line: line.asset_unit_id)
+    currents = _materialize_unique(current_lines, key=lambda line: line.asset_unit_id)
     diffs: list[UnitDiff] = []
     for unit_id, snap in snapshots.items():
         now = currents.get(unit_id)

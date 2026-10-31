@@ -87,9 +87,7 @@ class BusinessChangeRepository:
         # Unit maintenance and boundary events follow the unit's own
         # visibility: owner axis on owner_party_id, manager axis through the
         # project, matching AssetUnitRepository._apply_scope.
-        unit_ids = AssetUnitRepository._apply_scope(
-            select(AssetUnit.id), scope=scope
-        )
+        unit_ids = AssetUnitRepository._apply_scope(select(AssetUnit.id), scope=scope)
         query = select(BusinessChangeEvent).where(
             or_(
                 and_(
@@ -111,24 +109,25 @@ class BusinessChangeRepository:
                     BusinessChangeEvent.target_id.in_(unit_ids),
                 ),
                 and_(
-                    BusinessChangeEvent.target_type
-                    == "asset_unit_boundary_change",
+                    BusinessChangeEvent.target_type == "asset_unit_boundary_change",
                     BusinessChangeEvent.target_id.in_(
                         boundary_change_ids_for_scope(scope)
                     ),
                 ),
                 and_(
-                    BusinessChangeEvent.target_type
-                    == "assessment_scope_version",
+                    BusinessChangeEvent.target_type == "assessment_scope_version",
                     BusinessChangeEvent.target_id.in_(
-                        reporting_object_ids_for_scope(scope, "assessment_scope_versions")
+                        reporting_object_ids_for_scope(
+                            scope, "assessment_scope_versions"
+                        )
                     ),
                 ),
                 and_(
-                    BusinessChangeEvent.target_type
-                    == "monthly_occupancy_report",
+                    BusinessChangeEvent.target_type == "monthly_occupancy_report",
                     BusinessChangeEvent.target_id.in_(
-                        reporting_object_ids_for_scope(scope, "monthly_occupancy_reports")
+                        reporting_object_ids_for_scope(
+                            scope, "monthly_occupancy_reports"
+                        )
                     ),
                 ),
             )
@@ -152,7 +151,6 @@ class BusinessChangeRepository:
             .limit(limit)
         )
         return tuple(result.scalars().all()), total
-
 
 
 def reporting_object_ids_for_scope(
@@ -198,11 +196,9 @@ def boundary_change_ids_for_scope(
         select(AssetUnit.id), scope=scope
     )
     visibility = unit_visibility.whereclause
-    source_element = (
-        select(
-            func.jsonb_array_elements_text(
-                AssetUnitBoundaryChange.source_unit_ids
-            ).cast(String)
+    source_element = select(
+        func.jsonb_array_elements_text(AssetUnitBoundaryChange.source_unit_ids).cast(
+            String
         )
     )
     conditions: list[ColumnElement[bool]] = [
