@@ -627,7 +627,7 @@ def test_assessment_scope_commit_race_admits_single_winner_e2e(
                 actor = User(
                     id=str(uuid4()),
                     username=f"race-{uuid4().hex[:10]}",
-                    email=f"race-{uuid4().hex[:10]}@t.local",
+                    email=f"race-{uuid4().hex[:10]}@example.com",
                     phone=f"13{uuid4().int % 10**9:09d}",
                     full_name="范围并发",
                     password_hash="unused",
