@@ -9,6 +9,10 @@ from .abac import (  # noqa: F401
     ABACPolicyRule,
     ABACRolePolicy,
 )
+from .assessment_scope import (  # noqa: F401
+    AssessmentScopeItem,
+    AssessmentScopeVersion,
+)
 from .asset import Asset  # noqa: F401
 from .asset_contract import (  # noqa: F401
     AssetContractWriteReceipt,
@@ -88,6 +92,10 @@ from .notification import (  # noqa: F401
     Notification,
     NotificationPriority,
     NotificationType,
+)
+from .occupancy_report import (  # noqa: F401
+    MonthlyOccupancyReport,
+    MonthlyOccupancyReportLine,
 )
 from .organization import (  # noqa: F401
     Organization,

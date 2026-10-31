@@ -205,7 +205,7 @@ async def test_persist_split_rebinds_upstream_coverage_to_every_result() -> None
     await_args = db.execute.await_args.args[0]
     sql = str(await_args.compile(compile_kwargs={"literal_binds": True}))
     assert "FOR UPDATE" in sql
-    db.flush.assert_awaited_once()
+    assert db.flush.await_count == 2
 
 
 @pytest.mark.asyncio

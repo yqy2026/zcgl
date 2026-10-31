@@ -255,17 +255,24 @@ HTTP 请求与响应细则：
 
 ### 5.10 年度考核范围
 
+报送单位为运营主体 Party。按年度或统计月访问的范围/报送端点必须明确指定 `operator_party_id`，服务端校验整份报送单位的数据权限；不能把筛选后的局部资产集合存成该主体的完整范围或快照。按草稿/快照 ID 访问时，从持久对象解析运营主体并重新鉴权。`asset_ops:report` 不替代数据范围校验；同运营主体同年度版本递增，不同主体互不覆盖。
+
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 当前版本 | `GET /api/v1/assessment-scopes/{year}` | 返回活动版本、逐宗决定和当前出租率 |
-| 创建草稿 | `POST /api/v1/assessment-scopes/{year}/drafts` | 从当前版本或上一年度复制；覆盖前返回影响数 |
-| 更新草稿 | `PUT /api/v1/assessment-scope-drafts/{draft_id}` | 批量纳入/排除；排除原因必填 |
-| 影响预览 | `POST /api/v1/assessment-scope-drafts/{draft_id}/preview` | 返回纳入/排除宗数、未填原因、出租率变化和受影响月份 |
-| 保存版本 | `POST /api/v1/assessment-scope-drafts/{draft_id}/commit` | 消费预览 token、期望版本和幂等键，生成新版本 |
+| 当前版本 | `GET /api/v1/assessment-scopes/{year}?operator_party_id=` | 返回活动版本、逐宗决定、待确认清单和当月出租率；读取要求 `asset_ops:read` |
+| 创建草稿 | `POST /api/v1/assessment-scopes/{year}/drafts` | 请求指定 `operator_party_id` 与复制源（`current` / `previous_year`）；同运营主体同年度已有未保存草稿时返回 409 `ASSESSMENT_SCOPE_DRAFT_EXISTS` 并附草稿 ID，继续编辑该草稿而不是静默覆盖 |
+| 读取草稿 | `GET /api/v1/assessment-scope-drafts/{draft_id}` | 从草稿解析运营主体重新鉴权后返回决定与待确认清单 |
+| 更新草稿 | `PUT /api/v1/assessment-scope-drafts/{draft_id}` | 批量纳入/排除，期望版本乐观锁；排除原因去空白后必填，纳入不得携带原因；决定范围外的单元返回 404 |
+| 影响预览 | `POST /api/v1/assessment-scope-drafts/{draft_id}/preview` | 返回新旧纳入/排除宗数、待确认宗数、当月出租率对比、受影响月份和 `preview_token` |
+| 保存版本 | `POST /api/v1/assessment-scope-drafts/{draft_id}/commit` | 消费预览 token、期望版本、`effective_from_period` 和幂等键；旧活动版本转 `superseded`，同键同请求回放首次结果 |
 
-年中新增单元默认不进入当年活动版本，必须通过草稿明确纳入或排除。
+写端点要求 `asset_ops:report` 且运营主体须在操作者管理方范围内；`unrestricted` 之外的管理方范围只覆盖该主体部分数据时仍可报送整份范围（报送单位身份按运营主体，不按可见单元集合裁剪）。候选单元归属按当前有效上游覆盖的 `operator_party_id` 判定，无有效覆盖的单元回退项目运营主体；两条路径都缺失的单元不属于任何运营主体的候选。保存时锁定逐宗快照（名称、项目、面积、经营性质），此后主档变化只体现为新版本差异。
+
+年中新增接管单元按 `managed_from` 判断，默认不进入当年活动版本，必须通过草稿明确纳入或排除；年初已在管的补录存量默认纳入。拆合全部来源已纳入时继承纳入，来源决定不一致或未全纳入时进入待确认清单，确认前不计入分母。范围提交明确 `effective_from_period`，允许用于尚未提交的上月，不能修改已经提交的月报快照。
 
 ### 5.11 月度出租率报送
+
+同运营主体、同统计月只允许一条活动报送链，报送与范围版本的 `operator_party_id` 必须一致。历史快照整单授权读取，不能静默裁剪明细后保留全量汇总；撤回与后继草稿保持同一运营主体身份。
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
@@ -279,6 +286,10 @@ HTTP 请求与响应细则：
 | 导出 | `POST /api/v1/occupancy-reports/{report_id}/exports` | 生成对应快照的异步导出任务 |
 
 有较上月变动但说明为空，或存在改变分母的必处理项时，提交预览返回 `can_submit=false`；提交端点再次校验，不能只依赖按钮置灰。
+
+草稿端点（已实现）：`GET .../draft?operator_party_id=` 返回当月末逐宗行（含产权方/业态/项目/地址/建筑与可租/已租面积、月末有效终端合同）、由行聚合复算的汇总、待确认清单（必处理项）、与上月已提交快照的聚合字段级差异、`first_report`、`can_submit` 与门槛原因。变动口径＝宗数/已出租宗数/出租率/土地/建筑/可租/已租面积或范围版本任一变化；上月未提交则视为首报不触发说明。无活动考核范围返回 409 `OCCUPANCY_REPORT_SCOPE_MISSING`；期间非法或未来月返回 422 `OCCUPANCY_REPORT_PERIOD_INVALID`；该月已有已提交快照返回 409 `OCCUPANCY_REPORT_ALREADY_SUBMITTED`（撤回后重报在 V3-3 实现，当前先 fail loud）。`PUT .../draft-note` 保存草稿说明（去空白，空串归 `null`），不生成快照，要求 `asset_ops:report`；两个端点按统计月访问并指定运营主体，读取要求 `asset_ops:read`。建议项字段按 D05 裁决本期不实现。
+
+提交与撤回端点（已实现）：`POST .../submission-preview` 返回 `can_submit`、门槛原因、必处理项、规范化说明、与上月快照的差异及 `preview_token`（被门槛挡住时不下发 token，直接调用提交无法绕过）；`POST .../submissions` 消费 token、期望范围版本（ID+版本）与幂等键，在报送锁与范围锁下重新派生全部行并与预览指纹比对——范围变化、单元变化、租金事实（已租集合/终端合同）变化均拒绝陈旧提交（409 `PREVIEW_STALE`），通过后原子写入报送行、逐宗快照、业务审计与幂等回执；`GET /{report_id}` 只读返回快照数值、行、范围版本与当前台账字段级差异（差异按存储精度比较，只读不改写）；`POST /{report_id}/withdrawal-preview` 与 `POST .../withdrawal` 要求原因（非空白）、token 与幂等键，撤回把快照标 `withdrawn` 并建立后继草稿（`predecessor_report_id`），原行与审计保留，撤回后同月可重新走完整预览提交链。导出 `POST /{report_id}/exports` 创建异步任务并渲染快照 CSV 存入任务结果（系统暂无独立导出 worker，渲染在请求内完成后经标准任务查询端点取回，属已记录的实现妥协）。
 
 ### 5.12 档案
 
@@ -314,11 +325,11 @@ HTTP 请求与响应细则：
 
 | 方法与路径 | 契约 |
 |---|---|
-| `GET /api/v1/business-change-events?target_type=&target_id=&period=&page=&page_size=` | 按当前 Party 范围返回 `items` / `total`；`target_type` 支持 `upstream_contract` / `terminal_contract`，`target_id` 精确过滤，`period` 为上海业务月 `YYYY-MM`；分页默认 `page=1`、`page_size=50`（上限 200）；每项返回操作者、时间、动作、脱敏前后值、业务可读摘要、原因、关联对象和 `correlation_id` |
+| `GET /api/v1/business-change-events?target_type=&target_id=&period=&page=&page_size=` | 按当前 Party 范围返回 `items` / `total`；`target_type` 支持 `upstream_contract` / `terminal_contract` / `management_fee_statement` / `asset_unit` / `asset_unit_boundary_change`（单元维护事件按单元可见范围、拆合事件按任一源单元可见范围过滤），`target_id` 精确过滤，`period` 为上海业务月 `YYYY-MM`；分页默认 `page=1`、`page_size=50`（上限 200）；每项返回操作者、时间、动作、脱敏前后值、业务可读摘要、原因、关联对象和 `correlation_id` |
 
 变更记录是审计读取，不提供创建、更新或删除端点；由业务服务在同一事务写入。
 
-PR-0 先覆盖合同确认、修改、续签、终止、退出及撤销，动作码分别为 `confirmed` / `updated` / `renewed` / `terminated` / `exited` / `reversed`。续签的前驱与后继记录共用 `correlation_id`；幂等回放不追加第二份记录，失败事务不留下记录。无有效业务范围返回 403，范围外对象不出现在结果中；其他业务对象的变更记录随对应实施切片接入。
+PR-0 先覆盖合同确认、修改、续签、终止、退出及撤销，动作码分别为 `confirmed` / `updated` / `renewed` / `terminated` / `exited` / `reversed`。续签的前驱与后继记录共用 `correlation_id`；幂等回放不追加第二份记录，失败事务不留下记录。无有效业务范围返回 403，范围外对象不出现在结果中；其他业务对象的变更记录随对应实施切片接入。资产单元维护（更新/空置备注）与拆合提交在同一事务写 `asset_unit` / `asset_unit_boundary_change` 事件，只记录被修改字段或源/结果单元与生效日。
 
 ## 6. 预览—提交契约
 

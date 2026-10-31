@@ -28,7 +28,9 @@ from ...crud.asset_unit_boundary import (
     AssetUnitSplitContext,
     asset_unit_boundary_repository,
 )
+from ...crud.business_change_event import business_change_repository
 from ...models.asset_unit import AssetUnit, AssetUnitBoundaryChange
+from ...models.business_change_event import BusinessChangeEvent
 from ...schemas.asset_operations import (
     AssetUnitBoundaryCommitResponse,
     AssetUnitBoundaryImpact,
@@ -440,6 +442,26 @@ class AssetUnitBoundaryCommandService:
                 active_upstream_contract_ids=analysis.active_upstream_contract_ids,
                 effective_date=proposal.effective_date,
             )
+            await self._record_boundary_audit(
+                db,
+                boundary_change=boundary_change,
+                action="split",
+                actor_id=actor_id,
+                before={
+                    "source_unit_ids": response.source_unit_ids,
+                    "source_managed_to": (
+                        analysis.source.managed_to.isoformat()
+                        if analysis.source.managed_to is not None
+                        else None
+                    ),
+                },
+                after={
+                    "result_unit_ids": response.result_unit_ids,
+                    "effective_date": proposal.effective_date.isoformat(),
+                    "reason": request.reason,
+                },
+                occurred_at=occurred_at,
+            )
             await db.commit()
         except StaleDataError as exc:
             await db.rollback()
@@ -607,6 +629,21 @@ class AssetUnitBoundaryCommandService:
                 active_upstream_contract_ids=analysis.active_upstream_contract_ids,
                 effective_date=proposal.effective_date,
             )
+            await self._record_boundary_audit(
+                db,
+                boundary_change=boundary_change,
+                action="merge",
+                actor_id=actor_id,
+                before={
+                    "source_unit_ids": response.source_unit_ids,
+                },
+                after={
+                    "result_unit_ids": response.result_unit_ids,
+                    "effective_date": proposal.effective_date.isoformat(),
+                    "reason": request.reason,
+                },
+                occurred_at=occurred_at,
+            )
             await db.commit()
         except StaleDataError as exc:
             await db.rollback()
@@ -656,6 +693,34 @@ class AssetUnitBoundaryCommandService:
             return replay
         self.preview_store.delete(request.preview_token)
         return response
+
+    @staticmethod
+    async def _record_boundary_audit(
+        db: AsyncSession,
+        *,
+        boundary_change: AssetUnitBoundaryChange,
+        action: str,
+        actor_id: str,
+        before: dict[str, object],
+        after: dict[str, object],
+        occurred_at: datetime,
+    ) -> None:
+        """Append the boundary event in the caller's open transaction."""
+        await business_change_repository.add(
+            db,
+            event=BusinessChangeEvent(  # type: ignore[call-arg]
+                id=str(uuid.uuid4()),
+                target_type="asset_unit_boundary_change",
+                target_id=boundary_change.id,
+                action=action,
+                actor_id=actor_id,
+                before=before,
+                after=after,
+                reason=None,
+                correlation_id=boundary_change.id,
+                occurred_at=occurred_at,
+            ),
+        )
 
     async def _analyze_split(
         self,
