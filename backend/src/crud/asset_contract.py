@@ -3,8 +3,18 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import Any
 
-from sqlalchemy import Select, exists, false, func, join, or_, select, update
+from sqlalchemy import (
+    Select,
+    exists,
+    false,
+    func,
+    join,
+    or_,
+    select,
+    update,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset_contract import (
@@ -639,6 +649,105 @@ class AssetContractRepository:
             statement = statement.where(TerminalContract.id.not_in(closed_ids))
         rows = (await db.execute(statement)).scalars().all()
         return set(rows)
+
+    @staticmethod
+    def _live_terminal_coverage_statement(
+        columns: tuple[Any, ...],
+        *,
+        unit_ids: set[str] | None,
+        as_of: date,
+        closed_ids: set[str],
+    ) -> Select[tuple[object, ...]]:
+        """Select live terminal coverage at ``as_of`` for an optional unit set.
+
+        Live = coverage contains the date, contract started on or before it,
+        and the contract has neither an unreversed termination nor an
+        effective renewal successor.
+        """
+        statement = (
+            select(*columns)
+            .select_from(
+                join(
+                    TerminalContractAssetUnit,
+                    TerminalContract,
+                    TerminalContract.id
+                    == TerminalContractAssetUnit.terminal_contract_id,
+                )
+            )
+            .where(
+                TerminalContract.start_date <= as_of,
+                TerminalContractAssetUnit.effective_from <= as_of,
+                or_(
+                    TerminalContractAssetUnit.effective_to.is_(None),
+                    TerminalContractAssetUnit.effective_to >= as_of,
+                ),
+            )
+        )
+        if unit_ids is not None:
+            statement = statement.where(
+                TerminalContractAssetUnit.asset_unit_id.in_(unit_ids)
+            )
+        if closed_ids:
+            statement = statement.where(TerminalContract.id.not_in(closed_ids))
+        return statement
+
+    async def list_rented_unit_ids_by_units(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: set[str],
+        as_of: date,
+    ) -> set[str]:
+        """Rented subset of the given already-authorized units at ``as_of``.
+
+        Reporting facts follow the operator-party identity, not the caller's
+        visible slice: callers pass a whole-unit candidate set that ownership
+        checks have already resolved, so no user scope is applied here.
+        """
+        if not unit_ids:
+            return set()
+        closed_ids = await self._lifecycle_closed_terminal_ids(db, as_of=as_of)
+        statement = self._live_terminal_coverage_statement(
+            (TerminalContractAssetUnit.asset_unit_id,),
+            unit_ids=unit_ids,
+            as_of=as_of,
+            closed_ids=closed_ids,
+        )
+        rows = (await db.execute(statement)).scalars().all()
+        return set(rows)
+
+    async def map_live_terminal_contract_ids_by_units(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: set[str],
+        as_of: date,
+    ) -> dict[str, tuple[str, ...]]:
+        """Live terminal-contract ids per unit at ``as_of`` for report lines.
+
+        Same liveness semantics as ``list_rented_unit_ids_by_units``; callers
+        pass an already-authorized unit set, so no user scope applies here.
+        """
+        if not unit_ids:
+            return {}
+        closed_ids = await self._lifecycle_closed_terminal_ids(db, as_of=as_of)
+        statement = self._live_terminal_coverage_statement(
+            (
+                TerminalContractAssetUnit.asset_unit_id,
+                TerminalContractAssetUnit.terminal_contract_id,
+            ),
+            unit_ids=unit_ids,
+            as_of=as_of,
+            closed_ids=closed_ids,
+        )
+        rows = (await db.execute(statement)).all()
+        grouped: dict[str, list[str]] = {}
+        for unit_id, contract_id in rows:
+            grouped.setdefault(unit_id, []).append(contract_id)
+        return {
+            unit_id: tuple(sorted(contract_ids))
+            for unit_id, contract_ids in grouped.items()
+        }
 
     async def _lifecycle_closed_terminal_ids(
         self,

@@ -23,7 +23,14 @@ router = APIRouter(tags=["资产运营"])
     summary="查询变更记录",
 )
 async def list_business_change_events(
-    target_type: Literal["upstream_contract", "terminal_contract"] | None = None,
+    target_type: Literal[
+        "upstream_contract",
+        "terminal_contract",
+        "management_fee_statement",
+        "asset_unit",
+        "asset_unit_boundary_change",
+    ]
+    | None = None,
     target_id: str | None = Query(None, max_length=36),
     period: str | None = Query(None, description="上海业务月 YYYY-MM"),
     page: int = Query(1, ge=1),

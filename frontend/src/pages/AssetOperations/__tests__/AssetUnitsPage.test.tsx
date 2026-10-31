@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 import { AssetUnitsPage } from '../AssetUnitsPage';
+import { ASSET_OPERATIONS_V5_ROUTES } from '@/constants/routes';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
 
@@ -172,5 +173,20 @@ describe('AssetUnitsPage', () => {
       expect(mockedService.getAssetUnit).toHaveBeenCalledWith('unit-2');
       expect((screen.getByLabelText('单元名称') as HTMLInputElement).value).toBe('二号商铺');
     });
+  });
+
+  it('links the unit detail to the assessment-scope reporting page by year', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({
+      items: [makeUnit()],
+      total: 1,
+    });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: '查看考核范围' });
+    expect(link.getAttribute('href')).toBe(
+      `${ASSET_OPERATIONS_V5_ROUTES.OCCUPANCY_REPORTS}?year=${new Date().getFullYear()}`
+    );
   });
 });

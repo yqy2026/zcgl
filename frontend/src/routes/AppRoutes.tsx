@@ -71,6 +71,11 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     }),
     permissions: [{ resource: 'asset_ops', action: 'read' }],
   },
+  {
+    path: ASSET_OPERATIONS_V5_ROUTES.OCCUPANCY_REPORTS,
+    element: React.lazy(() => import('../pages/AssetOperations/OccupancyReportsPage')),
+    permissions: [{ resource: 'asset_ops', action: 'read' }],
+  },
 
   // 个人中心
   {

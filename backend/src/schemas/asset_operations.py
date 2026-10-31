@@ -804,7 +804,336 @@ class UpstreamContractExitCommitRequest(_StrictPayload):
     expected_version: int = Field(..., ge=1)
 
 
+AssessmentScopeStatus = Literal["draft", "active", "superseded"]
+AssessmentScopeDraftSource = Literal["current", "previous_year"]
+
+
+class AssessmentScopeUnitSnapshot(_StrictPayload):
+    unit_code: str
+    name: str
+    project_id: str
+    usage_type: str
+    is_operating: bool
+    land_area: Decimal
+    building_area: Decimal
+    rentable_area: Decimal
+    managed_from: date
+    predecessor_unit_ids: list[str]
+
+
+class AssessmentScopeItemResponse(_StrictPayload):
+    asset_unit_id: str
+    included: bool
+    exclusion_reason: str | None
+    unit_snapshot: AssessmentScopeUnitSnapshot
+
+
+class AssessmentScopePendingItem(_StrictPayload):
+    asset_unit_id: str
+    reason: Literal["new_takeover", "boundary_uncertain"]
+    unit_snapshot: AssessmentScopeUnitSnapshot
+
+
+class AssessmentScopeVersionSummary(_StrictPayload):
+    version_id: str
+    version_number: int | None
+    status: AssessmentScopeStatus
+    effective_from_period: str
+    activated_at: datetime | None
+    version: int
+
+
+class OccupancySnapshot(_StrictPayload):
+    period: str
+    unit_count: int
+    rented_unit_count: int
+    occupancy_rate: Decimal | None
+    rentable_area: Decimal
+    rented_area: Decimal
+
+
+class AssessmentScopeOverviewResponse(_StrictPayload):
+    operator_party_id: str
+    year: int
+    scope: AssessmentScopeVersionSummary | None
+    items: list[AssessmentScopeItemResponse]
+    pending: list[AssessmentScopePendingItem]
+    occupancy: OccupancySnapshot | None
+
+
+class CreateAssessmentScopeDraftRequest(_StrictPayload):
+    operator_party_id: str = Field(..., min_length=1)
+    source: AssessmentScopeDraftSource
+
+
+class AssessmentScopeDraftResponse(_StrictPayload):
+    draft_id: str
+    operator_party_id: str
+    year: int
+    status: Literal["draft"]
+    effective_from_period: str
+    version: int
+    items: list[AssessmentScopeItemResponse]
+    pending: list[AssessmentScopePendingItem]
+
+
+class AssessmentScopeDecisionInput(_StrictPayload):
+    asset_unit_id: str = Field(..., min_length=1)
+    included: bool
+    exclusion_reason: str | None = Field(None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_reason_presence(self) -> Self:
+        if self.included and self.exclusion_reason is not None:
+            raise ValueError("纳入决定不得填写排除原因")
+        has_reason = (
+            self.exclusion_reason is not None and self.exclusion_reason.strip() != ""
+        )
+        if not self.included and not has_reason:
+            raise ValueError("排除决定必须填写原因")
+        return self
+
+
+class UpdateAssessmentScopeDraftRequest(_StrictPayload):
+    expected_version: int = Field(..., ge=1)
+    decisions: list[AssessmentScopeDecisionInput] = Field(..., min_length=1)
+
+    @field_validator("decisions")
+    @classmethod
+    def validate_unique_units(
+        cls, values: list[AssessmentScopeDecisionInput]
+    ) -> list[AssessmentScopeDecisionInput]:
+        _ensure_unique_ids(
+            [value.asset_unit_id for value in values], field_name="decisions"
+        )
+        return values
+
+
+class AssessmentScopePreviewResponse(_StrictPayload):
+    preview_token: str
+    expires_at: datetime
+    current_version_number: int | None
+    current_included_count: int
+    current_excluded_count: int
+    new_included_count: int
+    new_excluded_count: int
+    pending_count: int
+    occupancy_period: str
+    occupancy_rate_current: Decimal | None
+    occupancy_rate_new: Decimal | None
+    affected_periods: list[str]
+
+
+class AssessmentScopeCommitRequest(_StrictPayload):
+    preview_token: str = Field(..., min_length=1, max_length=512)
+    expected_version: int = Field(..., ge=1)
+    effective_from_period: str = Field(..., pattern=r"^[0-9]{4}-(0[1-9]|1[0-2])$")
+
+
+class AssessmentScopeCommitResponse(_StrictPayload):
+    version_id: str
+    version_number: int
+    effective_from_period: str
+    activated_at: datetime
+    idempotent: bool
+
+
+class OccupancyReportLineResponse(_StrictPayload):
+    asset_unit_id: str
+    owner_name_snapshot: str
+    usage_type_snapshot: str
+    project_name_snapshot: str
+    address_snapshot: str
+    land_area: Decimal
+    building_area: Decimal
+    rentable_area: Decimal
+    rented_area: Decimal
+    unit_count: Literal[1]
+    rented_unit_count: Literal[0, 1]
+    rental_status: Literal["rented", "vacant", "non_rentable"]
+    terminal_contract_ids: list[str]
+
+
+class OccupancyReportTotals(_StrictPayload):
+    unit_count: int
+    rented_unit_count: int
+    occupancy_rate: Decimal | None
+    land_area: Decimal
+    building_area: Decimal
+    rentable_area: Decimal
+    rented_area: Decimal
+
+
+class OccupancyReportFieldChange(_StrictPayload):
+    field_name: str
+    previous: str | None
+    current: str | None
+
+
+class OccupancyReportPendingUnit(_StrictPayload):
+    asset_unit_id: str
+    reason: Literal["new_takeover", "boundary_uncertain"]
+
+
+class OccupancyReportDraftResponse(_StrictPayload):
+    operator_party_id: str
+    period: str
+    first_report: bool
+    scope_version: AssessmentScopeVersionSummary | None
+    totals: OccupancyReportTotals
+    lines: list[OccupancyReportLineResponse]
+    pending: list[OccupancyReportPendingUnit]
+    changes: list[OccupancyReportFieldChange]
+    change_note: str | None
+    can_submit: bool
+    gate_reasons: list[str]
+
+
+class SaveOccupancyReportNoteRequest(_StrictPayload):
+    operator_party_id: str = Field(..., min_length=1)
+    change_note: str | None = Field(None, max_length=2000)
+
+
+class OccupancyReportNoteResponse(_StrictPayload):
+    operator_party_id: str
+    period: str
+    change_note: str | None
+    draft_id: str
+    version: int
+
+
+class OccupancyReportMustHandleItem(_StrictPayload):
+    asset_unit_id: str
+    reason: Literal["new_takeover", "boundary_uncertain"]
+
+
+class OccupancyReportSubmissionPreviewResponse(_StrictPayload):
+    operator_party_id: str
+    period: str
+    can_submit: bool
+    gate_reasons: list[str]
+    must_handle: list[OccupancyReportMustHandleItem]
+    suggested: list[str] = Field(default_factory=list)
+    normalized_note: str | None
+    totals: OccupancyReportTotals
+    changes: list[OccupancyReportFieldChange]
+    first_report: bool
+    scope_version: AssessmentScopeVersionSummary
+    preview_token: str | None
+    expires_at: datetime | None
+
+
+class SubmitOccupancyReportRequest(_StrictPayload):
+    preview_token: str = Field(..., min_length=1, max_length=512)
+    expected_scope_version_id: str = Field(..., min_length=1)
+    expected_scope_version: int = Field(..., ge=1)
+
+
+class OccupancyReportSubmitResponse(_StrictPayload):
+    report_id: str
+    operator_party_id: str
+    period: str
+    status: Literal["submitted"]
+    scope_version_id: str
+    submitted_at: datetime
+    totals: OccupancyReportTotals
+    line_count: int
+    idempotent: bool
+
+
+class OccupancyReportLineSnapshot(_StrictPayload):
+    asset_unit_id: str
+    owner_name_snapshot: str
+    usage_type_snapshot: str
+    project_name_snapshot: str
+    address_snapshot: str
+    land_area: Decimal
+    building_area: Decimal
+    rentable_area: Decimal
+    rented_area: Decimal
+    unit_count: Literal[1]
+    rented_unit_count: Literal[0, 1]
+    rental_status: Literal["rented", "vacant", "non_rentable"]
+    terminal_contract_ids: list[str]
+
+
+class OccupancyReportUnitDiff(_StrictPayload):
+    asset_unit_id: str
+    kind: Literal["changed", "unit_left_scope", "unit_entered_scope"]
+    changes: list[OccupancyReportFieldChange]
+
+
+class OccupancyReportProjectCounts(_StrictPayload):
+    project_count: int
+    operating_project_count: int
+    non_operating_project_count: int
+
+
+class OccupancyReportSnapshotResponse(_StrictPayload):
+    report_id: str
+    operator_party_id: str
+    period: str
+    status: Literal["submitted", "withdrawn"]
+    scope_version: AssessmentScopeVersionSummary
+    change_note: str | None
+    submitted_at: datetime
+    withdrawn_at: datetime | None
+    withdraw_reason: str | None
+    predecessor_report_id: str | None
+    totals: OccupancyReportTotals
+    project_counts: OccupancyReportProjectCounts
+    lines: list[OccupancyReportLineSnapshot]
+    differences: list[OccupancyReportUnitDiff]
+
+
+class OccupancyReportWithdrawalPreviewResponse(_StrictPayload):
+    report_id: str
+    operator_party_id: str
+    period: str
+    submitted_at: datetime
+    successor_draft_rule: Literal["fresh_draft_with_predecessor_link"]
+    preview_token: str
+    expires_at: datetime
+    report_version: int
+
+
+class WithdrawOccupancyReportRequest(_StrictPayload):
+    preview_token: str = Field(..., min_length=1, max_length=512)
+    expected_version: int = Field(..., ge=1)
+    withdraw_reason: str = Field(..., min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_reason(self) -> Self:
+        if self.withdraw_reason.strip() == "":
+            raise ValueError("撤回原因不得为空白")
+        return self
+
+
+class OccupancyReportWithdrawResponse(_StrictPayload):
+    report_id: str
+    status: Literal["withdrawn"]
+    withdrawn_at: datetime
+    successor_draft_id: str
+    idempotent: bool
+
+
+class OccupancyReportExportResponse(_StrictPayload):
+    task_id: str
+    report_id: str
+    status: Literal["completed"]
+
+
 __all__ = [
+    "AssessmentScopeCommitRequest",
+    "AssessmentScopeCommitResponse",
+    "AssessmentScopeDecisionInput",
+    "AssessmentScopeDraftResponse",
+    "AssessmentScopeItemResponse",
+    "AssessmentScopeOverviewResponse",
+    "AssessmentScopePendingItem",
+    "AssessmentScopePreviewResponse",
+    "AssessmentScopeUnitSnapshot",
+    "AssessmentScopeVersionSummary",
     "AssetUnitBoundaryCommitResponse",
     "AssetUnitBoundaryImpact",
     "AssetUnitBoundaryPreviewResponse",
@@ -821,6 +1150,28 @@ __all__ = [
     "AssetUnitSplitPreviewRequest",
     "AssetUnitSplitProposal",
     "AssetUnitUpdate",
+    "CreateAssessmentScopeDraftRequest",
+    "OccupancyReportDraftResponse",
+    "OccupancyReportFieldChange",
+    "OccupancyReportLineResponse",
+    "OccupancyReportNoteResponse",
+    "OccupancyReportPendingUnit",
+    "OccupancyReportTotals",
+    "OccupancyReportExportResponse",
+    "OccupancyReportLineSnapshot",
+    "OccupancyReportMustHandleItem",
+    "OccupancyReportProjectCounts",
+    "OccupancyReportSnapshotResponse",
+    "OccupancyReportSubmissionPreviewResponse",
+    "OccupancyReportSubmitResponse",
+    "OccupancyReportUnitDiff",
+    "OccupancyReportWithdrawalPreviewResponse",
+    "OccupancyReportWithdrawResponse",
+    "OccupancySnapshot",
+    "SubmitOccupancyReportRequest",
+    "WithdrawOccupancyReportRequest",
+    "SaveOccupancyReportNoteRequest",
+    "UpdateAssessmentScopeDraftRequest",
     "AssetUnitVacancyNoteUpdate",
     "ContractLifecycleEventCreate",
     "ContractLifecycleEventResponse",

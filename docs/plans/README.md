@@ -8,6 +8,7 @@
 
 | 方案 | 状态 |
 |------|------|
+| [V3 考核范围与月度报送](2026-10-30-asset-operations-v5-v3.md) | 🔄 实现完成、待产品验收（V3-0 至 V3-5 已落地，双轴复核与门禁通过） |
 | [anydoc 办公文档解析引入评估](2026-08-08-anydoc-office-doc-parsing.md) | ⏸ 搁置（备选技术方案，无对应活跃 REQ） |
 
 历史方案见 [`docs/archive/backend-plans/`](../archive/backend-plans/README.md)。

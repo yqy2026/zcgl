@@ -39,6 +39,7 @@ export const ASSET_OPERATIONS_V5_ROUTES = {
   TERMINAL_CONTRACTS: '/asset-operations/contracts/terminal',
   TERMINAL_ACTIONS: '/asset-operations/contracts/terminal/:contractId/actions',
   UPSTREAM_ACTIONS: '/asset-operations/contracts/upstream/:contractId/actions',
+  OCCUPANCY_REPORTS: '/asset-operations/occupancy-reports',
 } as const;
 
 // 资产资源路由

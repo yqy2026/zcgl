@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Protocol
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError
+from ...crud.business_change_event import business_change_repository
 from ...models.asset_unit import AssetUnit
+from ...models.business_change_event import BusinessChangeEvent
 from ...schemas.asset_operations import (
     AssetUnitResponse,
     AssetUnitUpdate,
@@ -155,7 +158,7 @@ class AssetUnitCommandService:
         ]
         if provided_owned_fields:
             raise AssetUnitFieldNotEditableError(field_names=provided_owned_fields)
-        for field in (
+        editable_fields = (
             "name",
             "address",
             "usage_type",
@@ -166,11 +169,29 @@ class AssetUnitCommandService:
             "rentable_area",
             "managed_from",
             "managed_to",
-        ):
+        )
+        originals = {field: getattr(unit, field) for field in editable_fields}
+        changed_fields = [
+            field for field in editable_fields if getattr(request, field) is not None
+        ]
+        for field in editable_fields:
             value = getattr(request, field)
             if value is not None:
                 setattr(unit, field, value)
         await db.flush()
+        await record_unit_audit(
+            db,
+            unit=unit,
+            action="update",
+            actor_id=actor_id,
+            before={
+                field: _render_audit_value(originals[field]) for field in changed_fields
+            },
+            after={
+                field: _render_audit_value(getattr(unit, field))
+                for field in changed_fields
+            },
+        )
         await db.commit()
         return await self._response(db, unit, today=self.business_today())
 
@@ -197,11 +218,33 @@ class AssetUnitCommandService:
                 expected_version=request.expected_version,
                 actual_version=unit.version,
             )
+        originals = {
+            field: getattr(unit, field)
+            for field in ("vacancy_reason", "expected_lease_start")
+        }
+        changed_fields = [
+            field
+            for field in ("vacancy_reason", "expected_lease_start")
+            if getattr(request, field) is not None
+        ]
         for field in ("vacancy_reason", "expected_lease_start"):
             value = getattr(request, field)
             if value is not None:
                 setattr(unit, field, value)
         await db.flush()
+        await record_unit_audit(
+            db,
+            unit=unit,
+            action="update_vacancy_note",
+            actor_id=actor_id,
+            before={
+                field: _render_audit_value(originals[field]) for field in changed_fields
+            },
+            after={
+                field: _render_audit_value(getattr(unit, field))
+                for field in changed_fields
+            },
+        )
         await db.commit()
         return await self._response(db, unit, today=self.business_today())
 
@@ -230,7 +273,46 @@ class AssetUnitCommandService:
 asset_unit_command_service = AssetUnitCommandService()
 
 
+def _render_audit_value(value: object) -> object:
+    """JSON-safe audit payload for one unit field."""
+    if value is None:
+        return None
+    if isinstance(value, Decimal):
+        return str(value)
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
+
+
+async def record_unit_audit(
+    db: AsyncSession,
+    *,
+    unit: AssetUnit,
+    action: str,
+    actor_id: str,
+    before: dict[str, object],
+    after: dict[str, object],
+) -> None:
+    """Append the maintenance event in the caller's open transaction."""
+    await business_change_repository.add(
+        db,
+        event=BusinessChangeEvent(  # type: ignore[call-arg]
+            id=str(uuid4()),
+            target_type="asset_unit",
+            target_id=unit.id,
+            action=action,
+            actor_id=actor_id,
+            before=before,
+            after=after,
+            reason=None,
+            correlation_id=unit.id,
+            occurred_at=datetime.now(UTC),
+        ),
+    )
+
+
 __all__ = [
     "AssetUnitCommandService",
     "asset_unit_command_service",
+    "record_unit_audit",
 ]
