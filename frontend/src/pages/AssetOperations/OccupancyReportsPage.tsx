@@ -153,9 +153,7 @@ function QueryBoundary(props: {
               : errorText(props.query.error)
           }
         />
-        {forbidden ? null : (
-          <Button onClick={() => void props.query.refetch()}>重试</Button>
-        )}
+        {forbidden ? null : <Button onClick={() => void props.query.refetch()}>重试</Button>}
       </div>
     );
   }
@@ -200,7 +198,9 @@ const LINE_COLUMNS: ColumnsType<OccupancyReportLine> = [
     key: 'landArea',
     align: 'right',
     width: 110,
-    render: (_: unknown, record) => <span className={styles.numeric}>{formatArea(record.landArea)}</span>,
+    render: (_: unknown, record) => (
+      <span className={styles.numeric}>{formatArea(record.landArea)}</span>
+    ),
   },
   {
     title: '建筑面积',
@@ -228,7 +228,9 @@ const LINE_COLUMNS: ColumnsType<OccupancyReportLine> = [
     key: 'rentedArea',
     align: 'right',
     width: 110,
-    render: (_: unknown, record) => <span className={styles.numeric}>{formatArea(record.rentedArea)}</span>,
+    render: (_: unknown, record) => (
+      <span className={styles.numeric}>{formatArea(record.rentedArea)}</span>
+    ),
   },
   {
     title: '出租状态',
@@ -393,12 +395,7 @@ function ScopeSection(props: { year: number; operatorId: string }): React.ReactE
       >
         {scope != null ? (
           <>
-            <Descriptions
-              column={2}
-              size="small"
-              bordered
-              className={styles.summaryDescriptions}
-            >
+            <Descriptions column={2} size="small" bordered className={styles.summaryDescriptions}>
               <Descriptions.Item label="当前版本">
                 {scope.scope?.versionNumber != null ? `v${scope.scope.versionNumber}` : '—'}
               </Descriptions.Item>
@@ -443,7 +440,10 @@ function ScopeSection(props: { year: number; operatorId: string }): React.ReactE
                 type="warning"
                 showIcon
                 title={`还有 ${scope.pending.length} 宗待确认：${scope.pending
-                  .map(item => `${item.unitSnapshot.unitCode}（${PENDING_REASON_LABELS[item.reason] ?? item.reason}）`)
+                  .map(
+                    item =>
+                      `${item.unitSnapshot.unitCode}（${PENDING_REASON_LABELS[item.reason] ?? item.reason}）`
+                  )
                   .join('、')}`}
               />
             ) : null}
@@ -562,7 +562,11 @@ function AssessmentScopeDrawer(props: {
   });
 
   const commitMutation = useMutation({
-    mutationFn: (input: { previewToken: string; expectedVersion: number; effectiveFromPeriod: string }) =>
+    mutationFn: (input: {
+      previewToken: string;
+      expectedVersion: number;
+      effectiveFromPeriod: string;
+    }) =>
       occupancyReportService.commitAssessmentScopeDraft(
         props.draftId as string,
         input,
@@ -570,7 +574,9 @@ function AssessmentScopeDrawer(props: {
       ),
     onSuccess: result => {
       void queryClient.invalidateQueries({ queryKey: ['assessment-scope-draft', props.draftId] });
-      props.onCommitted(`考核范围 v${result.versionNumber} 已自 ${result.effectiveFromPeriod} 起生效。`);
+      props.onCommitted(
+        `考核范围 v${result.versionNumber} 已自 ${result.effectiveFromPeriod} 起生效。`
+      );
     },
     onError: error => {
       if (error instanceof AssetOperationsError && error.code === 'PREVIEW_STALE') {
@@ -586,12 +592,7 @@ function AssessmentScopeDrawer(props: {
   };
 
   const renderDecisionsTable = (): React.ReactElement => (
-    <div
-      role="region"
-      aria-label="范围草稿逐宗决定"
-      tabIndex={0}
-      className={styles.scrollRegion}
-    >
+    <div role="region" aria-label="范围草稿逐宗决定" tabIndex={0} className={styles.scrollRegion}>
       <Table<AssessmentScopeItem>
         rowKey="assetUnitId"
         columns={[
@@ -629,7 +630,9 @@ function AssessmentScopeDrawer(props: {
                       [record.assetUnitId]: {
                         included: value === 'included',
                         exclusionReason:
-                          value === 'included' ? '' : (previous[record.assetUnitId]?.exclusionReason ?? ''),
+                          value === 'included'
+                            ? ''
+                            : (previous[record.assetUnitId]?.exclusionReason ?? ''),
                       },
                     }))
                   }
@@ -789,10 +792,7 @@ function AssessmentScopeDrawer(props: {
                   description={
                     prepareMutation.error instanceof AssetOperationsError &&
                     prepareMutation.error.code === 'VERSION_CONFLICT' ? (
-                      <Button
-                        size="small"
-                        onClick={() => void draftQuery.refetch()}
-                      >
+                      <Button size="small" onClick={() => void draftQuery.refetch()}>
                         刷新草稿
                       </Button>
                     ) : undefined
@@ -930,12 +930,19 @@ function DraftSection(props: {
                 type="warning"
                 showIcon
                 title={`待确认宗地 ${draft.pending.length} 宗：${draft.pending
-                  .map(item => `${item.assetUnitId}（${PENDING_REASON_LABELS[item.reason] ?? item.reason}）`)
+                  .map(
+                    item =>
+                      `${item.assetUnitId}（${PENDING_REASON_LABELS[item.reason] ?? item.reason}）`
+                  )
                   .join('、')}`}
               />
             ) : null}
             {!draft.canSubmit && draft.gateReasons.length > 0 ? (
-              <Alert type="warning" showIcon title={`暂不满足提交条件：${draft.gateReasons.join('；')}`} />
+              <Alert
+                type="warning"
+                showIcon
+                title={`暂不满足提交条件：${draft.gateReasons.join('；')}`}
+              />
             ) : null}
 
             {!draft.firstReport && draft.changes.length > 0 ? (
@@ -987,7 +994,11 @@ function DraftSection(props: {
                     提交报送
                   </Button>
                   {previewSubmissionMutation.isError ? (
-                    <Alert type="error" showIcon title={errorText(previewSubmissionMutation.error)} />
+                    <Alert
+                      type="error"
+                      showIcon
+                      title={errorText(previewSubmissionMutation.error)}
+                    />
                   ) : null}
                 </Space>
               </Space>
@@ -1045,14 +1056,21 @@ function SubmissionPreviewModal(props: {
       {preview != null ? (
         <Space orientation="vertical" size={12} className={styles.sectionStack}>
           {!preview.canSubmit ? (
-            <Alert type="error" showIcon title={`不满足提交条件：${preview.gateReasons.join('；')}`} />
+            <Alert
+              type="error"
+              showIcon
+              title={`不满足提交条件：${preview.gateReasons.join('；')}`}
+            />
           ) : null}
           {preview.mustHandle.length > 0 ? (
             <Alert
               type="warning"
               showIcon
               title={`必须处理 ${preview.mustHandle.length} 宗：${preview.mustHandle
-                .map(item => `${item.assetUnitId}（${PENDING_REASON_LABELS[item.reason] ?? item.reason}）`)
+                .map(
+                  item =>
+                    `${item.assetUnitId}（${PENDING_REASON_LABELS[item.reason] ?? item.reason}）`
+                )
                 .join('、')}`}
             />
           ) : null}
@@ -1123,7 +1141,9 @@ function downloadCsvFile(fileName: string, contentBase64: string): void {
 
 function SnapshotSection(props: { reportId: string }): React.ReactElement {
   const queryClient = useQueryClient();
-  const [withdrawPreview, setWithdrawPreview] = useState<OccupancyReportWithdrawalPreview | null>(null);
+  const [withdrawPreview, setWithdrawPreview] = useState<OccupancyReportWithdrawalPreview | null>(
+    null
+  );
   const [withdrawReason, setWithdrawReason] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -1187,11 +1207,7 @@ function SnapshotSection(props: { reportId: string }): React.ReactElement {
   return (
     <div className={styles.section}>
       {notice != null ? <Alert type="success" showIcon title={notice} /> : null}
-      <QueryBoundary
-        query={snapshotQuery}
-        loadingText="正在读取报送快照…"
-        emptyText={null}
-      >
+      <QueryBoundary query={snapshotQuery} loadingText="正在读取报送快照…" emptyText={null}>
         {snapshot != null ? (
           <Space orientation="vertical" size={16} className={styles.sectionStack}>
             <Space wrap size={8}>
@@ -1228,9 +1244,7 @@ function SnapshotSection(props: { reportId: string }): React.ReactElement {
                   </Descriptions.Item>
                 </>
               ) : (
-                <Descriptions.Item label="变动说明">
-                  {snapshot.changeNote ?? '—'}
-                </Descriptions.Item>
+                <Descriptions.Item label="变动说明">{snapshot.changeNote ?? '—'}</Descriptions.Item>
               )}
             </Descriptions>
 
@@ -1359,7 +1373,8 @@ function useUrlParams(): {
   updateParams: (patch: Record<string, string | null>) => void;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
-  const operatorParam = searchParams.get('operator_party_id') ?? searchParams.get('operatorPartyId') ?? '';
+  const operatorParam =
+    searchParams.get('operator_party_id') ?? searchParams.get('operatorPartyId') ?? '';
   const periodParam = searchParams.get('period') ?? '';
   const reportId = searchParams.get('report_id') ?? '';
   const yearParam = searchParams.get('year');

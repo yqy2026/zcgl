@@ -5,14 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 import { OccupancyReportsPage } from '../OccupancyReportsPage';
-import {
-  occupancyReportService,
-  AssetOperationsError,
-} from '@/services/occupancyReportService';
-import type {
-  OccupancyReportDraft,
-  OccupancyReportLine,
-} from '@/services/occupancyReportService';
+import { occupancyReportService, AssetOperationsError } from '@/services/occupancyReportService';
+import type { OccupancyReportDraft, OccupancyReportLine } from '@/services/occupancyReportService';
 
 vi.mock(import('@/services/occupancyReportService'), async importOriginal => {
   const actual = await importOriginal<typeof import('@/services/occupancyReportService')>();
@@ -150,9 +144,7 @@ describe('OccupancyReportsPage', () => {
 
     renderPage();
 
-    expect(
-      await screen.findByText('当前账号没有相关数据范围或权限，请联系管理员。')
-    ).toBeTruthy();
+    expect(await screen.findByText('当前账号没有相关数据范围或权限，请联系管理员。')).toBeTruthy();
     expect(screen.queryByText('当月暂无纳入考核范围的宗地明细。')).toBeNull();
   });
 
@@ -169,9 +161,7 @@ describe('OccupancyReportsPage', () => {
   });
 
   it('shows the explicit empty state when the draft has no lines or pending units', async () => {
-    mockedService.getOccupancyReportDraft.mockResolvedValue(
-      makeDraft({ lines: [], pending: [] })
-    );
+    mockedService.getOccupancyReportDraft.mockResolvedValue(makeDraft({ lines: [], pending: [] }));
 
     renderPage();
 

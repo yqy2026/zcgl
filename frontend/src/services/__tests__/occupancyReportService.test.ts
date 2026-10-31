@@ -133,9 +133,9 @@ it('treats an explicitly null occupancy rate as null but throws on an unparseabl
     },
   });
 
-  await expect(
-    occupancyReportService.getOccupancyReportDraft('2026-10', 'op-1')
-  ).rejects.toThrow('Invalid Decimal field: occupancy_rate');
+  await expect(occupancyReportService.getOccupancyReportDraft('2026-10', 'op-1')).rejects.toThrow(
+    'Invalid Decimal field: occupancy_rate'
+  );
 });
 
 it('normalizes preview occupancy rates that bypass the shared decimal list', async () => {

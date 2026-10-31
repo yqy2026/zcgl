@@ -137,14 +137,13 @@ function toErrorPayloadError(
       : fallbackMessage;
   if (code === 'ASSESSMENT_SCOPE_DRAFT_EXISTS') {
     const details =
-      payload?.details != null && typeof payload.details === 'object' && !Array.isArray(payload.details)
+      payload?.details != null &&
+      typeof payload.details === 'object' &&
+      !Array.isArray(payload.details)
         ? (payload.details as RawRecord)
         : null;
     const draftId = details?.draft_id;
-    return new AssessmentScopeDraftExistsError(
-      message,
-      typeof draftId === 'string' ? draftId : ''
-    );
+    return new AssessmentScopeDraftExistsError(message, typeof draftId === 'string' ? draftId : '');
   }
   return new AssetOperationsError(message, code);
 }
@@ -156,11 +155,7 @@ function toServiceError(error: unknown): AssetOperationsError {
   const enhanced = ApiErrorHandler.handleError(error);
   if (isAxiosError<{ error?: RawErrorPayload }>(error)) {
     const fallbackCode = error.response?.status === 403 ? 'FORBIDDEN' : enhanced.code;
-    return toErrorPayloadError(
-      error.response?.data?.error,
-      fallbackCode,
-      enhanced.message
-    );
+    return toErrorPayloadError(error.response?.data?.error, fallbackCode, enhanced.message);
   }
   return new AssetOperationsError(enhanced.message, enhanced.code);
 }
@@ -295,9 +290,7 @@ function normalizeScopeItem(raw: RawRecord): AssessmentScopeItem {
     assetUnitId: requireString(raw, 'asset_unit_id'),
     included: requireBoolean(raw, 'included'),
     exclusionReason: optionalString(raw, 'exclusion_reason'),
-    unitSnapshot: normalizeUnitSnapshot(
-      requireRecord(raw.unit_snapshot, 'unit_snapshot')
-    ),
+    unitSnapshot: normalizeUnitSnapshot(requireRecord(raw.unit_snapshot, 'unit_snapshot')),
   };
 }
 
@@ -375,10 +368,7 @@ function normalizeScopeOverview(raw: RawRecord): AssessmentScopeOverview {
   return {
     operatorPartyId: String(raw.operator_party_id ?? ''),
     year: requireInt(raw, 'year'),
-    scope:
-      raw.scope == null
-        ? null
-        : normalizeVersionSummary(requireRecord(raw.scope, 'scope')),
+    scope: raw.scope == null ? null : normalizeVersionSummary(requireRecord(raw.scope, 'scope')),
     items: requireRecordArray(raw, 'items').map(normalizeScopeItem),
     pending: requireRecordArray(raw, 'pending').map(normalizePendingItem),
     occupancy:
@@ -447,7 +437,10 @@ function normalizeScopePreview(raw: RawRecord): AssessmentScopePreview {
     newExcludedCount: requireInt(raw, 'new_excluded_count'),
     pendingCount: requireInt(raw, 'pending_count'),
     occupancyPeriod: String(raw.occupancy_period ?? ''),
-    occupancyRateCurrent: requireDecimalFromAny(raw.occupancy_rate_current, 'occupancy_rate_current'),
+    occupancyRateCurrent: requireDecimalFromAny(
+      raw.occupancy_rate_current,
+      'occupancy_rate_current'
+    ),
     occupancyRateNew: requireDecimalFromAny(raw.occupancy_rate_new, 'occupancy_rate_new'),
     affectedPeriods: requireStringArray(raw, 'affected_periods'),
   };
@@ -834,7 +827,10 @@ export const occupancyReportService = {
     }
   },
 
-  getAssessmentScope: async (year: number, operatorPartyId: string): Promise<AssessmentScopeOverview> =>
+  getAssessmentScope: async (
+    year: number,
+    operatorPartyId: string
+  ): Promise<AssessmentScopeOverview> =>
     normalizeScopeOverview(
       await get<RawRecord>(`/assessment-scopes/${year}`, {
         operator_party_id: operatorPartyId,
@@ -947,9 +943,7 @@ export const occupancyReportService = {
     ),
 
   getOccupancyReportSnapshot: async (reportId: string): Promise<OccupancyReportSnapshot> =>
-    normalizeSnapshot(
-      await get<RawRecord>(`/occupancy-reports/${encodeURIComponent(reportId)}`)
-    ),
+    normalizeSnapshot(await get<RawRecord>(`/occupancy-reports/${encodeURIComponent(reportId)}`)),
 
   previewOccupancyReportWithdrawal: async (
     reportId: string
