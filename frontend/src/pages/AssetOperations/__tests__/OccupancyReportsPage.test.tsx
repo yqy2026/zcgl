@@ -64,6 +64,7 @@ function makeDraft(overrides: Partial<OccupancyReportDraft> = {}): OccupancyRepo
     operatorPartyId: 'op-1',
     period: dayjs().startOf('month').subtract(1, 'month').format('YYYY-MM'),
     firstReport: false,
+    fullScopeUnitCount: 1,
     scopeVersion: {
       versionId: 'sv-1',
       versionNumber: 1,
@@ -91,13 +92,13 @@ function makeDraft(overrides: Partial<OccupancyReportDraft> = {}): OccupancyRepo
   };
 }
 
-function renderPage(): void {
+function renderPage(path = '/asset-operations/occupancy-reports'): void {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/asset-operations/occupancy-reports']}>
+      <MemoryRouter initialEntries={[path]}>
         <OccupancyReportsPage />
       </MemoryRouter>
     </QueryClientProvider>
@@ -122,6 +123,50 @@ afterEach(() => {
 });
 
 describe('OccupancyReportsPage', () => {
+  it('keeps the original statistics label for a snapshot without full-property sources', async () => {
+    mockedService.getOccupancyReportSnapshot.mockResolvedValue({
+      reportId: 'old-report',
+      operatorPartyId: 'op-1',
+      period: '2026-10',
+      status: 'submitted',
+      scopeVersion: {
+        versionId: 'sv-1',
+        versionNumber: 1,
+        status: 'active',
+        effectiveFromPeriod: '2026-01',
+        activatedAt: null,
+        version: 1,
+      },
+      changeNote: null,
+      submittedAt: '2026-11-01T08:00:00Z',
+      withdrawnAt: null,
+      withdrawReason: null,
+      predecessorReportId: null,
+      totals: makeDraft().totals,
+      projectCounts: { projectCount: 1, operatingProjectCount: 1, nonOperatingProjectCount: 0 },
+      lines: [makeLine()],
+      differences: [],
+      fullScopeChanged: null,
+    });
+    renderPage('/asset-operations/occupancy-reports?operator_party_id=op-1&report_id=old-report');
+    expect(
+      await screen.findByText('此历史快照保留原提交口径，未记录全部在管物业来源。')
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        '项目数、土地和建筑面积统计全部在管物业，含非经营性及未纳入考核物业；宗数、出租率、可租和已租面积仅统计纳入考核的经营性物业。'
+      )
+    ).toBeNull();
+  });
+  it('keeps full-property totals visible when no property is included in assessment', async () => {
+    mockedService.getOccupancyReportDraft.mockResolvedValue(
+      makeDraft({ lines: [], pending: [], fullScopeUnitCount: 1 })
+    );
+    renderPage();
+    expect(await screen.findByRole('button', { name: '提交报送' })).toBeEnabled();
+    expect(screen.queryByText('当月暂无纳入考核范围的宗地明细。')).toBeNull();
+    expect(screen.getByText('土地面积', { selector: 'span' })).toBeTruthy();
+  });
   it('renders the monthly draft totals and line rows after loading', async () => {
     mockedService.getOccupancyReportDraft.mockResolvedValue(makeDraft());
 
@@ -161,7 +206,9 @@ describe('OccupancyReportsPage', () => {
   });
 
   it('shows the explicit empty state when the draft has no lines or pending units', async () => {
-    mockedService.getOccupancyReportDraft.mockResolvedValue(makeDraft({ lines: [], pending: [] }));
+    mockedService.getOccupancyReportDraft.mockResolvedValue(
+      makeDraft({ lines: [], pending: [], fullScopeUnitCount: 0 })
+    );
 
     renderPage();
 

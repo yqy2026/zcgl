@@ -86,8 +86,12 @@ def test_line_status_and_rented_area_follow_rental_fact() -> None:
 
 def test_lines_recompute_the_published_totals() -> None:
     facts = (
-        fact("a", rented=True, building_area=Decimal("100"), rentable_area=Decimal("80")),
-        fact("b", rented=False, building_area=Decimal("60"), rentable_area=Decimal("50")),
+        fact(
+            "a", rented=True, building_area=Decimal("100"), rentable_area=Decimal("80")
+        ),
+        fact(
+            "b", rented=False, building_area=Decimal("60"), rentable_area=Decimal("50")
+        ),
     )
     lines = build_report_lines("2026-10", facts)
     assert len(lines) == 2
@@ -259,74 +263,3 @@ def test_empty_lines_have_zero_denominator_and_null_rate() -> None:
         == aggregates.rented_area
         == Decimal(0)
     )
-
-
-def test_project_counts_split_operating_and_non_operating_projects() -> None:
-    from src.services.asset_operations.occupancy_report_draft_rules import (
-        project_counts,
-    )
-
-    facts = (
-        ReportLineFact(
-            unit_id="op1",
-            managed_from=date(2026, 1, 1),
-            managed_to=None,
-            is_operating=True,
-            included=True,
-            rented=False,
-            land_area=Decimal("0"),
-            building_area=Decimal("1"),
-            rentable_area=Decimal("1"),
-            owner_name="o",
-            usage_type="u",
-            project_name="项目甲",
-            address="a",
-        ),
-        ReportLineFact(
-            unit_id="op2",
-            managed_from=date(2026, 1, 1),
-            managed_to=None,
-            is_operating=True,
-            included=True,
-            rented=False,
-            land_area=Decimal("0"),
-            building_area=Decimal("1"),
-            rentable_area=Decimal("1"),
-            owner_name="o",
-            usage_type="u",
-            project_name="项目甲",
-            address="a",
-        ),
-        ReportLineFact(
-            unit_id="nonop",
-            managed_from=date(2026, 1, 1),
-            managed_to=None,
-            is_operating=False,
-            included=False,
-            rented=False,
-            land_area=Decimal("0"),
-            building_area=Decimal("1"),
-            rentable_area=Decimal("0"),
-            owner_name="o",
-            usage_type="u",
-            project_name="项目乙",
-            address="a",
-        ),
-        ReportLineFact(
-            unit_id="nonop2",
-            managed_from=date(2026, 1, 1),
-            managed_to=None,
-            is_operating=False,
-            included=False,
-            rented=False,
-            land_area=Decimal("0"),
-            building_area=Decimal("1"),
-            rentable_area=Decimal("0"),
-            owner_name="o",
-            usage_type="u",
-            project_name="项目乙",
-            address="a",
-        ),
-    )
-    assert project_counts(facts) == (2, 1, 1)
-    assert project_counts(()) == (0, 0, 0)

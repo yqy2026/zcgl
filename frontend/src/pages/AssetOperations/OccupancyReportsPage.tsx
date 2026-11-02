@@ -897,7 +897,11 @@ function DraftSection(props: {
     },
   });
 
-  const isEmpty = draft != null && draft.lines.length === 0 && draft.pending.length === 0;
+  const isEmpty =
+    draft != null &&
+    draft.fullScopeUnitCount === 0 &&
+    draft.lines.length === 0 &&
+    draft.pending.length === 0;
 
   return (
     <div className={styles.section}>
@@ -924,6 +928,11 @@ function DraftSection(props: {
             </Space>
 
             <TotalsGrid totals={draft.totals} />
+            <Alert
+              type="info"
+              showIcon
+              title="项目数、土地和建筑面积统计全部在管物业，含非经营性及未纳入考核物业；宗数、出租率、可租和已租面积仅统计纳入考核的经营性物业。"
+            />
 
             {draft.pending.length > 0 ? (
               <Alert
@@ -1220,6 +1229,15 @@ function SnapshotSection(props: { reportId: string }): React.ReactElement {
             </Space>
 
             <TotalsGrid totals={snapshot.totals} />
+            <Alert
+              type="info"
+              showIcon
+              title={
+                snapshot.fullScopeChanged === null
+                  ? '此历史快照保留原提交口径，未记录全部在管物业来源。'
+                  : '项目数、土地和建筑面积统计全部在管物业，含非经营性及未纳入考核物业；宗数、出租率、可租和已租面积仅统计纳入考核的经营性物业。'
+              }
+            />
 
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="项目数">
@@ -1255,6 +1273,19 @@ function SnapshotSection(props: { reportId: string }): React.ReactElement {
 
             <div>
               <h3 className={styles.blockTitle}>与当前台账差异</h3>
+              {snapshot.fullScopeChanged === true ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  title="全部在管物业的统计来源已变化，已报送的汇总和导出仍保留提交时的数据。"
+                />
+              ) : snapshot.fullScopeChanged === null ? (
+                <Alert
+                  type="info"
+                  showIcon
+                  title="此快照未保存全部在管物业来源，无法判断全量统计来源是否变化。"
+                />
+              ) : null}
               <div role="region" aria-label="台账差异" tabIndex={0} className={styles.scrollRegion}>
                 <Table<OccupancyReportUnitDiff>
                   rowKey="assetUnitId"
@@ -1262,7 +1293,7 @@ function SnapshotSection(props: { reportId: string }): React.ReactElement {
                   dataSource={snapshot.differences}
                   pagination={false}
                   size="small"
-                  locale={{ emptyText: '快照与当前台账无差异。' }}
+                  locale={{ emptyText: '纳入考核明细与当前台账无差异。' }}
                 />
               </div>
             </div>

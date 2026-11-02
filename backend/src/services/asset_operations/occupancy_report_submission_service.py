@@ -10,7 +10,7 @@ import json
 import secrets
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Protocol
@@ -40,6 +40,7 @@ from ...models.occupancy_report import (
 from ...schemas.asset_operations import (
     AssessmentScopeVersionSummary,
     OccupancyReportFieldChange,
+    OccupancyReportFullScopeUnit,
     OccupancyReportLineSnapshot,
     OccupancyReportMustHandleItem,
     OccupancyReportProjectCounts,
@@ -71,14 +72,18 @@ from .errors import (
 )
 from .occupancy_report_draft_rules import (
     FieldChange,
+    FullScopeUnitFact,
     ReportAggregates,
     ReportLine,
-    ReportLineFact,
     compare_with_baseline,
+    full_scope_project_counts,
     month_end,
-    project_counts,
 )
-from .occupancy_report_draft_service import DerivedReportFacts, derive_report_lines
+from .occupancy_report_draft_service import (
+    DerivedReportFacts,
+    derive_full_scope,
+    derive_report_lines,
+)
 from .occupancy_report_snapshot_rules import (
     CurrentLine,
     SnapshotLine,
@@ -166,6 +171,7 @@ class _ReportFacts:
     totals: OccupancyReportTotals
     project_counts: OccupancyReportProjectCounts
     state_fingerprint: str
+    full_scope: tuple[FullScopeUnitFact, ...]
 
 
 class OccupancyReportSubmissionService:
@@ -406,6 +412,12 @@ class OccupancyReportSubmissionService:
             )
         chain.status = "submitted"
         chain.scope_version_id = scope_version.id
+        chain.full_scope_snapshot = [
+            OccupancyReportFullScopeUnit.model_validate(asdict(row)).model_dump(
+                mode="json"
+            )
+            for row in facts.full_scope
+        ]
         chain.project_count = facts.project_counts.project_count
         chain.operating_project_count = facts.project_counts.operating_project_count
         chain.non_operating_project_count = (
@@ -555,7 +567,37 @@ class OccupancyReportSubmissionService:
             rentable_area=report.rentable_area or 0,  # type: ignore[arg-type]
             rented_area=report.rented_area or 0,  # type: ignore[arg-type]
         )
+        full_scope_changed = None
+        if report.full_scope_snapshot is not None:
+            current_candidates = await assessment_scope_repository.list_managed_units(
+                db,
+                operator_party_id=report.operator_party_id,
+                as_of=month_end(report.period),
+                year=int(report.period[:4]),
+                operating_only=False,
+            )
+            current_full_scope = await derive_full_scope(
+                db,
+                candidates=current_candidates,
+                period=report.period,
+            )
+            current_sources = [
+                OccupancyReportFullScopeUnit.model_validate(asdict(row)).model_dump(
+                    mode="json"
+                )
+                for row in current_full_scope
+            ]
+            full_scope_changed = report.full_scope_snapshot != current_sources
         return OccupancyReportSnapshotResponse(
+            full_scope_changed=full_scope_changed,
+            full_scope_snapshot=(
+                None
+                if report.full_scope_snapshot is None
+                else [
+                    OccupancyReportFullScopeUnit.model_validate(row)
+                    for row in report.full_scope_snapshot
+                ]
+            ),
             report_id=report.id,
             operator_party_id=report.operator_party_id,
             period=report.period,
@@ -898,6 +940,67 @@ class OccupancyReportSubmissionService:
                     "|".join(line.terminal_contract_ids),
                 ]
             )
+        writer.writerow([])
+        writer.writerow(["report_summary"])
+        writer.writerow(
+            [
+                "project_count",
+                "operating_project_count",
+                "non_operating_project_count",
+                "unit_count",
+                "rented_unit_count",
+                "occupancy_rate",
+                "land_area",
+                "building_area",
+                "rentable_area",
+                "rented_area",
+            ]
+        )
+        writer.writerow(
+            [
+                report.project_count,
+                report.operating_project_count,
+                report.non_operating_project_count,
+                report.unit_count,
+                report.rented_unit_count,
+                report.occupancy_rate,
+                report.land_area,
+                report.building_area,
+                report.rentable_area,
+                report.rented_area,
+            ]
+        )
+        writer.writerow([])
+        writer.writerow(["full_scope_snapshot"])
+        writer.writerow(
+            [
+                "asset_unit_id",
+                "name_snapshot",
+                "project_id",
+                "project_name_snapshot",
+                "is_operating",
+                "land_area",
+                "building_area",
+            ]
+        )
+        if report.full_scope_snapshot is None:
+            writer.writerow(["source_snapshot_unavailable"])
+        else:
+            for source in report.full_scope_snapshot:
+                writer.writerow(
+                    [
+                        source[key]
+                        for key in (
+                            "asset_unit_id",
+                            "name_snapshot",
+                            "project_id",
+                            "project_name_snapshot",
+                            "is_operating",
+                            "land_area",
+                            "building_area",
+                        )
+                    ]
+                )
         content = buffer.getvalue()
         await self.repository.finish_task(
             db,
@@ -932,8 +1035,9 @@ class OccupancyReportSubmissionService:
         candidates = await assessment_scope_repository.list_managed_units(
             db,
             operator_party_id=operator_party_id,
-            as_of=_business_today(),
+            as_of=month_end(period),
             year=int(period[:4]),
+            operating_only=False,
         )
         derived = await derive_report_lines(
             db,
@@ -942,14 +1046,7 @@ class OccupancyReportSubmissionService:
             candidates=candidates,
             period=period,
         )
-        end_of_month = month_end(period)
-        full_set_units = [
-            unit
-            for unit in candidates
-            if unit.managed_from <= end_of_month
-            and (unit.managed_to is None or unit.managed_to >= end_of_month)
-        ]
-        counts = project_counts(self._full_set_facts(full_set_units))
+        counts = full_scope_project_counts(derived.full_scope)
         return _ReportFacts(
             scope_version=scope_version,
             chain=chain,
@@ -977,32 +1074,16 @@ class OccupancyReportSubmissionService:
                 candidates=tuple(candidates),
                 derived=derived,
             ),
+            full_scope=derived.full_scope,
         )
 
     @staticmethod
-    def _full_set_facts(units: list[AssetUnit]) -> list[ReportLineFact]:
-        return [
-            ReportLineFact(
-                unit_id=unit.id,
-                managed_from=unit.managed_from,
-                managed_to=unit.managed_to,
-                is_operating=unit.is_operating,
-                included=False,
-                rented=False,
-                land_area=unit.land_area,
-                building_area=unit.building_area,
-                rentable_area=unit.rentable_area,
-                owner_name="",
-                usage_type=unit.usage_type,
-                project_name=unit.project_id,
-                address="",
-            )
-            for unit in units
-        ]
-
-    @staticmethod
     def _pending_units(facts: _ReportFacts) -> list[tuple[str, str]]:
-        view = view_for(facts.scope_version, facts.items, facts.candidates)
+        view = view_for(
+            facts.scope_version,
+            facts.items,
+            tuple(u for u in facts.candidates if u.is_operating),
+        )
         return list(view.pending)
 
     @staticmethod
@@ -1066,7 +1147,7 @@ class OccupancyReportSubmissionService:
         candidates = await assessment_scope_repository.list_managed_units(
             db,
             operator_party_id=operator_party_id,
-            as_of=_business_today(),
+            as_of=month_end(period),
             year=int(period[:4]),
         )
         derived = await derive_report_lines(
@@ -1182,6 +1263,10 @@ class OccupancyReportSubmissionService:
                 {
                     "id": unit.id,
                     "version": unit.version,
+                    "project_id": unit.project_id,
+                    "managed_from": unit.managed_from.isoformat(),
+                    "land_area": str(unit.land_area),
+                    "building_area": str(unit.building_area),
                     "is_operating": unit.is_operating,
                     "managed_to": (
                         unit.managed_to.isoformat()
@@ -1192,6 +1277,12 @@ class OccupancyReportSubmissionService:
                 for unit in sorted(candidates, key=lambda row: row.id)
             ],
             "rented_unit_ids": sorted(derived.rented_unit_ids),
+            "full_scope": [
+                OccupancyReportFullScopeUnit.model_validate(asdict(row)).model_dump(
+                    mode="json"
+                )
+                for row in derived.full_scope
+            ],
             "terminal_contract_map": {
                 unit_id: sorted(contract_ids)
                 for unit_id, contract_ids in sorted(

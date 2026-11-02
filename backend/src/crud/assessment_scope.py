@@ -132,6 +132,7 @@ class AssessmentScopeRepository:
         operator_party_id: str,
         as_of: date,
         year: int,
+        operating_only: bool = True,
     ) -> list[AssetUnit]:
         """Units this operator currently manages, whole-company, not user-scoped.
 
@@ -175,7 +176,6 @@ class AssessmentScopeRepository:
         statement = (
             select(AssetUnit)
             .where(
-                AssetUnit.is_operating.is_(True),
                 AssetUnit.managed_from <= date(year, 12, 31),
                 (AssetUnit.managed_to.is_(None))
                 | (AssetUnit.managed_to >= date(year, 1, 1)),
@@ -183,6 +183,8 @@ class AssessmentScopeRepository:
             )
             .order_by(AssetUnit.unit_code)
         )
+        if operating_only:
+            statement = statement.where(AssetUnit.is_operating.is_(True))
         return list((await db.execute(statement)).scalars().all())
 
     async def lock_serialization(

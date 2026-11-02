@@ -279,7 +279,7 @@ def test_occupancy_report_draft_derives_lines_and_gates_e2e(
     assert totals["unit_count"] == 2
     assert totals["rented_unit_count"] == 1
     assert totals["occupancy_rate"] == "0.5"
-    assert Decimal(totals["building_area"]) == Decimal("160")
+    assert Decimal(totals["building_area"]) == Decimal("200")
     assert Decimal(totals["rentable_area"]) == Decimal("130")
     assert Decimal(totals["rented_area"]) == Decimal("80")
 

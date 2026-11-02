@@ -99,6 +99,9 @@ class MonthlyOccupancyReport(Base):
         String(36), ForeignKey("assessment_scope_versions.id")
     )
     change_note: Mapped[str | None] = mapped_column(Text)
+    full_scope_snapshot: Mapped[list[dict[str, object]] | None] = mapped_column(
+        _JSON_TYPE
+    )
     project_count: Mapped[int | None] = mapped_column(Integer)
     operating_project_count: Mapped[int | None] = mapped_column(Integer)
     non_operating_project_count: Mapped[int | None] = mapped_column(Integer)

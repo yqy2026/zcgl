@@ -2,7 +2,8 @@
 
 Lines come from explicit scope decisions plus month-end unit and rental
 facts; the caller resolves operator identity, permissions and persistence.
-Draft totals are re-derivable from the lines by construction.
+Assessment totals derive from included lines. Published land/building areas
+and project counts use the separately snapshotted full managed-property set.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 import calendar
 import re
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 
@@ -71,6 +72,45 @@ class FieldChange:
     current: str | None
 
 
+@dataclass(frozen=True)
+class FullScopeUnitFact:
+    asset_unit_id: str
+    name_snapshot: str
+    project_id: str | None
+    project_name_snapshot: str
+    is_operating: bool
+    land_area: Decimal
+    building_area: Decimal
+
+
+def full_scope_project_counts(
+    units: Sequence[FullScopeUnitFact],
+) -> tuple[int, int, int]:
+    seen: set[str] = set()
+    projects: set[str] = set()
+    operating: set[str] = set()
+    for unit in units:
+        if unit.asset_unit_id in seen:
+            raise ValueError(f"Duplicate asset unit: {unit.asset_unit_id}")
+        seen.add(unit.asset_unit_id)
+        if unit.project_id is not None:
+            projects.add(unit.project_id)
+            if unit.is_operating:
+                operating.add(unit.project_id)
+    return len(projects), len(operating), len(projects - operating)
+
+
+def aggregates_with_full_scope(
+    assessment: ReportAggregates, units: Sequence[FullScopeUnitFact]
+) -> ReportAggregates:
+    full_scope_project_counts(units)
+    return replace(
+        assessment,
+        land_area=sum((unit.land_area for unit in units), Decimal(0)),
+        building_area=sum((unit.building_area for unit in units), Decimal(0)),
+    )
+
+
 def month_end(period: str) -> date:
     """Resolve the last calendar day of a ``YYYY-MM`` report month."""
     if re.fullmatch(r"[0-9]{4}-[0-9]{2}", period) is None:
@@ -126,7 +166,7 @@ def build_report_lines(
 
 
 def aggregates_from_lines(lines: Sequence[ReportLine]) -> ReportAggregates:
-    """Recompute published totals so lines remain the single source."""
+    """Recompute assessment totals before adding full managed-property areas."""
     unit_count = sum(line.unit_count for line in lines)
     rented_unit_count = sum(line.rented_unit_count for line in lines)
     return ReportAggregates(
@@ -215,24 +255,3 @@ __all__ = [
     "compare_with_baseline",
     "month_end",
 ]
-
-
-def project_counts(units: Sequence[ReportLineFact]) -> tuple[int, int, int]:
-    """Split month-end managed projects into operating vs fully non-operating.
-
-    The full set spans both operating and non-operating units under
-    management at month end; the report lines only ever cover the operating
-    included subset, so these counts are derived from the wider set.
-    """
-    projects: set[str] = set()
-    operating_projects: set[str] = set()
-    seen: set[str] = set()
-    for unit in units:
-        if unit.unit_id in seen:
-            raise ValueError(f"Duplicate asset unit: {unit.unit_id}")
-        seen.add(unit.unit_id)
-        projects.add(unit.project_name)
-        if unit.is_operating:
-            operating_projects.add(unit.project_name)
-    non_operating = projects - operating_projects
-    return len(projects), len(operating_projects), len(non_operating)

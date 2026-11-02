@@ -524,6 +524,8 @@ gap                = target_amount − held_amount
 | `activated_by` / `activated_at` | UUID? / datetime? | 保存生效审计 |
 | `version` | integer | 乐观锁版本 |
 
+同一运营主体同一年度的未保存草稿不可被再次创建或从上一年度复制静默覆盖；若已有草稿，返回原草稿身份并引导继续编辑。
+
 ### 4.22 AssessmentScopeItem
 
 | 字段 | 类型 | 约束 |
@@ -544,14 +546,15 @@ gap                = target_amount − held_amount
 | `status` | enum | `draft` / `submitted` / `withdrawn` |
 | `scope_version_id` | UUID | 提交时锁定考核范围版本 |
 | `change_note` | string? | 有较上月变动时提交必填 |
+| `full_scope_snapshot` | object[]? | 提交时锁定统计月末全部在管单元的来源；历史未记录时为 null，不从当前主档补造 |
 | `project_count` | integer | 快照汇总 |
 | `operating_project_count` | integer | 快照汇总 |
 | `non_operating_project_count` | integer | 快照汇总 |
 | `unit_count` | integer | 纳入宗数 |
 | `rented_unit_count` | integer | 已出租宗数 |
 | `occupancy_rate` | decimal? | 宗数出租率；分母为零时为 `null` |
-| `land_area` | decimal | 纳入范围土地面积合计 |
-| `building_area` | decimal | 纳入范围建筑面积合计 |
+| `land_area` | decimal | 统计月末全部在管物业土地面积合计（含非经营性与未纳入考核） |
+| `building_area` | decimal | 统计月末全部在管物业建筑面积合计（含非经营性与未纳入考核） |
 | `rentable_area` | decimal | 经营性可出租面积合计 |
 | `rented_area` | decimal | 经营性已出租面积合计 |
 | `submitted_by` / `submitted_at` | UUID? / datetime? | 提交审计 |
@@ -561,6 +564,8 @@ gap                = target_amount − held_amount
 | `version` | integer | 乐观锁版本 |
 
 `submitted` 快照不可更新。提交在报送/范围双锁下重新派生行并与预览指纹比对，事实漂移拒绝提交；撤回将快照标为 `withdrawn` 并生成后继草稿（`predecessor_report_id` 指向原快照），原行与审计保留，后继草稿可重新提交形成重报链。`draft` 行只承载身份、状态与 `change_note`，汇总字段与 `scope_version_id` 在提交时写入；同运营主体同月份至多一条非 `withdrawn` 报送链。
+
+全量来源快照的每项保存 `asset_unit_id`、`name_snapshot`、非空或空的 `project_id`、`project_name_snapshot`、`is_operating`、`land_area`、`building_area`。项目数及土地/建筑面积可从这份列表复算；经营性纳入明细独立保存。预览指纹涵盖全部来源的身份、项目、性质与面积，未纳入考核的单元变化同样使旧预览失效。提交后全量来源与汇总一同只读，导出使用该快照，不读取当前主档。读取时另将当前统计月末全量来源与已存列表比较，返回可空的 `full_scope_changed` 投影；历史来源缺失时为 null，不视为无变化。
 
 ### 4.24 MonthlyOccupancyReportLine
 
@@ -581,7 +586,7 @@ gap                = target_amount − held_amount
 | `rental_status` | enum | `rented` / `vacant` / `non_rentable`；可租面积为零即 `non_rentable` |
 | `terminal_contract_ids` | UUID[] | 月末有效终端合同快照 |
 
-行覆盖当月末仍在管、已纳入且经营性的单元；汇总字段全部由行聚合复算（`occupancy_rate` 分母为零时为 `null`）。行快照随提交锁定，草稿阶段始终按当前主档与月末台账实时派生，不落行存储。
+行覆盖当月末仍在管、已纳入且经营性的单元；宗数、出租率和可租/已租面积由本行集复算；土地/建筑面积与项目数由全部在管物业来源快照复算（`occupancy_rate` 分母为零时为 `null`）。行快照随提交锁定，草稿阶段始终按当前主档与月末台账实时派生，不落行存储。
 
 ### 4.25 ArchiveDocument
 
@@ -772,6 +777,8 @@ uploaded -> validating -> invalid
 
 ### 6.1 时点
 
+- 报送候选的运营主体归属按统计月末判定：有效上游合同运营主体优先，无有效上游时回退项目运营方；草稿、提交复算和快照差异读取使用同一统计时点，不采用报送当天。项目运营方回退依赖现存项目归属数据，不推造系统未记录的历史归属。
+
 - 月度出租率时点为统计月最后一天 24:00 前的最后有效状态。
 - 合同和单元采用自然日有效期；结束日当天仍有效。
 - 页面“今天”与逾期天数使用业务时区自然日。
@@ -799,15 +806,15 @@ occupancy_rate = rented_unit_count / unit_count
 
 ### 6.5 面积
 
-- 土地面积、建筑面积、可出租面积逐资产单元求和。
+- 土地面积与建筑面积按报送主体在统计月末的全部在管单元逐宗求和，包含非经营性及未纳入考核单元；可出租面积只汇总经营性且纳入考核的单元。
 - 经营性已出租面积只汇总 `rented_unit_count=1` 的单元 `rentable_area`。
 - 土地面积不因多个单元共享宗地而自动分摊；数据录入为 0 就按 0 汇总。
 
 ### 6.6 项目数
 
-- 在管项目数为报送明细中非空 `project_id` 去重数。
-- 经营性项目数为至少包含一个经营性纳入单元的项目去重数。
-- 非经营性项目数同理；一个混合项目可以按报送口径只计一次，具体分类取项目内是否存在经营性纳入单元优先。
+- 在管项目数为统计月末全部在管单元（含非经营性与未纳入考核）中非空 `project_id` 去重数。
+- 经营性项目数为至少包含一个经营性单元的项目去重数。
+- 非经营性项目数同理；一个混合项目可以按报送口径只计一次，具体分类取项目内是否存在经营性单元优先。
 
 ### 6.7 租金完成金额
 

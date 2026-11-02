@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -20,9 +20,11 @@ from ...models.occupancy_report import MonthlyOccupancyReport
 from ...schemas.asset_operations import (
     OccupancyReportDraftResponse,
     OccupancyReportFieldChange,
+    OccupancyReportFullScopeUnit,
     OccupancyReportLineResponse,
     OccupancyReportNoteResponse,
     OccupancyReportPendingUnit,
+    OccupancyReportProjectCounts,
     OccupancyReportTotals,
     SaveOccupancyReportNoteRequest,
 )
@@ -39,12 +41,15 @@ from .errors import (
 )
 from .occupancy_report_draft_rules import (
     FieldChange,
+    FullScopeUnitFact,
     ReportAggregates,
     ReportLine,
     ReportLineFact,
     aggregates_from_lines,
+    aggregates_with_full_scope,
     build_report_lines,
     compare_with_baseline,
+    full_scope_project_counts,
     month_end,
 )
 from .rent_command_support import require_scope
@@ -91,10 +96,13 @@ class OccupancyReportDraftService:
         candidates = await assessment_scope_repository.list_managed_units(
             db,
             operator_party_id=operator_party_id,
-            as_of=_business_today(),
+            as_of=month_end(period),
             year=int(period[:4]),
+            operating_only=False,
         )
-        current_view = view_for(scope_version, items, candidates)
+        current_view = view_for(
+            scope_version, items, [u for u in candidates if u.is_operating]
+        )
         derived = await derive_report_lines(
             db,
             scope_version=scope_version,
@@ -133,7 +141,19 @@ class OccupancyReportDraftService:
             gate_reasons.append("pending_units_unconfirmed")
         if len(changes) > 0 and not (change_note or "").strip():
             gate_reasons.append("change_note_required")
+        total_projects, operating_projects, non_operating_projects = (
+            full_scope_project_counts(derived.full_scope)
+        )
         return OccupancyReportDraftResponse(
+            full_scope_snapshot=[
+                OccupancyReportFullScopeUnit.model_validate(asdict(row))
+                for row in derived.full_scope
+            ],
+            project_counts=OccupancyReportProjectCounts(
+                project_count=total_projects,
+                operating_project_count=operating_projects,
+                non_operating_project_count=non_operating_projects,
+            ),
             operator_party_id=operator_party_id,
             period=period,
             first_report=first_report,
@@ -306,6 +326,7 @@ class DerivedReportFacts:
     aggregates: ReportAggregates
     rented_unit_ids: frozenset[str]
     terminal_contract_map: dict[str, tuple[str, ...]]
+    full_scope: tuple[FullScopeUnitFact, ...] = ()
 
 
 async def derive_report_lines(
@@ -371,7 +392,8 @@ async def derive_report_lines(
             for unit in included_units
         ),
     )
-    aggregates = aggregates_from_lines(lines)
+    full_scope = await derive_full_scope(db, candidates=candidates, period=period)
+    aggregates = aggregates_with_full_scope(aggregates_from_lines(lines), full_scope)
     aggregates = replace(aggregates, scope_version_id=scope_version.id)
     return DerivedReportFacts(
         included_units=included_units,
@@ -379,6 +401,38 @@ async def derive_report_lines(
         aggregates=aggregates,
         rented_unit_ids=frozenset(rented_ids),
         terminal_contract_map=terminal_map,
+        full_scope=full_scope,
+    )
+
+
+async def derive_full_scope(
+    db: AsyncSession,
+    *,
+    candidates: list[AssetUnit] | tuple[AssetUnit, ...],
+    period: str,
+) -> tuple[FullScopeUnitFact, ...]:
+    """Derive the full month-end identity and area source without rental queries."""
+    end_of_month = month_end(period)
+    full_set = tuple(
+        unit
+        for unit in candidates
+        if unit.managed_from <= end_of_month
+        and (unit.managed_to is None or unit.managed_to >= end_of_month)
+    )
+    projects = await occupancy_report_repository.get_line_display_names(
+        db, owner_party_ids=set(), project_ids={unit.project_id for unit in full_set}
+    )
+    return tuple(
+        FullScopeUnitFact(
+            unit.id,
+            unit.name,
+            unit.project_id,
+            projects["project"].get(unit.project_id, ""),
+            unit.is_operating,
+            unit.land_area,
+            unit.building_area,
+        )
+        for unit in sorted(full_set, key=lambda row: row.id)
     )
 
 
@@ -386,5 +440,6 @@ __all__ = [
     "DerivedReportFacts",
     "OccupancyReportDraftService",
     "derive_report_lines",
+    "derive_full_scope",
     "occupancy_report_draft_service",
 ]

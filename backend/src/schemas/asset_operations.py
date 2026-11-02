@@ -975,7 +975,25 @@ class OccupancyReportPendingUnit(_StrictPayload):
     reason: Literal["new_takeover", "boundary_uncertain"]
 
 
+class OccupancyReportFullScopeUnit(_StrictPayload):
+    asset_unit_id: str
+    name_snapshot: str
+    project_id: str | None
+    project_name_snapshot: str
+    is_operating: bool
+    land_area: Decimal
+    building_area: Decimal
+
+
+class OccupancyReportProjectCounts(_StrictPayload):
+    project_count: int
+    operating_project_count: int
+    non_operating_project_count: int
+
+
 class OccupancyReportDraftResponse(_StrictPayload):
+    full_scope_snapshot: list[OccupancyReportFullScopeUnit]
+    project_counts: OccupancyReportProjectCounts
     operator_party_id: str
     period: str
     first_report: bool
@@ -1063,13 +1081,9 @@ class OccupancyReportUnitDiff(_StrictPayload):
     changes: list[OccupancyReportFieldChange]
 
 
-class OccupancyReportProjectCounts(_StrictPayload):
-    project_count: int
-    operating_project_count: int
-    non_operating_project_count: int
-
-
 class OccupancyReportSnapshotResponse(_StrictPayload):
+    full_scope_changed: bool | None = None
+    full_scope_snapshot: list[OccupancyReportFullScopeUnit] | None = None
     report_id: str
     operator_party_id: str
     period: str

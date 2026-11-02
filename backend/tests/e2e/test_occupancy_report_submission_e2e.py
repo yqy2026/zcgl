@@ -290,10 +290,7 @@ def test_occupancy_report_submit_snapshot_and_export_e2e(
         params={"operator_party_id": operator_id},
     )
     assert blocked_draft.status_code == 409, blocked_draft.text
-    assert (
-        blocked_draft.json()["error"]["code"]
-        == "OCCUPANCY_REPORT_ALREADY_SUBMITTED"
-    )
+    assert blocked_draft.json()["error"]["code"] == "OCCUPANCY_REPORT_ALREADY_SUBMITTED"
 
     snapshot = client.get(f"/api/v1/occupancy-reports/{report_id}")
     assert snapshot.status_code == 200, snapshot.text
@@ -526,8 +523,7 @@ def test_occupancy_report_withdrawal_chain_and_resubmit_e2e(
     )
     assert wd_preview.status_code == 200, wd_preview.text
     assert (
-        wd_preview.json()["successor_draft_rule"]
-        == "fresh_draft_with_predecessor_link"
+        wd_preview.json()["successor_draft_rule"] == "fresh_draft_with_predecessor_link"
     )
 
     withdraw_key = f"wd-{uuid4().hex}"
@@ -555,9 +551,7 @@ def test_occupancy_report_withdrawal_chain_and_resubmit_e2e(
         headers={**csrf_headers, "Idempotency-Key": f"wd-{uuid4().hex}"},
     )
     assert repeat.status_code == 409, repeat.text
-    assert (
-        repeat.json()["error"]["code"] == "OCCUPANCY_REPORT_ALREADY_WITHDRAWN"
-    )
+    assert repeat.json()["error"]["code"] == "OCCUPANCY_REPORT_ALREADY_WITHDRAWN"
 
     snapshot = client.get(f"/api/v1/occupancy-reports/{report_id}")
     assert snapshot.status_code == 200, snapshot.text
@@ -788,3 +782,188 @@ def test_occupancy_report_withdraw_race_admits_single_winner_e2e(
     # 终态检查先于 token 消费（见 withdraw 实现）：败方必然收到"已撤回"，
     # 而非笼统的业务错误，这里不得再放宽到 BaseBusinessError。
     assert isinstance(failure, OccupancyReportAlreadyWithdrawnError), results
+
+
+def test_prior_month_reporting_keeps_operator_after_month_end_transfer_e2e(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    db_session: Session,
+) -> None:
+    """A later operator change must not remove the prior month's report line."""
+    from src.services.asset_operations.occupancy_report_draft_rules import month_end
+
+    client = authenticated_client
+    facts = _seed_submission_ready(db_session, getattr(client, "_user_id"))
+    operator_id = facts["operator_party_id"]
+    unit = db_session.get(AssetUnit, facts["unit_id"])
+    coverage = (
+        db_session.query(UpstreamContractAssetUnit)
+        .filter(UpstreamContractAssetUnit.asset_unit_id == unit.id)
+        .one()
+    )
+    coverage.effective_to = month_end(_PERIOD)
+    successor = create_approved_legal_party(
+        db_session, suffix=uuid4().hex[:12], name="月末后接续运营主体"
+    )
+    project = db_session.get(Project, unit.project_id)
+    project.manager_party_id = successor.id
+    db_session.commit()
+
+    draft = client.get(
+        f"/api/v1/occupancy-reports/{_PERIOD}/draft",
+        params={"operator_party_id": operator_id},
+    )
+    assert draft.status_code == 200, draft.text
+    assert draft.json()["totals"]["unit_count"] == 1
+    assert draft.json()["lines"][0]["asset_unit_id"] == facts["unit_id"]
+
+    preview = _preview(client, csrf_headers, operator_id)
+    assert preview["can_submit"] is True
+    committed = _submit(
+        client,
+        csrf_headers,
+        operator_id,
+        {
+            "preview_token": preview["preview_token"],
+            "expected_scope_version_id": facts["scope_version_id"],
+            "expected_scope_version": 1,
+        },
+        f"month-end-attribution-{uuid4().hex}",
+    )
+    assert committed.status_code == 200, committed.text
+    assert committed.json()["totals"]["unit_count"] == 1
+
+    snapshot = client.get(f"/api/v1/occupancy-reports/{committed.json()['report_id']}")
+    assert snapshot.status_code == 200, snapshot.text
+    assert snapshot.json()["lines"][0]["asset_unit_id"] == facts["unit_id"]
+    assert snapshot.json()["differences"] == []
+
+
+def test_full_scope_totals_and_sources_remain_locked_after_submission_e2e(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    db_session: Session,
+) -> None:
+    """D12 includes excluded/public property without enlarging the denominator."""
+    import base64
+    import csv
+    import io
+
+    client = authenticated_client
+    facts = _seed_submission_ready(db_session, getattr(client, "_user_id"))
+    operator_id = facts["operator_party_id"]
+    original = db_session.get(AssetUnit, facts["unit_id"])
+    public_project = Project(
+        id=str(uuid4()),
+        project_code=f"PUBLIC-{uuid4().hex[:12]}",
+        project_name="公共物业项目",
+        manager_party_id=operator_id,
+        status="active",
+    )
+    db_session.add(public_project)
+    db_session.flush()
+    extras = []
+    for operating, land, building, project_id in (
+        (True, "10", "200", original.project_id),
+        (False, "20", "300", public_project.id),
+    ):
+        unit = AssetUnit(
+            id=str(uuid4()),
+            unit_code=f"FULL-{uuid4().hex[:12]}",
+            name="全量来源单元",
+            project_id=project_id,
+            owner_party_id=operator_id,
+            address="全量来源地址",
+            usage_type="commercial",
+            acquisition_mode="managed",
+            is_operating=operating,
+            land_area=Decimal(land),
+            building_area=Decimal(building),
+            rentable_area=Decimal("50"),
+            managed_from=original.managed_from,
+            predecessor_unit_ids=[],
+            version=1,
+        )
+        db_session.add(unit)
+        extras.append(unit)
+    db_session.flush()
+    db_session.add(
+        AssessmentScopeItem(
+            scope_version_id=facts["scope_version_id"],
+            asset_unit_id=extras[0].id,
+            included=False,
+            exclusion_reason="本年排除",
+            unit_snapshot={},
+        )
+    )
+    db_session.commit()
+    draft = client.get(
+        f"/api/v1/occupancy-reports/{_PERIOD}/draft",
+        params={"operator_party_id": operator_id},
+    )
+    assert draft.status_code == 200, draft.text
+    assert draft.json()["totals"]["unit_count"] == 1
+    assert Decimal(draft.json()["totals"]["land_area"]) == Decimal("31.5")
+    assert Decimal(draft.json()["totals"]["building_area"]) == Decimal("600")
+    assert draft.json()["project_counts"] == {
+        "project_count": 2,
+        "operating_project_count": 1,
+        "non_operating_project_count": 1,
+    }
+    assert len(draft.json()["full_scope_snapshot"]) == 3
+    preview = _preview(client, csrf_headers, operator_id)
+    assert preview["can_submit"] is True
+    extras[0].land_area = Decimal("11")
+    db_session.commit()
+    payload = {
+        "preview_token": preview["preview_token"],
+        "expected_scope_version_id": facts["scope_version_id"],
+        "expected_scope_version": 1,
+    }
+    stale = _submit(
+        client, csrf_headers, operator_id, payload, f"full-stale-{uuid4().hex}"
+    )
+    assert stale.status_code == 409, stale.text
+    assert stale.json()["error"]["code"] == "PREVIEW_STALE"
+    fresh = _preview(client, csrf_headers, operator_id)
+    submitted = _submit(
+        client,
+        csrf_headers,
+        operator_id,
+        {**payload, "preview_token": fresh["preview_token"]},
+        f"full-submit-{uuid4().hex}",
+    )
+    assert submitted.status_code == 200, submitted.text
+    assert Decimal(submitted.json()["totals"]["land_area"]) == Decimal("32.5")
+    report_id = submitted.json()["report_id"]
+    before = client.get(f"/api/v1/occupancy-reports/{report_id}").json()
+    assert len(before["full_scope_snapshot"]) == 3
+    assert before["full_scope_changed"] is False
+    extras[1].building_area = Decimal("999")
+    public_project.project_name = "后来改名"
+    db_session.commit()
+    after_response = client.get(f"/api/v1/occupancy-reports/{report_id}")
+    assert after_response.status_code == 200, after_response.text
+    after = after_response.json()
+    assert after["full_scope_changed"] is True
+    assert after["totals"] == before["totals"]
+    assert after["full_scope_snapshot"] == before["full_scope_snapshot"]
+    export = client.post(
+        f"/api/v1/occupancy-reports/{report_id}/exports", headers=csrf_headers
+    )
+    assert export.status_code == 200, export.text
+    task = client.get(f"/api/v1/tasks/{export.json()['task_id']}")
+    assert task.status_code == 200, task.text
+    content = base64.b64decode(task.json()["result_data"]["content_base64"]).decode(
+        "utf-8"
+    )
+    rows = list(csv.reader(io.StringIO(content)))
+    assert rows[0][0:2] == ["asset_unit_id", "owner_name"]
+    source_index = rows.index(["full_scope_snapshot"])
+    source_rows = rows[source_index + 2 :]
+    public_row = next(row for row in source_rows if row[0] == extras[1].id)
+    assert public_row[3] == "公共物业项目"
+    assert Decimal(public_row[6]) == Decimal("300")
+    summary_index = rows.index(["report_summary"])
+    assert Decimal(rows[summary_index + 2][6]) == Decimal("32.5")
+    assert Decimal(rows[summary_index + 2][7]) == Decimal("600")

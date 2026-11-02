@@ -554,6 +554,7 @@ function normalizePendingUnit(raw: RawRecord): OccupancyReportPendingUnit {
 }
 
 export interface OccupancyReportDraft {
+  fullScopeUnitCount: number;
   operatorPartyId: string;
   period: string;
   firstReport: boolean;
@@ -569,6 +570,7 @@ export interface OccupancyReportDraft {
 
 function normalizeReportDraft(raw: RawRecord): OccupancyReportDraft {
   return {
+    fullScopeUnitCount: requireRecordArray(raw, 'full_scope_snapshot').length,
     operatorPartyId: String(raw.operator_party_id ?? ''),
     period: String(raw.period ?? ''),
     firstReport: requireBoolean(raw, 'first_report'),
@@ -706,6 +708,7 @@ export interface OccupancyReportSnapshot {
   projectCounts: OccupancyReportProjectCounts;
   lines: OccupancyReportLine[];
   differences: OccupancyReportUnitDiff[];
+  fullScopeChanged: boolean | null;
 }
 
 function normalizeSnapshot(raw: RawRecord): OccupancyReportSnapshot {
@@ -724,6 +727,8 @@ function normalizeSnapshot(raw: RawRecord): OccupancyReportSnapshot {
     projectCounts: normalizeProjectCounts(requireRecord(raw.project_counts, 'project_counts')),
     lines: requireRecordArray(raw, 'lines').map(normalizeReportLine),
     differences: requireRecordArray(raw, 'differences').map(normalizeUnitDiff),
+    fullScopeChanged:
+      raw.full_scope_changed === null ? null : requireBoolean(raw, 'full_scope_changed'),
   };
 }
 

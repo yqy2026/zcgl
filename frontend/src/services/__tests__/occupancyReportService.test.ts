@@ -56,6 +56,7 @@ it('converts Decimal strings into numbers for the draft totals and lines', async
           terminal_contract_ids: ['tc-1'],
         },
       ],
+      full_scope_snapshot: [],
       pending: [],
       changes: [{ field_name: 'rented_area', previous: '100.00', current: '150.00' }],
       change_note: null,
@@ -97,6 +98,7 @@ it('treats an explicitly null occupancy rate as null but throws on an unparseabl
         rented_area: '0',
       },
       lines: [],
+      full_scope_snapshot: [],
       pending: [],
       changes: [],
       change_note: null,
@@ -125,6 +127,7 @@ it('treats an explicitly null occupancy rate as null but throws on an unparseabl
         rented_area: '0',
       },
       lines: [],
+      full_scope_snapshot: [],
       pending: [],
       changes: [],
       change_note: null,
@@ -294,6 +297,7 @@ it('serializes scope decisions without exclusion reasons for included units', as
       effective_from_period: '2026-10',
       version: 2,
       items: [],
+      full_scope_snapshot: [],
       pending: [],
     },
   });
@@ -338,3 +342,40 @@ it('reads the export csv payload from the task result', async () => {
   expect(file.fileName).toBe('occupancy-report-2026-10.csv');
   expect(file.contentBase64).toBe('Y29sdW1uMQ==');
 });
+
+it.each([true, false, null])(
+  'preserves full-scope change status %s separately from assessment differences',
+  async changed => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      success: true,
+      data: {
+        report_id: 'report-1',
+        operator_party_id: 'op-1',
+        period: '2026-10',
+        status: 'submitted',
+        scope_version: { version_id: 'scope-1', version_number: 1, status: 'active', version: 1 },
+        totals: {
+          unit_count: 0,
+          rented_unit_count: 0,
+          occupancy_rate: null,
+          land_area: '25.5',
+          building_area: '90',
+          rentable_area: '0',
+          rented_area: '0',
+        },
+        project_counts: {
+          project_count: 1,
+          operating_project_count: 0,
+          non_operating_project_count: 1,
+        },
+        lines: [],
+        differences: [],
+        full_scope_changed: changed,
+      },
+    });
+    const result = await occupancyReportService.getOccupancyReportSnapshot('report-1');
+    expect(result).toHaveProperty('fullScopeChanged', changed);
+    expect(result.differences).toEqual([]);
+    expect(result.totals.landArea).toBe(25.5);
+  }
+);
