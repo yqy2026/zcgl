@@ -153,9 +153,12 @@ function toServiceError(error: unknown): AssetOperationsError {
     return error;
   }
   const enhanced = ApiErrorHandler.handleError(error);
-  if (isAxiosError<{ error?: RawErrorPayload }>(error)) {
-    const fallbackCode = error.response?.status === 403 ? 'FORBIDDEN' : enhanced.code;
-    return toErrorPayloadError(error.response?.data?.error, fallbackCode, enhanced.message);
+  // The shared client's interceptor rejects an enhanced error and retains the
+  // original AxiosError; read its nested business payload before converting it.
+  const originalError = isAxiosError(error) ? error : enhanced.originalError;
+  if (isAxiosError<{ error?: RawErrorPayload }>(originalError)) {
+    const fallbackCode = originalError.response?.status === 403 ? 'FORBIDDEN' : enhanced.code;
+    return toErrorPayloadError(originalError.response?.data?.error, fallbackCode, enhanced.message);
   }
   return new AssetOperationsError(enhanced.message, enhanced.code);
 }

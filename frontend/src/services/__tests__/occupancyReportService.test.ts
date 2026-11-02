@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { apiClient } from '@/api/client';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 import {
   occupancyReportService,
   isOccupancyForbidden,
@@ -379,3 +380,36 @@ it.each([true, false, null])(
     expect(result.totals.landArea).toBe(25.5);
   }
 );
+
+it('recovers the existing draft id from the real client interceptor error', async () => {
+  vi.mocked(apiClient.post).mockRejectedValueOnce(
+    ApiErrorHandler.handleError(
+      axiosRejection(409, {
+        code: 'ASSESSMENT_SCOPE_DRAFT_EXISTS',
+        message: '该年度已存在未保存的考核范围草稿',
+        details: { draft_id: 'draft-existing' },
+      })
+    )
+  );
+  const error: unknown = await occupancyReportService
+    .createAssessmentScopeDraft(2026, {
+      operatorPartyId: 'op-1',
+      source: 'previous_year',
+    })
+    .catch(value => value);
+  expect(error).toBeInstanceOf(AssessmentScopeDraftExistsError);
+  expect(error).toMatchObject({ draftId: 'draft-existing', code: 'ASSESSMENT_SCOPE_DRAFT_EXISTS' });
+});
+
+it('preserves scoped business errors through the real client interceptor', async () => {
+  vi.mocked(apiClient.get).mockRejectedValueOnce(
+    ApiErrorHandler.handleError(
+      axiosRejection(403, { code: 'PARTY_SCOPE_INVALID_BINDING', message: '主体绑定失效' })
+    )
+  );
+  const error: unknown = await occupancyReportService
+    .getOccupancyReportDraft('2026-10', 'op-1')
+    .catch(value => value);
+  expect(error).toMatchObject({ code: 'PARTY_SCOPE_INVALID_BINDING', message: '主体绑定失效' });
+  expect(isOccupancyForbidden(error)).toBe(true);
+});

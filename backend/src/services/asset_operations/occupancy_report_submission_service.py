@@ -903,6 +903,7 @@ class OccupancyReportSubmissionService:
                 error_message="报送快照不存在或未提交",
                 completed_at=self._database_datetime(self._clock()),
             )
+            await db.commit()
             return
         lines = await self.repository.list_lines(db, report_id=report.id)
         buffer = io.StringIO()
@@ -1015,6 +1016,7 @@ class OccupancyReportSubmissionService:
                 "line_count": len(lines),
             },
         )
+        await db.commit()
 
     # ------------------------------------------------------------------ utils
 
