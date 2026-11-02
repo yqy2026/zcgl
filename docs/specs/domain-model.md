@@ -509,17 +509,22 @@ gap                = target_amount − held_amount
 
 ### 4.21 AssessmentScopeVersion
 
+范围版本按运营主体 Party 隔离；`operator_party_id` 是稳定的报送单位身份，不是当前操作者，也不是动态授权集合。不同主体的年度版本互不覆盖。
+
 | 字段 | 类型 | 约束 |
 |---|---|---|
 | `id` | UUID | 主键 |
+| `operator_party_id` | UUID | 报送运营主体，引用 Party |
 | `year` | integer | 考核年度 |
-| `version_number` | integer | 同年度递增唯一 |
+| `version_number` | integer | 同运营主体、同年度递增唯一 |
 | `status` | enum | `draft` / `active` / `superseded` |
 | `effective_from_period` | year-month | 首个适用报送月 |
 | `based_on_version_id` | UUID? | 草稿来源版本 |
 | `created_by` / `created_at` | UUID / datetime | 创建审计 |
 | `activated_by` / `activated_at` | UUID? / datetime? | 保存生效审计 |
 | `version` | integer | 乐观锁版本 |
+
+同一运营主体同一年度的未保存草稿不可被再次创建或从上一年度复制静默覆盖；若已有草稿，返回原草稿身份并引导继续编辑。
 
 ### 4.22 AssessmentScopeItem
 
@@ -536,18 +541,20 @@ gap                = target_amount − held_amount
 | 字段 | 类型 | 约束 |
 |---|---|---|
 | `id` | UUID | 主键 |
-| `period` | year-month | 月度唯一活动报送链 |
+| `operator_party_id` | UUID | 报送运营主体，须与引用的范围版本一致 |
+| `period` | year-month | 同运营主体、同月份唯一活动报送链 |
 | `status` | enum | `draft` / `submitted` / `withdrawn` |
 | `scope_version_id` | UUID | 提交时锁定考核范围版本 |
 | `change_note` | string? | 有较上月变动时提交必填 |
+| `full_scope_snapshot` | object[]? | 提交时锁定统计月末全部在管单元的来源；历史未记录时为 null，不从当前主档补造 |
 | `project_count` | integer | 快照汇总 |
 | `operating_project_count` | integer | 快照汇总 |
 | `non_operating_project_count` | integer | 快照汇总 |
 | `unit_count` | integer | 纳入宗数 |
 | `rented_unit_count` | integer | 已出租宗数 |
-| `occupancy_rate` | decimal | 宗数出租率 |
-| `land_area` | decimal | 纳入范围土地面积合计 |
-| `building_area` | decimal | 纳入范围建筑面积合计 |
+| `occupancy_rate` | decimal? | 宗数出租率；分母为零时为 `null` |
+| `land_area` | decimal | 统计月末全部在管物业土地面积合计（含非经营性与未纳入考核） |
+| `building_area` | decimal | 统计月末全部在管物业建筑面积合计（含非经营性与未纳入考核） |
 | `rentable_area` | decimal | 经营性可出租面积合计 |
 | `rented_area` | decimal | 经营性已出租面积合计 |
 | `submitted_by` / `submitted_at` | UUID? / datetime? | 提交审计 |
@@ -556,7 +563,9 @@ gap                = target_amount − held_amount
 | `predecessor_report_id` | UUID? | 撤回后重报链 |
 | `version` | integer | 乐观锁版本 |
 
-`submitted` 快照不可更新。撤回将其标为 `withdrawn` 并生成新的草稿，原行保留。
+`submitted` 快照不可更新。提交在报送/范围双锁下重新派生行并与预览指纹比对，事实漂移拒绝提交；撤回将快照标为 `withdrawn` 并生成后继草稿（`predecessor_report_id` 指向原快照），原行与审计保留，后继草稿可重新提交形成重报链。`draft` 行只承载身份、状态与 `change_note`，汇总字段与 `scope_version_id` 在提交时写入；同运营主体同月份至多一条非 `withdrawn` 报送链。
+
+全量来源快照的每项保存 `asset_unit_id`、`name_snapshot`、非空或空的 `project_id`、`project_name_snapshot`、`is_operating`、`land_area`、`building_area`。项目数及土地/建筑面积可从这份列表复算；经营性纳入明细独立保存。预览指纹涵盖全部来源的身份、项目、性质与面积，未纳入考核的单元变化同样使旧预览失效。提交后全量来源与汇总一同只读，导出使用该快照，不读取当前主档。读取时另将当前统计月末全量来源与已存列表比较，返回可空的 `full_scope_changed` 投影；历史来源缺失时为 null，不视为无变化。
 
 ### 4.24 MonthlyOccupancyReportLine
 
@@ -569,12 +578,15 @@ gap                = target_amount − held_amount
 | `project_name_snapshot` | string | 项目名称快照 |
 | `address_snapshot` | string | 地址快照 |
 | `land_area` | decimal | 本行土地面积 |
+| `building_area` | decimal | 本行建筑面积 |
 | `rentable_area` | decimal | 本行经营性可出租面积 |
-| `rented_area` | decimal | 本行经营性已出租面积 |
+| `rented_area` | decimal | 本行经营性已出租面积；已出租行等于可租面积，其余为 0 |
 | `unit_count` | integer | 固定 `1` |
 | `rented_unit_count` | integer | `0` / `1` |
-| `rental_status` | enum | `rented` / `vacant` / `non_rentable` |
+| `rental_status` | enum | `rented` / `vacant` / `non_rentable`；可租面积为零即 `non_rentable` |
 | `terminal_contract_ids` | UUID[] | 月末有效终端合同快照 |
+
+行覆盖当月末仍在管、已纳入且经营性的单元；宗数、出租率和可租/已租面积由本行集复算；土地/建筑面积与项目数由全部在管物业来源快照复算（`occupancy_rate` 分母为零时为 `null`）。行快照随提交锁定，草稿阶段始终按当前主档与月末台账实时派生，不落行存储。
 
 ### 4.25 ArchiveDocument
 
@@ -740,7 +752,9 @@ collecting <-> pending_stamp（派生） -> confirmed -> superseded
 draft -> active -> superseded
 ```
 
-同一年度只能有一个对当前及未来报送有效的 `active` 版本；已报月份继续引用原版本。
+同一运营主体、同一年度只能有一个活动范围版本；`version_number` 在该组合内递增。新版本可以用于尚未提交的上月报送，`effective_from_period` 明确首个适用统计月，不强制等于操作日所在自然月。已报月份继续引用原版本，范围保存不得修改其快照或引用。
+
+年初（1 月 1 日）已在管的经营性物业默认纳入；补录历史存量按 `managed_from` 判断，不按 `created_at` 判断。当年新增接管单元必须明确确认纳入或排除，确认前不进入分母。拆合的全部来源在适用范围版本中都已纳入时，结果自动继承纳入；来源决定不一致时人工确认。显式排除必须保存非空原因。
 
 ### 5.6 月度报送
 
@@ -762,6 +776,8 @@ uploaded -> validating -> invalid
 ## 6. 统计口径
 
 ### 6.1 时点
+
+- 报送候选的运营主体归属按统计月末判定：有效上游合同运营主体优先，无有效上游时回退项目运营方；草稿、提交复算和快照差异读取使用同一统计时点，不采用报送当天。项目运营方回退依赖现存项目归属数据，不推造系统未记录的历史归属。
 
 - 月度出租率时点为统计月最后一天 24:00 前的最后有效状态。
 - 合同和单元采用自然日有效期；结束日当天仍有效。
@@ -790,15 +806,15 @@ occupancy_rate = rented_unit_count / unit_count
 
 ### 6.5 面积
 
-- 土地面积、建筑面积、可出租面积逐资产单元求和。
+- 土地面积与建筑面积按报送主体在统计月末的全部在管单元逐宗求和，包含非经营性及未纳入考核单元；可出租面积只汇总经营性且纳入考核的单元。
 - 经营性已出租面积只汇总 `rented_unit_count=1` 的单元 `rentable_area`。
 - 土地面积不因多个单元共享宗地而自动分摊；数据录入为 0 就按 0 汇总。
 
 ### 6.6 项目数
 
-- 在管项目数为报送明细中非空 `project_id` 去重数。
-- 经营性项目数为至少包含一个经营性纳入单元的项目去重数。
-- 非经营性项目数同理；一个混合项目可以按报送口径只计一次，具体分类取项目内是否存在经营性纳入单元优先。
+- 在管项目数为统计月末全部在管单元（含非经营性与未纳入考核）中非空 `project_id` 去重数。
+- 经营性项目数为至少包含一个经营性单元的项目去重数。
+- 非经营性项目数同理；一个混合项目可以按报送口径只计一次，具体分类取项目内是否存在经营性单元优先。
 
 ### 6.7 租金完成金额
 

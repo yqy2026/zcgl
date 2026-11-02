@@ -15,6 +15,7 @@ describe('AppRoutes authz metadata', () => {
       [ASSET_OPERATIONS_V5_ROUTES.MANAGEMENT_FEE_STATEMENT, 'asset_ops:read'],
       [ASSET_OPERATIONS_V5_ROUTES.UPSTREAM_CONTRACTS, 'asset_ops:read'],
       [ASSET_OPERATIONS_V5_ROUTES.TERMINAL_CONTRACTS, 'asset_ops:read'],
+      [ASSET_OPERATIONS_V5_ROUTES.OCCUPANCY_REPORTS, 'asset_ops:read'],
       [ASSET_OPERATIONS_V5_ROUTES.INTAKE, 'asset_ops:write'],
       [ASSET_OPERATIONS_V5_ROUTES.TERMINAL_ACTIONS, 'asset_ops:write'],
       [ASSET_OPERATIONS_V5_ROUTES.UPSTREAM_ACTIONS, 'asset_ops:write'],

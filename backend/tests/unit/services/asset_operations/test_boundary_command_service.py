@@ -208,6 +208,10 @@ class _Db:
         self.commit_count = 0
         self.rollback_count = 0
         self.commit_error = commit_error
+        self.added: list[object] = []
+
+    def add(self, obj: object) -> None:
+        self.added.append(obj)
 
     async def commit(self) -> None:
         self.commit_count += 1

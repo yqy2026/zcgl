@@ -1,5 +1,10 @@
 """Business services for the asset-operations v5 vertical slice."""
 
+from .assessment_scope_command_service import (
+    AssessmentScopeCommandService,
+    AssessmentScopePreviewStore,
+    assessment_scope_command_service,
+)
 from .asset_unit_command_service import (
     AssetUnitCommandService,
     asset_unit_command_service,
@@ -41,6 +46,15 @@ from .errors import (
     TerminalContractAlreadyTerminatedError,
 )
 from .lifecycle_rules import validate_upstream_exit
+from .occupancy_report_draft_service import (
+    OccupancyReportDraftService,
+    occupancy_report_draft_service,
+)
+from .occupancy_report_submission_service import (
+    OccupancyReportPreviewStore,
+    OccupancyReportSubmissionService,
+    occupancy_report_submission_service,
+)
 from .query_service import (
     AssetOperationsQueryService,
     asset_operations_query_service,
@@ -55,6 +69,14 @@ __all__ = [
     "asset_unit_command_service",
     "AssetUnitBoundaryCommandService",
     "AssetUnitBoundaryPreviewStore",
+    "assessment_scope_command_service",
+    "AssessmentScopeCommandService",
+    "AssessmentScopePreviewStore",
+    "OccupancyReportDraftService",
+    "occupancy_report_draft_service",
+    "OccupancyReportPreviewStore",
+    "OccupancyReportSubmissionService",
+    "occupancy_report_submission_service",
     "asset_unit_boundary_command_service",
     "AssetContractCommandService",
     "asset_contract_command_service",

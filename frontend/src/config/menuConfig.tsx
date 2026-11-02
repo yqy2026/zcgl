@@ -14,6 +14,7 @@ import {
   AuditOutlined,
   BookOutlined,
   ApartmentOutlined,
+  FileDoneOutlined,
   FileTextOutlined,
   FileAddOutlined,
   DatabaseOutlined,
@@ -66,6 +67,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
         key: '/asset-operations/contracts/terminal',
         icon: <SwapOutlined />,
         label: '终端合同',
+      },
+      {
+        key: '/asset-operations/occupancy-reports',
+        icon: <FileDoneOutlined />,
+        label: '月度出租率报送',
       },
     ],
   },
@@ -130,6 +136,9 @@ export function getSelectedKeys(pathname: string): string[] {
   }
   if (pathname.startsWith('/asset-operations/contracts/intake')) {
     return ['/asset-operations/contracts/intake'];
+  }
+  if (pathname.startsWith('/asset-operations/occupancy-reports')) {
+    return ['/asset-operations/occupancy-reports'];
   }
   if (pathname.startsWith('/asset-operations/units')) {
     return ['/asset-operations/units'];

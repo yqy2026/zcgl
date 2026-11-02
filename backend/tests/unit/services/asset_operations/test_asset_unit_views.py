@@ -107,9 +107,13 @@ class _ContractReader:
 class _DB:
     def __init__(self) -> None:
         self.commits = 0
+        self.added: list[object] = []
 
     def commit_called(self) -> bool:
         return self.commits > 0
+
+    def add(self, obj: object) -> None:
+        self.added.append(obj)
 
     async def flush(self) -> None:
         return None

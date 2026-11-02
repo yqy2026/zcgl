@@ -359,4 +359,124 @@ __all__ = [
     "UpstreamContractAlreadyExitedError",
     "UpstreamExitReversalBlockedError",
     "UpstreamExitReversalTargetInvalidError",
+    "AssessmentScopeOperatorForbiddenError",
+    "AssessmentScopeDraftExistsError",
+    "AssessmentScopeDraftStateError",
+    "AssessmentScopePeriodInvalidError",
+    "OccupancyReportAlreadySubmittedError",
+    "OccupancyReportPeriodInvalidError",
+    "OccupancyReportScopeMissingError",
+    "OccupancyReportNotSubmittedError",
+    "OccupancyReportAlreadyWithdrawnError",
 ]
+
+
+class AssessmentScopeOperatorForbiddenError(BaseBusinessError):
+    """The caller may not act on this operator party's reporting scope."""
+
+    def __init__(self, *, operator_party_id: str) -> None:
+        super().__init__(
+            message="无权管理该运营主体的考核范围",
+            code="ASSESSMENT_SCOPE_OPERATOR_FORBIDDEN",
+            details={"operator_party_id": operator_party_id},
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class AssessmentScopeDraftExistsError(BaseBusinessError):
+    """One draft per operator and year already exists; continue editing it."""
+
+    def __init__(self, *, draft_id: str) -> None:
+        super().__init__(
+            message="该年度已存在未保存的考核范围草稿",
+            code="ASSESSMENT_SCOPE_DRAFT_EXISTS",
+            details={"draft_id": draft_id},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class AssessmentScopeDraftStateError(BaseBusinessError):
+    """The draft is no longer editable, for example after being committed."""
+
+    def __init__(self, *, draft_status: str) -> None:
+        super().__init__(
+            message="考核范围草稿当前状态不允许该操作",
+            code="ASSESSMENT_SCOPE_DRAFT_STATE_INVALID",
+            details={"status": draft_status},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class AssessmentScopePeriodInvalidError(BaseBusinessError):
+    """The commit effective period does not belong to the draft's year."""
+
+    def __init__(self, *, effective_from_period: str, year: int) -> None:
+        super().__init__(
+            message="生效统计月必须属于考核年度",
+            code="ASSESSMENT_SCOPE_PERIOD_INVALID",
+            details={
+                "effective_from_period": effective_from_period,
+                "year": year,
+            },
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+
+
+class OccupancyReportScopeMissingError(BaseBusinessError):
+    """The period's year has no active assessment scope; reporting is closed."""
+
+    def __init__(self, *, operator_party_id: str, year: int) -> None:
+        super().__init__(
+            message="该年度尚无生效的考核范围，无法生成报送草稿",
+            code="OCCUPANCY_REPORT_SCOPE_MISSING",
+            details={"operator_party_id": operator_party_id, "year": year},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class OccupancyReportAlreadySubmittedError(BaseBusinessError):
+    """The month already has a submitted snapshot until it is withdrawn."""
+
+    def __init__(self, *, report_id: str, period: str) -> None:
+        super().__init__(
+            message="该统计月已提交快照，撤回后方可重新编辑",
+            code="OCCUPANCY_REPORT_ALREADY_SUBMITTED",
+            details={"report_id": report_id, "period": period},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class OccupancyReportPeriodInvalidError(BaseBusinessError):
+    """The requested reporting period is not a closed business month."""
+
+    def __init__(self, *, period: str, reason: str) -> None:
+        super().__init__(
+            message="报送统计月无效",
+            code="OCCUPANCY_REPORT_PERIOD_INVALID",
+            details={"period": period, "reason": reason},
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+
+
+class OccupancyReportNotSubmittedError(BaseBusinessError):
+    """The report chain row has not been submitted, so no snapshot exists."""
+
+    def __init__(self, *, report_id: str) -> None:
+        super().__init__(
+            message="该报送尚未提交，无可读取快照",
+            code="OCCUPANCY_REPORT_NOT_SUBMITTED",
+            details={"report_id": report_id},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class OccupancyReportAlreadyWithdrawnError(BaseBusinessError):
+    """The report was already withdrawn; the original snapshot stays intact."""
+
+    def __init__(self, *, report_id: str) -> None:
+        super().__init__(
+            message="该报送已撤回，不能重复撤回",
+            code="OCCUPANCY_REPORT_ALREADY_WITHDRAWN",
+            details={"report_id": report_id},
+            status_code=status.HTTP_409_CONFLICT,
+        )

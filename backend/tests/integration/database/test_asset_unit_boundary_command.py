@@ -23,6 +23,7 @@ from src.models.asset_unit import (
 )
 from src.models.attachment import Attachment
 from src.models.auth import AccountType, User
+from src.models.business_change_event import BusinessChangeEvent
 from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.project import Project
 from src.schemas.asset_operations import (
@@ -64,6 +65,23 @@ async def session_factory() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
 
     async def reset_facts() -> None:
         async with factory() as session:
+            await session.execute(
+                delete(BusinessChangeEvent).where(
+                    BusinessChangeEvent.correlation_id.in_(
+                        select(AssetUnitBoundaryChange.id).where(
+                            AssetUnitBoundaryChange.created_by == ACTOR_ID
+                        )
+                    )
+                    | (
+                        (BusinessChangeEvent.target_type == "asset_unit")
+                        & BusinessChangeEvent.target_id.in_(
+                            select(AssetUnit.id).where(
+                                AssetUnit.project_id == PROJECT_ID
+                            )
+                        )
+                    )
+                )
+            )
             await session.execute(
                 delete(AssetUnitBoundarySource).where(
                     AssetUnitBoundarySource.asset_unit_id.in_(

@@ -9,10 +9,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Alert, Table, Tag, Input, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
+import { ASSET_OPERATIONS_V5_ROUTES } from '@/constants/routes';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
 
@@ -31,6 +32,11 @@ const STATUS_COLORS: Record<AssetUnitListItem['rentalStatus'], string> = {
 };
 
 const PAGE_SIZE = 20;
+
+// 考核范围报送页要求 operator（管理方轴）；单元明细只有业主轴字段，
+// 前端拿不到可靠 operator id，深链降级为只带年度，由报送页内的
+// 运营主体选择器补齐 operator。
+const CURRENT_YEAR = new Date().getFullYear();
 
 function formatArea(value: number): string {
   return `${value.toLocaleString('zh-CN', { maximumFractionDigits: 2 })} ㎡`;
@@ -238,6 +244,14 @@ export function AssetUnitsPage(): React.ReactElement {
                       : detail.terminalContractIds.join('、')}
                   </span>
                 </div>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <Link
+                  aria-label="查看考核范围"
+                  to={`${ASSET_OPERATIONS_V5_ROUTES.OCCUPANCY_REPORTS}?year=${CURRENT_YEAR}`}
+                >
+                  考核范围
+                </Link>
               </div>
               <RenameForm
                 unit={detail}

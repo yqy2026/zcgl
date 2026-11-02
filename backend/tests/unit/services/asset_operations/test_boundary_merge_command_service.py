@@ -192,6 +192,7 @@ async def test_merge_commit_ends_all_sources_and_replays_idempotently() -> None:
     db = SimpleNamespace(
         commit=AsyncMock(),
         rollback=AsyncMock(),
+        add=lambda obj: None,
     )
     service = AssetUnitBoundaryCommandService(
         repository=repository,

@@ -345,7 +345,12 @@ class AssetUnitBoundaryRepository:
             asset_unit_id=source.id,
             boundary_change_id=boundary_change.id,
         )
-        db.add_all([*results, *new_coverages, boundary_change, boundary_source])
+        # Flush result units before the coverage rows that reference them:
+        # these mappers share no relationship, so insert order must not rely
+        # on unit-of-work table sorting.
+        db.add_all(results)
+        await db.flush()
+        db.add_all([*new_coverages, boundary_change, boundary_source])
         await db.flush()
         return boundary_change
 
