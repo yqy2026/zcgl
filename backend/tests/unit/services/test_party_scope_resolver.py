@@ -190,3 +190,18 @@ async def test_service_account_never_inherits_organization_scope() -> None:
     assert scope.error_code == "PARTY_SCOPE_MISSING"
     repository.load_bindings.assert_not_awaited()
     repository.load_organization.assert_not_awaited()
+
+
+def test_effective_party_scope_normalizes_sequence_inputs() -> None:
+    """字段声明为 list，但历史调用方传元组；构造时统一规范化避免 list+tuple 崩溃。"""
+    from src.services.party_scope_resolver import EffectivePartyScope
+
+    scope = EffectivePartyScope(
+        user_id="actor",
+        source="explicit",
+        scope_mode="manager",
+        manager_party_ids=("m1", "m2"),
+    )
+    assert scope.manager_party_ids == ["m1", "m2"]
+    assert scope.owner_party_ids == []
+    assert scope.effective_party_ids == ["m1", "m2"]

@@ -272,7 +272,7 @@ class AssetContractRepository:
         scope: EffectivePartyScope,
     ) -> set[str]:
         """Batch visibility check sharing get_terminal's scope filtering."""
-        if self._scope_is_empty(scope) or len(contract_ids) == 0:
+        if len(contract_ids) == 0 or self._scope_is_empty(scope):
             return set()
         statement = self._apply_terminal_scope(
             select(TerminalContract.id),
