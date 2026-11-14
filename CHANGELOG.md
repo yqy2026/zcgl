@@ -5,6 +5,8 @@
 
 ## 未发布
 
+- chore(deps): 移除零引用的死依赖 @faker-js/faker——全前端无任何 import，不再随 dependabot 升级空转（替代 #94 的 10.2→10.5 升级）。
+
 - fix(scope): EffectivePartyScope 构造时把 owner/manager party ids 序列输入规范化为 list——历史调用方（e2e 夹具等三处）传元组，在批量读路径触发 list+tuple 500；声明类型在运行时成立。
 
 - perf(asset-ops): 管理费读路径批量收口——月份清单与年度矩阵一次批量读取（每主体一份事实、全批一次边界校验/标记查询/终端可见性），消除逐单读放大；整单授权 SQL/Python 双实现合并为 visible_fee_statement_ids 单一事实源（V2 已知待办）。
