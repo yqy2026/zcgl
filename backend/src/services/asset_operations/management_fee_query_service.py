@@ -2,9 +2,11 @@
 
 Owner/unrestricted scope sees the whole statement; manager scope must cover
 every management agreement of the owner, including for confirmed snapshots.
+Authorization has a single home: the SQL boundary in
+crud/business_change_event (visible_fee_statement_ids).
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from decimal import Decimal
@@ -14,12 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError
 from ...crud.asset_contract import asset_contract_repository
+from ...crud.business_change_event import visible_fee_statement_ids
 from ...crud.management_fee_deferral import management_fee_deferral_repository
 from ...crud.management_fee_queries import (
     ManagementFeeQueryFacts,
     management_fee_query_repository,
 )
 from ...crud.management_fee_statement import management_fee_statement_repository
+from ...models.management_fee_deferral import ManagementFeeDeferral
 from ...models.management_fee_statement import (
     ManagementFeeStatement,
     ManagementFeeStatementLine,
@@ -42,6 +46,18 @@ class ManagementFeeDetail:
     statement: ManagementFeeStatement
     projection: ManagementFeeStatementProjection | None
     snapshot_lines: tuple[ManagementFeeStatementLine, ...]
+
+    @property
+    def status(self) -> str | None:
+        if self.projection is not None:
+            return self.projection.status
+        return self.statement.status
+
+    @property
+    def fee_amount(self) -> Decimal | None:
+        if self.projection is not None:
+            return self.projection.fee_amount
+        return self.statement.fee_amount
 
 
 def project_fee_facts(
@@ -147,86 +163,124 @@ class ManagementFeeQueryService:
         )
         if statement is None:
             raise ResourceNotFoundError("ManagementFeeStatement", statement_id)
-        facts = await management_fee_query_repository.load_facts(
-            db, owner_party_id=statement.owner_party_id
+        details = await self.details(db, statements=(statement,), scope=scope)
+        return details[statement.id]
+
+    async def details(
+        self,
+        db: AsyncSession,
+        *,
+        statements: Sequence[ManagementFeeStatement],
+        scope: EffectivePartyScope,
+    ) -> dict[str, ManagementFeeDetail]:
+        """Read a batch without amplifying queries per statement.
+
+        Whole-owner authorization, owner facts, terminal visibility and
+        deferral marks are each resolved once for the whole batch; statements
+        of one owner share the same facts. Any hidden statement fails the
+        whole batch with the same 404 as the single-statement read.
+        """
+        require_scope(scope, scope.user_id)
+        rows = tuple(statements)
+        visible = await visible_fee_statement_ids(
+            db, statement_ids=tuple(row.id for row in rows), scope=scope
         )
-        owner_access = (
-            scope.scope_mode in {"owner", "all"}
-            and statement.owner_party_id in scope.owner_party_ids
-        )
-        # Python twin of the SQL boundary in
-        # crud/business_change_event.fee_statement_ids_for_scope; keep in sync.
-        manager_access = (
-            scope.scope_mode in {"manager", "all"}
-            and len(facts.agreements) > 0
-            and all(
-                row.operator_party_id in scope.manager_party_ids
-                for row in facts.agreements
+        for row in rows:
+            if row.id not in visible:
+                raise ResourceNotFoundError("ManagementFeeStatement", row.id)
+        facts_by_owner: dict[str, ManagementFeeQueryFacts] = {}
+        for owner_party_id in dict.fromkeys(row.owner_party_id for row in rows):
+            facts_by_owner[
+                owner_party_id
+            ] = await management_fee_query_repository.load_facts(
+                db, owner_party_id=owner_party_id
             )
-        )
-        if (
-            scope.scope_mode != "unrestricted"
-            and not owner_access
-            and not manager_access
-        ):
-            raise ResourceNotFoundError("ManagementFeeStatement", statement_id)
-        if statement.status is not None:
-            return ManagementFeeDetail(
-                statement,
-                None,
-                tuple(row for row in facts.lines if row.statement_id == statement.id),
+        marks: Mapping[str, tuple[ManagementFeeDeferral, ...]] = {}
+        draft_ids = tuple(row.id for row in rows if row.status is None)
+        if draft_ids:
+            marks = await management_fee_deferral_repository.list_marks_for_statements(
+                db, statement_ids=draft_ids
             )
+        today = business_today()
+        manager_facts: dict[str, ManagementFeeQueryFacts] = {}
+        details: dict[str, ManagementFeeDetail] = {}
+        for row in rows:
+            facts = facts_by_owner[row.owner_party_id]
+            if row.status is not None:
+                # Immutable snapshot: status and amounts were persisted at
+                # confirmation; lines come from the owner's stored snapshot.
+                details[row.id] = ManagementFeeDetail(
+                    row,
+                    None,
+                    tuple(line for line in facts.lines if line.statement_id == row.id),
+                )
+                continue
+            owner_access = (
+                scope.scope_mode in {"owner", "all"}
+                and row.owner_party_id in scope.owner_party_ids
+            )
+            if scope.scope_mode != "unrestricted" and not owner_access:
+                if row.owner_party_id not in manager_facts:
+                    manager_facts[
+                        row.owner_party_id
+                    ] = await self._manager_visible_facts(db, facts=facts, scope=scope)
+                facts = manager_facts[row.owner_party_id]
+            details[row.id] = ManagementFeeDetail(
+                row,
+                project_fee_facts(
+                    facts,
+                    statement=row,
+                    today=today,
+                    deferral_marks={
+                        mark.rent_ledger_entry_id: mark.reason
+                        for mark in marks.get(row.id, ())
+                    },
+                ),
+                (),
+            )
+        return details
+
+    async def _manager_visible_facts(
+        self,
+        db: AsyncSession,
+        *,
+        facts: ManagementFeeQueryFacts,
+        scope: EffectivePartyScope,
+    ) -> ManagementFeeQueryFacts:
         # Agreement-level access grants the whole fee calculation, but missing
         # upstream warnings still require visibility of each terminal contract.
-        if scope.scope_mode != "unrestricted" and not owner_access:
-            visible = set()
-            for contract in facts.contracts:
-                if (
-                    contract.upstream_contract_id is not None
-                    or await asset_contract_repository.get_terminal(
-                        db, contract_id=contract.id, scope=scope
-                    )
-                    is not None
-                ):
-                    visible.add(contract.id)
-            contracts = tuple(row for row in facts.contracts if row.id in visible)
-            obligations = tuple(
-                row for row in facts.obligations if row.contract_id in visible
-            )
-            entry_ids = {row.id for row in obligations}
-            tenant_ids = {row.tenant_party_id for row in contracts}
-            facts = replace(
-                facts,
-                contracts=contracts,
-                obligations=obligations,
-                records=tuple(
-                    row for row in facts.records if row.ledger_entry_id in entry_ids
-                ),
-                tenant_names={
-                    key: value
-                    for key, value in facts.tenant_names.items()
-                    if key in tenant_ids
-                },
-                unit_ids={
-                    key: value
-                    for key, value in facts.unit_ids.items()
-                    if key in visible
-                },
-            )
-        marks = await management_fee_deferral_repository.list_marks(
-            db, statement_id=statement.id
+        unbound_ids = tuple(
+            row.id for row in facts.contracts if row.upstream_contract_id is None
         )
-        return ManagementFeeDetail(
-            statement,
-            project_fee_facts(
-                facts,
-                statement=statement,
-                today=business_today(),
-                deferral_marks={
-                    mark.rent_ledger_entry_id: mark.reason for mark in marks
-                },
+        visible_contracts = await asset_contract_repository.terminal_ids_in_scope(
+            db, contract_ids=unbound_ids, scope=scope
+        )
+        visible = {
+            row.id
+            for row in facts.contracts
+            if row.upstream_contract_id is not None or row.id in visible_contracts
+        }
+        contracts = tuple(row for row in facts.contracts if row.id in visible)
+        obligations = tuple(
+            row for row in facts.obligations if row.contract_id in visible
+        )
+        entry_ids = {row.id for row in obligations}
+        tenant_ids = {row.tenant_party_id for row in contracts}
+        return replace(
+            facts,
+            contracts=contracts,
+            obligations=obligations,
+            records=tuple(
+                row for row in facts.records if row.ledger_entry_id in entry_ids
             ),
-            (),
+            tenant_names={
+                key: value
+                for key, value in facts.tenant_names.items()
+                if key in tenant_ids
+            },
+            unit_ids={
+                key: value for key, value in facts.unit_ids.items() if key in visible
+            },
         )
 
 

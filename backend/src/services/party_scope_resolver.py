@@ -47,6 +47,14 @@ class EffectivePartyScope:
     error_code: ScopeErrorCode | None = None
     issues: list[PartyScopeIssue] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        # Some callers pass tuples; normalize so list-typed consumers
+        # (effective_party_ids 等) cannot crash on list + tuple.
+        object.__setattr__(self, "owner_party_ids", list(self.owner_party_ids or []))
+        object.__setattr__(
+            self, "manager_party_ids", list(self.manager_party_ids or [])
+        )
+
     @property
     def effective_party_ids(self) -> list[str]:
         return sorted(set(self.owner_party_ids + self.manager_party_ids))

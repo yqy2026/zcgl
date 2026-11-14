@@ -15,7 +15,10 @@ from ...schemas.management_fee_responses import (
     ManagementFeeStatementStatus,
 )
 from ..party_scope_resolver import EffectivePartyScope
-from .management_fee_query_service import management_fee_query_service
+from .management_fee_query_service import (
+    ManagementFeeDetail,
+    management_fee_query_service,
+)
 from .management_fee_rules import deadline_for
 from .rent_command_support import require_scope
 
@@ -27,6 +30,10 @@ class ManagementFeeResponseService:
         detail = await management_fee_query_service.detail(
             db, statement_id=statement_id, scope=scope
         )
+        return self._serialize(detail)
+
+    @staticmethod
+    def _serialize(detail: ManagementFeeDetail) -> ManagementFeeStatementResponse:
         row, projection = detail.statement, detail.projection
         identity: dict[str, Any] = {
             "id": row.id,
@@ -57,7 +64,7 @@ class ManagementFeeResponseService:
                 upstream_missing_warning=projection.upstream_missing_warning,
             )
         # Snapshot reads only happen for confirmed/superseded rows, whose status
-        # and amounts were persisted at confirmation (see query service detail()).
+        # and amounts were persisted at confirmation (see query service details()).
         return ManagementFeeStatementResponse(
             **identity,
             status=cast(ManagementFeeStatementStatus, row.status),
@@ -89,7 +96,10 @@ class ManagementFeeResponseService:
         rows = await management_fee_statement_repository.list_for_period(
             db, period=period, scope=scope
         )
-        items = [await self.get(db, statement_id=row.id, scope=scope) for row in rows]
+        details = await management_fee_query_service.details(
+            db, statements=rows, scope=scope
+        )
+        items = [self._serialize(details[row.id]) for row in rows]
         return ManagementFeeListResponse(items=items, total=len(items))
 
 

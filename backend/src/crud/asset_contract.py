@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Any
+from typing import Any, TypeVar
 
 from sqlalchemy import (
     Select,
@@ -30,6 +30,8 @@ from ..models.asset_unit import AssetUnit
 from ..models.attachment import Attachment
 from ..models.project import Project
 from ..services.party_scope_resolver import EffectivePartyScope
+
+_T = TypeVar("_T")
 
 
 class AssetContractRepository:
@@ -62,10 +64,10 @@ class AssetContractRepository:
 
     @staticmethod
     def _apply_terminal_scope(
-        statement: Select[tuple[TerminalContract]],
+        statement: Select[tuple[_T]],
         *,
         scope: EffectivePartyScope,
-    ) -> Select[tuple[TerminalContract]]:
+    ) -> Select[tuple[_T]]:
         if scope.scope_mode == "unrestricted":
             return statement
         conditions = []
@@ -261,6 +263,22 @@ class AssetContractRepository:
                 populate_existing=True
             )
         return (await db.execute(statement)).scalars().one_or_none()
+
+    async def terminal_ids_in_scope(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+        scope: EffectivePartyScope,
+    ) -> set[str]:
+        """Batch visibility check sharing get_terminal's scope filtering."""
+        if len(contract_ids) == 0 or self._scope_is_empty(scope):
+            return set()
+        statement = self._apply_terminal_scope(
+            select(TerminalContract.id),
+            scope=scope,
+        ).where(TerminalContract.id.in_(contract_ids))
+        return set((await db.execute(statement)).scalars().all())
 
     async def get_upstreams_by_ids(
         self,

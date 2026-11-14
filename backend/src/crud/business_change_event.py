@@ -27,10 +27,11 @@ from .asset_unit import AssetUnitRepository
 
 
 def fee_statement_ids_for_scope(scope: EffectivePartyScope) -> Select[tuple[str]]:
-    """Audit uses the same whole-owner boundary as management fee detail.
+    """Single home of the whole-owner fee boundary (audit and fee reads).
 
-    Keep the manager "covers every agreement of the owner" rule in sync with
-    the Python twin in services/asset_operations/management_fee_query_service.
+    A statement is readable when the scope owns it, or the scope's managers
+    cover every management agreement of that owner. Fee reads authorize
+    through visible_fee_statement_ids instead of reimplementing this rule.
     """
     query = select(ManagementFeeStatement.id)
     if scope.scope_mode == "unrestricted":
@@ -60,6 +61,22 @@ def fee_statement_ids_for_scope(scope: EffectivePartyScope) -> Select[tuple[str]
             )
         )
     return query.where(or_(*conditions) if conditions else false())
+
+
+async def visible_fee_statement_ids(
+    db: AsyncSession,
+    *,
+    statement_ids: tuple[str, ...],
+    scope: EffectivePartyScope,
+) -> set[str]:
+    """Batch membership check against fee_statement_ids_for_scope."""
+    if not statement_ids:
+        return set()
+    query = select(ManagementFeeStatement.id).where(
+        ManagementFeeStatement.id.in_(statement_ids),
+        ManagementFeeStatement.id.in_(fee_statement_ids_for_scope(scope)),
+    )
+    return set((await db.execute(query)).scalars().all())
 
 
 class BusinessChangeRepository:

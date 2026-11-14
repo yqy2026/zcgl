@@ -20,12 +20,21 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.fixture(autouse=True)
-def deferral_marks(monkeypatch):
+def batch_seams(monkeypatch):
+    monkeypatch.setattr(
+        query_module,
+        "visible_fee_statement_ids",
+        AsyncMock(side_effect=_visible_everything),
+    )
     monkeypatch.setattr(
         query_module.management_fee_deferral_repository,
-        "list_marks",
-        AsyncMock(return_value=()),
+        "list_marks_for_statements",
+        AsyncMock(return_value={}),
     )
+
+
+def _visible_everything(*args, statement_ids, scope):
+    return set(statement_ids)
 
 
 @pytest.mark.asyncio
@@ -77,8 +86,10 @@ async def test_manager_missing_upstream_warnings_respect_terminal_scope(monkeypa
         "load_facts",
         AsyncMock(return_value=data),
     )
-    lookup = AsyncMock(side_effect=[data.contracts[0], None])
-    monkeypatch.setattr(query_module.asset_contract_repository, "get_terminal", lookup)
+    lookup = AsyncMock(return_value={"tm"})
+    monkeypatch.setattr(
+        query_module.asset_contract_repository, "terminal_ids_in_scope", lookup
+    )
     scope = EffectivePartyScope(
         user_id="actor",
         source="explicit",
@@ -89,7 +100,8 @@ async def test_manager_missing_upstream_warnings_respect_terminal_scope(monkeypa
         Row(), statement_id="first", scope=scope
     )
     assert result.projection.upstream_missing_entry_ids == ("entry",)
-    assert lookup.await_count == 2
+    # 可见性按批一次判定，不再逐合同查询。
+    lookup.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -130,8 +142,9 @@ async def test_confirmed_snapshot_is_not_reprojected(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_partial_manager_scope_cannot_read_whole_owner_statement(monkeypatch):
-    data = facts()
-    data.agreements += (Row(id="other", operator_party_id="other-manager"),)
+    # 「协议未全覆盖的管理方不可读整单」的规则本体在 SQL 边界
+    # (visible_fee_statement_ids)，见 test_management_fee_query_batch 的真实
+    # 语义用例；此处验证读取路径对边界拒绝传播 404 且不触达事实读取。
     statement = Row(
         id="old", owner_party_id="owner", period="2026-09", status="confirmed"
     )
@@ -141,9 +154,11 @@ async def test_partial_manager_scope_cannot_read_whole_owner_statement(monkeypat
         AsyncMock(return_value=statement),
     )
     monkeypatch.setattr(
-        query_module.management_fee_query_repository,
-        "load_facts",
-        AsyncMock(return_value=data),
+        query_module, "visible_fee_statement_ids", AsyncMock(return_value=set())
+    )
+    load = AsyncMock()
+    monkeypatch.setattr(
+        query_module.management_fee_query_repository, "load_facts", load
     )
     scope = EffectivePartyScope(
         user_id="actor",
@@ -155,6 +170,7 @@ async def test_partial_manager_scope_cannot_read_whole_owner_statement(monkeypat
         await query_module.management_fee_query_service.detail(
             Row(), statement_id="old", scope=scope
         )
+    load.assert_not_awaited()
 
 
 def facts():
@@ -226,9 +242,9 @@ async def test_persisted_deferral_is_applied_to_open_projection(monkeypatch):
         AsyncMock(return_value=data),
     )
     monkeypatch.setattr(query_module, "business_today", lambda: date(2026, 10, 10))
-    query_module.management_fee_deferral_repository.list_marks.return_value = (
-        Row(rent_ledger_entry_id="entry", reason="下月补齐"),
-    )
+    query_module.management_fee_deferral_repository.list_marks_for_statements.return_value = {
+        "first": (Row(rent_ledger_entry_id="entry", reason="下月补齐"),),
+    }
     scope = EffectivePartyScope(
         user_id="actor",
         source="explicit",
