@@ -190,10 +190,10 @@ class ManagementFeeQueryService:
                 raise ResourceNotFoundError("ManagementFeeStatement", row.id)
         facts_by_owner: dict[str, ManagementFeeQueryFacts] = {}
         for owner_party_id in dict.fromkeys(row.owner_party_id for row in rows):
-            facts_by_owner[owner_party_id] = (
-                await management_fee_query_repository.load_facts(
-                    db, owner_party_id=owner_party_id
-                )
+            facts_by_owner[
+                owner_party_id
+            ] = await management_fee_query_repository.load_facts(
+                db, owner_party_id=owner_party_id
             )
         marks: Mapping[str, tuple[ManagementFeeDeferral, ...]] = {}
         draft_ids = tuple(row.id for row in rows if row.status is None)
@@ -221,9 +221,9 @@ class ManagementFeeQueryService:
             )
             if scope.scope_mode != "unrestricted" and not owner_access:
                 if row.owner_party_id not in manager_facts:
-                    manager_facts[row.owner_party_id] = await self._manager_visible_facts(
-                        db, facts=facts, scope=scope
-                    )
+                    manager_facts[
+                        row.owner_party_id
+                    ] = await self._manager_visible_facts(db, facts=facts, scope=scope)
                 facts = manager_facts[row.owner_party_id]
             details[row.id] = ManagementFeeDetail(
                 row,
