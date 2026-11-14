@@ -8,6 +8,7 @@ import { AssetUnitsPage } from '../AssetUnitsPage';
 import { ASSET_OPERATIONS_V5_ROUTES } from '@/constants/routes';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
+vi.mock('@/components/System/CapabilityGuard', () => ({ default: () => null }));
 
 vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
   const actual = await importOriginal<typeof import('@/services/assetOperationsService')>();
@@ -16,6 +17,7 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
     assetOperationsService: {
       listAssetUnits: vi.fn(),
       getAssetUnit: vi.fn(),
+      listAssetUnitCertificates: vi.fn(),
       updateAssetUnit: vi.fn(),
       updateVacancyNote: vi.fn(),
     },
@@ -67,6 +69,7 @@ function renderPage(): void {
 }
 
 beforeEach(() => {
+  mockedService.listAssetUnitCertificates.mockReset().mockResolvedValue([]);
   mockedService.listAssetUnits.mockReset();
   mockedService.getAssetUnit.mockReset();
   mockedService.updateAssetUnit.mockReset();
@@ -77,6 +80,98 @@ afterEach(() => {
 });
 
 describe('AssetUnitsPage', () => {
+  it('removes the previous certificates while the next unit loads', async () => {
+    const second = makeUnit({ id: 'unit-2', unitCode: 'U-002', name: '二号商铺' });
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit(), second], total: 2 });
+    mockedService.getAssetUnit.mockImplementation(async id =>
+      id === second.id ? second : makeUnit()
+    );
+    mockedService.listAssetUnitCertificates
+      .mockResolvedValueOnce([
+        {
+          id: 'c1',
+          certificate_number: '上一单元证',
+          certificate_type: 'real_estate',
+          property_address: null,
+          registration_date: null,
+          building_area: null,
+          land_area: null,
+          land_use_term_start: null,
+          land_use_term_end: null,
+        },
+      ])
+      .mockReturnValueOnce(new Promise(() => {}));
+    renderPage();
+    expect(await screen.findByText('上一单元证')).toBeTruthy();
+    await userEvent.click(screen.getByText('二号商铺'));
+    expect(await screen.findByText('产权证加载中…')).toBeTruthy();
+    expect(screen.queryByText('上一单元证')).toBeNull();
+  });
+  it('shows certificate loading only after the unit detail is available', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit()], total: 1 });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+    mockedService.listAssetUnitCertificates.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    expect(await screen.findByText('产权证加载中…')).toBeTruthy();
+    expect(screen.queryByText('当前单元尚未关联产权证。')).toBeNull();
+  });
+
+  it.each([
+    'PARTY_SCOPE_MISSING',
+    'PARTY_SCOPE_INVALID_ORGANIZATION',
+    'PARTY_SCOPE_INVALID_PARTY',
+    'PARTY_SCOPE_INVALID_BINDING',
+    'ASSET_OPS_PERMISSION_DENIED',
+  ])('shows certificate permission failure %s without displaying an empty result', async code => {
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit()], total: 1 });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+    mockedService.listAssetUnitCertificates.mockRejectedValue(
+      new AssetOperationsError('范围缺失', code)
+    );
+    renderPage();
+    expect(await screen.findByText('没有可访问的产权证范围，请联系管理员。')).toBeTruthy();
+    expect(screen.queryByText('当前单元尚未关联产权证。')).toBeNull();
+  });
+  it('shows certificate source text without exposing old certificate links', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit()], total: 1 });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+    mockedService.listAssetUnitCertificates.mockResolvedValue([
+      {
+        id: 'c1',
+        certificate_number: '粤证001',
+        certificate_type: 'real_estate',
+        property_address: '证载地址',
+        registration_date: null,
+        building_area: '100（共有）',
+        land_area: null,
+        land_use_term_start: null,
+        land_use_term_end: null,
+      },
+    ]);
+    renderPage();
+    expect(await screen.findByText('粤证001')).toBeTruthy();
+    expect(screen.getByText('100（共有）')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: '粤证001' })).toBeNull();
+  });
+
+  it('distinguishes an unlinked certificate from a missing scan', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit()], total: 1 });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+    renderPage();
+    expect(await screen.findByText('当前单元尚未关联产权证。')).toBeTruthy();
+    expect(screen.queryByText('缺少扫描件')).toBeNull();
+  });
+
+  it('offers a retry for certificate failures and preserves the selected unit', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit()], total: 1 });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+    mockedService.listAssetUnitCertificates
+      .mockRejectedValueOnce(new AssetOperationsError('失败', 'SERVER_ERROR'))
+      .mockResolvedValue([]);
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '重新加载产权证' }));
+    expect(await screen.findByText('当前单元尚未关联产权证。')).toBeTruthy();
+  });
   it('renders units and derives the detail pane after loading', async () => {
     mockedService.listAssetUnits.mockResolvedValue({
       items: [makeUnit()],

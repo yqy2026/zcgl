@@ -35,13 +35,31 @@ def setup(monkeypatch):
         AsyncMock(return_value=row),
     )
     monkeypatch.setattr(
-        module.attachment_crud, "get_for_owner", AsyncMock(return_value=Row(id="doc"))
+        module.attachment_crud,
+        "get_for_owner",
+        AsyncMock(
+            return_value=Row(
+                id="doc",
+                owner_type="management_fee_statement",
+                owner_id="st",
+                created_by="actor",
+                created_at="2026-11-04T00:00:00",
+            )
+        ),
     )
     monkeypatch.setattr(module.business_change_repository, "add", AsyncMock())
+    monkeypatch.setattr(
+        module.archive_document_repository, "target_rows", AsyncMock(return_value=[])
+    )
+    register = AsyncMock(
+        return_value=Row(id="arch-1", document_version=1, replaces_document_id=None)
+    )
+    monkeypatch.setattr(module.archive_document_repository, "register_target", register)
     db = MagicMock(flush=AsyncMock(), commit=AsyncMock(), rollback=AsyncMock())
     return (
         row,
         db,
+        register,
         dict(
             statement_id="st",
             request=ManagementFeeStampRequest(document_id="doc", expected_version=2),
@@ -57,7 +75,7 @@ def setup(monkeypatch):
 
 
 async def test_stamp_replacement_updates_version_and_audit_atomically(setup):
-    row, db, kwargs = setup
+    row, db, register, kwargs = setup
     result = await module.management_fee_stamp_service.bind_document(db, **kwargs)
     assert row.stamped_document_id == "doc"
     assert row.version == result.version == 3
@@ -67,12 +85,13 @@ async def test_stamp_replacement_updates_version_and_audit_atomically(setup):
         db, attachment_id="doc", owner_type="management_fee_statement", owner_id="st"
     )
     module.business_change_repository.add.assert_awaited_once()
+    register.assert_awaited_once()
     db.commit.assert_awaited_once()
 
 
 @pytest.mark.parametrize("status", ["confirmed", "superseded"])
 async def test_locked_statement_rejects_stamp_replacement(setup, status):
-    row, db, kwargs = setup
+    row, db, _, kwargs = setup
     row.status = status
     with pytest.raises(Exception) as caught:
         await module.management_fee_stamp_service.bind_document(db, **kwargs)
@@ -82,7 +101,7 @@ async def test_locked_statement_rejects_stamp_replacement(setup, status):
 
 
 async def test_foreign_attachment_is_not_bound(setup):
-    row, db, kwargs = setup
+    row, db, _, kwargs = setup
     module.attachment_crud.get_for_owner.return_value = None
     with pytest.raises(module.ResourceNotFoundError):
         await module.management_fee_stamp_service.bind_document(db, **kwargs)
@@ -91,7 +110,7 @@ async def test_foreign_attachment_is_not_bound(setup):
 
 
 async def test_audit_failure_rolls_back_stamp_change(setup):
-    row, db, kwargs = setup
+    row, db, _, kwargs = setup
     module.business_change_repository.add.side_effect = RuntimeError(
         "audit unavailable"
     )
@@ -102,7 +121,7 @@ async def test_audit_failure_rolls_back_stamp_change(setup):
 
 
 async def test_stale_version_does_not_replace_document(setup):
-    row, db, kwargs = setup
+    row, db, _, kwargs = setup
     row.version = 4
     with pytest.raises(module.AssetOperationsVersionConflictError):
         await module.management_fee_stamp_service.bind_document(db, **kwargs)

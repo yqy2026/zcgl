@@ -6,7 +6,7 @@ Current implementation: RapidOCR and PyMuPDF produce local page text; DeepSeek i
 ## API
 - Contract sessions: `/api/v1/extraction-sessions/contracts`
 - Property certificate sessions: `/api/v1/extraction-sessions/property-certificates`
-- Generic property certificate attachments: `/api/v1/property-certificates/{certificate_id}/attachments`
+- Scoped property certificate archives: `/api/v1/archive/documents` (list/upload), `/{document_id}/replacement` and `/{document_id}/content`; the former certificate attachment routes have been removed.
 
 ## Flow
 1. Stage one PDF or image.

@@ -9,6 +9,7 @@ from .abac import (  # noqa: F401
     ABACPolicyRule,
     ABACRolePolicy,
 )
+from .archive_document import ArchiveDocument  # noqa: F401
 from .assessment_scope import (  # noqa: F401
     AssessmentScopeItem,
     AssessmentScopeVersion,
@@ -79,6 +80,7 @@ from .contract_group import (  # noqa: F401
     RevenueMode,
     ServiceFeeLedger,
 )
+from .contract_supplement import ContractSupplement  # noqa: F401
 from .deposit_ledger import DepositLedgerEntry, DepositRecord
 from .enum_field import (  # noqa: F401
     EnumFieldHistory,

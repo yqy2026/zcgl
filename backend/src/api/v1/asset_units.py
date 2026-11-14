@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
@@ -31,11 +32,21 @@ from ...schemas.asset_operations import (
     AssetUnitUpdate,
     AssetUnitVacancyNoteUpdate,
 )
+from ...schemas.asset_unit_certificate import (
+    AssetUnitCertificateItem,
+    AssetUnitCertificateLinkCreate,
+    AssetUnitCertificateListResponse,
+    AssetUnitCertificateOptionsResponse,
+    AssetUnitCertificateUnlink,
+)
 from ...services.asset_operations import (
     AssetOperationsPermissionDeniedError,
     asset_operations_query_service,
     asset_unit_boundary_command_service,
     asset_unit_command_service,
+)
+from ...services.asset_operations.asset_unit_certificate_service import (
+    asset_unit_certificate_service,
 )
 from ...services.party_scope_resolver import party_scope_resolver
 
@@ -131,6 +142,181 @@ async def get_asset_unit(
         raise
     except Exception as exc:
         raise internal_error("查询资产单元详情失败", original_error=exc) from exc
+
+
+@router.get(
+    "/asset-units/{unit_id}/property-certificates",
+    response_model=AssetUnitCertificateListResponse,
+    summary="查询物业关联产权证",
+)
+async def list_asset_unit_certificates(
+    unit_id: str,
+    as_of: date | None = Query(None, description="关联有效日，默认上海业务当天"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="asset_ops",
+                resource_id="{unit_id}",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> AssetUnitCertificateListResponse:
+    """List certificate facts without exposing other certificate relationships."""
+    _ = _authz
+    try:
+        scope = await party_scope_resolver.resolve(db, user_id=str(current_user.id))
+        certificates = await asset_unit_certificate_service.list_for_unit(
+            db, unit_id=unit_id, scope=scope, as_of=as_of
+        )
+        return AssetUnitCertificateListResponse(
+            items=[
+                AssetUnitCertificateItem.model_validate(item) for item in certificates
+            ]
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询物业关联产权证失败", original_error=exc) from exc
+
+
+@router.get(
+    "/asset-units/{unit_id}/property-certificate-options",
+    response_model=AssetUnitCertificateOptionsResponse,
+    summary="查询可关联产权证",
+)
+async def list_asset_unit_certificate_options(
+    unit_id: str,
+    q: str | None = Query(None, max_length=100),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="write",
+                resource_type="asset_ops",
+                resource_id="{unit_id}",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> AssetUnitCertificateOptionsResponse:
+    _ = _authz
+    try:
+        scope = await party_scope_resolver.resolve(db, user_id=str(current_user.id))
+        items, total = await asset_unit_certificate_service.list_options_for_unit(
+            db, unit_id=unit_id, scope=scope, query=q, offset=offset, limit=limit
+        )
+        return AssetUnitCertificateOptionsResponse(
+            items=[AssetUnitCertificateItem.model_validate(item) for item in items],
+            total=total,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询可关联产权证失败", original_error=exc) from exc
+
+
+@router.post(
+    "/asset-units/{unit_id}/property-certificates",
+    response_model=AssetUnitCertificateListResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="绑定产权证关联",
+)
+async def link_asset_unit_certificate(
+    unit_id: str,
+    payload: AssetUnitCertificateLinkCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="write",
+                resource_type="asset_ops",
+                resource_id="{unit_id}",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> AssetUnitCertificateListResponse:
+    """Bind a certificate over an inclusive range; overlapping ranges conflict."""
+    _ = _authz
+    try:
+        actor_id = str(current_user.id)
+        scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+        certificates = await asset_unit_certificate_service.link_certificate(
+            db,
+            unit_id=unit_id,
+            certificate_id=payload.certificate_id,
+            effective_from=payload.effective_from,
+            effective_to=payload.effective_to,
+            scope=scope,
+            actor_id=actor_id,
+        )
+        return AssetUnitCertificateListResponse(
+            items=[
+                AssetUnitCertificateItem.model_validate(item) for item in certificates
+            ]
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("绑定产权证关联失败", original_error=exc) from exc
+
+
+@router.post(
+    "/asset-units/{unit_id}/property-certificates/{certificate_id}/unlink",
+    response_model=AssetUnitCertificateListResponse,
+    summary="解绑产权证关联",
+)
+async def unlink_asset_unit_certificate(
+    unit_id: str,
+    certificate_id: str,
+    payload: AssetUnitCertificateUnlink,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="write",
+                resource_type="asset_ops",
+                resource_id="{unit_id}",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> AssetUnitCertificateListResponse:
+    """End the link from the given day; the covered range closes the day before."""
+    _ = _authz
+    try:
+        actor_id = str(current_user.id)
+        scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+        certificates = await asset_unit_certificate_service.unlink_certificate(
+            db,
+            unit_id=unit_id,
+            certificate_id=certificate_id,
+            effective_from=payload.effective_from,
+            scope=scope,
+            actor_id=actor_id,
+        )
+        return AssetUnitCertificateListResponse(
+            items=[
+                AssetUnitCertificateItem.model_validate(item) for item in certificates
+            ]
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("解绑产权证关联失败", original_error=exc) from exc
 
 
 @router.patch(

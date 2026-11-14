@@ -10,6 +10,11 @@
 
 | 文档 | 内容 |
 |------|------|
+| [2026-11-03-v4-supplement-files-review.md](./2026-11-03-v4-supplement-files-review.md) | 补充协议统一档案读写、撤回后历史保护、错绑拒绝及真实浏览器验证 |
+| [2026-11-03-v4-supplement-register-review.md](./2026-11-03-v4-supplement-register-review.md) | 补充协议登记/撤回、矩阵业务依据、权限与数据库约束及浏览器验证 |
+| [2026-11-03-v4-archive-matrix-review.md](./2026-11-03-v4-archive-matrix-review.md) | 当前档案分母及物业矩阵、历史协议排除和真实浏览器检查点 |
+| [2026-11-03-v4-certificate-upload-review.md](./2026-11-03-v4-certificate-upload-review.md) | V4 产权证档案统一上传/替换、旧路由退役、缓存及重试修复与真实浏览器 11/11 证据 |
+| [2026-11-03-v4-certificate-maintenance-review.md](./2026-11-03-v4-certificate-maintenance-review.md) | V4 产权证维护、范围化档案读取与版本下载，真实浏览器 15/15及分层测试证据 |
 | [2026-11-02-asset-operations-v5-v3-acceptance-review.md](./2026-11-02-asset-operations-v5-v3-acceptance-review.md) | V3真实浏览器验收14/14，修复草稿错误包装与导出结果跨会话丢失 |
 | [2026-10-27-asset-operations-v5-v1-pr95-review.md](./2026-10-27-asset-operations-v5-v1-pr95-review.md) | PR #95 最终双轴复核、上传重试与报告门禁修复、完整 CI 证据及合并后边界 |
 | [2026-09-01-prototype-terminology-audit-review.md](./2026-09-01-prototype-terminology-audit-review.md) | P0 原型术语可读性走查（**实际使用者视角**）：响应运营管理方「很多莫名其妙的词语看不懂」的反馈，脚本化抓取 9 岗位全部页面的渲染文案 809 条去重，按「业务人员能否独立理解」分级。结果：P0 完全看不懂 9 组 26 处（幂等/内容哈希/规则集英文代号/SLA/Party 认领/金额守恒/状态机/事实源/权责发生双口径）、P1 内部模型词 13 组 145 处（空间 33、分配类 26、主体 19、终端 13、阻断 13、异常池 9、候选 9…）、P2 生造缩略与渲染瑕疵 8 组；核销/底价/确权等 14 个行业词列为保留。**查出 8 处违反 AGENTS.md 设计红线**（内部模型词进入导航 3 处：终端到账确认 / 空间档案 / 收款认领与分配；进入按钮 5 处：确为新空间 / 用主体库既有主体 / 确为新主体 / 转异常池处理 / 原始行原文）。与正式走查正交：机制 79/79 通过不代表人看得懂。三项业务判断已由运营管理方授权裁决（2026-09-01 下午闭环：空间→物业全局统一；规则集代号保留但降级为中文名（第 N 版 · 代号 …）；本轮收口红线 8 处 + P0 九组，P1 其余与 P2 留 S0；复扫 809 条零残留，smoke 98/98、走查 79/79 全绿——详见报告 §9 处置闭环） |

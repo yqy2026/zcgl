@@ -1,0 +1,43 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  min-width: 0;
+}
+.page > * {
+  min-width: 0;
+}
+.search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+.search label {
+  flex-basis: 100%;
+}
+.search input {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.missing {
+  margin: 0;
+  padding-inline-start: var(--spacing-md);
+}
+
+.batchMatch {
+  margin-top: var(--spacing-xl);
+}
+
+.batchTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--spacing-md);
+}
+.batchTable th,
+.batchTable td {
+  border: 0.0625rem solid var(--color-border, #d9d9d9);
+  padding: var(--spacing-sm);
+  text-align: left;
+  vertical-align: top;
+}

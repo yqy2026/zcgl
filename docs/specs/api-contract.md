@@ -60,7 +60,7 @@
 | `asset_ops:read` | 本月、物业、合同、台账、报送、档案和导入记录只读 |
 | `asset_ops:write` | 资产单元、合同、租金、押金、委托管理费对账（含盖章件上传与确认）、终止和退出维护 |
 | `asset_ops:report` | 考核范围保存、报送提交和撤回 |
-| `asset_ops:archive` | 档案上传、替换、下载和配对 |
+| `asset_ops:archive` | 档案上传、替换和配对；档案读取/下载使用 `asset_ops:read` |
 | `asset_ops:import` | 模板下载、文件校验、批次提交和撤销 |
 
 内建“资产管理岗”映射上述五类能力。平台角色不因为能进入系统管理页面而自动获得业务能力；`admin` / `system_admin` 的全局边界沿用平台规则。
@@ -133,12 +133,20 @@
 | 详情 | `GET /api/v1/asset-units/{unit_id}` | 返回基础信息、派生租出状态/已租面积/出租率与当前有效终端合同；考核/证照状态与时间轴待联动切片 |
 | 更新基本信息 | `PATCH /api/v1/asset-units/{unit_id}` | 乐观锁必填；手工字段（名称/地址/用途/面积/在管期等），可租面积不得超建筑面积（422 `ASSET_UNIT_AREA_INVALID`），在管期变化与活跃终端覆盖冲突返回 `ASSET_UNIT_PERIOD_OVERLAP` |
 | 更新空置备注 | `PUT /api/v1/asset-units/{unit_id}/vacancy-note` | 接受原因、预计起租和期望版本 |
+| 关联产权证 | `GET /api/v1/asset-units/{unit_id}/property-certificates?as_of=` | `asset_ops:read`；先校验当前单元可见范围，再按关联有效日读取，默认上海业务当天，起止日均含边界；返回 `{items}`，同证去重，仅包含证照字段，不返回其他关联单元或 Party 关系 |
+| 可关联证照候选 | `GET /api/v1/asset-units/{unit_id}/property-certificate-options?q=&offset=&limit=` | `asset_ops:write`；按当前目标物业的同一资格口径筛选（已知关联或当前有效权利人匹配），排除该物业所有已有关系；按证号/坐落搜索，授权过滤后计数和分页，返回 `{items,total}`；`q` 最长 100，`offset>=0`，`limit` 默认 20、范围 1–100；无范围 403，目标物业不可见或不存在 404；正式绑定仍在写锁内重新检查资格 |
+| 绑定产权证 | `POST /api/v1/asset-units/{unit_id}/property-certificates` | `asset_ops:write`；请求 `certificate_id`、`effective_from`、可选 `effective_to`（截止早于起始为 `400 CERTIFICATE_LINK_RANGE_INVALID`）；未结束或重叠为 `409 CERTIFICATE_LINK_OVERLAP`，已结束关系重开为 `409 CERTIFICATE_LINK_HISTORY_PROTECTED`；目标须在当前可见单元上已生效关联过，或当前有效 `owner`/`co_owner` 包含目标单元产权方（无限制范围仅检查存在）；两支均不满足 404；成功 201 返回生效日起 `{items}`，同事务写 `certificate_link_added` 审计 |
+| 解绑产权证 | `POST /api/v1/asset-units/{unit_id}/property-certificates/{certificate_id}/unlink` | `asset_ops:write`；请求 `effective_from` 为解绑生效日，覆盖区间截止到前一日；追溯过去或删除已生效起始日的关系为 `409 CERTIFICATE_LINK_HISTORY_PROTECTED`；仅尚未生效的未来区间可取消删除。无覆盖区间 404；成功 200 返回生效日起 `{items}`，同事务写 `certificate_link_removed` 审计 |
 | 拆分预览 | `POST /api/v1/asset-units/{unit_id}/split/preview` | 校验生效日、子单元编号、面积守恒和历史影响，返回 `preview_token` |
 | 拆分提交 | `POST /api/v1/asset-units/{unit_id}/split` | 消费 token、原因、期望版本和幂等键，原子创建新单元及边界事件 |
 | 合并预览 | `POST /api/v1/asset-units/merge/preview` | 接受源单元集合、生效日和结果编号/名称，校验归属、同一上游范围、期间、面积和合同冲突 |
 | 合并提交 | `POST /api/v1/asset-units/merge` | 消费 token、原因、完整期望版本集合和幂等键 |
 
 `filter` 白名单：`all`、`assessment_included`、`vacant_rentable`、`non_rentable`、`certificate_missing`。搜索覆盖地址、单元编号、当前租户和产权证号。
+
+关联产权证响应项包含 `id`、`certificate_number`、`certificate_type`、`property_address`、`registration_date`、`building_area`、`land_area`、`land_use_term_start`、`land_use_term_end`。日期为 ISO 日期或 null，证载面积为原文字符串或 null（可能含文字，不作为单元经营面积计算）。`as_of` 只决定证照关联有效日，不改变当前请求的授权范围；无有效范围 403，单元不存在或不可见 404，无关联返回空 `items`。查询只使用 `PropertyCertificateAssetUnit`，不使用旧资产或证照 Party 关系授权。
+
+绑定与解绑共享读取的范围规则：先校验当前有效范围并锁定可见单元，再操作证照关联。同一证与单元对受复合主键约束只有一行关联记录：绑定只创建新行或重开已完全结束的区间，不产生多段历史区间；解绑关闭区间到生效日前一日或删除未生效行。两类操作同事务写入单元审计（`certificate_link_added` / `certificate_link_removed`，`before`/`after` 含区间载荷），证照事实本身不被修改。
 
 拆分预览请求包含 `effective_date` 和至少两个 `parts`；源单元 ID 只取自路径，请求体不得重复或覆盖；每个 part 只接受 `unit_code`、`name`、`land_area`、`building_area`、`rentable_area`。结果单元的 Project、产权方、地址、用途、取得方式、经营标记和经营备注由源单元继承，不允许客户端覆盖。结果编号在全局范围内不得与现有单元重复。
 
@@ -299,14 +307,42 @@ HTTP 请求与响应细则：
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 完成率 | `GET /api/v1/archive/completion` | 返回四类已有/应有、完成率和缺漏数 |
-| 矩阵 | `GET /api/v1/archive/matrix` | 按物业分组返回各类型已有/应有和详情深链 |
-| 目标文件 | `GET /api/v1/archive/documents?target_type=&target_id=&document_type=` | 返回现行及历史版本 |
-| 上传 | `POST /api/v1/archive/documents` | 单文件挂接目标；重复内容按目标和哈希拒绝 |
-| 批量配对预览 | `POST /api/v1/archive/batch-matches/preview` | 多文件识别候选，只返回建议，不自动挂接 |
-| 批量配对提交 | `POST /api/v1/archive/batch-matches` | 人工确认目标后原子或逐文件明确结果提交 |
-| 替换 | `POST /api/v1/archive/documents/{document_id}/replacement` | 创建新版本，不覆盖旧文件 |
-| 下载 | `GET /api/v1/archive/documents/{document_id}/content` | 鉴权后返回私有文件流 |
+| 完成率 | `GET /api/v1/archive/completion` | 当前在管物业范围的各类已有/应有、完成率和缺漏数；`asset_ops:read`，支持 `project_id`、`q`、`as_of`（YYYY-MM-DD，历史统计日，晚于上海业务今天 422 `ARCHIVE_AS_OF_INVALID`，缺省今天）筛选 |
+| 矩阵 | `GET /api/v1/archive/matrix` | 同范围按物业返回各类已有/应有和缺件详情深链；`asset_ops:read`，支持同筛选（含 `as_of`）及 `offset`（默认 0）、`limit`（默认 20，上限 100） |
+| 目标文件 | `GET /api/v1/archive/documents?target_type=&target_id=&document_type=&include_history=` | `asset_ops:read`；支持产权证、补充协议、交接事件、上游/终端合同及委托管理费对账单六类目标（各自成对），`target_id` 必填，`include_history` 默认 true；返回 `{items}`，不支持的类型或类型配对 422 |
+| 上传 | `POST /api/v1/archive/documents` | `asset_ops:archive`；multipart 字段 `target_type`、`target_id`、`document_type`、`file`，支持目标的单文件返回档案项（201）；重复内容按目标和哈希拒绝 |
+| 批量配对预览 | `POST /api/v1/archive/batch-matches/preview` | `asset_ops:archive`；multipart `files`（至少 1 份）暂存后按文件名中的合同编号在当前范围内识别候选，仅返回建议不自动挂接；预览 30 分钟过期 |
+| 批量配对提交 | `POST /api/v1/archive/batch-matches` | `asset_ops:archive`；JSON `preview_token` 与 `matches[]`（staging_id / target_type / target_id，仅上游/终端合同），允许只提交子集；整批原子提交 |
+| 替换 | `POST /api/v1/archive/documents/{document_id}/replacement` | `asset_ops:archive`；multipart 字段 `file`，只接受支持目标的现行档案 ID，返回追加的新版本（201），不覆盖旧文件 |
+| 下载 | `GET /api/v1/archive/documents/{document_id}/content` | `asset_ops:read`；每请求按文档真实目标重查数据范围，返回私有附件流与 `Cache-Control: private, no-store`；历史版本可读，越权或不支持/不存在文档 404 |
+
+完成率和矩阵默认统计当前在管物业及当前有效合同；历史档案另查。选择历史 `as_of` 时按该日时点重算：在管窗口、证照关联、合同覆盖与生命周期状态、交接事件均按 as_of 日判定；对账单按「`confirmed_at` ≤ as_of 且更正未发生」计入（更正时刻取 `supersede_management_fee_statement` 业务事件），补充协议按「`created_at` ≤ as_of < `withdrawn_at`」计入，档案版本链与事实引用只认 as_of 前绑定的文件/版本；交接事件的 `handover_status` 使用当前值（无历史状态轨迹，已记录边界）。同一产权证或合同跨多个物业时，总览按业务对象去重，各物业显示同一档案状态。文件展示元数据从 ArchiveDocument 引用的 Attachment 读取，不保存档案副本；替换追加版本并保留历史文件，不自动改写合同或已确认对账单原有扫描件引用。
+
+目标配对为 `property_certificate` / `property_certificate` 和 `contract_supplement` / `supplement`（依次为 target_type / document_type）；产权证读取维持 document_type 默认值，补充协议请求须明确配对。补充协议列表、上传、替换和下载按父合同当前范围鉴权，权限不能由登记 ID 或上次列表结果代替。写入遵循父合同→登记锁序并在锁后重查范围及登记状态；已撤回登记仍可读取和下载历史文件，追加或替换返回 409 `SUPPLEMENT_WITHDRAWN`。补充协议附件归属于父合同，档案目标归属于具体登记；内容去重和替换链按登记分别计算。
+
+交接书配对为 `contract_lifecycle_event` / `handover`，目标仅接受原始 `terminated` 或 `exited` 事件；续签和撤销事件本身不是交接书目标，返回 404。列表、下载和写入均按父合同当前范围授权，父合同已结束不构成文件写入禁令。写入锁定父合同后重新读取事件与撤销记录，只允许已生效、需要交接（`pending` / `completed`）且尚未被有效撤销的原事件；分别拒绝为 409 `HANDOVER_NOT_EFFECTIVE`、`HANDOVER_NOT_REQUIRED` 或 `HANDOVER_EVENT_REVERSED`。事件撤销后历史文件仍可读，档案分母按有效事件排除，不删除文件。附件归属父合同，版本和内容去重以具体事件为边界。
+
+`GET /api/v1/archive/handover-targets?contract_kind=upstream|terminal&contract_id=` 要求 `asset_ops:read`，先按父合同范围授权，再返回 `{items}`。项包含 `event_id`、`event_type`、`effective_date`、可空 `handover_status`、`can_write`、可空 `unavailable_reason`；仅列原终止/退出事件，包含未来、不适用及已撤销的原事件供历史查看。不可写原因使用上述三种稳定错误码，与上传/替换资格一致；不返回无权访问合同的事件或计数。
+
+档案分母按业务依据产生：对账盖章件仅统计已确认对账单，草稿和顺延月份不计（不改变对账确认的盖章件前置校验）；补充协议按人工登记清单逐份计数；交接书按未撤销且明确需要交接的终止/退出事件逐次计数。没有业务依据时不报缺件，上传文件数与替换版本数不能充当应有份数。
+
+完成率返回 `{as_of, categories, unlinked_unit_count}`，矩阵返回 `{as_of, items, total}`。统计日固定为上海业务今天，`q` 搜索物业编号、名称和地址；总览按全部筛选结果的业务对象去重，不受矩阵分页限制。每个物业行含 `unit_id`、`unit_code`、`unit_name`、`categories` 和 `missing_items`；缺件项包含 `document_type`、`target_type`、`target_id`、`label`、`href`，只指向当前有权访问的已实施详情页。
+
+分类固定为产权证、上游合同、终端合同、补充协议、交接书和委托管理费对账单，对应 `document_type` 为 `property_certificate`、`upstream_contract`、`terminal_contract`、`supplement`、`handover`、`management_fee_statement`。分类项含 `label`、`supported`、`required`、`existing`、`missing`、`completion_rate`；比率为 0–1，零分母时为 null。同一对象多文件和历史版本不重复计已有。补充协议从未撤回的合同登记清单逐份派生应有，已接入统计；无有效登记时数量为 0、完成率为 null，不把登记成功当作文件已归档。无有效产权证关联的物业以 `unlinked_unit_count` 单列，不假设每个物业必有一本证。
+
+V4-1 产权证附件的公开入口统一为 `/archive/documents`，原 `/property-certificates/{certificate_id}/attachments` 全组路由及其预览/下载地址移除，避免另一路权限绕过 v5 单元范围。底层附件写入和解析确认仍共用同一版本登记逻辑。重复内容为 409 `ARCHIVE_DUPLICATE_CONTENT`，陈旧替换为 409 `ARCHIVE_VERSION_STALE`；替换保留旧附件，普通删除已有档案/关联历史的产权证为 409 `ARCHIVE_HISTORY_PROTECTED`。写入共用产权证锁，失败只回滚本次新记录及新文件。上传与替换逐次验证当前范围，仅权利人匹配但尚未在可见物业生效关联的证照须先关联再维护文件；范围检查发生在文件暂存之前。
+
+产权证档案新读取路径走 `asset_ops:read`，不复用旧证照资源权限：当前范围有效且证照在可见单元上已生效关联过才可读取（含已结束关系，不含仅未来关系），无限制范围也须校验证照存在。无有效范围或错误范围轴 403，目标不可见/不存在 404；独立权利人匹配只授予绑定候选资格，不单独授予文件读取资格。下载每次重新检查同一范围并校验附件所属对象，不能凭文档 ID 或上次列表结果绕过；缺失文件和非法存储路径按既有附件规则明确失败。
+
+档案列表及写入响应项的 `id` 为 ArchiveDocument ID，另返回 `attachment_id`、`document_type`、`target_type`、`target_id`、`file_name`、`content_type`、`file_size`、`document_version`、`replaces_document_id`、`uploaded_at`、`is_current`；不返回上传人、存储键、内容哈希或其他单元/主体关系。`uploaded_at` 使用既有 UTC 时间，页面按北京时间展示。当前统一接口实现产权证、补充协议、交接书、上游/终端合同扫描件及对账单盖章件的档案读取与下载；除对账单外各目标另提供单文件上传与替换，上游/终端合同提供批量配对预览与整批原子提交，历史查询尚未实现。对账单详情在盖章与确认区之外提供只读盖章件版本面板。物业详情提供候选搜索/分页、关联与解除安排、版本抽屉、鉴权下载及档案权限下的上传/替换；合同补充协议清单提供相同版本抽屉，已撤回登记只读；合同详情提供扫描件档案面板；未来生效的关联写入成功后重新查询当前时点关联，不把未来响应行直接写入今日列表。
+
+合同扫描件以合同自身为档案目标：`target_type` / `document_type` 取 `upstream_contract` 或 `terminal_contract` 且必须成对，其余组合 422。上传与替换使用 `asset_ops:archive`，先锁定并按父合同当前范围鉴权（合同结束不构成写入禁令），附件归属该合同并按目标去重（409 `ARCHIVE_DUPLICATE_CONTENT` / `ARCHIVE_VERSION_STALE` 与其他目标一致）；读取与下载使用 `asset_ops:read` 且逐次重验范围。档案链不改写合同 `scan_document_id`，矩阵已有按事实引用或现行档案链判定。
+
+批量配对仅服务合同扫描件：预览把全角/半角括号、【】、「第」与前导零等编号变体归一为 `代字[年]序号号` 键，与当前范围内上游/终端合同的编号比对；唯一命中给 `detected` 建议并标记该合同是否已有档案，多命中只列 `ambiguous` 候选，无编号不推造目标，范围外合同不进入候选。预览暂存是进程内操作态（单次至多 50 份文件，30 分钟过期，重启失效，不构成业务事实），提交重新锁定并逐目标重查范围并对既有行校验附件归属；同批重复目标 409 `ARCHIVE_BATCH_DUPLICATE_TARGET`，目标已有现行档案 409 `ARCHIVE_TARGET_ALREADY_HAS_FILE`，重复内容 409 `ARCHIVE_DUPLICATE_CONTENT`，任一失败整批回滚并作废整个预览（补偿已落位文件、清理剩余暂存，重试得到干净的 404，不留下半可用状态）。已提交目标沿用合同扫描件的版本与归属规则，不自动改写 `scan_document_id`；未配对的暂存文件不落库，等过期清理。
+
+对账单盖章件以对账单自身为只读档案目标：`target_type` / `document_type` 取 `management_fee_statement` 且必须成对，其余组合 422。列表与下载使用 `asset_ops:read` 并沿用整单产权方/管理方范围（管理方须覆盖该单全部委托管理协议，部分覆盖不授予读取），逐次重验，范围外或不存在返回 404。写入不经过统一档案入口：上传与替换仍在 `POST /api/v1/management-fee-statements/{statement_id}/stamped-document`（`asset_ops:write`，含期望版本与业务事件），每次绑定同事务追加一个档案版本（首次版本 1，替换链接到上一现行版本），经统一入口上传或替换对账单目标分别返回 422 与 404；重绑同一附件不追加版本。确认与更正后的历史版本保持可读可下载，矩阵已有仍按已确认单的 `stamped_document_id` 事实引用判定，档案链不改写该引用。
+
+补充协议清单入口独立于文件上传：`GET /api/v1/contract-supplements?contract_kind=upstream|terminal&contract_id=` 使用 `asset_ops:read`，返回 `{items}` 并保留撤回历史；`POST /api/v1/contract-supplements` 使用 `asset_ops:archive`，接收 `contract_kind`、`contract_id`、`agreement_number`、`title`、可空 `signed_on`，返回登记项（201）。`POST /api/v1/contract-supplements/{supplement_id}/withdrawal` 使用 `asset_ops:archive`，接收 `expected_version` 和非空 `reason`，返回撤回后的登记项。展示字段为 `id`、父合同身份、编号、名称、签署日期、`version`、可空 `withdrawn_at`。范围无效 403，父合同或登记不可见 404；编号重复及陈旧版本 409。撤回不删除记录、文件或修改原合同事实。
 
 ### 5.13 数据导入
 
@@ -324,6 +360,10 @@ HTTP 请求与响应细则：
 | 撤销 | `POST /api/v1/import-batches/{batch_id}/revert` | 原因、token 和幂等键必填，追加反向变更 |
 
 新增模式遇到已存在编号时报错；更新模式遇到不存在编号时报错且绝不新增。空白不覆盖现值，派生字段忽略并提示。提交和撤销不得改变已提交报送快照。
+
+撤销窗口按北京时间七个自然日计算，提交当天为第 1 天，第 7 天全天可撤销；以提交日加 7 天的 `Asia/Shanghai` 00:00 为排他截止时刻。预览与正式撤销均检查窗口，跨过截止时刻后不得凭旧 token 提交；窗口内仍须通过后继依赖检查。
+
+新增合同导入须先上传已签扫描件，再在 Excel 引用已上传文件；任一合同缺件阻断整批提交。引用必须经过当前操作者范围、上传归属及占用校验，文件上传本身不创建合同事实。导入批次的确认与单合同录入会话共用正式合同业务校验，不另建绕过扫描件或覆盖规则的写入链路。
 
 ### 5.14 变更记录
 
