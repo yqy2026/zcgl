@@ -5,6 +5,8 @@
 
 ## 未发布
 
+- chore(ci): Playwright 1.53→1.65.1，前端 E2E job 恢复 ubuntu-latest——新版自带 ubuntu-26.04 浏览器二进制，解除 24.04 固定（V2 已知待办）；type-check:e2e 与 lint 已过，运行时由 CI 验证。
+
 - fix(asset-ops): 报送服务保留客户端增强错误中的业务码和草稿ID，让已有草稿可继续编辑；导出成功和失败终态显式提交，修复独立请求读不到CSV结果的问题（REQ-RPT-001 / REQ-RPT-002）。
 
 - docs(asset-ops): 确认同年度已有考核草稿继续编辑、不覆盖的产品规则；旧报送快照保留原提交口径提示，避免被误标为全量统计（REQ-RPT-001 / REQ-RPT-002）。
