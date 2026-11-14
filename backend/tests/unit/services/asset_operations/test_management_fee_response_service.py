@@ -105,24 +105,25 @@ async def test_invalid_list_period_fails_before_repository(period, monkeypatch):
     query.assert_not_awaited()
 
 
-async def test_list_reauthorizes_each_scoped_candidate(monkeypatch):
+async def test_list_batches_one_details_read(monkeypatch):
     monkeypatch.setattr(
         module.management_fee_statement_repository,
         "list_for_period",
         AsyncMock(return_value=(statement("confirmed"),)),
     )
-    read = AsyncMock(
-        return_value=Row(
-            statement=statement("confirmed"), projection=None, snapshot_lines=()
-        )
+    detail = Row(
+        statement=statement("confirmed"), projection=None, snapshot_lines=()
     )
-    monkeypatch.setattr(module.management_fee_query_service, "detail", read)
+    read = AsyncMock(return_value={"st": detail})
+    monkeypatch.setattr(module.management_fee_query_service, "details", read)
     result = await module.management_fee_response_service.list(
         MagicMock(), period="2026-10", scope=scope()
     )
     assert result.total == 1
     assert result.items[0].id == "st"
+    # 月份列表一次批量读取并保持清单顺序。
     read.assert_awaited_once()
+    assert read.await_args.kwargs["statements"] == (detail.statement,)
 
 
 async def test_snapshot_line_defaults_processed_without_exposing_storage_fields(

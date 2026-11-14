@@ -27,14 +27,14 @@ async def test_matrix_statuses_and_confirmed_only_totals(monkeypatch):
     ]
     repository = AsyncMock(return_value=facts)
     monkeypatch.setattr(service.repository, "list_year", repository)
-    detail = AsyncMock(
-        side_effect=[
-            Row(status="confirmed", fee_amount=Decimal("12.34")),
-            Row(status="pending_stamp", fee_amount=Decimal("99.99")),
-            Row(status="confirmed", fee_amount=Decimal("7.77")),
-        ]
+    details = AsyncMock(
+        return_value={
+            "a": Row(status="confirmed", fee_amount=Decimal("12.34")),
+            "b": Row(status="pending_stamp", fee_amount=Decimal("99.99")),
+            "c": Row(status="confirmed", fee_amount=Decimal("7.77")),
+        }
     )
-    monkeypatch.setattr(service.responses, "get", detail)
+    monkeypatch.setattr(service.query_service, "details", details)
     result = await service.matrix(
         None, scope=scope, year=2026, today=date(2026, 10, 29)
     )
@@ -59,7 +59,13 @@ async def test_matrix_statuses_and_confirmed_only_totals(monkeypatch):
         ),
         Decimal("0"),
     )
-    detail.assert_any_await(None, statement_id="a", scope=scope)
+    # 整年一次批量读取，不再逐单触发详情请求。
+    details.assert_awaited_once()
+    assert details.await_args.kwargs["statements"] == (
+        facts[0][0],
+        facts[1][0],
+        facts[2][0],
+    )
     repository.assert_awaited_once_with(None, scope=scope, year=2026)
 
 

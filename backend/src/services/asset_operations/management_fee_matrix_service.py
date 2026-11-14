@@ -13,14 +13,14 @@ from ...schemas.management_fee_matrix import (
     ManagementFeeOwnerRow,
 )
 from ..party_scope_resolver import EffectivePartyScope
-from .management_fee_response_service import management_fee_response_service
+from .management_fee_query_service import management_fee_query_service
 from .rent_command_support import require_scope
 from .rent_ledger_query_service import business_today
 
 
 class ManagementFeeMatrixService:
     repository = management_fee_matrix_repository
-    responses = management_fee_response_service
+    query_service = management_fee_query_service
 
     async def matrix(
         self,
@@ -33,13 +33,14 @@ class ManagementFeeMatrixService:
         require_scope(scope, scope.user_id)
         current = today or business_today()
         facts = await self.repository.list_year(db, scope=scope, year=year)
+        # One batched read: whole-owner authorization, owner facts and marks
+        # resolve once for the year instead of per statement.
+        details = await self.query_service.details(
+            db, statements=tuple(row for row, _ in facts), scope=scope
+        )
         rows: dict[str, ManagementFeeOwnerRow] = {}
         for statement, owner_name in facts:
-            # Reuse the detail boundary, including fresh whole-owner authorization
-            # and immutable snapshots for confirmed statements.
-            detail = await self.responses.get(
-                db, statement_id=statement.id, scope=scope
-            )
+            detail = details[statement.id]
             row = rows.get(statement.owner_party_id)
             if row is None:
                 row = ManagementFeeOwnerRow(
@@ -69,7 +70,8 @@ class ManagementFeeMatrixService:
                 fee_amount=detail.fee_amount,
             )
             if detail.status == "confirmed":
-                row.total_confirmed_amount += detail.fee_amount
+                # Confirmed rows persist non-null amounts (snapshot CHECK).
+                row.total_confirmed_amount += cast(Decimal, detail.fee_amount)
         return ManagementFeeMatrixView(
             year=year,
             current_month=current.month if year == current.year else 0,
