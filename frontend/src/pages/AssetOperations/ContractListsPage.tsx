@@ -128,7 +128,7 @@ function UpstreamList(props: {
         limit: pagination.pageSize,
       }),
   });
-  const selectedId = searchParams.get('contract_id') ?? listQuery.data?.items[0]?.id ?? '';
+  const selectedId = searchParams.get('contract_id') ?? '';
   const detailQuery = useQuery({
     queryKey: ['asset-operations-upstream-contract', selectedId],
     queryFn: () => assetOperationsService.getUpstreamContract(selectedId),
@@ -303,7 +303,7 @@ function TerminalList(props: {
         limit: pagination.pageSize,
       }),
   });
-  const selectedId = searchParams.get('contract_id') ?? listQuery.data?.items[0]?.id ?? '';
+  const selectedId = searchParams.get('contract_id') ?? '';
   const detailQuery = useQuery({
     queryKey: ['asset-operations-terminal-contract', selectedId],
     queryFn: () => assetOperationsService.getTerminalContract(selectedId),

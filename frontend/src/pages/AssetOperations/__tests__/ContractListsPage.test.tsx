@@ -129,7 +129,7 @@ afterEach(() => {
 });
 
 describe('UpstreamContractsPage', () => {
-  it('renders rows and detail aggregates after loading', async () => {
+  it('renders rows but keeps the detail hint until a row is selected', async () => {
     mockedService.listUpstreamContracts.mockResolvedValue({
       items: [makeUpstream()],
       total: 1,
@@ -141,6 +141,13 @@ describe('UpstreamContractsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('UP-001')).toBeTruthy();
     });
+    await waitFor(() => {
+      expect(screen.getByText('在左侧选择一份合同查看详情。')).toBeTruthy();
+    });
+    expect(mockedService.getUpstreamContract).not.toHaveBeenCalled();
+
+    await userEvent.setup().click(screen.getByText('UP-001'));
+
     await waitFor(() => {
       expect(screen.getByText(/版本链|当前终端合同|覆盖单元/)).toBeTruthy();
       expect(screen.getByText('1 个')).toBeTruthy();
@@ -178,7 +185,7 @@ describe('UpstreamContractsPage', () => {
 });
 
 describe('TerminalContractsPage', () => {
-  it('renders warning tags and detail coverage list', async () => {
+  it('renders warning tags and loads detail only after selection', async () => {
     mockedService.listTerminalContracts.mockResolvedValue({
       items: [makeTerminal()],
       total: 1,
@@ -191,6 +198,13 @@ describe('TerminalContractsPage', () => {
       expect(screen.getByText('TM-001')).toBeTruthy();
       expect(screen.getByText('暂无上游')).toBeTruthy();
     });
+    await waitFor(() => {
+      expect(screen.getByText('在左侧选择一份合同查看详情。')).toBeTruthy();
+    });
+    expect(mockedService.getTerminalContract).not.toHaveBeenCalled();
+
+    await userEvent.setup().click(screen.getByText('TM-001'));
+
     await waitFor(() => {
       expect(screen.getByText(/上游合同/)).toBeTruthy();
     });
