@@ -20,6 +20,9 @@ import type {
 import styles from './ContractListsPage.module.css';
 import ContractRentPanel from './ContractRentPanel';
 import ContractDepositPanel from './ContractDepositPanel';
+import ContractScanPanel from './ContractScanPanel';
+import ContractSupplementsPanel from './ContractSupplementsPanel';
+import HandoverDocumentsPanel from './HandoverDocumentsPanel';
 
 const PAGE_SIZE = 20;
 
@@ -125,7 +128,7 @@ function UpstreamList(props: {
         limit: pagination.pageSize,
       }),
   });
-  const selectedId = searchParams.get('contract_id') ?? listQuery.data?.items[0]?.id ?? '';
+  const selectedId = searchParams.get('contract_id') ?? '';
   const detailQuery = useQuery({
     queryKey: ['asset-operations-upstream-contract', selectedId],
     queryFn: () => assetOperationsService.getUpstreamContract(selectedId),
@@ -237,6 +240,9 @@ function UpstreamList(props: {
               ]}
             />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <ContractScanPanel kind="upstream" contractId={detail.id} />
+            <ContractSupplementsPanel kind="upstream" contractId={detail.id} />
+            <HandoverDocumentsPanel kind="upstream" contractId={detail.id} />
             <ContractDepositPanel
               kind="upstream"
               contractId={detail.id}
@@ -297,7 +303,7 @@ function TerminalList(props: {
         limit: pagination.pageSize,
       }),
   });
-  const selectedId = searchParams.get('contract_id') ?? listQuery.data?.items[0]?.id ?? '';
+  const selectedId = searchParams.get('contract_id') ?? '';
   const detailQuery = useQuery({
     queryKey: ['asset-operations-terminal-contract', selectedId],
     queryFn: () => assetOperationsService.getTerminalContract(selectedId),
@@ -446,6 +452,9 @@ function TerminalList(props: {
               summary={detail.rentSummary}
               canCorrect={detail.status !== 'ended' && detail.status !== 'historical'}
             />
+            <ContractScanPanel kind="terminal" contractId={detail.id} />
+            <ContractSupplementsPanel kind="terminal" contractId={detail.id} />
+            <HandoverDocumentsPanel kind="terminal" contractId={detail.id} />
             <ContractDepositPanel kind="terminal" contractId={detail.id} />
           </div>
         )

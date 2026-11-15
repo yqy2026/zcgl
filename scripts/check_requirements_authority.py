@@ -458,6 +458,7 @@ def check_document_filenames(docs_dir: Path = DOCS) -> list[str]:
 # 列序依赖 trace 表格的第 2/5 列（产品状态/测试证据），列结构变更时需同步。
 _CRITICAL_E2E_REQS: frozenset[str] = frozenset(
     {
+        "REQ-ARC-001",
         "REQ-RNT-001",
         "REQ-RNT-005",
         "REQ-RNT-006",

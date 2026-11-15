@@ -21,6 +21,33 @@ import { apiClient } from '@/api/client';
 import { assetOperationsService } from '../assetOperationsService';
 
 describe('assetOperationsService Decimal normalization', () => {
+  it('loads unit certificates with encoded identity and preserves certificate area text', async () => {
+    const certificate = {
+      id: 'c1',
+      certificate_number: '证001',
+      building_area: '100.00（共有）',
+      land_area: '80.00',
+    };
+    vi.mocked(apiClient.get).mockResolvedValue({ success: true, data: { items: [certificate] } });
+    const result = await assetOperationsService.listAssetUnitCertificates('unit/a');
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/api/v1/asset-units/unit%2Fa/property-certificates',
+      { cache: false }
+    );
+    expect(result[0].building_area).toBe('100.00（共有）');
+    expect(result[0].land_area).toBe('80.00');
+  });
+
+  it('retains certificate scope failure codes', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: false,
+      error: 'forbidden',
+      rawResponse: { data: { error: { code: 'PARTY_SCOPE_MISSING' } } },
+    });
+    await expect(assetOperationsService.listAssetUnitCertificates('u1')).rejects.toMatchObject({
+      code: 'PARTY_SCOPE_MISSING',
+    });
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

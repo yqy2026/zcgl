@@ -1,0 +1,11 @@
+.panel {
+  margin-block: var(--spacing-md);
+  min-width: 0;
+}
+.list {
+  padding-inline-start: var(--spacing-md);
+  overflow-wrap: anywhere;
+}
+.list > li {
+  margin-block: var(--spacing-md);
+}

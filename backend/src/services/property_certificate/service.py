@@ -246,6 +246,24 @@ class PropertyCertificateService:
         )
 
     async def delete_certificate(self, certificate_id: str) -> None:
+        from src.core.exception_handler import BaseBusinessError, ResourceNotFoundError
+        from src.crud.archive_document import archive_document_repository
+        from src.crud.asset_unit_certificate import asset_unit_certificate_repository
+
+        if not await archive_document_repository.lock_certificate(
+            self.db, certificate_id=certificate_id
+        ):
+            raise ResourceNotFoundError("PropertyCertificate", certificate_id)
+        if await archive_document_repository.has_for_certificate(
+            self.db, certificate_id=certificate_id
+        ) or await asset_unit_certificate_repository.has_links_for_certificate(
+            self.db, certificate_id=certificate_id
+        ):
+            raise BaseBusinessError(
+                "产权证已有归档文件或物业关联历史，不允许删除",
+                code="ARCHIVE_HISTORY_PROTECTED",
+                status_code=409,
+            )
         await property_certificate_crud.remove(self.db, id=certificate_id)
 
     async def _resolve_party_filter(

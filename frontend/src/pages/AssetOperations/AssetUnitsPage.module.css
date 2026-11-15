@@ -11,15 +11,54 @@
   align-items: start;
 }
 
+.layout > * {
+  min-width: 0;
+}
+
 @media (max-width: 60rem) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 .detailCard {
   position: sticky;
   top: var(--spacing-lg);
+}
+
+.certificates {
+  overflow-wrap: anywhere;
+}
+
+.certificateForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-block: var(--spacing-md);
+}
+
+.certificateForm label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.certificateForm input,
+.certificateForm select {
+  min-width: 0;
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 0.0625rem solid var(--color-border, #d9d9d9);
+  border-radius: var(--border-radius-sm, 0.25rem);
+  background: var(--color-bg-container, white);
+  color: inherit;
+  font: inherit;
+}
+
+.certificateButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
 }
 
 .fieldRow {

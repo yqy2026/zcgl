@@ -5,6 +5,7 @@
  * 后端金额/面积字段是 Decimal 字符串；本服务统一转成 number 后再交给页面。
  */
 
+import { isAxiosError } from 'axios';
 import { apiClient } from '@/api/client';
 import { convertBackendToFrontend, convertFrontendToBackend } from '@/utils/dataConversion';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
@@ -24,6 +25,13 @@ export class AssetOperationsError extends Error {
 
 function toServiceError(error: unknown): AssetOperationsError {
   const enhanced = ApiErrorHandler.handleError(error);
+  const original = isAxiosError(error) ? error : enhanced.originalError;
+  if (isAxiosError<{ error?: { code?: unknown } }>(original)) {
+    const code = original.response?.data?.error?.code;
+    if (typeof code === 'string' && code !== '') {
+      return new AssetOperationsError(enhanced.message, code);
+    }
+  }
   return new AssetOperationsError(enhanced.message, enhanced.code);
 }
 
@@ -37,6 +45,19 @@ function extractErrorCode(result: FailedResult): string {
 }
 
 const API_BASE = '/api/v1';
+
+/** Certificate areas retain the registered source text, including qualifications. */
+export interface AssetUnitCertificate {
+  id: string;
+  certificate_number: string;
+  certificate_type: string;
+  property_address: string | null;
+  registration_date: string | null;
+  building_area: string | null;
+  land_area: string | null;
+  land_use_term_start: string | null;
+  land_use_term_end: string | null;
+}
 
 export interface AssetUnitListItem {
   id: string;
@@ -577,6 +598,82 @@ export class AssetOperationsService {
       if (error instanceof AssetOperationsError) {
         throw error;
       }
+      throw toServiceError(error);
+    }
+  }
+
+  async listAssetUnitCertificates(unitId: string): Promise<AssetUnitCertificate[]> {
+    try {
+      const result = await apiClient.get<{ items: AssetUnitCertificate[] }>(
+        `${API_BASE}/asset-units/${encodeURIComponent(unitId)}/property-certificates`,
+        { cache: false }
+      );
+      if (!result.success) {
+        throw new AssetOperationsError('产权证加载失败，请重新加载。', extractErrorCode(result));
+      }
+      if (result.data == null || !Array.isArray(result.data.items)) {
+        throw new AssetOperationsError('产权证数据格式错误，请重新加载。', 'INVALID_RESPONSE_DATA');
+      }
+      return result.data.items;
+    } catch (error) {
+      if (error instanceof AssetOperationsError) throw error;
+      throw toServiceError(error);
+    }
+  }
+
+  async listCertificateOptions(
+    unitId: string,
+    q: string,
+    offset = 0
+  ): Promise<{ items: AssetUnitCertificate[]; total: number }> {
+    try {
+      const result = await apiClient.get<{ items: AssetUnitCertificate[]; total: number }>(
+        `${API_BASE}/asset-units/${encodeURIComponent(unitId)}/property-certificate-options`,
+        { params: { q, offset, limit: 20 }, cache: false }
+      );
+      if (!result.success || result.data == null)
+        throw new AssetOperationsError('候选证照加载失败，请重试。', extractErrorCode(result));
+      return result.data;
+    } catch (error) {
+      if (error instanceof AssetOperationsError) throw error;
+      throw toServiceError(error);
+    }
+  }
+
+  async linkCertificate(
+    unitId: string,
+    input: { certificate_id: string; effective_from: string; effective_to?: string }
+  ): Promise<void> {
+    try {
+      const result = await apiClient.post(
+        `${API_BASE}/asset-units/${encodeURIComponent(unitId)}/property-certificates`,
+        input
+      );
+      if (!result.success)
+        throw new AssetOperationsError(
+          '关联保存失败，请刷新候选后重试。',
+          extractErrorCode(result)
+        );
+    } catch (error) {
+      if (error instanceof AssetOperationsError) throw error;
+      throw toServiceError(error);
+    }
+  }
+
+  async unlinkCertificate(
+    unitId: string,
+    certificateId: string,
+    effectiveFrom: string
+  ): Promise<void> {
+    try {
+      const result = await apiClient.post(
+        `${API_BASE}/asset-units/${encodeURIComponent(unitId)}/property-certificates/${encodeURIComponent(certificateId)}/unlink`,
+        { effective_from: effectiveFrom }
+      );
+      if (!result.success)
+        throw new AssetOperationsError('解除安排保存失败，请重试。', extractErrorCode(result));
+    } catch (error) {
+      if (error instanceof AssetOperationsError) throw error;
       throw toServiceError(error);
     }
   }

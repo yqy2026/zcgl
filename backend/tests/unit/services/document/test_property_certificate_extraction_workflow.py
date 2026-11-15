@@ -127,8 +127,9 @@ def staged_file():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("registration_fails", [False, True])
 async def test_new_confirmation_creates_generic_attachment_after_explicit_review(
-    monkeypatch, staged_file
+    monkeypatch, staged_file, registration_fails
 ):
     import src.services.document.property_certificate_extraction_workflow as module
     from src.services.document.property_certificate_extraction_workflow import (
@@ -208,7 +209,11 @@ async def test_new_confirmation_creates_generic_attachment_after_explicit_review
     monkeypatch.setattr(module.attachment_crud, "create", create_attachment)
 
     db = FakeDb()
-    certificate_id = await workflow.confirm(
+    if registration_fails:
+        module.archive_document_repository.register.side_effect = RuntimeError(
+            "archive failed"
+        )
+    operation = workflow.confirm(
         session_id="session-1",
         actions=[
             {
@@ -224,7 +229,19 @@ async def test_new_confirmation_creates_generic_attachment_after_explicit_review
         current_user_id="user-1",
     )
 
+    if registration_fails:
+        with pytest.raises(RuntimeError, match="archive failed"):
+            await operation
+        assert db.commits == 0
+        assert db.rollbacks == 1
+        assert len(lifecycle.discarded) == 1
+        assert lifecycle.discarded[0] == Path(
+            "uploads/files/property_certificate/certificate-1/source.pdf"
+        )
+        return
+    certificate_id = await operation
     assert certificate_id == "certificate-1"
+    module.archive_document_repository.register.assert_awaited_once()
     assert db.commits == 1
     assert lifecycle.promotions[0][1:] == ("property_certificate", "certificate-1")
     assert created[0]["asset_ids"] == ["asset-1"]
@@ -403,3 +420,22 @@ async def test_duplicate_certificate_number_returns_conflict_and_keeps_session(
 
     assert repository.session is not None
     assert repository.session["status"] == "ready_for_review"
+
+
+@pytest.fixture(autouse=True)
+def archive_registration(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from src.services.document import property_certificate_extraction_workflow as module
+
+    monkeypatch.setattr(
+        module.property_certificate_attachment_service, "lock_for_write", AsyncMock()
+    )
+    monkeypatch.setattr(
+        module.property_certificate_attachment_service,
+        "assert_content_unique",
+        AsyncMock(),
+    )
+    register = AsyncMock()
+    monkeypatch.setattr(module.archive_document_repository, "register", register)
+    return register

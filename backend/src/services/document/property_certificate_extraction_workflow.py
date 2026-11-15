@@ -13,6 +13,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.crud.archive_document import archive_document_repository
 from src.crud.asset import asset_crud
 from src.crud.attachment import attachment_crud
 from src.crud.property_certificate import property_certificate_crud
@@ -27,6 +28,9 @@ from src.services.file_upload.staged_files import (
     StoredFile,
 )
 from src.services.party import party_service
+from src.services.property_certificate.attachment_service import (
+    property_certificate_attachment_service,
+)
 
 from .candidate_review import (
     CandidateReviewError,
@@ -298,25 +302,38 @@ class PropertyCertificateExtractionWorkflow(ContractExtractionWorkflow):
             created_by=current_user_id,
             commit=False,
         )
+        await property_certificate_attachment_service.lock_for_write(
+            db, str(certificate.id)
+        )
+        await property_certificate_attachment_service.assert_content_unique(
+            db, str(certificate.id), staged.sha256
+        )
         stored = self._lifecycle.promote(
             staged,
             owner_type="property_certificate",
             owner_id=str(certificate.id),
         )
-        await attachment_crud.create(
-            db,
-            data={
-                "owner_type": "property_certificate",
-                "owner_id": str(certificate.id),
-                "file_name": staged.original_filename,
-                "file_type": staged.canonical_extension.lstrip("."),
-                "file_size": staged.size_bytes,
-                "file_hash": staged.sha256,
-                "storage_key": stored.storage_key,
-                "created_by": current_user_id,
-            },
-            commit=False,
-        )
+        try:
+            attachment = await attachment_crud.create(
+                db,
+                data={
+                    "owner_type": "property_certificate",
+                    "owner_id": str(certificate.id),
+                    "file_name": staged.original_filename,
+                    "file_type": staged.canonical_extension.lstrip("."),
+                    "file_size": staged.size_bytes,
+                    "file_hash": staged.sha256,
+                    "storage_key": stored.storage_key,
+                    "created_by": current_user_id,
+                },
+                commit=False,
+            )
+            await archive_document_repository.register(
+                db, certificate_id=str(certificate.id), attachment=attachment
+            )
+        except BaseException:
+            self._lifecycle.compensate_promotion(stored)
+            raise
         return str(certificate.id), stored
 
     async def _confirm_conflict_link(
@@ -348,25 +365,38 @@ class PropertyCertificateExtractionWorkflow(ContractExtractionWorkflow):
         )
         if not attach_staged:
             return selected_certificate_id, None
+        await property_certificate_attachment_service.lock_for_write(
+            db, selected_certificate_id
+        )
+        await property_certificate_attachment_service.assert_content_unique(
+            db, selected_certificate_id, staged.sha256
+        )
         stored = self._lifecycle.promote(
             staged,
             owner_type="property_certificate",
             owner_id=selected_certificate_id,
         )
-        await attachment_crud.create(
-            db,
-            data={
-                "owner_type": "property_certificate",
-                "owner_id": selected_certificate_id,
-                "file_name": staged.original_filename,
-                "file_type": staged.canonical_extension.lstrip("."),
-                "file_size": staged.size_bytes,
-                "file_hash": staged.sha256,
-                "storage_key": stored.storage_key,
-                "created_by": current_user_id,
-            },
-            commit=False,
-        )
+        try:
+            attachment = await attachment_crud.create(
+                db,
+                data={
+                    "owner_type": "property_certificate",
+                    "owner_id": selected_certificate_id,
+                    "file_name": staged.original_filename,
+                    "file_type": staged.canonical_extension.lstrip("."),
+                    "file_size": staged.size_bytes,
+                    "file_hash": staged.sha256,
+                    "storage_key": stored.storage_key,
+                    "created_by": current_user_id,
+                },
+                commit=False,
+            )
+            await archive_document_repository.register(
+                db, certificate_id=selected_certificate_id, attachment=attachment
+            )
+        except BaseException:
+            self._lifecycle.compensate_promotion(stored)
+            raise
         return selected_certificate_id, stored
 
     async def _confirm_existing_reference(

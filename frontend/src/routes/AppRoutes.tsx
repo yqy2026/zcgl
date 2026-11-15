@@ -20,6 +20,11 @@ export interface ProtectedRouteItem {
 const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 资产运营
   {
+    path: ASSET_OPERATIONS_V5_ROUTES.ARCHIVE,
+    element: React.lazy(() => import('../pages/AssetOperations/ArchivePage')),
+    permissions: [{ resource: 'asset_ops', action: 'read' }],
+  },
+  {
     path: ASSET_OPERATIONS_V5_ROUTES.MANAGEMENT_FEE_STATEMENT,
     element: React.lazy(() => import('../pages/AssetOperations/ManagementFeeStatementPage')),
     permissions: [{ resource: 'asset_ops', action: 'read' }],

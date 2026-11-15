@@ -31,6 +31,7 @@ export const PROTOTYPE_ROUTES = {
 
 // 资产运营 v5 生产路由（V1 纵向切片）
 export const ASSET_OPERATIONS_V5_ROUTES = {
+  ARCHIVE: '/asset-operations/archive',
   LEDGERS: '/asset-operations/ledgers',
   MANAGEMENT_FEE_STATEMENT: '/asset-operations/management-fees/:statement_id',
   UNITS: '/asset-operations/units',

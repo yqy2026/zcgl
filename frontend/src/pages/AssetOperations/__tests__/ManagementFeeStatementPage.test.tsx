@@ -23,6 +23,9 @@ vi.mock('@/services/managementFeeService', () => ({
 vi.mock('@/components/System/CapabilityGuard', () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
+vi.mock('@/services/archiveDocumentService', () => ({
+  archiveDocumentService: { list: vi.fn().mockResolvedValue([]) },
+}));
 beforeEach(() => {
   vi.mocked(assetLedgerService.getEntry).mockResolvedValue({ version: 7 } as Awaited<
     ReturnType<typeof assetLedgerService.getEntry>
@@ -308,4 +311,30 @@ it.each([
   [1.01, '壹元零壹分'],
 ])('formats capital amount %s', (value, expected) => {
   expect(capitalMoney(Number(value))).toBe(expected);
+});
+
+it('shows stamp archive history without an upload entrance', async () => {
+  const { archiveDocumentService } = await import('@/services/archiveDocumentService');
+  vi.mocked(archiveDocumentService.list).mockResolvedValue([
+    {
+      id: 'd1',
+      attachment_id: 'a1',
+      document_type: 'management_fee_statement',
+      target_type: 'management_fee_statement',
+      target_id: 'st',
+      file_name: '盖章版.png',
+      content_type: 'image/png',
+      file_size: 4,
+      document_version: 1,
+      replaces_document_id: null,
+      uploaded_at: '2026-11-04T00:00:00Z',
+      is_current: true,
+    },
+  ]);
+  vi.mocked(managementFeeService.get).mockResolvedValue(statement);
+  show();
+  expect(await screen.findByText('盖章件档案')).toBeVisible();
+  expect(await screen.findByText('盖章版.png')).toBeVisible();
+  expect(archiveDocumentService.list).toHaveBeenCalledWith('st', 'management_fee_statement');
+  expect(screen.queryByLabelText('选择归档文件')).toBeNull();
 });

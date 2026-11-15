@@ -29,6 +29,8 @@ MODELS_DIR = ROOT / "backend" / "src" / "models"
 # be listed as "no model mapping" and skipped cleanly).
 # ---------------------------------------------------------------------------
 ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
+    "ArchiveDocument": ("archive_document.py", "ArchiveDocument"),
+    "ContractSupplement": ("contract_supplement.py", "ContractSupplement"),
     "AssetUnit": ("asset_unit.py", "AssetUnit"),
     "AssetUnitBoundaryChange": ("asset_unit.py", "AssetUnitBoundaryChange"),
     "AssetUnitBoundarySource": ("asset_unit.py", "AssetUnitBoundarySource"),

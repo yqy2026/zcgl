@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Alert, Button } from 'antd';
 import CapabilityGuard from '@/components/System/CapabilityGuard';
+import ArchiveDocumentsPanel from '@/pages/AssetOperations/ArchiveDocumentsPanel';
 import { managementFeeService, type ManagementFeeStatement } from '@/services/managementFeeService';
 import {
   assetLedgerService,
@@ -286,6 +287,9 @@ export default function ManagementFeeStatementPage(): React.ReactElement {
     void client.invalidateQueries({ queryKey: ['management-fee-matrix'] });
     void client.invalidateQueries({ queryKey: ['rent-ledger-entry'] });
     void client.invalidateQueries({ queryKey: ['rent-ledgers'] });
+    void client.invalidateQueries({
+      queryKey: ['archive-documents', 'management_fee_statement', id],
+    });
   };
   return (
     <div className={styles.page}>
@@ -444,6 +448,15 @@ export default function ManagementFeeStatementPage(): React.ReactElement {
               denied={() => setDeniedId(id)}
             />
           </CapabilityGuard>
+          <section className={styles.controls} aria-label="盖章件档案">
+            <h2>盖章件档案</h2>
+            <p>每次上传或替换都会追加版本，历史版本保留可下载；上传入口在上方盖章与确认区。</p>
+            <ArchiveDocumentsPanel
+              targetId={statement.id}
+              targetType="management_fee_statement"
+              readOnly
+            />
+          </section>
         </>
       ) : null}
     </div>

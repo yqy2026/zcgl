@@ -137,6 +137,7 @@ BASIC_PERMISSIONS_DATA = [
     ("asset_ops", "read", "查看资产运营", "查看资产单元与合同链"),
     ("asset_ops", "write", "维护资产运营", "登记合同、终止退出续签与单元编辑"),
     ("asset_ops", "report", "管理资产运营报送", "保存考核范围并提交或撤回报送"),
+    ("asset_ops", "archive", "维护资产运营档案", "上传和替换业务档案"),
     # 资产管理权限
     ("asset", "read", "查看资产", "查看资产基本信息"),
     ("asset", "create", "创建资产", "创建新资产"),

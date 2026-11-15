@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
 from ...core.exception_handler import ResourceNotFoundError
+from ...crud.archive_document import archive_document_repository
 from ...crud.attachment import attachment_crud
 from ...crud.business_change_event import business_change_repository
 from ...crud.management_fee_statement import management_fee_statement_repository
@@ -64,6 +65,36 @@ class ManagementFeeStampService:
             previous = statement.stamped_document_id
             statement.stamped_document_id = document.id
             statement.version += 1
+            # Every newly bound file becomes one immutable archive version; the
+            # fact pointer above stays the only reference consumed by confirm
+            # and the completion matrix.
+            if document.id != previous:
+                versions = await archive_document_repository.target_rows(
+                    db,
+                    target_type="management_fee_statement",
+                    target_id=statement_id,
+                    document_type="management_fee_statement",
+                )
+                if any(d.attachment_id == document.id for d, _ in versions):
+                    # Rebinding an archived historical attachment would collide
+                    # with the attachment's unique archive row; only fresh
+                    # files may start a new version.
+                    raise rent_error(
+                        "ARCHIVE_DUPLICATE_CONTENT", "该附件已归档，请上传新文件"
+                    )
+                current = max(
+                    (d for d, _ in versions),
+                    key=lambda d: d.document_version,
+                    default=None,
+                )
+                await archive_document_repository.register_target(
+                    db,
+                    target_type="management_fee_statement",
+                    target_id=statement_id,
+                    document_type="management_fee_statement",
+                    attachment=document,
+                    replaces_document_id=current.id if current is not None else None,
+                )
             await db.flush()
             await business_change_repository.add(
                 db,

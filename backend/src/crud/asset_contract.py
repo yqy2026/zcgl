@@ -31,7 +31,7 @@ from ..models.attachment import Attachment
 from ..models.project import Project
 from ..services.party_scope_resolver import EffectivePartyScope
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", bound=tuple[Any, ...])
 
 
 class AssetContractRepository:
@@ -45,10 +45,10 @@ class AssetContractRepository:
 
     @staticmethod
     def _apply_upstream_scope(
-        statement: Select[tuple[UpstreamContract]],
+        statement: Select[_T],
         *,
         scope: EffectivePartyScope,
-    ) -> Select[tuple[UpstreamContract]]:
+    ) -> Select[_T]:
         if scope.scope_mode == "unrestricted":
             return statement
         conditions = []
@@ -64,10 +64,10 @@ class AssetContractRepository:
 
     @staticmethod
     def _apply_terminal_scope(
-        statement: Select[tuple[_T]],
+        statement: Select[_T],
         *,
         scope: EffectivePartyScope,
-    ) -> Select[tuple[_T]]:
+    ) -> Select[_T]:
         if scope.scope_mode == "unrestricted":
             return statement
         conditions = []
@@ -93,6 +93,40 @@ class AssetContractRepository:
                 )
             )
         )
+
+    async def contract_numbers_in_scope(
+        self, db: AsyncSession, *, scope: EffectivePartyScope
+    ) -> list[tuple[str, str, str, str]]:
+        """Light (kind, id, contract_number, name) pairs for archive pairing.
+
+        Terminal contracts carry no title column; their label is the number.
+        """
+        if self._scope_is_empty(scope):
+            return []
+        upstream = self._apply_upstream_scope(
+            select(
+                UpstreamContract.id,
+                UpstreamContract.contract_number,
+                UpstreamContract.name,
+            ),
+            scope=scope,
+        )
+        terminal = self._apply_terminal_scope(
+            select(
+                TerminalContract.id,
+                TerminalContract.contract_number,
+            ),
+            scope=scope,
+        )
+        rows: list[tuple[str, str, str, str]] = [
+            ("upstream_contract", row.id, row.contract_number, row.name)
+            for row in (await db.execute(upstream)).all()
+        ]
+        rows.extend(
+            ("terminal_contract", row.id, row.contract_number, "")
+            for row in (await db.execute(terminal)).all()
+        )
+        return rows
 
     async def list_upstream(
         self,

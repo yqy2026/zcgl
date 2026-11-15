@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-import shutil
-import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
-from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
+from src.core.exception_handler import (
+    BaseBusinessError,
+    BusinessValidationError,
+    ResourceNotFoundError,
+)
+from src.crud.archive_document import archive_document_repository
 from src.crud.attachment import attachment_crud
 from src.crud.operation_log import OperationLogCRUD
 from src.crud.property_certificate import property_certificate_crud
+from src.models.archive_document import ArchiveDocument
 from src.models.attachment import Attachment
 from src.models.property_certificate import PropertyCertificate
 from src.services.file_upload import (
@@ -31,70 +34,79 @@ operation_log_crud = OperationLogCRUD()
 _OWNER_TYPE = "property_certificate"
 
 
+_Promotions = list[tuple[StagedFile, StoredFile]]
+
+
 @dataclass(frozen=True)
 class PropertyCertificateAttachmentDownload:
     attachment: Attachment
     path: Path
 
 
+@dataclass(frozen=True)
+class PropertyCertificateAttachmentVersion:
+    attachment: Attachment
+    document: ArchiveDocument
+    is_current: bool
+
+
 class PropertyCertificateAttachmentService:
-    """Manage only generic attachments owned by a property certificate."""
+    """Append immutable certificate files and archive replacement links."""
 
     uploads_root = Path("temp_uploads")
 
-    async def list(self, db: AsyncSession, *, certificate_id: str) -> list[Attachment]:
+    async def lock_for_write(self, db: AsyncSession, certificate_id: str) -> None:
+        if not await archive_document_repository.lock_certificate(
+            db, certificate_id=certificate_id
+        ):
+            raise ResourceNotFoundError("PropertyCertificate", certificate_id)
+
+    async def assert_content_unique(
+        self, db: AsyncSession, certificate_id: str, content_hash: str
+    ) -> None:
+        if (
+            await archive_document_repository.find_by_hash(
+                db, certificate_id=certificate_id, content_hash=content_hash
+            )
+            is not None
+        ):
+            raise BaseBusinessError(
+                "该产权证已归档相同内容的文件",
+                code="ARCHIVE_DUPLICATE_CONTENT",
+                status_code=409,
+            )
+
+    async def list(
+        self, db: AsyncSession, *, certificate_id: str, include_history: bool = False
+    ) -> list[PropertyCertificateAttachmentVersion]:
         await self._require_certificate(db, certificate_id)
-        return await attachment_crud.list_for_owner(
-            db, owner_type=_OWNER_TYPE, owner_id=certificate_id
+        rows = await archive_document_repository.list_for_certificate(
+            db, certificate_id=certificate_id, include_history=include_history
         )
+        replaced_ids = {
+            document.replaces_document_id
+            for document, _ in rows
+            if document.replaces_document_id is not None
+        }
+        result = []
+        for document, attachment in rows:
+            result.append(
+                PropertyCertificateAttachmentVersion(
+                    attachment, document, document.id not in replaced_ids
+                )
+            )
+        return result
 
     async def append(
-        self,
-        db: AsyncSession,
-        *,
-        certificate_id: str,
-        file: UploadFile,
-        user_id: str,
-    ) -> Attachment:
-        await self._require_certificate(db, certificate_id)
-        lifecycle = StagedFileService(self.uploads_root)
-        staged = await lifecycle.stage_upload(
-            file, UploadPurpose.PROPERTY_CERTIFICATE_EXTRACTION
+        self, db: AsyncSession, *, certificate_id: str, file: UploadFile, user_id: str
+    ) -> PropertyCertificateAttachmentVersion:
+        return await self._write(
+            db,
+            certificate_id=certificate_id,
+            attachment_id=None,
+            file=file,
+            user_id=user_id,
         )
-        stored: StoredFile | None = None
-        try:
-            stored = lifecycle.promote(
-                staged, owner_type=_OWNER_TYPE, owner_id=certificate_id
-            )
-            attachment = await attachment_crud.create(
-                db,
-                data=self._attachment_data(
-                    certificate_id=certificate_id,
-                    staged=staged,
-                    stored=stored,
-                    user_id=user_id,
-                ),
-                commit=False,
-            )
-            await db.commit()
-            return attachment
-        except BaseException as operation_error:
-            cleanup_error: BaseException | None = None
-            try:
-                if stored is None:
-                    lifecycle.discard_staged(staged)
-                else:
-                    lifecycle.compensate_promotion(stored)
-            except BaseException as exc:
-                cleanup_error = exc
-            try:
-                await db.rollback()
-            except BaseException as rollback_error:
-                if cleanup_error is None:
-                    cleanup_error = rollback_error
-            if cleanup_error is not None:
-                raise cleanup_error from operation_error
-            raise
 
     async def replace(
         self,
@@ -104,121 +116,178 @@ class PropertyCertificateAttachmentService:
         attachment_id: str,
         file: UploadFile,
         user_id: str,
-    ) -> Attachment:
-        await self._require_certificate(db, certificate_id)
-        old = await self._require_attachment(db, certificate_id, attachment_id)
-        lifecycle = StagedFileService(self.uploads_root)
-        staged = await lifecycle.stage_upload(
-            file, UploadPurpose.PROPERTY_CERTIFICATE_EXTRACTION
+    ) -> PropertyCertificateAttachmentVersion:
+        return await self._write(
+            db,
+            certificate_id=certificate_id,
+            attachment_id=attachment_id,
+            file=file,
+            user_id=user_id,
         )
-        stored: StoredFile | None = None
-        backup: Path | None = None
-        committed = False
-        try:
-            stored = lifecycle.promote(
-                staged, owner_type=_OWNER_TYPE, owner_id=certificate_id
-            )
-            backup = self._move_to_quarantine(self._resolve_path(old.storage_key))
-            removed = await attachment_crud.delete_for_owner(
+
+    async def _write_staged(
+        self,
+        db: AsyncSession,
+        *,
+        staged: StagedFile,
+        owner_id: str,
+        user_id: str,
+        attachment_id: str | None = None,
+        archive_target: tuple[str, str, str] | None = None,
+        promotions: _Promotions | None = None,
+    ) -> tuple[PropertyCertificateAttachmentVersion, StoredFile]:
+        """Register one staged file as attachment + archive version without committing.
+
+        The caller owns the transaction, the staged file and the cleanup: each
+        successful promotion is appended to ``promotions`` so a later failure
+        can compensate it instead of discarding the untouched staged file.
+        """
+        lifecycle = StagedFileService(self.uploads_root)
+        if archive_target is None:
+            await self.lock_for_write(db, owner_id)
+        target_rows = (
+            []
+            if archive_target is None
+            else await archive_document_repository.target_rows(
                 db,
-                attachment_id=attachment_id,
-                owner_type=_OWNER_TYPE,
-                owner_id=certificate_id,
+                target_type=archive_target[0],
+                target_id=archive_target[1],
+                document_type=archive_target[2],
             )
-            if removed is None:
-                raise ResourceNotFoundError("Attachment", attachment_id)
-            replacement = await attachment_crud.create(
-                db,
-                data=self._attachment_data(
-                    certificate_id=certificate_id,
+        )
+        predecessor = None
+        if attachment_id is not None:
+            predecessor = (
+                next((d for d, a in target_rows if a.id == attachment_id), None)
+                if archive_target is not None
+                else await archive_document_repository.get_for_attachment(
+                    db, certificate_id=owner_id, attachment_id=attachment_id
+                )
+            )
+            if predecessor is None:
+                raise ResourceNotFoundError("ArchiveDocument", attachment_id)
+            if (
+                await archive_document_repository.get_successor(
+                    db, document_id=predecessor.id
+                )
+                is not None
+            ):
+                raise BaseBusinessError(
+                    "该文件已有后续版本，请刷新后重试",
+                    code="ARCHIVE_VERSION_STALE",
+                    status_code=409,
+                )
+        if archive_target is None:
+            await self.assert_content_unique(db, owner_id, staged.sha256)
+        elif any(a.file_hash == staged.sha256 for _, a in target_rows):
+            raise BaseBusinessError(
+                "Already archived",
+                code="ARCHIVE_DUPLICATE_CONTENT",
+                status_code=409,
+            )
+        stored = lifecycle.promote(
+            staged,
+            owner_type=_OWNER_TYPE if archive_target is None else "contract",
+            owner_id=owner_id,
+        )
+        if promotions is not None:
+            promotions.append((staged, stored))
+        attachment = await attachment_crud.create(
+            db,
+            data={
+                **self._attachment_data(
+                    certificate_id=owner_id,
                     staged=staged,
                     stored=stored,
                     user_id=user_id,
                 ),
-                commit=False,
+                "owner_type": _OWNER_TYPE if archive_target is None else "contract",
+            },
+            commit=False,
+        )
+        document = (
+            await archive_document_repository.register_target(
+                db,
+                target_type=archive_target[0],
+                target_id=archive_target[1],
+                document_type=archive_target[2],
+                attachment=attachment,
+                replaces_document_id=predecessor.id
+                if predecessor is not None
+                else None,
             )
-            await db.commit()
-            committed = True
-            self._discard_quarantine(backup)
-            return replacement
-        except BaseException as operation_error:
-            if committed:
-                logger.error(
-                    "property certificate attachment replacement final cleanup failed"
-                )
-                raise
-            cleanup_error: BaseException | None = None
-            try:
-                if stored is None:
-                    lifecycle.discard_staged(staged)
-                else:
-                    lifecycle.compensate_promotion(stored)
-                if backup is not None:
-                    self._restore_quarantine(
-                        backup, self._resolve_path(old.storage_key)
-                    )
-            except BaseException as exc:
-                cleanup_error = exc
-            try:
-                await db.rollback()
-            except BaseException as rollback_error:
-                if cleanup_error is None:
-                    cleanup_error = rollback_error
-            if cleanup_error is not None:
-                logger.error(
-                    "property certificate attachment replacement cleanup failed"
-                )
-                raise cleanup_error from operation_error
-            raise
+            if archive_target is not None
+            else await archive_document_repository.register(
+                db,
+                certificate_id=owner_id,
+                attachment=attachment,
+                replaces_document_id=predecessor.id
+                if predecessor is not None
+                else None,
+            )
+        )
+        return PropertyCertificateAttachmentVersion(attachment, document, True), stored
 
-    async def delete(
+    async def _write(
         self,
         db: AsyncSession,
         *,
         certificate_id: str,
-        attachment_id: str,
-    ) -> None:
-        attachments = await self.list(db, certificate_id=certificate_id)
-        if len(attachments) <= 1:
-            raise BusinessValidationError(
-                "the final property certificate attachment cannot be deleted"
-            )
-        attachment = await self._require_attachment(db, certificate_id, attachment_id)
-        original = self._resolve_path(attachment.storage_key)
-        backup = self._move_to_quarantine(original)
-        committed = False
+        attachment_id: str | None,
+        file: UploadFile,
+        user_id: str,
+        archive_target: tuple[str, str, str] | None = None,
+    ) -> PropertyCertificateAttachmentVersion:
+        lifecycle = StagedFileService(self.uploads_root)
+        staged = await lifecycle.stage_upload(
+            file, UploadPurpose.PROPERTY_CERTIFICATE_EXTRACTION
+        )
+        promotions: list[tuple[StagedFile, StoredFile]] = []
         try:
-            removed = await attachment_crud.delete_for_owner(
+            result, _ = await self._write_staged(
                 db,
-                attachment_id=attachment_id,
-                owner_type=_OWNER_TYPE,
+                staged=staged,
                 owner_id=certificate_id,
+                user_id=user_id,
+                attachment_id=attachment_id,
+                archive_target=archive_target,
+                promotions=promotions,
             )
-            if removed is None:
-                raise ResourceNotFoundError("Attachment", attachment_id)
             await db.commit()
-            committed = True
-            self._discard_quarantine(backup)
+            return result
         except BaseException as operation_error:
-            if committed:
-                logger.error(
-                    "property certificate attachment deletion final cleanup failed"
-                )
-                raise
             cleanup_error: BaseException | None = None
             try:
-                self._restore_quarantine(backup, original)
+                if promotions:
+                    for _, stored in promotions:
+                        lifecycle.compensate_promotion(stored)
+                else:
+                    lifecycle.discard_staged(staged)
             except BaseException as exc:
                 cleanup_error = exc
             try:
                 await db.rollback()
-            except BaseException as rollback_error:
+            except BaseException as exc:
                 if cleanup_error is None:
-                    cleanup_error = rollback_error
+                    cleanup_error = exc
             if cleanup_error is not None:
-                logger.error("property certificate attachment deletion cleanup failed")
                 raise cleanup_error from operation_error
             raise
+
+    async def delete(
+        self, db: AsyncSession, *, certificate_id: str, attachment_id: str
+    ) -> None:
+        await self.lock_for_write(db, certificate_id)
+        document = await archive_document_repository.get_for_attachment(
+            db, certificate_id=certificate_id, attachment_id=attachment_id
+        )
+        if document is None:
+            raise ResourceNotFoundError("ArchiveDocument", attachment_id)
+        raise BaseBusinessError(
+            "已归档文件需保留历史，不允许删除",
+            code="ARCHIVE_HISTORY_PROTECTED",
+            status_code=409,
+        )
 
     async def prepare_download(
         self,
@@ -230,6 +299,11 @@ class PropertyCertificateAttachmentService:
     ) -> PropertyCertificateAttachmentDownload:
         await self._require_certificate(db, certificate_id)
         attachment = await self._require_attachment(db, certificate_id, attachment_id)
+        document = await archive_document_repository.get_for_attachment(
+            db, certificate_id=certificate_id, attachment_id=attachment_id
+        )
+        if document is None:
+            raise ResourceNotFoundError("ArchiveDocument", attachment_id)
         path = self._resolve_path(attachment.storage_key)
         if not path.is_file():
             await self._record_download(
@@ -295,30 +369,6 @@ class PropertyCertificateAttachmentService:
         except ValueError as exc:
             raise BusinessValidationError("invalid attachment storage key") from exc
         return path
-
-    def _move_to_quarantine(self, source: Path) -> Path:
-        if not source.is_file():
-            raise ResourceNotFoundError("Attachment", source.name)
-        quarantine = (
-            self.uploads_root.resolve()
-            / ".staging"
-            / f"delete-{uuid.uuid4().hex}"
-            / "payload"
-        )
-        quarantine.parent.mkdir(parents=True, exist_ok=False)
-        os.replace(source, quarantine)
-        return quarantine
-
-    @staticmethod
-    def _restore_quarantine(backup: Path, destination: Path) -> None:
-        if backup.is_file():
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(backup, destination)
-            backup.parent.rmdir()
-
-    @staticmethod
-    def _discard_quarantine(backup: Path) -> None:
-        shutil.rmtree(backup.parent)
 
     async def _record_download(
         self,
