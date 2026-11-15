@@ -14,6 +14,7 @@ from . import (
     contract_supplements,  # noqa: F401
     deposits,  # noqa: F401
     extraction_sessions,  # noqa: F401
+    import_batches,  # noqa: F401
     management_fee_statements,  # noqa: F401
     occupancy_reports,  # noqa: F401
     party,  # noqa: F401

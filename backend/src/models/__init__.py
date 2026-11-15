@@ -88,6 +88,7 @@ from .enum_field import (  # noqa: F401
     EnumFieldUsage,
     EnumFieldValue,
 )
+from .import_batch import ImportBatch, ImportBatchChange  # noqa: F401
 from .management_fee_deferral import ManagementFeeDeferral
 from .management_fee_statement import ManagementFeeStatement, ManagementFeeStatementLine
 from .notification import (  # noqa: F401

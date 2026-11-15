@@ -668,11 +668,16 @@ ArchiveDocument 只记录业务分类和版本关系，Attachment 是唯一文�
 | `error_count` | integer | 错误数 |
 | `warning_count` | integer | 提醒数 |
 | `proposal_hash` | string | 规范化差异哈希 |
-| `committed_at` / `committed_by` | datetime? / UUID? | 提交审计 |
-| `reverted_at` / `reverted_by` | datetime? / UUID? | 撤销审计 |
+| `committed_at` | datetime? | 提交审计 |
+| `committed_by` | UUID? | 提交审计 |
+| `reverted_at` | datetime? | 撤销审计 |
+| `reverted_by` | UUID? | 撤销审计 |
 | `revert_reason` | string? | 撤销必填 |
 | `idempotency_key` | string | 提交时唯一 |
 | `version` | integer | 乐观锁版本 |
+| `created_by` | UUID | 创建者 |
+| `created_at` | datetime | 审计时间戳 |
+| `updated_at` | datetime | 审计时间戳 |
 
 ### 4.28 ImportBatchChange
 
@@ -680,11 +685,13 @@ ArchiveDocument 只记录业务分类和版本关系，Attachment 是唯一文�
 |---|---|---|
 | `id` | UUID | 主键 |
 | `batch_id` | UUID | 导入批次 |
-| `sheet_name` / `row_number` | string / integer | 来源定位 |
+| `sheet_name` | string | 来源定位 |
+| `row_number` | integer | 来源定位（文件级问题为 0） |
+| `old_value` | JSON | 现值 |
+| `new_value` | JSON | 新值 |
 | `target_type` | enum | `asset_unit` / `upstream_contract` / `terminal_contract` |
 | `target_key` | string | 单元编号或合同号 |
 | `field_name` | string | 变更字段 |
-| `old_value` / `new_value` | JSON | 现值和新值 |
 | `selected` | boolean | 用户是否纳入提交 |
 | `severity` | enum | `change` / `warning` / `error` |
 | `effect_summary` | string | 业务可读影响说明 |

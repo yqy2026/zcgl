@@ -59,6 +59,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
         label: '资产单元',
       },
       {
+        key: '/asset-operations/imports',
+        icon: <FileTextOutlined />,
+        label: '数据导入',
+      },
+      {
         key: '/asset-operations/contracts/intake',
         icon: <FileAddOutlined />,
         label: '录入已签合同',

@@ -31,6 +31,8 @@ MODELS_DIR = ROOT / "backend" / "src" / "models"
 ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "ArchiveDocument": ("archive_document.py", "ArchiveDocument"),
     "ContractSupplement": ("contract_supplement.py", "ContractSupplement"),
+    "ImportBatch": ("import_batch.py", "ImportBatch"),
+    "ImportBatchChange": ("import_batch.py", "ImportBatchChange"),
     "AssetUnit": ("asset_unit.py", "AssetUnit"),
     "AssetUnitBoundaryChange": ("asset_unit.py", "AssetUnitBoundaryChange"),
     "AssetUnitBoundarySource": ("asset_unit.py", "AssetUnitBoundarySource"),
