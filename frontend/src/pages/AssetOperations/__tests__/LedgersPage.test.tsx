@@ -120,7 +120,9 @@ it('exports the current ledger selection and surfaces export failures', async ()
     total_remaining_amount: 0,
   });
   vi.mocked(assetLedgerService.exportLedger).mockResolvedValue(
-    new Blob(['xlsx'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    new Blob(['xlsx'], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
   );
   show('/asset-operations/ledgers?ledger_type=upstream_rent');
   await screen.findByText('本年暂无租金义务');

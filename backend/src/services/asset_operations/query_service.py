@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Protocol
@@ -75,7 +75,7 @@ class AssetUnitReader(Protocol):
         db: AsyncSession,
         *,
         scope: EffectivePartyScope,
-    ) -> list[str]: ...
+    ) -> Sequence[str]: ...
 
 
 class AssetContractReader(Protocol):
@@ -261,7 +261,7 @@ class AssetOperationsQueryService:
         db: AsyncSession,
         *,
         scope: EffectivePartyScope,
-    ) -> list[str]:
+    ) -> Sequence[str]:
         self._require_effective_scope(scope)
         return await self.asset_unit_repository.distinct_usage_types(db, scope=scope)
 

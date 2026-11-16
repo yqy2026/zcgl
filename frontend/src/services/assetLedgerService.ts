@@ -194,17 +194,12 @@ export const assetLedgerService = {
   getMatrix: (ledgerType: LedgerType, year: number) =>
     get<LedgerMatrix>('/rent-ledgers', { ledger_type: ledgerType, year }),
   getEntry: (id: string) => get<RentEntry>(`/rent-ledger-entries/${encodeURIComponent(id)}`),
-  exportLedger: async (
-    ledgerType: LedgerType | 'management_fee',
-    year: number
-  ): Promise<Blob> => {
+  exportLedger: async (ledgerType: LedgerType | 'management_fee', year: number): Promise<Blob> => {
     try {
-      const result = await apiClient
-        .getAxiosInstance()
-        .get<Blob>('/api/v1/rent-ledgers/export', {
-          params: { ledger_type: ledgerType, year },
-          responseType: 'blob',
-        });
+      const result = await apiClient.getAxiosInstance().get<Blob>('/api/v1/rent-ledgers/export', {
+        params: { ledger_type: ledgerType, year },
+        responseType: 'blob',
+      });
       return result.data;
     } catch (error) {
       throw ledgerError(error);

@@ -168,13 +168,13 @@ it('renders first-page thumbnails for PDF archives only', async () => {
     new Blob(['png'], { type: 'image/png' })
   );
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <ArchiveDocumentsPanel targetId="c1" targetType="upstream_contract" readOnly />
     </QueryClientProvider>
   );
-  expect(
-    await screen.findByRole('img', { name: 'scan.pdf 首页缩略图' })
-  ).toBeTruthy();
+  expect(await screen.findByRole('img', { name: 'scan.pdf 首页缩略图' })).toBeTruthy();
   expect(screen.queryByRole('img', { name: 'stamp.png 首页缩略图' })).toBeNull();
   expect(archiveDocumentService.thumbnail).toHaveBeenCalledWith('doc-pdf');
   expect(archiveDocumentService.thumbnail).not.toHaveBeenCalledWith('doc-png');

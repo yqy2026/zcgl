@@ -3,10 +3,7 @@ import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import ChangeTimelinePanel from '../ChangeTimelinePanel';
-import {
-  businessChangeService,
-  type BusinessChangeEvent,
-} from '@/services/businessChangeService';
+import { businessChangeService, type BusinessChangeEvent } from '@/services/businessChangeService';
 import { AssetOperationsError } from '@/services/assetOperationsService';
 
 vi.mock('@/services/businessChangeService', () => ({
@@ -84,9 +81,7 @@ describe('ChangeTimelinePanel', () => {
   });
 
   it('renders a scope warning instead of a hard error on PARTY_SCOPE failures', async () => {
-    mocked.mockRejectedValue(
-      new AssetOperationsError('无有效业务范围', 'PARTY_SCOPE_MISSING')
-    );
+    mocked.mockRejectedValue(new AssetOperationsError('无有效业务范围', 'PARTY_SCOPE_MISSING'));
     show();
     await waitFor(() =>
       expect(

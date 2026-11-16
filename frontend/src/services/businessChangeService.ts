@@ -48,7 +48,10 @@ export const businessChangeService = {
         }
       );
       if (!result.success || result.data == null || !Array.isArray(result.data.items)) {
-        throw new AssetOperationsError('变更记录加载失败，请重新加载。', 'CHANGE_EVENT_READ_FAILED');
+        throw new AssetOperationsError(
+          '变更记录加载失败，请重新加载。',
+          'CHANGE_EVENT_READ_FAILED'
+        );
       }
       return result.data;
     } catch (error) {

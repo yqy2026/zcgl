@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import TypeVar
+from collections.abc import Iterable, Sequence
+from typing import Any, TypeVar
 
 from sqlalchemy import Select, exists, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ from ..models.asset_unit import AssetUnit
 from ..models.project import Project
 from ..services.party_scope_resolver import EffectivePartyScope
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", bound=tuple[Any, ...])
 
 
 class AssetUnitRepository:
@@ -114,7 +114,7 @@ class AssetUnitRepository:
         db: AsyncSession,
         *,
         scope: EffectivePartyScope,
-    ) -> list[str]:
+    ) -> Sequence[str]:
         """Distinct usage_type values within scope, for list filter options."""
         if scope.scope_mode != "unrestricted" and (
             scope.error_code is not None or len(scope.effective_party_ids) == 0

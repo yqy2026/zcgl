@@ -7,7 +7,10 @@ import { archiveDocumentService, type ArchiveTargetType } from '@/services/archi
 import { AssetOperationsError } from '@/services/assetOperationsService';
 import styles from './AssetUnitsPage.module.css';
 
-function PdfThumbnail({ documentId, fileName }: {
+function PdfThumbnail({
+  documentId,
+  fileName,
+}: {
   documentId: string;
   fileName: string;
 }): React.ReactElement | null {
@@ -31,12 +34,7 @@ function PdfThumbnail({ documentId, fileName }: {
   }, [query.data]);
   if (objectUrl == null) return null;
   return (
-    <img
-      className={styles.thumbnail}
-      src={objectUrl}
-      alt={`${fileName} 首页缩略图`}
-      width={160}
-    />
+    <img className={styles.thumbnail} src={objectUrl} alt={`${fileName} 首页缩略图`} width={160} />
   );
 }
 

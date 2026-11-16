@@ -50,9 +50,7 @@ vi.mock('@/services/partyService', () => ({
 }));
 vi.mock('@/services/businessChangeService', () => ({
   businessChangeService: {
-    list: vi
-      .fn()
-      .mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
+    list: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
   },
 }));
 

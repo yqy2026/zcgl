@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
 from typing import Annotated, Literal
 
@@ -122,7 +123,7 @@ async def list_asset_unit_usage_types(
             )
         ),
     ] = None,
-) -> list[str]:
+) -> Sequence[str]:
     """Distinct scoped usage_type values for list filter options."""
     _ = _authz
     try:

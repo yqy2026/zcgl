@@ -44,9 +44,8 @@ function formatOccurredAt(occurredAt: string): string {
       timeZone: 'Asia/Shanghai',
       dateStyle: 'short',
       timeStyle: 'short',
-    }).format(
-      new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(occurredAt) ? occurredAt : occurredAt + 'Z')
-    ) + ' 北京时间'
+    }).format(new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(occurredAt) ? occurredAt : occurredAt + 'Z')) +
+    ' 北京时间'
   );
 }
 
@@ -66,9 +65,7 @@ function eventChildren(event: BusinessChangeEvent): React.ReactNode {
 }
 
 function isScopeForbidden(error: unknown): boolean {
-  return (
-    error instanceof AssetOperationsError && error.code.startsWith('PARTY_SCOPE_')
-  );
+  return error instanceof AssetOperationsError && error.code.startsWith('PARTY_SCOPE_');
 }
 
 export default function ChangeTimelinePanel({
@@ -115,7 +112,9 @@ export default function ChangeTimelinePanel({
             }))}
           />
           {(query.data?.total ?? 0) > PAGE_SIZE ? (
-            <p>共 {query.data?.total ?? 0} 条，仅展示最近 {PAGE_SIZE} 条。</p>
+            <p>
+              共 {query.data?.total ?? 0} 条，仅展示最近 {PAGE_SIZE} 条。
+            </p>
           ) : null}
         </>
       )}
