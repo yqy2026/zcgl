@@ -3,8 +3,11 @@
 import json
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import cast
 from zoneinfo import ZoneInfo
 
+import fitz
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
@@ -556,6 +559,8 @@ class ArchiveDocumentQueryService:
         actor_id: str,
         resource_type: str,
         resource_id: str,
+        audit_action: str = "download",
+        audit_action_name: str = "contract archive download",
     ) -> PropertyCertificateAttachmentDownload:
         """Audit and serve a contract-side archive file by its current storage."""
         path = self.files._resolve_path(attachment.storage_key)
@@ -563,8 +568,8 @@ class ArchiveDocumentQueryService:
         await OperationLogCRUD().create_async(
             db,
             user_id=actor_id,
-            action="download",
-            action_name="contract archive download",
+            action=audit_action,
+            action_name=audit_action_name,
             module="asset_ops",
             module_name="asset_ops",
             resource_type=resource_type,
@@ -589,6 +594,8 @@ class ArchiveDocumentQueryService:
         document_id: str,
         actor_id: str,
         scope: EffectivePartyScope,
+        audit_action: str = "download",
+        audit_action_name: str = "contract archive download",
     ) -> PropertyCertificateAttachmentDownload:
         self._require_scope(scope)
         document = await self.documents.get_document(db, document_id=document_id)
@@ -620,6 +627,8 @@ class ArchiveDocumentQueryService:
                 actor_id=actor_id,
                 resource_type=document.target_type,
                 resource_id=row.id,
+                audit_action=audit_action,
+                audit_action_name=audit_action_name,
             )
         if (
             document is not None
@@ -648,6 +657,8 @@ class ArchiveDocumentQueryService:
                 actor_id=actor_id,
                 resource_type=document.target_type,
                 resource_id=document.target_id,
+                audit_action=audit_action,
+                audit_action_name=audit_action_name,
             )
         if (
             document is not None
@@ -674,6 +685,8 @@ class ArchiveDocumentQueryService:
                 actor_id=actor_id,
                 resource_type="management_fee_statement",
                 resource_id=document.target_id,
+                audit_action=audit_action,
+                audit_action_name=audit_action_name,
             )
 
         if (
@@ -688,7 +701,41 @@ class ArchiveDocumentQueryService:
             certificate_id=document.target_id,
             attachment_id=document.attachment_id,
             user_id=actor_id,
+            audit_action=audit_action,
+            audit_action_name=audit_action_name,
+        )
+
+    async def prepare_thumbnail(
+        self,
+        db: AsyncSession,
+        *,
+        document_id: str,
+        actor_id: str,
+        scope: EffectivePartyScope,
+    ) -> PropertyCertificateAttachmentDownload:
+        """Resolve a thumbnail read through the download access chain.
+
+        Same authorization as a download, but audited as a read so panel
+        renders do not masquerade as content downloads.
+        """
+        return await self.prepare_download(
+            db,
+            document_id=document_id,
+            actor_id=actor_id,
+            scope=scope,
+            audit_action="read",
+            audit_action_name="contract archive thumbnail",
         )
 
 
 archive_document_query_service = ArchiveDocumentQueryService()
+
+
+def render_pdf_first_page(path: Path, *, max_width: int = 320) -> bytes:
+    """Render the first PDF page as a PNG thumbnail bounded by max_width."""
+    with fitz.open(path) as document:
+        page = document.load_page(0)
+        scale = min(1.0, max_width / page.rect.width)
+        matrix = fitz.Matrix(scale, scale)
+        pixmap = page.get_pixmap(matrix=matrix)
+        return cast(bytes, pixmap.tobytes("png"))

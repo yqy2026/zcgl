@@ -172,6 +172,23 @@ export const archiveDocumentService = {
       throw new AssetOperationsError('档案下载失败，请重试。', enhanced.code);
     }
   },
+  async thumbnail(documentId: string): Promise<Blob> {
+    try {
+      const result = await apiClient
+        .getAxiosInstance()
+        .get<Blob>(`/api/v1/archive/documents/${encodeURIComponent(documentId)}/thumbnail`, {
+          responseType: 'blob',
+        });
+      return result.data;
+    } catch (error) {
+      const enhanced = ApiErrorHandler.handleError(error);
+      const original = isAxiosError(error) ? error : enhanced.originalError;
+      const code = isAxiosError(original)
+        ? (original.response?.data as { error?: { code?: string } } | undefined)?.error?.code
+        : undefined;
+      throw new AssetOperationsError('缩略图加载失败。', code ?? enhanced.code);
+    }
+  },
 };
 
 async function writeDocument<T = ArchiveDocument>(url: string, data: FormData): Promise<T> {

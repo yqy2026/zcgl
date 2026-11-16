@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Alert, Table, Tag, Input, Button } from 'antd';
+import { Alert, Table, Tag, Input, Button, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import { ASSET_OPERATIONS_V5_ROUTES } from '@/constants/routes';
@@ -18,6 +18,8 @@ import { assetOperationsService, AssetOperationsError } from '@/services/assetOp
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
 
 import styles from './AssetUnitsPage.module.css';
+import ChangeTimelinePanel from './ChangeTimelinePanel';
+import OwnerPartySelect from './OwnerPartySelect';
 import { CertificateLink, CertificateControls } from './CertificateActions';
 
 const STATUS_LABELS: Record<AssetUnitListItem['rentalStatus'], string> = {
@@ -62,18 +64,35 @@ export function AssetUnitsPage(): React.ReactElement {
   const queryClient = useQueryClient();
   const [searchText, setSearchText] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [ownerPartyId, setOwnerPartyId] = useState<string | undefined>();
+  const [usageType, setUsageType] = useState<string | undefined>();
   const [pagination, setPagination] = useState({ current: 1, pageSize: PAGE_SIZE });
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedUnitId = searchParams.get('unit_id') ?? '';
 
   const unitsQuery = useQuery({
-    queryKey: ['asset-operations-units', appliedSearch, pagination.current],
+    queryKey: [
+      'asset-operations-units',
+      appliedSearch,
+      ownerPartyId ?? '',
+      usageType ?? '',
+      pagination.current,
+    ],
     queryFn: () =>
       assetOperationsService.listAssetUnits({
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
+        ownerPartyId,
+        usageType,
         offset: (pagination.current - 1) * pagination.pageSize,
         limit: pagination.pageSize,
       }),
+  });
+
+  const usageTypesQuery = useQuery({
+    queryKey: ['asset-operations-unit-usage-types'],
+    queryFn: () => assetOperationsService.listAssetUnitUsageTypes(),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   const selectedId = selectedUnitId !== '' ? selectedUnitId : (unitsQuery.data?.items[0]?.id ?? '');
@@ -161,18 +180,43 @@ export function AssetUnitsPage(): React.ReactElement {
         />
       ) : null}
 
-      <Input.Search
-        aria-label="搜索单元编号、名称或地址"
-        placeholder="搜索单元编号、名称或地址"
-        value={searchText}
-        onChange={event => setSearchText(event.target.value)}
-        onSearch={value => {
-          setAppliedSearch(value);
-          setPagination(previous => ({ ...previous, current: 1 }));
-        }}
-        allowClear
-        style={{ maxWidth: 360 }}
-      />
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Input.Search
+          aria-label="搜索单元编号、名称或地址"
+          placeholder="搜索单元编号、名称或地址"
+          value={searchText}
+          onChange={event => setSearchText(event.target.value)}
+          onSearch={value => {
+            setAppliedSearch(value);
+            setPagination(previous => ({ ...previous, current: 1 }));
+          }}
+          allowClear
+          style={{ maxWidth: 360 }}
+        />
+        <OwnerPartySelect
+          value={ownerPartyId}
+          onChange={value => {
+            setOwnerPartyId(value);
+            setPagination(previous => ({ ...previous, current: 1 }));
+          }}
+        />
+        <Select
+          aria-label="按业态筛选"
+          placeholder="全部业态"
+          allowClear
+          style={{ minWidth: 140 }}
+          value={usageType}
+          loading={usageTypesQuery.isLoading}
+          onChange={value => {
+            setUsageType(value);
+            setPagination(previous => ({ ...previous, current: 1 }));
+          }}
+          options={(usageTypesQuery.data ?? []).map(type => ({
+            value: type,
+            label: type,
+          }))}
+        />
+      </div>
 
       <div className={styles.layout}>
         <Table<AssetUnitListItem>
@@ -275,6 +319,7 @@ export function AssetUnitsPage(): React.ReactElement {
                 }
               />
               <UnitCertificates key={detail.id} unitId={detail.id} />
+              <ChangeTimelinePanel targetType="asset_unit" targetId={detail.id} />
             </div>
           )}
         </aside>

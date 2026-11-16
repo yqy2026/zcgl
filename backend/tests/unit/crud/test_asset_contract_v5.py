@@ -121,3 +121,28 @@ async def test_get_upstream_contract_reuses_role_scope() -> None:
     sql = str(statement.compile(compile_kwargs={"literal_binds": True}))
     assert "upstream_contracts.id = 'upstream-1'" in sql
     assert "upstream_contracts.operator_party_id IN ('operator-a')" in sql
+
+
+@pytest.mark.asyncio
+async def test_list_terminal_contracts_filters_by_owner_party_through_covered_units() -> None:
+    expected = TerminalContract(id="terminal-1", contract_number="TM-001")
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=_execute_results(items=[expected], total=1))
+
+    items, total = await AssetContractRepository().list_terminal(
+        db,
+        scope=EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="owner",
+            owner_party_ids=["owner-a"],
+        ),
+        owner_party_id="owner-b",
+    )
+
+    assert items == [expected]
+    assert total == 1
+    list_statement = db.execute.await_args_list[1].args[0]
+    sql = str(list_statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "terminal_contract_asset_units" in sql
+    assert "asset_units.owner_party_id = 'owner-b'" in sql

@@ -79,3 +79,10 @@
   text-align: right;
   overflow-wrap: anywhere;
 }
+
+.thumbnail {
+  display: block;
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-block-start: var(--spacing-sm);
+}

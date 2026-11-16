@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -16,6 +16,7 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
     ...actual,
     assetOperationsService: {
       listAssetUnits: vi.fn(),
+      listAssetUnitUsageTypes: vi.fn(),
       getAssetUnit: vi.fn(),
       listAssetUnitCertificates: vi.fn(),
       updateAssetUnit: vi.fn(),
@@ -25,6 +26,22 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
 });
 
 const mockedService = vi.mocked(assetOperationsService);
+vi.mock('@/services/partyService', () => ({
+  partyService: {
+    getParties: vi.fn().mockResolvedValue({
+      items: [{ id: 'owner-1', name: '城投置业' }],
+      total: 1,
+      skip: 0,
+      limit: 1000,
+      isTruncated: false,
+    }),
+  },
+}));
+vi.mock('@/services/businessChangeService', () => ({
+  businessChangeService: {
+    list: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
+  },
+}));
 
 function makeUnit(overrides: Partial<AssetUnitListItem> = {}): AssetUnitListItem {
   return {
@@ -73,6 +90,7 @@ beforeEach(() => {
   mockedService.listAssetUnits.mockReset();
   mockedService.getAssetUnit.mockReset();
   mockedService.updateAssetUnit.mockReset();
+  mockedService.listAssetUnitUsageTypes.mockReset().mockResolvedValue(['办公', '商业']);
 });
 
 afterEach(() => {
@@ -169,7 +187,7 @@ describe('AssetUnitsPage', () => {
       .mockRejectedValueOnce(new AssetOperationsError('失败', 'SERVER_ERROR'))
       .mockResolvedValue([]);
     renderPage();
-    await userEvent.click(await screen.findByRole('button', { name: '重新加载产权证' }));
+    await userEvent.click(await screen.findByText('重新加载产权证'));
     expect(await screen.findByText('当前单元尚未关联产权证。')).toBeTruthy();
   });
   it('renders units and derives the detail pane after loading', async () => {
@@ -282,6 +300,38 @@ describe('AssetUnitsPage', () => {
     const link = await screen.findByRole('link', { name: '查看考核范围' });
     expect(link.getAttribute('href')).toBe(
       `${ASSET_OPERATIONS_V5_ROUTES.OCCUPANCY_REPORTS}?year=${new Date().getFullYear()}`
+    );
+  });
+
+  it('filters units by owner party with pagination reset', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit()], total: 1 });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+
+    renderPage();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '按产权方筛选' }));
+    fireEvent.click(await screen.findByText('城投置业'));
+
+    await waitFor(() =>
+      expect(mockedService.listAssetUnits).toHaveBeenLastCalledWith(
+        expect.objectContaining({ ownerPartyId: 'owner-1', offset: 0 })
+      )
+    );
+  });
+
+  it('filters units by usage type', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({ items: [makeUnit()], total: 1 });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+
+    renderPage();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '按业态筛选' }));
+    fireEvent.click(await screen.findByText('商业'));
+
+    await waitFor(() =>
+      expect(mockedService.listAssetUnits).toHaveBeenLastCalledWith(
+        expect.objectContaining({ usageType: '商业', offset: 0 })
+      )
     );
   });
 });

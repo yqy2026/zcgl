@@ -142,3 +142,47 @@ async def test_lock_for_write_uses_one_scoped_deterministic_row_lock_contract() 
     assert "asset_units.owner_party_id IN ('owner-a')" in sql
     assert "ORDER BY asset_units.id" in sql
     assert "FOR UPDATE" in sql
+
+
+@pytest.mark.asyncio
+async def test_distinct_usage_types_applies_scope_and_orders_values() -> None:
+    rows_result = MagicMock()
+    rows_result.all.return_value = [("办公",), ("商业",), ("",)]
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=rows_result)
+
+    values = await AssetUnitRepository().distinct_usage_types(
+        db,
+        scope=EffectivePartyScope(
+            user_id="user-1",
+            source="explicit",
+            scope_mode="owner",
+            owner_party_ids=["owner-a"],
+        ),
+    )
+
+    assert values == ["办公", "商业"]
+    statement = db.execute.await_args.args[0]
+    sql = str(statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "DISTINCT" in sql
+    assert "asset_units.owner_party_id IN ('owner-a')" in sql
+    assert "ORDER BY asset_units.usage_type" in sql
+
+
+@pytest.mark.asyncio
+async def test_distinct_usage_types_fails_closed_without_effective_scope() -> None:
+    db = MagicMock()
+    db.execute = AsyncMock()
+
+    values = await AssetUnitRepository().distinct_usage_types(
+        db,
+        scope=EffectivePartyScope(
+            user_id="user-1",
+            source="none",
+            scope_mode="owner",
+            owner_party_ids=[],
+        ),
+    )
+
+    assert values == []
+    db.execute.assert_not_awaited()

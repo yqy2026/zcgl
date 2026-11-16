@@ -5,6 +5,11 @@
 
 ## 未发布
 
+- feat(asset-ops): 年度台账 Excel 导出——`GET /rent-ledgers/export` 同范围同步导出 xlsx（租金合同行×12 月应付/实收/剩余+合计，管理费业主行×状态/金额+年确认合计），台账页新增导出按钮（#109-4）。
+- feat(asset-ops): 档案面板 PDF 首页缩略图——`GET /archive/documents/{id}/thumbnail` 复用下载范围校验链，fitz 渲染首页 PNG，审计记 read 非下载；面板 PDF 条目展示缩略图（#109-3）。
+- feat(asset-ops): 单元/合同列表产权方与业态筛选——产权方选项取 owner 角色主体，业态新增 `GET /asset-units/usage-types` 去重端点，终端合同新增 `owner_party_id` 按覆盖单元匹配（#109-2）。
+- feat(asset-ops): 合同/单元详情接入变更时间线面板——消费既有 `GET /business-change-events`，动作标签+北京时间+业务摘要+原因，范围缺失降级提示（#109-1）。
+- docs(asset-ops): V4 计划完结归档（PR #108/#110 已合入）——REQ-ARC-001 转「已实现」，traceability §7 记 #109 四项生产界面增强证据，原型实现期义务对账闭环（#109）。
 - feat(asset-ops): 三表导入批次全链路（V4-3~V4-6）——模板与更新底稿导出、扫描件独立暂存池、六层结构校验+库内引用解析、更新差异逐项选择、复用正式命令的单事务原子提交与幂等回执、上海七自然日撤销（派生事实随批回滚/外部依赖阻断）、导入页与路由（REQ-IMP-001）。
 
 - docs(asset-ops): V4-0 三表模板契约裁决并升格 domain-model §4.28.1——逐月矩阵线下换算阶段行、主体全称唯一匹配不自动建、更新空白不覆盖；修正单元面积必填与缴租日命名两处草案偏差。

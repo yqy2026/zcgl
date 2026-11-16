@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+from typing import Any, TypeVar
 
 from sqlalchemy import Select, exists, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,8 @@ from sqlalchemy.sql.elements import ColumnElement
 from ..models.asset_unit import AssetUnit
 from ..models.project import Project
 from ..services.party_scope_resolver import EffectivePartyScope
+
+_T = TypeVar("_T", bound=tuple[Any, ...])
 
 
 class AssetUnitRepository:
@@ -24,10 +27,10 @@ class AssetUnitRepository:
 
     @staticmethod
     def _apply_scope(
-        statement: Select[tuple[AssetUnit]],
+        statement: Select[_T],
         *,
         scope: EffectivePartyScope,
-    ) -> Select[tuple[AssetUnit]]:
+    ) -> Select[_T]:
         if scope.scope_mode == "unrestricted":
             return statement
 
@@ -105,6 +108,23 @@ class AssetUnitRepository:
             .all()
         )
         return list(rows), total
+
+    async def distinct_usage_types(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+    ) -> Sequence[str]:
+        """Distinct usage_type values within scope, for list filter options."""
+        if scope.scope_mode != "unrestricted" and (
+            scope.error_code is not None or len(scope.effective_party_ids) == 0
+        ):
+            return []
+        statement = self._apply_scope(
+            select(AssetUnit.usage_type).distinct(), scope=scope
+        )
+        rows = await db.execute(statement.order_by(AssetUnit.usage_type))
+        return [value for (value,) in rows.all() if value]
 
     async def get(
         self,

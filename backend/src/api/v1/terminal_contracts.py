@@ -56,6 +56,9 @@ router = APIRouter(tags=["资产运营"])
 async def list_terminal_contracts(
     contract_mode: str | None = Query(None, description="合同模式过滤"),
     upstream_contract_id: str | None = Query(None, description="上游合同过滤"),
+    owner_party_id: str | None = Query(
+        None, description="产权方过滤（按覆盖单元的产权方匹配）"
+    ),
     q: str | None = Query(None, max_length=100, description="编号搜索"),
     offset: int = Query(0, ge=0, description="跳过条数"),
     limit: int = Query(50, ge=1, le=200, description="返回条数"),
@@ -85,6 +88,7 @@ async def list_terminal_contracts(
             scope=scope,
             contract_mode=contract_mode,
             upstream_contract_id=upstream_contract_id,
+            owner_party_id=owner_party_id,
             query=q,
             rent_unpaid=filter == "rent_unpaid",
             deposit_unsettled=filter == "deposit_unsettled",

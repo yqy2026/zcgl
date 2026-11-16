@@ -18,6 +18,8 @@ import type {
 } from '@/services/assetOperationsService';
 
 import styles from './ContractListsPage.module.css';
+import ChangeTimelinePanel from './ChangeTimelinePanel';
+import OwnerPartySelect from './OwnerPartySelect';
 import ContractRentPanel from './ContractRentPanel';
 import ContractDepositPanel from './ContractDepositPanel';
 import ContractScanPanel from './ContractScanPanel';
@@ -117,13 +119,20 @@ function UpstreamList(props: {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchText, setSearchText] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [ownerPartyId, setOwnerPartyId] = useState<string | undefined>();
   const [pagination, setPagination] = useState({ current: 1, pageSize: PAGE_SIZE });
 
   const listQuery = useQuery({
-    queryKey: ['asset-operations-upstream-contracts', appliedSearch, pagination.current],
+    queryKey: [
+      'asset-operations-upstream-contracts',
+      appliedSearch,
+      ownerPartyId ?? '',
+      pagination.current,
+    ],
     queryFn: () =>
       assetOperationsService.listUpstreamContracts({
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
+        ownerPartyId,
         offset: (pagination.current - 1) * pagination.pageSize,
         limit: pagination.pageSize,
       }),
@@ -170,6 +179,15 @@ function UpstreamList(props: {
   return (
     <ContractPageShell
       title={props.title}
+      extra={
+        <OwnerPartySelect
+          value={ownerPartyId}
+          onChange={value => {
+            setOwnerPartyId(value);
+            setPagination(previous => ({ ...previous, current: 1 }));
+          }}
+        />
+      }
       searchProps={{
         searchText,
         setSearchText,
@@ -240,6 +258,7 @@ function UpstreamList(props: {
               ]}
             />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <ChangeTimelinePanel targetType="upstream_contract" targetId={detail.id} />
             <ContractScanPanel kind="upstream" contractId={detail.id} />
             <ContractSupplementsPanel kind="upstream" contractId={detail.id} />
             <HandoverDocumentsPanel kind="upstream" contractId={detail.id} />
@@ -281,12 +300,14 @@ function TerminalList(props: {
   const [depositUnsettled, setDepositUnsettled] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [ownerPartyId, setOwnerPartyId] = useState<string | undefined>();
   const [pagination, setPagination] = useState({ current: 1, pageSize: PAGE_SIZE });
 
   const listQuery = useQuery({
     queryKey: [
       'asset-operations-terminal-contracts',
       appliedSearch,
+      ownerPartyId ?? '',
       pagination.current,
       rentUnpaid,
       depositUnsettled,
@@ -299,6 +320,7 @@ function TerminalList(props: {
             ? { filter: 'rent_unpaid' }
             : {}),
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
+        ownerPartyId,
         offset: (pagination.current - 1) * pagination.pageSize,
         limit: pagination.pageSize,
       }),
@@ -352,7 +374,7 @@ function TerminalList(props: {
     <ContractPageShell
       title={props.title}
       extra={
-        <div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <label>
             <input
               type="checkbox"
@@ -377,6 +399,13 @@ function TerminalList(props: {
             />
             押金未结清
           </label>
+          <OwnerPartySelect
+            value={ownerPartyId}
+            onChange={value => {
+              setOwnerPartyId(value);
+              setPagination(previous => ({ ...previous, current: 1 }));
+            }}
+          />
         </div>
       }
       searchProps={{
@@ -437,6 +466,7 @@ function TerminalList(props: {
               ]}
             />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <ChangeTimelinePanel targetType="terminal_contract" targetId={detail.id} />
             <p style={{ marginTop: 8 }}>
               <Link to={`/asset-operations/contracts/terminal/${detail.id}/actions`}>
                 终止 / 撤销 / 续签操作

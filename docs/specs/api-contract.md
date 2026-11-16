@@ -130,6 +130,7 @@
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 列表 | `GET /api/v1/asset-units` | 分页返回派生租出状态行；支持 `filter`（本切片 `all`/`non_rentable`，`vacant_rentable` 等待租出批量派生与考核/证照联动切片）、`project_id`、`owner_party_id`、`usage_type`、`q` |
+| 业态选项 | `GET /api/v1/asset-units/usage-types` | 返回当前数据范围内资产单元的去重业态（`usage_type`）清单，按字典序，用于列表筛选下拉；无有效范围 403 |
 | 详情 | `GET /api/v1/asset-units/{unit_id}` | 返回基础信息、派生租出状态/已租面积/出租率与当前有效终端合同；考核/证照状态与时间轴待联动切片 |
 | 更新基本信息 | `PATCH /api/v1/asset-units/{unit_id}` | 乐观锁必填；手工字段（名称/地址/用途/面积/在管期等），可租面积不得超建筑面积（422 `ASSET_UNIT_AREA_INVALID`），在管期变化与活跃终端覆盖冲突返回 `ASSET_UNIT_PERIOD_OVERLAP` |
 | 更新空置备注 | `PUT /api/v1/asset-units/{unit_id}/vacancy-note` | 接受原因、预计起租和期望版本 |
@@ -190,7 +191,7 @@
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 列表 | `GET /api/v1/terminal-contracts` | 分页返回派生状态与风险行；支持 `contract_mode`、`upstream_contract_id`、`q` 搜索，以及台账类 `filter`：`rent_unpaid`（转租：当前业务月及以前账期仍有剩余金额；直签：上月及以前账期产权方尚未报足；均不含 `void`）、`deposit_unsettled`（押金状态不是 `settled`）；上游关系 warning 按调用方范围派生，范围外上游按缺失处理 |
+| 列表 | `GET /api/v1/terminal-contracts` | 分页返回派生状态与风险行；支持 `contract_mode`、`upstream_contract_id`、`owner_party_id`（按覆盖单元的产权方匹配，任一覆盖单元属于该产权方即命中）、`q` 搜索，以及台账类 `filter`：`rent_unpaid`（转租：当前业务月及以前账期仍有剩余金额；直签：上月及以前账期产权方尚未报足；均不含 `void`）、`deposit_unsettled`（押金状态不是 `settled`）；上游关系 warning 按调用方范围派生，范围外上游按缺失处理 |
 | 详情 | `GET /api/v1/terminal-contracts/{contract_id}` | 返回覆盖单元、模式、上游、条款、租金阶段、版本链、生命周期事件、版本和派生风险 |
 | 更新 | `PATCH /api/v1/terminal-contracts/{contract_id}` | 乐观锁必填；可编辑绑上游（不得清空，改绑重验类型/出租方/覆盖）、`end_date`、押金，响应重算风险；`end_date` 变更同事务跟随覆盖行并重排租金义务，重叠 409 |
 | 租金阶段更正预览 / 提交 | `POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction/preview`、`POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction` | 与上游合同同一契约；已终止合同返回 409 `TERMINAL_CONTRACT_ALREADY_TERMINATED` |
@@ -208,6 +209,7 @@
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 台账矩阵 | `GET /api/v1/rent-ledgers?ledger_type=&year=` | `ledger_type` 白名单：`upstream_rent`（承租租金应付）、`terminal_rent`（转租应收与直签产权方应报到账）、`management_fee`（按对账单状态）；返回合同行、1–12 月单元格（按账期首月归列，标注非付款月与免租期）、合计和当前月 |
+| 台账导出 | `GET /api/v1/rent-ledgers/export?ledger_type=&year=` | 同一 `ledger_type` 白名单与数据范围；同步返回 xlsx 附件（`{ledger_type}-ledger-{year}.xlsx` / `management-fee-ledger-{year}.xlsx`）：租金台账为合同行 × 12 月（应付/实收/剩余）+ 年合计行，管理费台账为业主行 × 12 月（状态中文/金额）+ 年确认合计行；`year` 范围 1000–9998 |
 | 条目详情 | `GET /api/v1/rent-ledger-entries/{entry_id}` | 返回来源条款、账期起止、义务、有效登记、撤销链、操作人和 warning（如 `RENT_LEDGER_PLAN_MISMATCH`） |
 | 登记付款/到账 | `POST /api/v1/rent-ledger-entries/{entry_id}/records` | 接受记录类型、金额、日期、可选凭证、期望版本和幂等键 |
 | 撤销登记 | `POST /api/v1/rent-payment-records/{record_id}/reversal` | 原记录不可更新；原因必填；同一事务重排该合同义务，返回重算状态 |
@@ -315,6 +317,7 @@ HTTP 请求与响应细则：
 | 批量配对提交 | `POST /api/v1/archive/batch-matches` | `asset_ops:archive`；JSON `preview_token` 与 `matches[]`（staging_id / target_type / target_id，仅上游/终端合同），允许只提交子集；整批原子提交 |
 | 替换 | `POST /api/v1/archive/documents/{document_id}/replacement` | `asset_ops:archive`；multipart 字段 `file`，只接受支持目标的现行档案 ID，返回追加的新版本（201），不覆盖旧文件 |
 | 下载 | `GET /api/v1/archive/documents/{document_id}/content` | `asset_ops:read`；每请求按文档真实目标重查数据范围，返回私有附件流与 `Cache-Control: private, no-store`；历史版本可读，越权或不支持/不存在文档 404 |
+| 首页缩略图 | `GET /api/v1/archive/documents/{document_id}/thumbnail` | `asset_ops:read`；与下载同一范围校验链，返回 PDF 首页 PNG（宽约 320px）与 `Cache-Control: private, no-store`；仅 PDF 提供，非 PDF 404；审计按 `read`（contract archive thumbnail）记录，不计为下载 |
 
 完成率和矩阵默认统计当前在管物业及当前有效合同；历史档案另查。选择历史 `as_of` 时按该日时点重算：在管窗口、证照关联、合同覆盖与生命周期状态、交接事件均按 as_of 日判定；对账单按「`confirmed_at` ≤ as_of 且更正未发生」计入（更正时刻取 `supersede_management_fee_statement` 业务事件），补充协议按「`created_at` ≤ as_of < `withdrawn_at`」计入，档案版本链与事实引用只认 as_of 前绑定的文件/版本；交接事件的 `handover_status` 使用当前值（无历史状态轨迹，已记录边界）。同一产权证或合同跨多个物业时，总览按业务对象去重，各物业显示同一档案状态。文件展示元数据从 ArchiveDocument 引用的 Attachment 读取，不保存档案副本；替换追加版本并保留历史文件，不自动改写合同或已确认对账单原有扫描件引用。
 

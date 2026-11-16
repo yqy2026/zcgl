@@ -582,6 +582,26 @@ export class AssetOperationsService {
     }
   }
 
+  async listAssetUnitUsageTypes(): Promise<string[]> {
+    try {
+      const result = await apiClient.get<string[]>(`${API_BASE}/asset-units/usage-types`, {
+        cache: false,
+      });
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `获取资产单元业态选项失败: ${result.error}`,
+          extractErrorCode(result)
+        );
+      }
+      return Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
   async getAssetUnit(unitId: string): Promise<AssetUnitListItem> {
     try {
       const result = await apiClient.get<RawUnitRecord>(`${API_BASE}/asset-units/${unitId}`, {
@@ -771,6 +791,7 @@ export class AssetOperationsService {
       filter?: 'rent_unpaid' | 'deposit_unsettled';
       contractMode?: string;
       upstreamContractId?: string;
+      ownerPartyId?: string;
       q?: string;
       offset?: number;
       limit?: number;
@@ -787,6 +808,7 @@ export class AssetOperationsService {
           ...(params.upstreamContractId != null
             ? { upstream_contract_id: params.upstreamContractId }
             : {}),
+          ...(params.ownerPartyId != null ? { owner_party_id: params.ownerPartyId } : {}),
           ...(params.q != null && params.q.trim() !== '' ? { q: params.q } : {}),
           offset: params.offset ?? 0,
           limit: params.limit ?? 50,

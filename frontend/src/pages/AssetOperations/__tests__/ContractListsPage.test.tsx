@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
@@ -33,6 +33,25 @@ vi.mock('@/services/assetDepositService', () => ({
 }));
 vi.mock('@/components/System/CapabilityGuard', () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
+}));
+vi.mock('@/services/partyService', () => ({
+  partyService: {
+    getParties: vi.fn().mockResolvedValue({
+      items: [
+        { id: 'owner-1', name: '城投置业' },
+        { id: 'owner-2', name: '产业集团' },
+      ],
+      total: 2,
+      skip: 0,
+      limit: 1000,
+      isTruncated: false,
+    }),
+  },
+}));
+vi.mock('@/services/businessChangeService', () => ({
+  businessChangeService: {
+    list: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
+  },
 }));
 
 function makeUpstream(overrides: Partial<UpstreamContractListItem> = {}): UpstreamContractListItem {
@@ -182,6 +201,21 @@ describe('UpstreamContractsPage', () => {
       expect(screen.getByText('暂无上游合同，请先经录入会话登记已签合同。')).toBeTruthy();
     });
   });
+
+  it('filters upstream contracts by owner party and resets pagination', async () => {
+    mockedService.listUpstreamContracts.mockResolvedValue({ items: [], total: 0 });
+
+    renderPage(<UpstreamContractsPage />);
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '按产权方筛选' }));
+    fireEvent.click(await screen.findByText('城投置业'));
+
+    await waitFor(() =>
+      expect(mockedService.listUpstreamContracts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ ownerPartyId: 'owner-1', offset: 0 })
+      )
+    );
+  });
 });
 
 describe('TerminalContractsPage', () => {
@@ -226,6 +260,20 @@ it('filters unsettled deposits separately from unpaid rent and resets pagination
   await waitFor(() =>
     expect(mockedService.listTerminalContracts).toHaveBeenLastCalledWith(
       expect.objectContaining({ filter: 'rent_unpaid' })
+    )
+  );
+});
+
+it('filters terminal contracts by owner party through covered units', async () => {
+  mockedService.listTerminalContracts.mockResolvedValue({ items: [], total: 0 });
+  renderPage(<TerminalContractsPage />);
+
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: '按产权方筛选' }));
+  fireEvent.click(await screen.findByText('产业集团'));
+
+  await waitFor(() =>
+    expect(mockedService.listTerminalContracts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ ownerPartyId: 'owner-2', offset: 0 })
     )
   );
 });
