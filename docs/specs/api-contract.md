@@ -348,8 +348,10 @@ V4-1 产权证附件的公开入口统一为 `/archive/documents`，原 `/proper
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 下载新增模板 | `GET /api/v1/imports/templates/create` | 返回版本化三表模板 |
-| 导出更新底稿 | `POST /api/v1/imports/templates/update` | 生成当前授权范围内的异步导出任务 |
+| 下载新增模板 | `GET /api/v1/imports/templates/create` | 返回版本化三表模板（含隐藏 template_version 行与填写说明页） |
+| 导出更新底稿 | `POST /api/v1/imports/templates/update` | 同步导出当前授权范围内对象的三表底稿（xlsx）；阶段列留空——阶段变更不走导入 |
+| 暂存扫描件 | `POST /api/v1/import-batches/scan-staging` | 多文件上传，落入操作者专属导入暂存池（归属 `import-staging-<actor>`），返回文件名清单 |
+| 查看暂存 | `GET /api/v1/import-batches/scan-staging` | 返回当前操作者暂存池文件名清单 |
 | 上传批次 | `POST /api/v1/import-batches` | 接受 `mode` 和文件，返回批次 |
 | 校验状态 | `GET /api/v1/import-batches/{batch_id}` | 返回表级数量、错误、提醒和差异摘要 |
 | 差异列表 | `GET /api/v1/import-batches/{batch_id}/changes` | 分页返回现值、新值、影响和可选择状态 |

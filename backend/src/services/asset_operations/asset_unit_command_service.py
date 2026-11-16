@@ -98,6 +98,7 @@ class AssetUnitCommandService:
         request: AssetUnitUpdate,
         actor_id: str,
         scope: EffectivePartyScope,
+        auto_commit: bool = True,
     ) -> AssetUnitResponse:
         unit = await self.repository.get(
             db,
@@ -192,7 +193,8 @@ class AssetUnitCommandService:
                 for field in changed_fields
             },
         )
-        await db.commit()
+        if auto_commit:
+            await db.commit()
         return await self._response(db, unit, today=self.business_today())
 
     async def update_vacancy_note(

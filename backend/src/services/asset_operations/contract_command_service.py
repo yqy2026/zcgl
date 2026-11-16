@@ -266,6 +266,7 @@ class AssetContractCommandService:
         idempotency_key: str,
         attachment_owner_id: str,
         lifecycle_event: ContractLifecycleEvent | None = None,
+        auto_commit: bool = True,
     ) -> UpstreamContractResponse:
         self._require_effective_scope(scope)
         self._validate_upstream_fields(
@@ -380,6 +381,7 @@ class AssetContractCommandService:
             request_fingerprint=fingerprint,
             attachment_owner_id=attachment_owner_id,
             lifecycle_event=lifecycle_event,
+            auto_commit=auto_commit,
         )
 
     async def create_terminal(
@@ -392,6 +394,7 @@ class AssetContractCommandService:
         idempotency_key: str,
         attachment_owner_id: str,
         lifecycle_event: ContractLifecycleEvent | None = None,
+        auto_commit: bool = True,
     ) -> TerminalContractResponse:
         self._require_effective_scope(scope)
         fingerprint = self._fingerprint("create_terminal", request)
@@ -511,6 +514,7 @@ class AssetContractCommandService:
             request_fingerprint=fingerprint,
             attachment_owner_id=attachment_owner_id,
             lifecycle_event=lifecycle_event,
+            auto_commit=auto_commit,
         )
 
     async def update_upstream(
@@ -521,6 +525,7 @@ class AssetContractCommandService:
         request: UpstreamContractUpdate,
         actor_id: str,
         scope: EffectivePartyScope,
+        auto_commit: bool = True,
     ) -> UpstreamContractResponse:
         """Apply editable-term changes under optimistic locking."""
         self._require_effective_scope(scope)
@@ -637,16 +642,19 @@ class AssetContractCommandService:
                 correlation_id=correlation_id,
             )
             await db.flush()
-            await db.commit()
+            if auto_commit:
+                await db.commit()
         except StaleDataError as exc:
-            await db.rollback()
+            if auto_commit:
+                await db.rollback()
             raise AssetOperationsVersionConflictError(
                 unit_id=contract_id,
                 expected_version=request.expected_version,
                 actual_version=None,
             ) from exc
         except Exception:
-            await db.rollback()
+            if auto_commit:
+                await db.rollback()
             raise
         upstream_schedules = await self.repository.list_rent_schedules(
             db,
@@ -708,6 +716,7 @@ class AssetContractCommandService:
         request: TerminalContractUpdate,
         actor_id: str,
         scope: EffectivePartyScope,
+        auto_commit: bool = True,
     ) -> TerminalContractResponse:
         """Apply editable-term changes and recompute derived risks."""
         self._require_effective_scope(scope)
@@ -826,16 +835,19 @@ class AssetContractCommandService:
                 correlation_id=correlation_id,
             )
             await db.flush()
-            await db.commit()
+            if auto_commit:
+                await db.commit()
         except StaleDataError as exc:
-            await db.rollback()
+            if auto_commit:
+                await db.rollback()
             raise AssetOperationsVersionConflictError(
                 unit_id=contract_id,
                 expected_version=request.expected_version,
                 actual_version=None,
             ) from exc
         except IntegrityError as exc:
-            await db.rollback()
+            if auto_commit:
+                await db.rollback()
             if self._constraint_name(exc) == (
                 "ex_terminal_contract_asset_units_unit_period"
             ):
@@ -845,7 +857,8 @@ class AssetContractCommandService:
                 ) from exc
             raise
         except Exception:
-            await db.rollback()
+            if auto_commit:
+                await db.rollback()
             raise
         if upstream is None and contract.upstream_contract_id is not None:
             upstream = await self.repository.get_upstream(
@@ -1134,6 +1147,7 @@ class AssetContractCommandService:
         request_fingerprint: str,
         attachment_owner_id: str,
         lifecycle_event: ContractLifecycleEvent | None = None,
+        auto_commit: bool = True,
     ) -> UpstreamContractResponse:
         try:
             await self.repository.add_upstream(
@@ -1167,9 +1181,12 @@ class AssetContractCommandService:
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )
-            await db.commit()
+            if auto_commit:
+                await db.commit()
             return response
         except IntegrityError as exc:
+            if not auto_commit:
+                raise
             await db.rollback()
             return await self._raise_integrity_error(
                 db,
@@ -1181,7 +1198,8 @@ class AssetContractCommandService:
                 contract_number=contract.contract_number,
             )
         except Exception:
-            await db.rollback()
+            if auto_commit:
+                await db.rollback()
             raise
 
     async def _persist_terminal(
@@ -1197,6 +1215,7 @@ class AssetContractCommandService:
         request_fingerprint: str,
         attachment_owner_id: str,
         lifecycle_event: ContractLifecycleEvent | None = None,
+        auto_commit: bool = True,
     ) -> TerminalContractResponse:
         try:
             await self.repository.add_terminal(
@@ -1230,9 +1249,12 @@ class AssetContractCommandService:
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )
-            await db.commit()
+            if auto_commit:
+                await db.commit()
             return response
         except IntegrityError as exc:
+            if not auto_commit:
+                raise
             await db.rollback()
             constraint_name = self._constraint_name(exc)
             if constraint_name == "ex_terminal_contract_asset_units_unit_period":
@@ -1256,7 +1278,8 @@ class AssetContractCommandService:
                 contract_number=contract.contract_number,
             )
         except Exception:
-            await db.rollback()
+            if auto_commit:
+                await db.rollback()
             raise
 
     async def _record_confirmation(

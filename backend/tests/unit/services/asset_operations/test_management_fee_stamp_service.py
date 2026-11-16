@@ -187,6 +187,25 @@ async def test_attachment_migration_matches_model_owner_check(monkeypatch):
         if isinstance(item, CheckConstraint) and item.name == "ck_attachment_owner_type"
     )
     operations.create_check_constraint.assert_called_once_with(
+        "ck_attachment_owner_type",
+        "attachments",
+        "owner_type IN ('asset', 'contract', 'property_certificate', "
+        "'payment_flow', 'management_fee_statement')",
+    )
+
+    # 2026-11-15 导入切片扩展 owner_type/file_type，最新约束以 20261115b 为准。
+    followup_path = (
+        Path(__file__).resolve().parents[4]
+        / "alembic/versions/20261115b_import_attachment_types.py"
+    )
+    followup_spec = spec_from_file_location("import_attachment_migration",
+                                            followup_path)
+    followup = module_from_spec(followup_spec)
+    followup_spec.loader.exec_module(followup)
+    followup_ops = MagicMock()
+    monkeypatch.setattr(followup, "op", followup_ops)
+    followup.upgrade()
+    followup_ops.create_check_constraint.assert_any_call(
         "ck_attachment_owner_type", "attachments", expected
     )
     assert migration.down_revision == "20261029_fee_deferrals"

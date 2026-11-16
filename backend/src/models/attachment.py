@@ -17,11 +17,11 @@ class Attachment(Base):
     __tablename__ = "attachments"
     __table_args__ = (
         CheckConstraint(
-            "owner_type IN ('asset', 'contract', 'property_certificate', 'payment_flow', 'management_fee_statement')",
+            "owner_type IN ('asset', 'contract', 'property_certificate', 'payment_flow', 'management_fee_statement', 'import_batch')",
             name="ck_attachment_owner_type",
         ),
         CheckConstraint(
-            "file_type IN ('pdf', 'jpg', 'jpeg', 'png')",
+            "file_type IN ('pdf', 'jpg', 'jpeg', 'png', 'xlsx')",
             name="ck_attachment_file_type",
         ),
         CheckConstraint(

@@ -16,6 +16,12 @@ from ..services.party_scope_resolver import EffectivePartyScope
 class AssetUnitRepository:
     """Read asset units through an explicit, fail-closed Party scope."""
 
+    async def add(self, db: AsyncSession, *, unit: AssetUnit) -> AssetUnit:
+        """Insert a new unit in the caller's open transaction."""
+        db.add(unit)
+        await db.flush()
+        return unit
+
     @staticmethod
     def _apply_scope(
         statement: Select[tuple[AssetUnit]],

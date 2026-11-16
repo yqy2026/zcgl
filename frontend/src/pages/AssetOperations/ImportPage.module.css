@@ -1,0 +1,45 @@
+.importPage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--spacing-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.modeSection {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.uploadSection,
+.batchSection {
+  padding: var(--spacing-md);
+  border: 0.0625rem solid var(--color-border, #d9d9d9);
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  background: var(--color-surface, #fff);
+}
+
+.hintText {
+  margin: 0;
+  color: var(--color-text-secondary, #6e757f);
+  font-size: var(--font-size-sm, 0.8125rem);
+}
+
+.revertBox {
+  display: flex;
+  gap: var(--spacing-sm);
+  max-width: 30rem;
+}
