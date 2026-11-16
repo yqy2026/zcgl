@@ -248,6 +248,8 @@ async def test_statement_download_serves_through_statement_scope(monkeypatch):
         actor_id="actor",
         resource_type="management_fee_statement",
         resource_id="st",
+        audit_action="download",
+        audit_action_name="contract archive download",
     )
 
 
