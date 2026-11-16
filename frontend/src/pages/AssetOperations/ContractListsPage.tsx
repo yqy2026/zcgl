@@ -18,6 +18,7 @@ import type {
 } from '@/services/assetOperationsService';
 
 import styles from './ContractListsPage.module.css';
+import ChangeTimelinePanel from './ChangeTimelinePanel';
 import ContractRentPanel from './ContractRentPanel';
 import ContractDepositPanel from './ContractDepositPanel';
 import ContractScanPanel from './ContractScanPanel';
@@ -240,6 +241,7 @@ function UpstreamList(props: {
               ]}
             />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <ChangeTimelinePanel targetType="upstream_contract" targetId={detail.id} />
             <ContractScanPanel kind="upstream" contractId={detail.id} />
             <ContractSupplementsPanel kind="upstream" contractId={detail.id} />
             <HandoverDocumentsPanel kind="upstream" contractId={detail.id} />
@@ -437,6 +439,7 @@ function TerminalList(props: {
               ]}
             />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            <ChangeTimelinePanel targetType="terminal_contract" targetId={detail.id} />
             <p style={{ marginTop: 8 }}>
               <Link to={`/asset-operations/contracts/terminal/${detail.id}/actions`}>
                 终止 / 撤销 / 续签操作

@@ -18,6 +18,7 @@ import { assetOperationsService, AssetOperationsError } from '@/services/assetOp
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
 
 import styles from './AssetUnitsPage.module.css';
+import ChangeTimelinePanel from './ChangeTimelinePanel';
 import { CertificateLink, CertificateControls } from './CertificateActions';
 
 const STATUS_LABELS: Record<AssetUnitListItem['rentalStatus'], string> = {
@@ -275,6 +276,7 @@ export function AssetUnitsPage(): React.ReactElement {
                 }
               />
               <UnitCertificates key={detail.id} unitId={detail.id} />
+              <ChangeTimelinePanel targetType="asset_unit" targetId={detail.id} />
             </div>
           )}
         </aside>
