@@ -206,6 +206,7 @@ class AssetContractRepository:
         scope: EffectivePartyScope,
         contract_mode: str | None = None,
         upstream_contract_id: str | None = None,
+        owner_party_id: str | None = None,
         query: str | None = None,
         offset: int = 0,
         limit: int = 50,
@@ -221,6 +222,22 @@ class AssetContractRepository:
             statement = statement.where(TerminalContract.id.in_(contract_ids))
         if contract_mode is not None:
             statement = statement.where(TerminalContract.contract_mode == contract_mode)
+        if owner_party_id is not None:
+            statement = statement.where(
+                exists(
+                    select(1)
+                    .select_from(TerminalContractAssetUnit)
+                    .join(
+                        AssetUnit,
+                        AssetUnit.id == TerminalContractAssetUnit.asset_unit_id,
+                    )
+                    .where(
+                        TerminalContractAssetUnit.terminal_contract_id
+                        == TerminalContract.id,
+                        AssetUnit.owner_party_id == owner_party_id,
+                    )
+                )
+            )
         if upstream_contract_id is not None:
             statement = statement.where(
                 TerminalContract.upstream_contract_id == upstream_contract_id

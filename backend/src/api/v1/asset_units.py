@@ -105,6 +105,39 @@ async def list_asset_units(
 
 
 @router.get(
+    "/asset-units/usage-types",
+    response_model=list[str],
+    summary="查询资产单元业态选项",
+)
+async def list_asset_unit_usage_types(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="asset_ops",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> list[str]:
+    """Distinct scoped usage_type values for list filter options."""
+    _ = _authz
+    try:
+        actor_id = str(current_user.id)
+        scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+        return await asset_operations_query_service.list_asset_unit_usage_types(
+            db, scope=scope
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询资产单元业态选项失败", original_error=exc) from exc
+
+
+@router.get(
     "/asset-units/{unit_id}",
     response_model=AssetUnitDetail,
     summary="查询资产单元详情",

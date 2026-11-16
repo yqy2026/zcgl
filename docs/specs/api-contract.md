@@ -130,6 +130,7 @@
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 列表 | `GET /api/v1/asset-units` | 分页返回派生租出状态行；支持 `filter`（本切片 `all`/`non_rentable`，`vacant_rentable` 等待租出批量派生与考核/证照联动切片）、`project_id`、`owner_party_id`、`usage_type`、`q` |
+| 业态选项 | `GET /api/v1/asset-units/usage-types` | 返回当前数据范围内资产单元的去重业态（`usage_type`）清单，按字典序，用于列表筛选下拉；无有效范围 403 |
 | 详情 | `GET /api/v1/asset-units/{unit_id}` | 返回基础信息、派生租出状态/已租面积/出租率与当前有效终端合同；考核/证照状态与时间轴待联动切片 |
 | 更新基本信息 | `PATCH /api/v1/asset-units/{unit_id}` | 乐观锁必填；手工字段（名称/地址/用途/面积/在管期等），可租面积不得超建筑面积（422 `ASSET_UNIT_AREA_INVALID`），在管期变化与活跃终端覆盖冲突返回 `ASSET_UNIT_PERIOD_OVERLAP` |
 | 更新空置备注 | `PUT /api/v1/asset-units/{unit_id}/vacancy-note` | 接受原因、预计起租和期望版本 |
@@ -190,7 +191,7 @@
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 列表 | `GET /api/v1/terminal-contracts` | 分页返回派生状态与风险行；支持 `contract_mode`、`upstream_contract_id`、`q` 搜索，以及台账类 `filter`：`rent_unpaid`（转租：当前业务月及以前账期仍有剩余金额；直签：上月及以前账期产权方尚未报足；均不含 `void`）、`deposit_unsettled`（押金状态不是 `settled`）；上游关系 warning 按调用方范围派生，范围外上游按缺失处理 |
+| 列表 | `GET /api/v1/terminal-contracts` | 分页返回派生状态与风险行；支持 `contract_mode`、`upstream_contract_id`、`owner_party_id`（按覆盖单元的产权方匹配，任一覆盖单元属于该产权方即命中）、`q` 搜索，以及台账类 `filter`：`rent_unpaid`（转租：当前业务月及以前账期仍有剩余金额；直签：上月及以前账期产权方尚未报足；均不含 `void`）、`deposit_unsettled`（押金状态不是 `settled`）；上游关系 warning 按调用方范围派生，范围外上游按缺失处理 |
 | 详情 | `GET /api/v1/terminal-contracts/{contract_id}` | 返回覆盖单元、模式、上游、条款、租金阶段、版本链、生命周期事件、版本和派生风险 |
 | 更新 | `PATCH /api/v1/terminal-contracts/{contract_id}` | 乐观锁必填；可编辑绑上游（不得清空，改绑重验类型/出租方/覆盖）、`end_date`、押金，响应重算风险；`end_date` 变更同事务跟随覆盖行并重排租金义务，重叠 409 |
 | 租金阶段更正预览 / 提交 | `POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction/preview`、`POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction` | 与上游合同同一契约；已终止合同返回 409 `TERMINAL_CONTRACT_ALREADY_TERMINATED` |

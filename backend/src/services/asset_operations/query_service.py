@@ -70,6 +70,13 @@ class AssetUnitReader(Protocol):
         for_update: bool = False,
     ) -> AssetUnit | None: ...
 
+    async def distinct_usage_types(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+    ) -> list[str]: ...
+
 
 class AssetContractReader(Protocol):
     async def list_upstream(
@@ -108,6 +115,7 @@ class AssetContractReader(Protocol):
         scope: EffectivePartyScope,
         contract_mode: str | None = None,
         upstream_contract_id: str | None = None,
+        owner_party_id: str | None = None,
         query: str | None = None,
         offset: int = 0,
         limit: int = 50,
@@ -247,6 +255,17 @@ class AssetOperationsQueryService:
             self._unit_detail(unit, rented=unit.id in rented_ids) for unit in units
         ]
         return items, total
+
+    async def list_asset_unit_usage_types(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+    ) -> list[str]:
+        self._require_effective_scope(scope)
+        return await self.asset_unit_repository.distinct_usage_types(
+            db, scope=scope
+        )
 
     async def get_asset_unit_detail(
         self,
@@ -452,6 +471,7 @@ class AssetOperationsQueryService:
         scope: EffectivePartyScope,
         contract_mode: str | None = None,
         upstream_contract_id: str | None = None,
+        owner_party_id: str | None = None,
         query: str | None = None,
         offset: int = 0,
         limit: int = 50,
@@ -490,6 +510,7 @@ class AssetOperationsQueryService:
             scope=scope,
             contract_mode=contract_mode,
             upstream_contract_id=upstream_contract_id,
+            owner_party_id=owner_party_id,
             query=query,
             offset=offset,
             limit=limit,
