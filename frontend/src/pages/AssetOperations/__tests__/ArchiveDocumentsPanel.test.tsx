@@ -122,7 +122,7 @@ it('shows the contract scan empty state for contract targets', async () => {
   await screen.findByText('此合同暂无已归档扫描件。');
   expect(archiveDocumentService.list).toHaveBeenCalledWith('c1', 'upstream_contract');
 });
-	it('shows the fee stamp empty state without upload controls', async () => {
+it('shows the fee stamp empty state without upload controls', async () => {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <ArchiveDocumentsPanel targetId="st1" targetType="management_fee_statement" readOnly />

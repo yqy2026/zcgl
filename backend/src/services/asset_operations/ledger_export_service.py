@@ -106,7 +106,13 @@ def build_management_fee_workbook(view: ManagementFeeMatrixView) -> bytes:
                 if month is not None and month.fee_amount is not None
                 else None
             )
-            if month is not None and month.fee_amount is not None:
+            # 合计行只累计已确认金额，与「年确认合计」同口径；
+            # 收租中/待盖章月的金额属试算，不进合计（同前端口径）。
+            if (
+                month is not None
+                and month.status == "confirmed"
+                and month.fee_amount is not None
+            ):
                 month_amount_totals[month_number - 1] += month.fee_amount
             values.extend([status, amount])
         values.append(row.total_confirmed_amount)

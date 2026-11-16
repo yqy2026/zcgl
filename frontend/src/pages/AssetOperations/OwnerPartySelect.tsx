@@ -13,6 +13,7 @@ export default function OwnerPartySelect({
 }): React.ReactElement {
   const query = useQuery({
     queryKey: ['owner-party-options'],
+    // owner 主体超过 1000 时选项静默截断（接口 limit 上限），当前规模无碍。
     queryFn: () => partyService.getParties({ business_role: 'owner', limit: 1000 }),
     staleTime: 5 * 60 * 1000,
     retry: false,

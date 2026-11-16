@@ -92,7 +92,9 @@ def test_management_fee_export_uses_business_status_labels():
                     ManagementFeeMonthView(
                         month=1, status="confirmed", fee_amount=Decimal("88.5")
                     ),
-                    ManagementFeeMonthView(month=2, status="pending_stamp"),
+                    ManagementFeeMonthView(
+                        month=2, status="pending_stamp", fee_amount=Decimal("12")
+                    ),
                 ],
                 total_confirmed_amount=Decimal("88.5"),
             )
@@ -105,11 +107,32 @@ def test_management_fee_export_uses_business_status_labels():
     row = [cell.value for cell in sheet[2]]
     assert row[0] == "城投置业"
     assert row[1:3] == ["已确认", Decimal("88.5")]
-    assert row[3:5] == ["待盖章", None]
+    assert row[3:5] == ["待盖章", Decimal("12")]
     assert row[-1] == Decimal("88.5")
 
+    # 合计行与「年确认合计」同口径：待盖章月的试算金额不进合计。
     totals = [cell.value for cell in sheet[3]]
     assert totals[1:3] == [None, Decimal("88.5")]
+    assert totals[3:5] == [None, Decimal("0")]
+
+
+_PAGELESS_PDF = (
+    b"%PDF-1.4\n"
+    b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+    b"2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\n"
+    b"trailer<</Size 3/Root 1 0 R>>\n%%EOF"
+)
+
+
+def test_render_pdf_first_page_fails_loud_on_pageless_pdf(tmp_path):
+    from src.services.asset_operations.archive_document_query_service import (
+        render_pdf_first_page,
+    )
+
+    empty_path = tmp_path / "empty.pdf"
+    empty_path.write_bytes(_PAGELESS_PDF)
+    with pytest.raises(ValueError):
+        render_pdf_first_page(empty_path)
 
 
 def load_workbook_from_bytes(content: bytes):

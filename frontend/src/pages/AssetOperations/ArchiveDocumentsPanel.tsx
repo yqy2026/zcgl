@@ -17,12 +17,18 @@ function PdfThumbnail({ documentId, fileName }: {
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-  const objectUrl = query.data == null ? null : URL.createObjectURL(query.data);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   useEffect(() => {
+    if (query.data == null) {
+      setObjectUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(query.data);
+    setObjectUrl(url);
     return () => {
-      if (objectUrl != null) URL.revokeObjectURL(objectUrl);
+      URL.revokeObjectURL(url);
     };
-  }, [objectUrl]);
+  }, [query.data]);
   if (objectUrl == null) return null;
   return (
     <img
