@@ -263,9 +263,7 @@ class AssetOperationsQueryService:
         scope: EffectivePartyScope,
     ) -> list[str]:
         self._require_effective_scope(scope)
-        return await self.asset_unit_repository.distinct_usage_types(
-            db, scope=scope
-        )
+        return await self.asset_unit_repository.distinct_usage_types(db, scope=scope)
 
     async def get_asset_unit_detail(
         self,

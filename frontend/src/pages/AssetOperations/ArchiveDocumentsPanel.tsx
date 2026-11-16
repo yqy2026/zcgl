@@ -32,10 +32,10 @@ function PdfThumbnail({ documentId, fileName }: {
   if (objectUrl == null) return null;
   return (
     <img
+      className={styles.thumbnail}
       src={objectUrl}
       alt={`${fileName} 首页缩略图`}
       width={160}
-      style={{ display: 'block', border: '1px solid #d9d9d9', borderRadius: 4, marginTop: 8 }}
     />
   );
 }
