@@ -8,7 +8,6 @@
 
 | 方案 | 状态 |
 |------|------|
-| [资产运营 v5 V4：档案与导入](2026-11-02-asset-operations-v5-v4.md) | 🔄 进行中（当前档案矩阵、产权证/补充协议档案已接入，其他维护及导入待实施） |
 | [anydoc 办公文档解析引入评估](2026-08-08-anydoc-office-doc-parsing.md) | ⏸ 搁置（备选技术方案，无对应活跃 REQ） |
 
 历史方案见 [`docs/archive/backend-plans/`](../archive/backend-plans/README.md)。

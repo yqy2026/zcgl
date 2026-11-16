@@ -4,6 +4,7 @@
 
 | 文档 | 主题 |
 |------|------|
+| [2026-11-02-asset-operations-v5-v4.md](./2026-11-02-asset-operations-v5-v4.md) | 资产运营 v5 V4 档案与导入实施完结（PR #108/#110，2026-11-16 归档；#109 原型对账生产界面增强同日收口） |
 | [2026-10-30-asset-operations-v5-v3.md](./2026-10-30-asset-operations-v5-v3.md) | V3 考核范围与月度报送实施完结，2026-11-02 功能验收走查 14/14，PR #104 |
 | [2026-10-27-asset-operations-v5-v2.md](./2026-10-27-asset-operations-v5-v2.md) | 资产运营 v5 V2 租金、押金与委托管理费实施计划（✅ PR-0 #97 / PR-A #98 / PR-B #99 / PR-C #100 全部合入，2026-10-30 验收） |
 | [2026-10-23-asset-operations-v5-v1.md](./2026-10-23-asset-operations-v5-v1.md) | 资产运营 v5 V1 本次交付切片与 PR #95 门禁收口（完整需求验收及部署演练另行跟进） |
