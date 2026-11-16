@@ -332,6 +332,34 @@ export default function LedgersPage(): React.ReactElement {
   const selected = params.get('ledger_type');
   const ledgerType =
     selected === 'management_fee' || selected === 'upstream_rent' ? selected : 'terminal_rent';
+  const yearValid = /^[1-9][0-9]{3}$/.test(yearText) && Number(yearText) <= 9998;
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const exportLedger = (): void => {
+    setExportError(null);
+    setExporting(true);
+    assetLedgerService
+      .exportLedger(ledgerType, Number(yearText))
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download =
+          ledgerType === 'management_fee'
+            ? `management-fee-ledger-${yearText}.xlsx`
+            : `${ledgerType}-ledger-${yearText}.xlsx`;
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+      })
+      .catch((error: unknown) => {
+        setExportError(error instanceof Error ? error.message : '台账导出失败，请重试。');
+      })
+      .finally(() => {
+        setExporting(false);
+      });
+  };
   return (
     <div className={styles.page}>
       <h1>{ledgerType === 'management_fee' ? '委托管理费台账' : '租金台账'}</h1>
@@ -362,10 +390,12 @@ export default function LedgersPage(): React.ReactElement {
             onChange={event => setYearText(event.target.value)}
           />
         </label>
+        <Button loading={exporting} disabled={!yearValid || exporting} onClick={exportLedger}>
+          导出台账
+        </Button>
       </div>
-      {!/^[1-9][0-9]{3}$/.test(yearText) || Number(yearText) > 9998 ? (
-        <Alert type="warning" title="请输入 1000 至 9998 的年份" />
-      ) : null}
+      {exportError != null ? <Alert type="error" title={exportError} /> : null}
+      {!yearValid ? <Alert type="warning" title="请输入 1000 至 9998 的年份" /> : null}
       {ledgerType === 'management_fee' ? (
         <ManagementFeeLedger yearText={yearText} />
       ) : (

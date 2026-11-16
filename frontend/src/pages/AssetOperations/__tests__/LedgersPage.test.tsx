@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -17,13 +17,25 @@ vi.mock('@/services/managementFeeService', () => ({
 
 vi.mock('@/services/assetLedgerService', async original => ({
   ...(await original<typeof import('@/services/assetLedgerService')>()),
-  assetLedgerService: { getMatrix: vi.fn(), getEntry: vi.fn(), record: vi.fn(), reverse: vi.fn() },
+  assetLedgerService: {
+    getMatrix: vi.fn(),
+    getEntry: vi.fn(),
+    record: vi.fn(),
+    reverse: vi.fn(),
+    exportLedger: vi.fn(),
+  },
 }));
 vi.mock('@/components/System/CapabilityGuard', () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
+beforeAll(() => {
+  if (typeof URL.createObjectURL !== 'function') {
+    URL.createObjectURL = vi.fn(() => 'blob:mock-export');
+    URL.revokeObjectURL = vi.fn();
+  }
+});
 function show(path = '/'): void {
   render(
     <QueryClientProvider
@@ -95,6 +107,34 @@ it('renders a genuine empty ledger with a contract entry link', async () => {
   show();
   expect(await screen.findByText('本年暂无租金义务')).toBeVisible();
   expect(screen.getByRole('link', { name: '核对合同租金阶段' })).toBeVisible();
+});
+
+it('exports the current ledger selection and surfaces export failures', async () => {
+  vi.mocked(assetLedgerService.getMatrix).mockResolvedValue({
+    ledger_type: 'terminal_rent',
+    year: 2026,
+    current_month: 10,
+    rows: [],
+    total_due_amount: 0,
+    total_paid_amount: 0,
+    total_remaining_amount: 0,
+  });
+  vi.mocked(assetLedgerService.exportLedger).mockResolvedValue(
+    new Blob(['xlsx'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  );
+  show('/asset-operations/ledgers?ledger_type=upstream_rent');
+  await screen.findByText('本年暂无租金义务');
+
+  await userEvent.setup().click(screen.getByRole('button', { name: '导出台账' }));
+  await waitFor(() =>
+    expect(assetLedgerService.exportLedger).toHaveBeenCalledWith('upstream_rent', 2026)
+  );
+
+  vi.mocked(assetLedgerService.exportLedger).mockRejectedValue(
+    new AssetOperationsError('导出失败', 'SERVER_ERROR')
+  );
+  await userEvent.setup().click(screen.getByRole('button', { name: '导出台账' }));
+  expect(await screen.findByText('导出失败')).toBeVisible();
 });
 
 it('defaults a partial receipt to the remaining amount and requires a reversal reason', async () => {

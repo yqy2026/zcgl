@@ -209,6 +209,7 @@
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 台账矩阵 | `GET /api/v1/rent-ledgers?ledger_type=&year=` | `ledger_type` 白名单：`upstream_rent`（承租租金应付）、`terminal_rent`（转租应收与直签产权方应报到账）、`management_fee`（按对账单状态）；返回合同行、1–12 月单元格（按账期首月归列，标注非付款月与免租期）、合计和当前月 |
+| 台账导出 | `GET /api/v1/rent-ledgers/export?ledger_type=&year=` | 同一 `ledger_type` 白名单与数据范围；同步返回 xlsx 附件（`{ledger_type}-ledger-{year}.xlsx` / `management-fee-ledger-{year}.xlsx`）：租金台账为合同行 × 12 月（应付/实收/剩余）+ 年合计行，管理费台账为业主行 × 12 月（状态中文/金额）+ 年确认合计行；`year` 范围 1000–9998 |
 | 条目详情 | `GET /api/v1/rent-ledger-entries/{entry_id}` | 返回来源条款、账期起止、义务、有效登记、撤销链、操作人和 warning（如 `RENT_LEDGER_PLAN_MISMATCH`） |
 | 登记付款/到账 | `POST /api/v1/rent-ledger-entries/{entry_id}/records` | 接受记录类型、金额、日期、可选凭证、期望版本和幂等键 |
 | 撤销登记 | `POST /api/v1/rent-payment-records/{record_id}/reversal` | 原记录不可更新；原因必填；同一事务重排该合同义务，返回重算状态 |

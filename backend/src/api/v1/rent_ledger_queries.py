@@ -3,6 +3,7 @@
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.router_registry import route_registry
@@ -12,6 +13,11 @@ from ...models.auth import User
 from ...schemas.management_fee_matrix import ManagementFeeMatrixView
 from ...schemas.rent_queries import RentEntryView, RentMatrixView
 from ...services.asset_operations.errors import AssetOperationsPermissionDeniedError
+from ...services.asset_operations.ledger_export_service import (
+    XLSX_MEDIA_TYPE,
+    build_management_fee_workbook,
+    build_rent_ledger_workbook,
+)
 from ...services.asset_operations.management_fee_matrix_service import (
     management_fee_matrix_service,
 )
@@ -43,6 +49,36 @@ async def get_rent_ledger(
         return await management_fee_matrix_service.matrix(db, scope=scope, year=year)
     return await rent_ledger_query_service.matrix(
         db, scope=scope, ledger_type=ledger_type, year=year
+    )
+
+
+@router.get("/rent-ledgers/export")
+async def export_rent_ledger(
+    ledger_type: Literal["upstream_rent", "terminal_rent", "management_fee"] = Query(
+        "terminal_rent"
+    ),
+    year: int = Query(..., ge=1000, le=9998),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[AuthzContext | None, Depends(_read_guard)] = None,
+) -> Response:
+    scope = await party_scope_resolver.resolve(db, user_id=str(current_user.id))
+    if ledger_type == "management_fee":
+        fee_view = await management_fee_matrix_service.matrix(
+            db, scope=scope, year=year
+        )
+        content = build_management_fee_workbook(fee_view)
+        filename = f"management-fee-ledger-{year}.xlsx"
+    else:
+        rent_view = await rent_ledger_query_service.matrix(
+            db, scope=scope, ledger_type=ledger_type, year=year
+        )
+        content = build_rent_ledger_workbook(rent_view)
+        filename = f"{ledger_type}-ledger-{year}.xlsx"
+    return Response(
+        content=content,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
