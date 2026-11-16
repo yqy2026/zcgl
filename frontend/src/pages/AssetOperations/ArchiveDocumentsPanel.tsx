@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Tag } from 'antd';
@@ -6,6 +6,33 @@ import CapabilityGuard from '@/components/System/CapabilityGuard';
 import { archiveDocumentService, type ArchiveTargetType } from '@/services/archiveDocumentService';
 import { AssetOperationsError } from '@/services/assetOperationsService';
 import styles from './AssetUnitsPage.module.css';
+
+function PdfThumbnail({ documentId, fileName }: {
+  documentId: string;
+  fileName: string;
+}): React.ReactElement | null {
+  const query = useQuery({
+    queryKey: ['archive-thumbnail', documentId],
+    queryFn: () => archiveDocumentService.thumbnail(documentId),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const objectUrl = query.data == null ? null : URL.createObjectURL(query.data);
+  useEffect(() => {
+    return () => {
+      if (objectUrl != null) URL.revokeObjectURL(objectUrl);
+    };
+  }, [objectUrl]);
+  if (objectUrl == null) return null;
+  return (
+    <img
+      src={objectUrl}
+      alt={`${fileName} 首页缩略图`}
+      width={160}
+      style={{ display: 'block', border: '1px solid #d9d9d9', borderRadius: 4, marginTop: 8 }}
+    />
+  );
+}
 
 interface PanelProps {
   targetId: string;
@@ -87,6 +114,9 @@ function DocumentList({ targetId, targetType, readOnly }: PanelProps): React.Rea
         query.data.map(item => (
           <article key={item.id}>
             <h4>{item.file_name}</h4>
+            {item.content_type === 'application/pdf' ? (
+              <PdfThumbnail documentId={item.id} fileName={item.file_name} />
+            ) : null}
             <Tag>{item.is_current ? '现行版本' : '历史版本'}</Tag>
             <p>
               版本 {item.document_version} ·{' '}

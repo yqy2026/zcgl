@@ -296,6 +296,8 @@ class PropertyCertificateAttachmentService:
         certificate_id: str,
         attachment_id: str,
         user_id: str,
+        audit_action: str = "download",
+        audit_action_name: str = "property certificate attachment download",
     ) -> PropertyCertificateAttachmentDownload:
         await self._require_certificate(db, certificate_id)
         attachment = await self._require_attachment(db, certificate_id, attachment_id)
@@ -313,6 +315,8 @@ class PropertyCertificateAttachmentService:
                 attachment_id=attachment_id,
                 result="not_found",
                 response_status=404,
+                action=audit_action,
+                action_name=audit_action_name,
             )
             raise ResourceNotFoundError("Attachment", attachment_id)
         await self._record_download(
@@ -322,6 +326,8 @@ class PropertyCertificateAttachmentService:
             attachment_id=attachment_id,
             result="success",
             response_status=200,
+            action=audit_action,
+            action_name=audit_action_name,
         )
         return PropertyCertificateAttachmentDownload(attachment=attachment, path=path)
 
@@ -379,12 +385,14 @@ class PropertyCertificateAttachmentService:
         attachment_id: str,
         result: str,
         response_status: int,
+        action: str = "download",
+        action_name: str = "property certificate attachment download",
     ) -> None:
         await operation_log_crud.create_async(
             db,
             user_id=user_id,
-            action="download",
-            action_name="property certificate attachment download",
+            action=action,
+            action_name=action_name,
             module="property_certificate",
             module_name="property_certificate",
             resource_type="property_certificate_attachment",

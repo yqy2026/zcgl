@@ -316,6 +316,7 @@ HTTP 请求与响应细则：
 | 批量配对提交 | `POST /api/v1/archive/batch-matches` | `asset_ops:archive`；JSON `preview_token` 与 `matches[]`（staging_id / target_type / target_id，仅上游/终端合同），允许只提交子集；整批原子提交 |
 | 替换 | `POST /api/v1/archive/documents/{document_id}/replacement` | `asset_ops:archive`；multipart 字段 `file`，只接受支持目标的现行档案 ID，返回追加的新版本（201），不覆盖旧文件 |
 | 下载 | `GET /api/v1/archive/documents/{document_id}/content` | `asset_ops:read`；每请求按文档真实目标重查数据范围，返回私有附件流与 `Cache-Control: private, no-store`；历史版本可读，越权或不支持/不存在文档 404 |
+| 首页缩略图 | `GET /api/v1/archive/documents/{document_id}/thumbnail` | `asset_ops:read`；与下载同一范围校验链，返回 PDF 首页 PNG（宽约 320px）与 `Cache-Control: private, no-store`；仅 PDF 提供，非 PDF 404；审计按 `read`（contract archive thumbnail）记录，不计为下载 |
 
 完成率和矩阵默认统计当前在管物业及当前有效合同；历史档案另查。选择历史 `as_of` 时按该日时点重算：在管窗口、证照关联、合同覆盖与生命周期状态、交接事件均按 as_of 日判定；对账单按「`confirmed_at` ≤ as_of 且更正未发生」计入（更正时刻取 `supersede_management_fee_statement` 业务事件），补充协议按「`created_at` ≤ as_of < `withdrawn_at`」计入，档案版本链与事实引用只认 as_of 前绑定的文件/版本；交接事件的 `handover_status` 使用当前值（无历史状态轨迹，已记录边界）。同一产权证或合同跨多个物业时，总览按业务对象去重，各物业显示同一档案状态。文件展示元数据从 ArchiveDocument 引用的 Attachment 读取，不保存档案副本；替换追加版本并保留历史文件，不自动改写合同或已确认对账单原有扫描件引用。
 

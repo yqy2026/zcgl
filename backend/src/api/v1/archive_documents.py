@@ -3,7 +3,7 @@
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.router_registry import route_registry
@@ -27,6 +27,7 @@ from ...services.asset_operations.archive_batch_match_service import (
 from ...services.asset_operations.archive_document_query_service import (
     CONTENT_TYPES,
     archive_document_query_service,
+    render_pdf_first_page,
 )
 from ...services.party_scope_resolver import party_scope_resolver
 
@@ -256,6 +257,28 @@ async def download_archive_document(
         filename=result.attachment.file_name,
         media_type=CONTENT_TYPES[result.attachment.file_type],
         content_disposition_type="attachment",
+        headers={"Cache-Control": "private, no-store"},
+    )
+
+
+@router.get("/archive/documents/{document_id}/thumbnail")
+async def get_archive_document_thumbnail(
+    document_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: DocumentReadAccess = None,
+) -> Response:
+    actor_id = str(current_user.id)
+    scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+    result = await archive_document_query_service.prepare_thumbnail(
+        db, document_id=document_id, actor_id=actor_id, scope=scope
+    )
+    if result.attachment.file_type != "pdf":
+        raise HTTPException(404, "Thumbnail only available for PDF archives")
+    thumbnail = render_pdf_first_page(result.path)
+    return Response(
+        content=thumbnail,
+        media_type="image/png",
         headers={"Cache-Control": "private, no-store"},
     )
 

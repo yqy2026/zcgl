@@ -189,3 +189,74 @@ def test_archive_upload_dispatches_contract_scan(client: TestClient, monkeypatch
     assert writer.await_args.kwargs["target_type"] == "upstream_contract"
     assert writer.await_args.kwargs["target_id"] == "c1"
     assert writer.await_args.kwargs["scope"] is scope
+
+
+def _make_pdf(path):
+    import fitz
+
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "scan page")
+    document.save(str(path))
+    document.close()
+
+
+def _download_result(tmp_path, file_type: str):
+    from src.models.attachment import Attachment
+    from src.services.property_certificate.attachment_service import (
+        PropertyCertificateAttachmentDownload,
+    )
+
+    pdf_path = tmp_path / "scan.pdf"
+    _make_pdf(pdf_path)
+    attachment = Attachment(
+        file_name="scan.pdf",
+        file_type=file_type,
+        storage_key="contracts/scan.pdf",
+        file_size=pdf_path.stat().st_size,
+        owner_type="contract",
+        owner_id="c1",
+        created_by="actor",
+    )
+    return PropertyCertificateAttachmentDownload(
+        attachment=attachment, path=pdf_path
+    )
+
+
+def test_archive_thumbnail_renders_pdf_first_page_as_png(
+    client: TestClient, monkeypatch, tmp_path
+):
+    scope = EffectivePartyScope(
+        user_id="actor", source="unrestricted", scope_mode="unrestricted"
+    )
+    monkeypatch.setattr(
+        api.party_scope_resolver, "resolve", AsyncMock(return_value=scope)
+    )
+    reader = AsyncMock(return_value=_download_result(tmp_path, "pdf"))
+    monkeypatch.setattr(
+        api.archive_document_query_service, "prepare_thumbnail", reader
+    )
+    response = client.get("/api/v1/archive/documents/doc-1/thumbnail")
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "image/png"
+    assert response.content[:8] == b"\x89PNG\r\n\x1a\n"
+    assert reader.await_args.kwargs["document_id"] == "doc-1"
+    assert reader.await_args.kwargs["scope"] is scope
+
+
+def test_archive_thumbnail_rejects_non_pdf_archives(
+    client: TestClient, monkeypatch, tmp_path
+):
+    scope = EffectivePartyScope(
+        user_id="actor", source="unrestricted", scope_mode="unrestricted"
+    )
+    monkeypatch.setattr(
+        api.party_scope_resolver, "resolve", AsyncMock(return_value=scope)
+    )
+    monkeypatch.setattr(
+        api.archive_document_query_service,
+        "prepare_thumbnail",
+        AsyncMock(return_value=_download_result(tmp_path, "png")),
+    )
+    response = client.get("/api/v1/archive/documents/doc-1/thumbnail")
+    assert response.status_code == 404

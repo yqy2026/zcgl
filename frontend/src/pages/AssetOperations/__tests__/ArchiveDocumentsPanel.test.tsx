@@ -1,12 +1,24 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import ArchiveDocumentsPanel from '../ArchiveDocumentsPanel';
 import { archiveDocumentService } from '@/services/archiveDocumentService';
 vi.mock('@/services/archiveDocumentService', () => ({
-  archiveDocumentService: { list: vi.fn(), upload: vi.fn(), replace: vi.fn(), download: vi.fn() },
+  archiveDocumentService: {
+    list: vi.fn(),
+    upload: vi.fn(),
+    replace: vi.fn(),
+    download: vi.fn(),
+    thumbnail: vi.fn(),
+  },
 }));
+beforeAll(() => {
+  if (typeof URL.createObjectURL !== 'function') {
+    URL.createObjectURL = vi.fn(() => 'blob:mock-thumbnail');
+    URL.revokeObjectURL = vi.fn();
+  }
+});
 vi.mock('@/components/System/CapabilityGuard', () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -110,7 +122,7 @@ it('shows the contract scan empty state for contract targets', async () => {
   await screen.findByText('此合同暂无已归档扫描件。');
   expect(archiveDocumentService.list).toHaveBeenCalledWith('c1', 'upstream_contract');
 });
-it('shows the fee stamp empty state without upload controls', async () => {
+	it('shows the fee stamp empty state without upload controls', async () => {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <ArchiveDocumentsPanel targetId="st1" targetType="management_fee_statement" readOnly />
@@ -119,4 +131,51 @@ it('shows the fee stamp empty state without upload controls', async () => {
   await screen.findByText('此对账单暂无盖章件。');
   expect(archiveDocumentService.list).toHaveBeenCalledWith('st1', 'management_fee_statement');
   expect(screen.queryByLabelText('选择归档文件')).toBeNull();
+});
+
+it('renders first-page thumbnails for PDF archives only', async () => {
+  vi.mocked(archiveDocumentService.list).mockResolvedValue([
+    {
+      id: 'doc-pdf',
+      attachment_id: 'att-1',
+      document_type: 'upstream_contract',
+      target_type: 'upstream_contract',
+      target_id: 'c1',
+      file_name: 'scan.pdf',
+      content_type: 'application/pdf',
+      file_size: 10,
+      document_version: 1,
+      replaces_document_id: null,
+      uploaded_at: '2026-11-01T00:00:00Z',
+      is_current: true,
+    },
+    {
+      id: 'doc-png',
+      attachment_id: 'att-2',
+      document_type: 'upstream_contract',
+      target_type: 'upstream_contract',
+      target_id: 'c1',
+      file_name: 'stamp.png',
+      content_type: 'image/png',
+      file_size: 10,
+      document_version: 1,
+      replaces_document_id: null,
+      uploaded_at: '2026-11-01T00:00:00Z',
+      is_current: true,
+    },
+  ]);
+  vi.mocked(archiveDocumentService.thumbnail).mockResolvedValue(
+    new Blob(['png'], { type: 'image/png' })
+  );
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <ArchiveDocumentsPanel targetId="c1" targetType="upstream_contract" readOnly />
+    </QueryClientProvider>
+  );
+  expect(
+    await screen.findByRole('img', { name: 'scan.pdf 首页缩略图' })
+  ).toBeTruthy();
+  expect(screen.queryByRole('img', { name: 'stamp.png 首页缩略图' })).toBeNull();
+  expect(archiveDocumentService.thumbnail).toHaveBeenCalledWith('doc-pdf');
+  expect(archiveDocumentService.thumbnail).not.toHaveBeenCalledWith('doc-png');
 });
