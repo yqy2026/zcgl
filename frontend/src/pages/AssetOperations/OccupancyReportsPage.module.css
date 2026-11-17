@@ -105,3 +105,17 @@
 .summaryDescriptions {
   max-width: 60rem;
 }
+
+.historyCard {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #e4e6ea);
+  border-radius: 8px;
+  background: var(--color-bg-container, #fff);
+  cursor: pointer;
+  min-width: 88px;
+  font: inherit;
+  text-align: left;
+}

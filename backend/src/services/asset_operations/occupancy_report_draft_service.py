@@ -21,10 +21,12 @@ from ...schemas.asset_operations import (
     OccupancyReportDraftResponse,
     OccupancyReportFieldChange,
     OccupancyReportFullScopeUnit,
+    OccupancyReportHistoryResponse,
     OccupancyReportLineResponse,
     OccupancyReportNoteResponse,
     OccupancyReportPendingUnit,
     OccupancyReportProjectCounts,
+    OccupancyReportSummaryRow,
     OccupancyReportTotals,
     SaveOccupancyReportNoteRequest,
 )
@@ -200,6 +202,58 @@ class OccupancyReportDraftService:
             change_note=change_note,
             can_submit=len(gate_reasons) == 0,
             gate_reasons=gate_reasons,
+        )
+
+    async def history(
+        self,
+        db: AsyncSession,
+        *,
+        operator_party_id: str,
+        year: int,
+        actor_id: str,
+        scope: EffectivePartyScope,
+    ) -> OccupancyReportHistoryResponse:
+        """Submitted months plus the live draft row for the history strip."""
+        require_scope(scope, actor_id)
+        require_operator_access(scope, operator_party_id=operator_party_id)
+        rows = await occupancy_report_repository.list_reports(
+            db, operator_party_id=operator_party_id, year=year
+        )
+        version_ids = tuple(
+            sorted({row.scope_version_id for row in rows if row.scope_version_id})
+        )
+        version_numbers: dict[str, int | None] = {}
+        if version_ids:
+            from sqlalchemy import select as sa_select
+
+            from ...models.assessment_scope import AssessmentScopeVersion
+
+            statement = sa_select(
+                AssessmentScopeVersion.id, AssessmentScopeVersion.version_number
+            ).where(AssessmentScopeVersion.id.in_(version_ids))
+            version_numbers = dict((await db.execute(statement)).all())
+        items = [
+            OccupancyReportSummaryRow(
+                report_id=row.id,
+                period=row.period,
+                status="submitted" if row.status == "submitted" else "draft",
+                occupancy_rate=row.occupancy_rate,
+                unit_count=row.unit_count,
+                rented_unit_count=row.rented_unit_count,
+                submitted_at=row.submitted_at,
+                scope_version_number=(
+                    version_numbers.get(row.scope_version_id)
+                    if row.scope_version_id is not None
+                    else None
+                ),
+            )
+            for row in rows
+            if row.status in {"draft", "submitted"}
+        ]
+        return OccupancyReportHistoryResponse(
+            operator_party_id=operator_party_id,
+            year=year,
+            items=items,
         )
 
     async def save_note(

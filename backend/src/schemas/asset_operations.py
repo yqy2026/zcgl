@@ -653,6 +653,25 @@ class TerminalContractFilterCounts(_StrictPayload):
     ended: int
 
 
+class OccupancyReportSummaryRow(_StrictPayload):
+    """One month in the reporting history strip (prototype 报送记录卡片)."""
+
+    report_id: str
+    period: str
+    status: Literal["draft", "submitted"]
+    occupancy_rate: Decimal | None
+    unit_count: int | None
+    rented_unit_count: int | None
+    submitted_at: datetime | None
+    scope_version_number: int | None
+
+
+class OccupancyReportHistoryResponse(_StrictPayload):
+    operator_party_id: str
+    year: int
+    items: list[OccupancyReportSummaryRow]
+
+
 class ContractIntakeSessionResponse(_StrictPayload):
     id: str
     document_id: str

@@ -51,6 +51,25 @@ class OccupancyReportRepository:
             )
         return (await db.execute(statement)).scalars().one_or_none()
 
+    async def list_reports(
+        self,
+        db: AsyncSession,
+        *,
+        operator_party_id: str,
+        year: int,
+    ) -> tuple[MonthlyOccupancyReport, ...]:
+        """Non-withdrawn chain rows for one operator-year (drafts included)."""
+        statement = (
+            select(MonthlyOccupancyReport)
+            .where(
+                MonthlyOccupancyReport.operator_party_id == operator_party_id,
+                MonthlyOccupancyReport.period.like(f"{year:04d}-%"),
+                MonthlyOccupancyReport.status != "withdrawn",
+            )
+            .order_by(MonthlyOccupancyReport.period)
+        )
+        return tuple((await db.execute(statement)).scalars().all())
+
     async def get_any_status(
         self,
         db: AsyncSession,
