@@ -82,6 +82,9 @@ function makeUpstream(overrides: Partial<UpstreamContractListItem> = {}): Upstre
       },
     ],
     lifecycleEvents: [],
+    daysToExpiry: 120,
+    paymentPlan: [],
+    unitsMatrix: [],
     renewalChain: [
       {
         contractId: 'upstream-1',

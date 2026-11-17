@@ -215,6 +215,29 @@ export interface UpstreamContractListItem {
   status: 'scheduled' | 'active' | 'expiring' | 'expired_pending_action' | 'exited' | 'historical';
   warnings: { code: string; severity: string; message: string | null }[];
   terminalContractIds: string[];
+  /** 详情富化（WP4）：到期剩余天数、付款计划、单元×终端矩阵 */
+  daysToExpiry: number | null;
+  paymentPlan: {
+    stageStart: string;
+    stageEnd: string;
+    monthlyRent: number;
+    periodCount: number;
+    paidCount: number;
+    nextDueDate: string | null;
+    totalAmount: number;
+    note: string;
+  }[];
+  unitsMatrix: {
+    assetUnitId: string;
+    unitCode: string;
+    unitName: string;
+    rentableArea: number;
+    tenantPartyName: string | null;
+    terminalContractNumber: string | null;
+    terminalEndDate: string | null;
+    monthlyRent: number | null;
+    hasScan: boolean | null;
+  }[];
   coverages: {
     assetUnitId: string;
     effectiveFrom: string;
@@ -434,6 +457,38 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
     coverages: normalizeCoverages(raw.coverages),
     lifecycleEvents: normalizeEvents(raw.lifecycle_events),
     renewalChain: normalizeChain(raw.renewal_chain),
+    daysToExpiry:
+      normalized.days_to_expiry == null ? null : Number(normalized.days_to_expiry),
+    paymentPlan: Array.isArray(normalized.payment_plan)
+      ? normalized.payment_plan.map((item: RawUnitRecord) => ({
+          stageStart: String(item.stage_start ?? ''),
+          stageEnd: String(item.stage_end ?? ''),
+          monthlyRent: Number(item.monthly_rent ?? 0),
+          periodCount: Number(item.period_count ?? 0),
+          paidCount: Number(item.paid_count ?? 0),
+          nextDueDate: item.next_due_date == null ? null : String(item.next_due_date),
+          totalAmount: Number(item.total_amount ?? 0),
+          note: String(item.note ?? ''),
+        }))
+      : [],
+    unitsMatrix: Array.isArray(normalized.units_matrix)
+      ? normalized.units_matrix.map((item: RawUnitRecord) => ({
+          assetUnitId: String(item.asset_unit_id ?? ''),
+          unitCode: String(item.unit_code ?? ''),
+          unitName: String(item.unit_name ?? ''),
+          rentableArea: Number(item.rentable_area ?? 0),
+          tenantPartyName:
+            item.tenant_party_name == null ? null : String(item.tenant_party_name),
+          terminalContractNumber:
+            item.terminal_contract_number == null
+              ? null
+              : String(item.terminal_contract_number),
+          terminalEndDate:
+            item.terminal_end_date == null ? null : String(item.terminal_end_date),
+          monthlyRent: item.monthly_rent == null ? null : Number(item.monthly_rent),
+          hasScan: item.has_scan == null ? null : item.has_scan === true,
+        }))
+      : [],
   };
 }
 

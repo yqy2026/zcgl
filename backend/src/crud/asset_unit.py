@@ -212,6 +212,26 @@ class AssetUnitRepository:
             statement = statement.with_for_update()
         return (await db.execute(statement)).scalars().one_or_none()
 
+    async def get_units_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: tuple[str, ...],
+        scope: EffectivePartyScope,
+    ) -> tuple[AssetUnit, ...]:
+        """Batched scoped read for detail enrichment (units matrix)."""
+        if len(unit_ids) == 0 or (
+            scope.scope_mode != "unrestricted"
+            and (scope.error_code is not None or len(scope.effective_party_ids) == 0)
+        ):
+            return ()
+        statement = (
+            self._apply_scope(select(AssetUnit), scope=scope)
+            .where(AssetUnit.id.in_(unit_ids))
+            .order_by(AssetUnit.unit_code)
+        )
+        return tuple((await db.execute(statement)).scalars().all())
+
     async def lock_for_write(
         self,
         db: AsyncSession,

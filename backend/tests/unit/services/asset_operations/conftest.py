@@ -32,6 +32,17 @@ def lifecycle_rent_boundary(request, monkeypatch):
         monkeypatch.setattr(
             rent_ledger_query_service, "contract_summary", AsyncMock(return_value={})
         )
+        # WP4 付款计划/单元矩阵路径：台账条目与视图整体旁路。
+        monkeypatch.setattr(
+            rent_ledger_query_service.repository,
+            "contract_entries",
+            AsyncMock(return_value=((), ())),
+        )
+        monkeypatch.setattr(
+            rent_ledger_query_service,
+            "_views",
+            staticmethod(lambda facts, *, today: ({}, {})),
+        )
     if not request.node.path.name.startswith("test_contract_lifecycle_"):
         return
     from src.services.asset_operations.deposit_settlement_service import (

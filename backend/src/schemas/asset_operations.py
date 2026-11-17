@@ -575,6 +575,33 @@ class AssetUnitListResponse(_StrictPayload):
     counts: AssetUnitFilterCounts | None = None
 
 
+class UpstreamPaymentPlanItem(_StrictPayload):
+    """One rent stage of the upstream payment plan (prototype 付款计划行)."""
+
+    stage_start: date
+    stage_end: date
+    monthly_rent: Decimal
+    period_count: int
+    paid_count: int
+    next_due_date: date | None = None
+    total_amount: Decimal
+    note: str = ""
+
+
+class UpstreamUnitMatrixItem(_StrictPayload):
+    """One covered unit with its live terminal contract (prototype 单元×终端矩阵行)."""
+
+    asset_unit_id: str
+    unit_code: str
+    unit_name: str
+    rentable_area: Decimal
+    tenant_party_name: str | None = None
+    terminal_contract_number: str | None = None
+    terminal_end_date: date | None = None
+    monthly_rent: Decimal | None = None
+    has_scan: bool | None = None
+
+
 class UpstreamContractDetail(UpstreamContractResponse):
     """Contract terms plus replayed aggregates for the detail read."""
 
@@ -587,6 +614,9 @@ class UpstreamContractDetail(UpstreamContractResponse):
     terminal_contract_ids: list[str] = Field(default_factory=list)
     lifecycle_events: list[LifecycleEventItem] = Field(default_factory=list)
     rent_summary: dict[str, object] = Field(default_factory=dict)
+    payment_plan: list[UpstreamPaymentPlanItem] = Field(default_factory=list)
+    units_matrix: list[UpstreamUnitMatrixItem] = Field(default_factory=list)
+    days_to_expiry: int | None = None
 
 
 class TerminalContractDetail(TerminalContractResponse):

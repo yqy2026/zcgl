@@ -191,9 +191,15 @@ class _PartyNames:
         return {}
 
 
+class _UnitReaderLite:
+    async def get_units_by_ids(self, _db, *, unit_ids, scope):
+        return ()
+
+
 def _service(reader: _Reader) -> AssetOperationsQueryService:
     return AssetOperationsQueryService(
         asset_contract_repository=reader,  # type: ignore[arg-type]
+        asset_unit_repository=_UnitReaderLite(),  # type: ignore[arg-type]
         party_name_reader=_PartyNames(),  # type: ignore[arg-type]
         business_today=lambda: TODAY,
     )
@@ -479,3 +485,67 @@ async def test_terminal_view_counts_and_page_enrichment(
     assert counts.missing_scan == 1
     assert counts.rent_unpaid == 1
     _ = rent_ledger_query_repository
+
+
+@pytest.mark.asyncio
+async def test_upstream_detail_builds_payment_plan_and_units_matrix(
+    terminal_ledger_boundary,
+) -> None:
+    reader = _Reader()
+    reader.schedules.append(
+        ContractRentSchedule(  # type: ignore[call-arg]
+            id="schedule-up",
+            contract_kind="upstream",
+            contract_id="upstream-1",
+            stage_start=date(2026, 1, 1),
+            stage_end=date(2026, 12, 31),
+            base_monthly_rent=Decimal("10000"),
+            actual_monthly_rent=Decimal("10000"),
+            increase_rate=Decimal("0"),
+            free_rent_months=Decimal("0"),
+            discount_amount=Decimal("0"),
+            payment_cycle="monthly",
+            due_day=15,
+        )
+    )
+
+    class _Units:
+        async def get_units_by_ids(self, _db, *, unit_ids, scope):
+            from types import SimpleNamespace
+
+            return (
+                SimpleNamespace(
+                    id="unit-1",
+                    unit_code="U-001",
+                    name="一号商铺",
+                    rentable_area=Decimal("80"),
+                ),
+            )
+
+    service = AssetOperationsQueryService(
+        asset_contract_repository=reader,  # type: ignore[arg-type]
+        asset_unit_repository=_Units(),  # type: ignore[arg-type]
+        party_name_reader=_PartyNames(),  # type: ignore[arg-type]
+        business_today=lambda: TODAY,
+    )
+
+    detail = await service.get_upstream_contract(_DB(), "upstream-1", scope=SCOPE)
+
+    assert detail is not None
+    # 默认上游止日 2026-12-20 → 剩余 56 天。
+    assert detail.days_to_expiry == (date(2026, 12, 20) - TODAY).days
+    # 付款计划：单阶段，期数按月计，合计 = 月租 × 12。
+    assert len(detail.payment_plan) == 1
+    plan = detail.payment_plan[0]
+    assert plan.stage_start == date(2026, 1, 1)
+    assert plan.stage_end == date(2026, 12, 20)
+    assert plan.period_count == 12
+    assert plan.total_amount == Decimal("120000")
+    assert plan.note == "首期租金"
+    # 单元矩阵：覆盖单元带出当前终端合同与当期月租。
+    assert len(detail.units_matrix) == 1
+    row = detail.units_matrix[0]
+    assert row.asset_unit_id == "unit-1"
+    assert row.terminal_contract_number == "TM-001"
+    assert row.monthly_rent == Decimal("10000")
+    assert row.has_scan is True

@@ -35,6 +35,8 @@ from ...schemas.asset_operations import (
     TerminalContractDetail,
     TerminalContractFilterCounts,
     UpstreamContractDetail,
+    UpstreamPaymentPlanItem,
+    UpstreamUnitMatrixItem,
 )
 from ...schemas.rent_queries import RentEntryView
 from ..party_scope_resolver import EffectivePartyScope
@@ -73,6 +75,14 @@ class AssetUnitReader(Protocol):
         scope: EffectivePartyScope,
         for_update: bool = False,
     ) -> AssetUnit | None: ...
+
+    async def get_units_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: tuple[str, ...],
+        scope: EffectivePartyScope,
+    ) -> tuple[AssetUnit, ...]: ...
 
     async def distinct_usage_types(
         self,
@@ -796,7 +806,199 @@ class AssetOperationsQueryService:
             events=events,
             today=self.business_today(),
         )
+        today = self.business_today()
+        detail.days_to_expiry = (contract.end_date - today).days
+
+        if contract.contract_type == "lease":
+            detail.payment_plan = await self._upstream_payment_plan(
+                db,
+                contract=contract,
+                schedules=schedules,
+                events=events,
+                today=today,
+            )
+        detail.units_matrix = await self._upstream_units_matrix(
+            db,
+            contract=contract,
+            coverages=coverages,
+            terminal_contracts=terminal_contracts,
+            scope=scope,
+            today=today,
+        )
         return detail
+
+    async def _upstream_payment_plan(
+        self,
+        db: AsyncSession,
+        *,
+        contract: UpstreamContract,
+        schedules: tuple[ContractRentSchedule, ...],
+        events: tuple[ContractLifecycleEvent, ...],
+        today: date,
+    ) -> list[UpstreamPaymentPlanItem]:
+        """Per-stage plan: 期间/月租/期数/进度/合计（prototype 付款计划）."""
+        from .rent_ledger_query_service import effective_end, rent_ledger_query_service
+
+        entries, records = await rent_ledger_query_service.repository.contract_entries(
+            db, contract_kind="upstream", contract_id=contract.id
+        )
+
+        from types import SimpleNamespace
+
+        facts = SimpleNamespace(
+            contracts=(contract,),
+            entries=entries,
+            records=records,
+            schedules=schedules,
+            events=events,
+        )
+        views, _ = rent_ledger_query_service._views(facts, today=today)
+        end = effective_end(contract.end_date, events)
+        active_views = [view for view in views.values() if view.status != "void"]
+        plan: list[UpstreamPaymentPlanItem] = []
+        for index, stage in enumerate(
+            sorted(schedules, key=lambda row: row.stage_start)
+        ):
+            months = (
+                (stage.stage_end.year - stage.stage_start.year) * 12
+                + stage.stage_end.month
+                - stage.stage_start.month
+                + 1
+            )
+            stage_views = [
+                view
+                for view in active_views
+                if stage.stage_start <= view.period_start <= min(stage.stage_end, end)
+            ]
+            paid = len([view for view in stage_views if view.status == "paid"])
+            pending = [view for view in stage_views if view.remaining_amount > 0]
+            next_due = min((view.due_date for view in pending), default=None)
+            if index == 0:
+                note = "首期租金"
+            elif stage.increase_rate:
+                note = f"第 {index} 次递增"
+            else:
+                note = ""
+            plan.append(
+                UpstreamPaymentPlanItem(
+                    stage_start=stage.stage_start,
+                    stage_end=min(stage.stage_end, end),
+                    monthly_rent=stage.actual_monthly_rent,
+                    period_count=max(months, 0),
+                    paid_count=paid,
+                    next_due_date=next_due,
+                    total_amount=stage.actual_monthly_rent * max(months, 0),
+                    note=note,
+                )
+            )
+        return plan
+
+    async def _upstream_units_matrix(
+        self,
+        db: AsyncSession,
+        *,
+        contract: UpstreamContract,
+        coverages: tuple[UpstreamContractAssetUnit, ...],
+        terminal_contracts: list[TerminalContract],
+        scope: EffectivePartyScope,
+        today: date,
+    ) -> list[UpstreamUnitMatrixItem]:
+        """单元×当前终端合同矩阵（prototype 资产单元与终端合同表）."""
+        _ = contract
+        unit_ids = tuple(
+            sorted(
+                coverage.asset_unit_id
+                for coverage in coverages
+                if coverage.effective_from <= today
+                and (coverage.effective_to is None or coverage.effective_to >= today)
+            )
+        )
+        units = await self.asset_unit_repository.get_units_by_ids(
+            db, unit_ids=unit_ids, scope=scope
+        )
+        terminal_ids = tuple(sorted(terminal.id for terminal in terminal_contracts))
+        terminal_events = (
+            await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(
+                db, contract_kind="terminal", contract_ids=terminal_ids
+            )
+            if terminal_ids
+            else ()
+        )
+        grouped: dict[str, list[ContractLifecycleEvent]] = {}
+        for event in terminal_events:
+            grouped.setdefault(event.contract_id, []).append(event)
+        from .rent_ledger_query_service import effective_end
+
+        schedules = (
+            await self.asset_contract_repository.list_rent_schedules(
+                db, contract_kind="terminal", contract_ids=terminal_ids
+            )
+            if terminal_ids
+            else ()
+        )
+        tenant_names = await self.party_name_reader.get_party_names_by_ids(
+            db,
+            party_ids=tuple(
+                sorted(
+                    {
+                        terminal.tenant_party_id
+                        for terminal in terminal_contracts
+                        if terminal.tenant_party_id
+                    }
+                )
+            ),
+        )
+        terminal_by_unit: dict[str, tuple[TerminalContract, date]] = {}
+        for terminal in terminal_contracts:
+            covered = (
+                await self.asset_contract_repository.list_terminal_coverages(
+                    db, contract_id=terminal.id
+                )
+            )
+            end = effective_end(terminal.end_date, tuple(grouped.get(terminal.id, ())))
+            if end < today:
+                continue
+            for link in covered:
+                current = terminal_by_unit.get(link.asset_unit_id)
+                if current is None or terminal.start_date > current[0].start_date:
+                    terminal_by_unit[link.asset_unit_id] = (terminal, end)
+        matrix: list[UpstreamUnitMatrixItem] = []
+        for unit in units:
+            terminal, end = terminal_by_unit.get(unit.id, (None, None))
+            stage = (
+                [
+                    row
+                    for row in schedules
+                    if row.contract_id == terminal.id
+                    and row.stage_start <= today <= row.stage_end
+                ]
+                if terminal is not None
+                else []
+            )
+            matrix.append(
+                UpstreamUnitMatrixItem(
+                    asset_unit_id=unit.id,
+                    unit_code=unit.unit_code,
+                    unit_name=unit.name,
+                    rentable_area=unit.rentable_area,
+                    tenant_party_name=(
+                        tenant_names.get(terminal.tenant_party_id, "")
+                        if terminal is not None
+                        else None
+                    ),
+                    terminal_contract_number=(
+                        terminal.contract_number if terminal is not None else None
+                    ),
+                    terminal_end_date=end,
+                    monthly_rent=stage[0].actual_monthly_rent if stage else None,
+                    has_scan=(
+                        terminal.scan_document_id is not None
+                        if terminal is not None
+                        else None
+                    ),
+                )
+            )
+        return matrix
 
     async def list_terminal_contracts(
         self,

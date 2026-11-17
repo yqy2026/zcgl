@@ -262,7 +262,14 @@ function UpstreamList(props: {
                 },
               ]}
             />
+            <ExpiryBox endDate={detail.endDate} daysToExpiry={detail.daysToExpiry} />
             <ChainRow chain={detail.renewalChain} currentId={detail.id} />
+            {detail.contractType === 'lease' && detail.paymentPlan.length > 0 ? (
+              <PaymentPlanTable plan={detail.paymentPlan} />
+            ) : null}
+            {detail.unitsMatrix.length > 0 ? (
+              <UnitsMatrixTable rows={detail.unitsMatrix} />
+            ) : null}
             <ChangeTimelinePanel targetType="upstream_contract" targetId={detail.id} />
             <ContractScanPanel kind="upstream" contractId={detail.id} />
             <ContractSupplementsPanel kind="upstream" contractId={detail.id} />
@@ -665,6 +672,234 @@ interface ListQueryState {
   isError: boolean;
   error: unknown;
   emptyText: string;
+}
+
+function ExpiryBox(props: {
+  endDate: string;
+  daysToExpiry: number | null;
+}): React.ReactElement {
+  const days = props.daysToExpiry ?? daysUntil(props.endDate);
+  if (!Number.isFinite(days)) {
+    return <></>;
+  }
+  const tone =
+    days < 0
+      ? { background: '#fff1f0', color: '#cf1322', label: `已过 ${-days} 天` }
+      : days <= 90
+        ? { background: '#fff1f0', color: '#cf1322', label: `剩 ${days} 天` }
+        : days <= 180
+          ? { background: '#fffbe6', color: '#874d00', label: `剩 ${days} 天` }
+          : { background: '#f5f5f5', color: '#595959', label: `剩 ${days} 天` };
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 8,
+        padding: '6px 12px',
+        borderRadius: 8,
+        ...tone,
+      }}
+      aria-label="到期剩余"
+    >
+      <span style={{ fontSize: 12 }}>到期</span>
+      <b style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{tone.label}</b>
+      <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+        {props.endDate}
+      </span>
+    </div>
+  );
+}
+
+function PaymentPlanTable(props: {
+  plan: UpstreamContractListItem['paymentPlan'];
+}): React.ReactElement {
+  return (
+    <section aria-label="付款计划">
+      <b style={{ fontSize: 13 }}>付款计划</b>
+      <p
+        style={{
+          margin: '4px 0 8px',
+          fontSize: 12,
+          color: 'var(--color-text-secondary)',
+        }}
+      >
+        按合同条款生成 · 递增自动叠加 · 付款在系统外完成，这里只记一笔
+      </p>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <thead>
+          <tr style={{ color: 'var(--color-text-secondary)' }}>
+            <th style={{ textAlign: 'left', padding: '4px 6px' }}>期间</th>
+            <th style={{ textAlign: 'right', padding: '4px 6px' }}>月租金</th>
+            <th style={{ textAlign: 'right', padding: '4px 6px' }}>期数</th>
+            <th style={{ textAlign: 'left', padding: '4px 6px' }}>进度</th>
+            <th style={{ textAlign: 'right', padding: '4px 6px' }}>合计</th>
+          </tr>
+        </thead>
+        <tbody>
+          {props.plan.map(stage => {
+            const percent =
+              stage.periodCount > 0
+                ? Math.round((stage.paidCount / stage.periodCount) * 100)
+                : 0;
+            return (
+              <tr key={`${stage.stageStart}-${stage.stageEnd}`}>
+                <td style={{ padding: '4px 6px' }}>
+                  {stage.stageStart.slice(0, 7)} ~ {stage.stageEnd.slice(0, 7)}
+                  {stage.note !== '' ? (
+                    <span style={{ color: 'var(--color-text-tertiary)' }}>
+                      {' '}
+                      · {stage.note}
+                    </span>
+                  ) : null}
+                </td>
+                <td
+                  style={{
+                    padding: '4px 6px',
+                    textAlign: 'right',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {formatMoney(stage.monthlyRent)}
+                </td>
+                <td
+                  style={{
+                    padding: '4px 6px',
+                    textAlign: 'right',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {stage.periodCount}
+                </td>
+                <td style={{ padding: '4px 6px' }}>
+                  <div
+                    style={{
+                      height: 6,
+                      borderRadius: 3,
+                      background: '#eef0f2',
+                      overflow: 'hidden',
+                      marginBottom: 2,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${percent}%`,
+                        height: '100%',
+                        background: 'var(--ant-color-primary, #0e63e5)',
+                      }}
+                    />
+                  </div>
+                  <span
+                    style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}
+                  >
+                    已付 {stage.paidCount}/{stage.periodCount}
+                    {stage.nextDueDate != null
+                      ? ` · 下期 ${stage.nextDueDate.slice(0, 7)}`
+                      : ''}
+                  </span>
+                </td>
+                <td
+                  style={{
+                    padding: '4px 6px',
+                    textAlign: 'right',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {formatMoney(stage.totalAmount)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function UnitsMatrixTable(props: {
+  rows: UpstreamContractListItem['unitsMatrix'];
+}): React.ReactElement {
+  return (
+    <section aria-label="资产单元与终端合同">
+      <b style={{ fontSize: 13 }}>资产单元与终端合同</b>
+      <p
+        style={{
+          margin: '4px 0 8px',
+          fontSize: 12,
+          color: 'var(--color-text-secondary)',
+        }}
+      >
+        出租方由上游模式决定：承租→本公司转租；委托→产权方直签
+      </p>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <thead>
+          <tr style={{ color: 'var(--color-text-secondary)' }}>
+            <th style={{ textAlign: 'left', padding: '4px 6px' }}>单元</th>
+            <th style={{ textAlign: 'right', padding: '4px 6px' }}>面积㎡</th>
+            <th style={{ textAlign: 'left', padding: '4px 6px' }}>终端租户</th>
+            <th style={{ textAlign: 'left', padding: '4px 6px' }}>终端合同</th>
+            <th style={{ textAlign: 'left', padding: '4px 6px' }}>租期至</th>
+            <th style={{ textAlign: 'right', padding: '4px 6px' }}>月租金</th>
+            <th style={{ textAlign: 'center', padding: '4px 6px' }}>扫描件</th>
+          </tr>
+        </thead>
+        <tbody>
+          {props.rows.map(row => (
+            <tr key={row.assetUnitId}>
+              <td style={{ padding: '4px 6px' }}>
+                {row.unitName}
+                <span style={{ color: 'var(--color-text-tertiary)' }}>
+                  （{row.unitCode}）
+                </span>
+              </td>
+              <td
+                style={{
+                  padding: '4px 6px',
+                  textAlign: 'right',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {row.rentableArea.toLocaleString('zh-CN', {
+                  maximumFractionDigits: 2,
+                })}
+              </td>
+              <td style={{ padding: '4px 6px' }}>
+                {row.tenantPartyName != null ? (
+                  row.tenantPartyName
+                ) : (
+                  <span style={{ color: 'var(--color-success, #237804)' }}>
+                    空置 · 可租
+                  </span>
+                )}
+              </td>
+              <td style={{ padding: '4px 6px' }}>
+                {row.terminalContractNumber ?? '—'}
+              </td>
+              <td style={{ padding: '4px 6px' }}>{row.terminalEndDate ?? '—'}</td>
+              <td
+                style={{
+                  padding: '4px 6px',
+                  textAlign: 'right',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {row.monthlyRent != null ? formatMoney(row.monthlyRent) : '—'}
+              </td>
+              <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                {row.hasScan == null ? (
+                  '—'
+                ) : row.hasScan ? (
+                  '有'
+                ) : (
+                  <span style={{ color: 'var(--color-error, #cf1322)' }}>缺</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
 }
 
 function ContractPageShell<T extends { id: string }>(props: {
