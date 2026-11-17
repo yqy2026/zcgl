@@ -264,11 +264,17 @@ class AssetUnitCommandService:
             end_date=today,
         )
         rented = len(overlapping) > 0
+        from ...schemas.asset_operations import AssetUnitDetail
         from .query_service import AssetOperationsQueryService
 
         detail = AssetOperationsQueryService._unit_detail(unit, rented=rented)
+        # 列表富化字段（owner_party_name 等）只随 AssetUnitDetail 返回，
+        # 单元写路径仍回 AssetUnitResponse，需剔除避免 extra_forbidden。
         return AssetUnitResponse.model_validate(
-            detail.model_dump(exclude={"terminal_contract_ids"})
+            detail.model_dump(
+                exclude=set(AssetUnitDetail.model_fields)
+                - set(AssetUnitResponse.model_fields)
+            )
         )
 
 

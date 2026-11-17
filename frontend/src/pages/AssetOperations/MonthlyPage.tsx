@@ -376,14 +376,6 @@ export default function MonthlyPage(): React.ReactElement {
                   item.statementId != null
                     ? `/asset-operations/management-fees/${encodeURIComponent(item.statementId)}`
                     : '/asset-operations/ledgers?ledger_type=management_fee';
-                const actionLabel =
-                  item.status === 'confirmed'
-                    ? '查看对账单 →'
-                    : item.status === 'pending_stamp'
-                      ? '盖章确认 →'
-                      : item.status === 'collecting'
-                        ? '去登记到账 →'
-                        : '查看管理费台账 →';
                 return (
                   <li key={`${item.ownerPartyId}-${item.statementId ?? 'missing'}`}>
                     <button

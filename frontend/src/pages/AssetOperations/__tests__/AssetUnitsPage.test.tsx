@@ -21,6 +21,12 @@ vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
       listAssetUnitCertificates: vi.fn(),
       updateAssetUnit: vi.fn(),
       updateVacancyNote: vi.fn(),
+      getCoverageHistory: vi.fn().mockResolvedValue([]),
+      previewAssetUnitSplit: vi.fn(),
+      commitAssetUnitSplit: vi.fn(),
+      previewAssetUnitMerge: vi.fn(),
+      commitAssetUnitMerge: vi.fn(),
+      exportAssetUnits: vi.fn(),
     },
   };
 });
@@ -36,6 +42,12 @@ vi.mock('@/services/partyService', () => ({
       isTruncated: false,
     }),
   },
+}));
+vi.mock('@/services/occupancyReportService', () => ({
+  occupancyReportService: { listOperatorParties: vi.fn().mockResolvedValue([]) },
+}));
+vi.mock('@/services/projectService', () => ({
+  projectService: { getProjects: vi.fn().mockResolvedValue({ items: [], total: 0 }) },
 }));
 vi.mock('@/services/businessChangeService', () => ({
   businessChangeService: {
@@ -68,6 +80,13 @@ function makeUnit(overrides: Partial<AssetUnitListItem> = {}): AssetUnitListItem
     occupancyRate: 1,
     warnings: [],
     terminalContractIds: ['terminal-1'],
+    ownerPartyName: '城投置业',
+    projectName: '一德路项目',
+    assessment: 'included',
+    currentTenantName: '凤凰创意',
+    currentContractNumber: 'ZZ-1',
+    currentContractEndDate: '2027-06-30',
+    certificateCount: 1,
     ...overrides,
   };
 }
@@ -200,11 +219,11 @@ describe('AssetUnitsPage', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText('U-001')).toBeTruthy();
+      expect(screen.getAllByText(/U-001/).length).toBeGreaterThan(0);
     });
     await waitFor(() => {
       expect(screen.getByText(/当前终端合同/)).toBeTruthy();
-      expect(screen.getByText('terminal-1')).toBeTruthy();
+      expect(screen.getByText(/ZZ-1 · 凤凰创意/)).toBeTruthy();
     });
   });
 
@@ -301,6 +320,58 @@ describe('AssetUnitsPage', () => {
     expect(link.getAttribute('href')).toBe(
       `${ASSET_OPERATIONS_V5_ROUTES.OCCUPANCY_REPORTS}?year=${new Date().getFullYear()}`
     );
+  });
+
+  it('passes the segmented view filter to the list query with counts', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({
+      items: [makeUnit()],
+      total: 1,
+      counts: {
+        all: 10,
+        inAssessment: 8,
+        vacant: 2,
+        nonRentable: 1,
+        missingCertificate: 3,
+      },
+    });
+    mockedService.getAssetUnit.mockResolvedValue(makeUnit());
+
+    renderPage();
+
+    await userEvent.click(await screen.findByText('空置可租 2'));
+
+    await waitFor(() =>
+      expect(mockedService.listAssetUnits).toHaveBeenLastCalledWith(
+        expect.objectContaining({ filter: 'vacant' })
+      )
+    );
+  });
+
+  it('shows the vacancy editor for vacant units and saves the note', async () => {
+    mockedService.listAssetUnits.mockResolvedValue({
+      items: [makeUnit({ rentalStatus: 'vacant', currentTenantName: null, currentContractNumber: null })],
+      total: 1,
+      counts: null,
+    });
+    mockedService.getAssetUnit.mockResolvedValue(
+      makeUnit({ rentalStatus: 'vacant', currentTenantName: null, currentContractNumber: null })
+    );
+    mockedService.updateVacancyNote.mockResolvedValue(
+      makeUnit({ rentalStatus: 'vacant', vacancyReason: 'marketing' })
+    );
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: '招商中' }));
+    await user.click(await screen.findByRole('button', { name: '保存空置备注' }));
+
+    await waitFor(() => {
+      expect(mockedService.updateVacancyNote).toHaveBeenCalledWith('unit-1', {
+        expectedVersion: 2,
+        vacancyReason: 'marketing',
+      });
+    });
   });
 
   it('filters units by owner party with pagination reset', async () => {

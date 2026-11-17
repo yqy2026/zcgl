@@ -83,11 +83,28 @@ export interface AssetUnitListItem {
   occupancyRate: number;
   warnings: { code: string; severity: string; message: string | null }[];
   terminalContractIds: string[];
+  /** 列表富化字段（WP2 物业页对齐原型） */
+  ownerPartyName: string;
+  projectName: string;
+  assessment: 'included' | 'excluded' | 'pending' | null;
+  currentTenantName: string | null;
+  currentContractNumber: string | null;
+  currentContractEndDate: string | null;
+  certificateCount: number;
+}
+
+export interface AssetUnitFilterCounts {
+  all: number;
+  inAssessment: number;
+  vacant: number;
+  nonRentable: number;
+  missingCertificate: number;
 }
 
 export interface AssetUnitListResult {
   items: AssetUnitListItem[];
   total: number;
+  counts: AssetUnitFilterCounts | null;
 }
 
 export interface AssetUnitListParams {
@@ -95,7 +112,9 @@ export interface AssetUnitListParams {
   ownerPartyId?: string;
   usageType?: string;
   q?: string;
-  filter?: 'all' | 'non_rentable';
+  filter?: 'all' | 'in_assessment' | 'vacant' | 'non_rentable' | 'missing_certificate';
+  assessmentOperatorPartyId?: string;
+  assessmentYear?: number;
   offset?: number;
   limit?: number;
 }
@@ -155,6 +174,25 @@ function normalizeUnit(raw: RawUnitRecord): AssetUnitListItem {
     terminalContractIds: Array.isArray(normalized.terminal_contract_ids)
       ? normalized.terminal_contract_ids.map(String)
       : [],
+    ownerPartyName: String(normalized.owner_party_name ?? ''),
+    projectName: String(normalized.project_name ?? ''),
+    assessment:
+      normalized.assessment === 'included' ||
+      normalized.assessment === 'excluded' ||
+      normalized.assessment === 'pending'
+        ? normalized.assessment
+        : null,
+    currentTenantName:
+      normalized.current_tenant_name == null ? null : String(normalized.current_tenant_name),
+    currentContractNumber:
+      normalized.current_contract_number == null
+        ? null
+        : String(normalized.current_contract_number),
+    currentContractEndDate:
+      normalized.current_contract_end_date == null
+        ? null
+        : String(normalized.current_contract_end_date),
+    certificateCount: Number(normalized.certificate_count ?? 0),
   };
 }
 
@@ -548,21 +586,26 @@ export interface RenewalResult {
 export class AssetOperationsService {
   async listAssetUnits(params: AssetUnitListParams = {}): Promise<AssetUnitListResult> {
     try {
-      const result = await apiClient.get<{ items: RawUnitRecord[]; total: number }>(
-        `${API_BASE}/asset-units`,
-        {
-          params: {
-            ...(params.projectId != null ? { project_id: params.projectId } : {}),
-            ...(params.ownerPartyId != null ? { owner_party_id: params.ownerPartyId } : {}),
-            ...(params.usageType != null ? { usage_type: params.usageType } : {}),
-            ...(params.q != null && params.q.trim() !== '' ? { q: params.q } : {}),
-            ...(params.filter != null ? { filter: params.filter } : {}),
-            offset: params.offset ?? 0,
-            limit: params.limit ?? 50,
-          },
-          cache: false,
-        }
-      );
+      const result = await apiClient.get<{
+        items: RawUnitRecord[];
+        total: number;
+        counts?: RawUnitRecord | null;
+      }>(`${API_BASE}/asset-units`, {
+        params: {
+          ...(params.projectId != null ? { project_id: params.projectId } : {}),
+          ...(params.ownerPartyId != null ? { owner_party_id: params.ownerPartyId } : {}),
+          ...(params.usageType != null ? { usage_type: params.usageType } : {}),
+          ...(params.q != null && params.q.trim() !== '' ? { q: params.q } : {}),
+          ...(params.filter != null ? { filter: params.filter } : {}),
+          ...(params.assessmentOperatorPartyId != null
+            ? { assessment_operator_party_id: params.assessmentOperatorPartyId }
+            : {}),
+          ...(params.assessmentYear != null ? { assessment_year: params.assessmentYear } : {}),
+          offset: params.offset ?? 0,
+          limit: params.limit ?? 50,
+        },
+        cache: false,
+      });
       if (!result.success) {
         throw new AssetOperationsError(
           `获取资产单元列表失败: ${result.error}`,
@@ -570,9 +613,20 @@ export class AssetOperationsService {
         );
       }
       const payload = result.data ?? { items: [], total: 0 };
+      const countsRaw = payload.counts ?? null;
       return {
         items: (payload.items ?? []).map(normalizeUnit),
         total: Number(payload.total ?? 0),
+        counts:
+          countsRaw == null
+            ? null
+            : {
+                all: Number(countsRaw.all ?? 0),
+                inAssessment: Number(countsRaw.in_assessment ?? 0),
+                vacant: Number(countsRaw.vacant ?? 0),
+                nonRentable: Number(countsRaw.non_rentable ?? 0),
+                missingCertificate: Number(countsRaw.missing_certificate ?? 0),
+              },
       };
     } catch (error) {
       if (error instanceof AssetOperationsError) {
@@ -1349,6 +1403,179 @@ export class AssetOperationsService {
       if (error instanceof AssetOperationsError) {
         throw error;
       }
+      throw toServiceError(error);
+    }
+  }
+
+  /** 调整资产单元（原型：拆分/合并弹窗）——预览与提交两步命令。 */
+  async previewAssetUnitSplit(
+    unitId: string,
+    request: {
+      effectiveDate: string;
+      parts: {
+        unitCode: string;
+        name: string;
+        landArea: number;
+        buildingArea: number;
+        rentableArea: number;
+      }[];
+    }
+  ): Promise<RawUnitRecord> {
+    return this._boundaryPreview(`${API_BASE}/asset-units/${unitId}/split/preview`, {
+      effective_date: request.effectiveDate,
+      parts: request.parts.map(part => ({
+        unit_code: part.unitCode,
+        name: part.name,
+        land_area: part.landArea,
+        building_area: part.buildingArea,
+        rentable_area: part.rentableArea,
+      })),
+    });
+  }
+
+  async previewAssetUnitMerge(request: {
+    sourceUnitIds: string[];
+    effectiveDate: string;
+    resultUnitCode: string;
+    resultName: string;
+  }): Promise<RawUnitRecord> {
+    return this._boundaryPreview(`${API_BASE}/asset-units/merge/preview`, {
+      source_unit_ids: request.sourceUnitIds,
+      effective_date: request.effectiveDate,
+      result: { unit_code: request.resultUnitCode, name: request.resultName },
+    });
+  }
+
+  async _boundaryPreview(path: string, payload: unknown): Promise<RawUnitRecord> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(path, payload, {
+        retry: false,
+      });
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `预览失败: ${result.error}`,
+          extractErrorCode(result)
+        );
+      }
+      return result.data ?? {};
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  async commitAssetUnitSplit(
+    unitId: string,
+    request: { previewToken: string; reason: string; expectedVersion: number }
+  ): Promise<RawUnitRecord> {
+    return this._boundaryCommit(`${API_BASE}/asset-units/${unitId}/split`, {
+      preview_token: request.previewToken,
+      reason: request.reason,
+      expected_version: request.expectedVersion,
+    });
+  }
+
+  async commitAssetUnitMerge(request: {
+    previewToken: string;
+    reason: string;
+    expectedVersions: Record<string, number>;
+  }): Promise<RawUnitRecord> {
+    return this._boundaryCommit(`${API_BASE}/asset-units/merge`, {
+      preview_token: request.previewToken,
+      reason: request.reason,
+      expected_versions: request.expectedVersions,
+    });
+  }
+
+  async _boundaryCommit(path: string, payload: unknown): Promise<RawUnitRecord> {
+    try {
+      const result = await apiClient.post<RawUnitRecord>(path, payload, {
+        retry: false,
+        headers: {
+          'Idempotency-Key':
+            typeof crypto !== 'undefined' && 'randomUUID' in crypto
+              ? crypto.randomUUID()
+              : `boundary-${Date.now()}`,
+        },
+      });
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `提交失败: ${result.error}`,
+          extractErrorCode(result)
+        );
+      }
+      return result.data ?? {};
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  /** 单元租赁时间轴：覆盖过该单元的终端/上游合同区间（终止已回放）。 */
+  async getCoverageHistory(unitId: string): Promise<
+    {
+      contractKind: 'terminal' | 'upstream';
+      contractId: string;
+      contractNumber: string;
+      startDate: string;
+      endDate: string;
+    }[]
+  > {
+    try {
+      const result = await apiClient.get<{
+        items: {
+          contract_kind?: unknown;
+          contract_id?: unknown;
+          contract_number?: unknown;
+          start_date?: unknown;
+          end_date?: unknown;
+        }[];
+      }>(`${API_BASE}/asset-units/${unitId}/coverage-history`, { cache: false });
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `获取租赁时间轴失败: ${result.error}`,
+          extractErrorCode(result)
+        );
+      }
+      return (result.data?.items ?? []).map(item => ({
+        contractKind: item.contract_kind === 'upstream' ? 'upstream' : 'terminal',
+        contractId: String(item.contract_id ?? ''),
+        contractNumber: String(item.contract_number ?? ''),
+        startDate: String(item.start_date ?? ''),
+        endDate: String(item.end_date ?? ''),
+      }));
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
+  /** 物业台账导出（xlsx blob），参数与列表筛选一致。 */
+  async exportAssetUnits(params: AssetUnitListParams): Promise<Blob> {    try {
+      const result = await apiClient
+        .getAxiosInstance()
+        .get<Blob>(`${API_BASE}/asset-units/export`, {
+          params: {
+            ...(params.projectId != null ? { project_id: params.projectId } : {}),
+            ...(params.ownerPartyId != null ? { owner_party_id: params.ownerPartyId } : {}),
+            ...(params.usageType != null ? { usage_type: params.usageType } : {}),
+            ...(params.q != null && params.q.trim() !== '' ? { q: params.q } : {}),
+            ...(params.filter != null ? { filter: params.filter } : {}),
+            ...(params.assessmentOperatorPartyId != null
+              ? { assessment_operator_party_id: params.assessmentOperatorPartyId }
+              : {}),
+            ...(params.assessmentYear != null ? { assessment_year: params.assessmentYear } : {}),
+          },
+          responseType: 'blob',
+        });
+      return result.data;
+    } catch (error) {
       throw toServiceError(error);
     }
   }

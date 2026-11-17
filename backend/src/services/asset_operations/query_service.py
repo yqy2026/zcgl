@@ -25,7 +25,9 @@ from ...models.asset_contract import (
 )
 from ...models.asset_unit import AssetUnit
 from ...schemas.asset_operations import (
+    AssetUnitCoverageInterval,
     AssetUnitDetail,
+    AssetUnitFilterCounts,
     ContractCoverageItem,
     LifecycleEventItem,
     RenewalChainItem,
@@ -186,6 +188,15 @@ class AssetContractReader(Protocol):
     ) -> tuple[TerminalContract, ...]: ...
 
 
+class PartyNameReader(Protocol):
+    async def get_party_names_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        party_ids: tuple[str, ...],
+    ) -> dict[str, str]: ...
+
+
 class AssetOperationsQueryService:
     """Expose scoped reads while hiding range validation and persistence."""
 
@@ -194,6 +205,7 @@ class AssetOperationsQueryService:
         *,
         asset_unit_repository: AssetUnitReader | None = None,
         asset_contract_repository: AssetContractReader | None = None,
+        party_name_reader: PartyNameReader | None = None,
         business_today: Callable[[], date] = _business_today,
     ) -> None:
         self.asset_unit_repository = (
@@ -202,6 +214,7 @@ class AssetOperationsQueryService:
         self.asset_contract_repository = (
             asset_contract_repository or default_asset_contract_repository
         )
+        self.party_name_reader = party_name_reader or default_party_name_reader
         self.business_today = business_today
 
     @staticmethod
@@ -231,30 +244,343 @@ class AssetOperationsQueryService:
         usage_type: str | None = None,
         query: str | None = None,
         filter: str | None = None,
+        assessment_operator_party_id: str | None = None,
+        assessment_year: int | None = None,
         offset: int = 0,
         limit: int = 50,
     ) -> tuple[list[AssetUnitDetail], int]:
-        self._require_effective_scope(scope)
-        units, total = await self.asset_unit_repository.list(
+        items, total, _ = await self.list_asset_units_view(
             db,
             scope=scope,
             project_id=project_id,
             owner_party_id=owner_party_id,
             usage_type=usage_type,
             query=query,
-            non_rentable_only=filter == "non_rentable",
+            filter=filter,
+            assessment_operator_party_id=assessment_operator_party_id,
+            assessment_year=assessment_year,
             offset=offset,
             limit=limit,
         )
+        return items, total
+
+    async def list_asset_units_view(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+        project_id: str | None = None,
+        owner_party_id: str | None = None,
+        usage_type: str | None = None,
+        query: str | None = None,
+        filter: str | None = None,
+        assessment_operator_party_id: str | None = None,
+        assessment_year: int | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> tuple[list[AssetUnitDetail], int, AssetUnitFilterCounts]:
+        """Page of enriched unit rows plus the segmented-filter counts."""
+        self._require_effective_scope(scope)
+        today = self.business_today()
         rented_ids = await self.asset_contract_repository.list_rented_unit_ids(
             db,
-            as_of=self.business_today(),
+            as_of=today,
             scope=scope,
         )
+        assessment_maps = await self._assessment_maps(
+            db,
+            operator_party_id=assessment_operator_party_id,
+            year=assessment_year,
+            today=today,
+        )
+        decided, pending_ids = assessment_maps
+        included_ids = frozenset(
+            unit_id for unit_id, included in decided.items() if included
+        )
+
+        base_kwargs: dict[str, object] = {
+            "scope": scope,
+            "project_id": project_id,
+            "owner_party_id": owner_party_id,
+            "usage_type": usage_type,
+            "query": query,
+        }
+
+        def restricted(**extra: object) -> dict[str, object]:
+            merged = dict(base_kwargs)
+            merged.update(extra)
+            return merged
+
+        filter_kwargs = self._unit_filter_kwargs(
+            filter,
+            today=today,
+            rented_ids=rented_ids,
+            included_ids=included_ids,
+        )
+        units, total = await self.asset_unit_repository.list(
+            db,
+            offset=offset,
+            limit=limit,
+            **restricted(**filter_kwargs),
+        )
+        items = await self._enrich_units(
+            db,
+            units,
+            rented_ids=rented_ids,
+            decided=decided,
+            pending_ids=pending_ids,
+            today=today,
+        )
+        counts = AssetUnitFilterCounts(
+            all=await self._count_units(db, **restricted()),
+            in_assessment=await self._count_units(
+                db, **restricted(unit_ids=tuple(sorted(included_ids)))
+            ),
+            vacant=await self._count_units(
+                db,
+                **restricted(
+                    rentable_only=True,
+                    exclude_unit_ids=tuple(sorted(rented_ids)),
+                ),
+            ),
+            non_rentable=await self._count_units(
+                db, **restricted(non_rentable_only=True)
+            ),
+            missing_certificate=await self._count_units(
+                db, **restricted(missing_certificate_only=True, as_of=today)
+            ),
+        )
+        return items, total, counts
+
+    @staticmethod
+    def _unit_filter_kwargs(
+        filter: str | None,
+        *,
+        today: date,
+        rented_ids: set[str],
+        included_ids: frozenset[str],
+    ) -> dict[str, object]:
+        if filter == "non_rentable":
+            return {"non_rentable_only": True}
+        if filter == "vacant":
+            return {
+                "rentable_only": True,
+                "exclude_unit_ids": tuple(sorted(rented_ids)),
+            }
+        if filter == "in_assessment":
+            return {"unit_ids": tuple(sorted(included_ids))}
+        if filter == "missing_certificate":
+            return {"missing_certificate_only": True, "as_of": today}
+        return {}
+
+    async def _count_units(self, db: AsyncSession, **kwargs: object) -> int:
+        _, total = await self.asset_unit_repository.list(
+            db, offset=0, limit=1, **kwargs
+        )
+        return total
+
+    async def _assessment_maps(
+        self,
+        db: AsyncSession,
+        *,
+        operator_party_id: str | None,
+        year: int | None,
+        today: date,
+    ) -> tuple[dict[str, bool], frozenset[str]]:
+        """Decided inclusion map and pending-confirm ids for current version."""
+        if operator_party_id is None or year is None:
+            return {}, frozenset()
+        from ...crud.assessment_scope import assessment_scope_repository
+
+        version = await assessment_scope_repository.get_active_version(
+            db, operator_party_id=operator_party_id, year=year
+        )
+        if version is None:
+            return {}, frozenset()
+        items = await assessment_scope_repository.list_items(
+            db, version_id=version.id
+        )
+        candidates = await assessment_scope_repository.list_managed_units(
+            db,
+            operator_party_id=operator_party_id,
+            as_of=today,
+            year=year,
+            operating_only=True,
+        )
+        from .assessment_scope_command_service import view_for
+
+        view = view_for(version, items, candidates)
+        decided = {
+            item.asset_unit_id: item.included for item in view.items
+        }
+        pending = frozenset(unit_id for unit_id, _reason in view.pending)
+        return decided, pending
+
+    async def _enrich_units(
+        self,
+        db: AsyncSession,
+        units: Sequence[AssetUnit],
+        *,
+        rented_ids: set[str],
+        decided: dict[str, bool],
+        pending_ids: frozenset[str],
+        today: date,
+    ) -> list[AssetUnitDetail]:
+        if len(units) == 0:
+            return []
+        unit_ids = tuple(unit.id for unit in units)
+        project_names = await self.asset_unit_repository.project_names(
+            db, project_ids=tuple(unit.project_id for unit in units)
+        )
+        owner_ids = tuple(
+            sorted({unit.owner_party_id for unit in units if unit.owner_party_id})
+        )
+        party_names = await self._party_names(db, owner_ids)
+        cert_counts = await self.asset_unit_repository.active_certificate_counts(
+            db, unit_ids=unit_ids, as_of=today
+        )
+        terminal_rows = (
+            await self.asset_contract_repository.list_active_terminals_by_units(
+                db, unit_ids=unit_ids, as_of=today
+            )
+        )
+        terminal_ids = tuple(
+            sorted({terminal.id for _unit_id, terminal in terminal_rows})
+        )
+        terminal_events: dict[str, tuple[ContractLifecycleEvent, ...]] = {}
+        if terminal_ids:
+            events = (
+                await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
+                    db, contract_kind="terminal", contract_ids=terminal_ids
+                )
+            )
+            grouped: dict[str, list[ContractLifecycleEvent]] = {}
+            for event in events:
+                grouped.setdefault(event.contract_id, []).append(event)
+            terminal_events = {
+                key: tuple(value) for key, value in grouped.items()
+            }
+        tenant_ids = tuple(
+            sorted(
+                {
+                    terminal.tenant_party_id
+                    for _unit_id, terminal in terminal_rows
+                    if terminal.tenant_party_id
+                }
+            )
+        )
+        tenant_names = await self._party_names(db, tenant_ids)
+        from .rent_ledger_query_service import effective_end
+
+        terminal_by_unit: dict[str, tuple[TerminalContract, date]] = {}
+        for unit_id, terminal in terminal_rows:
+            end = effective_end(
+                terminal.end_date, terminal_events.get(terminal.id, ())
+            )
+            if end < today:
+                continue
+            current = terminal_by_unit.get(unit_id)
+            if current is None or terminal.start_date > current[0].start_date:
+                terminal_by_unit[unit_id] = (terminal, end)
+
+        items: list[AssetUnitDetail] = []
+        for unit in units:
+            detail = self._unit_detail(unit, rented=unit.id in rented_ids)
+            current = terminal_by_unit.get(unit.id)
+            detail.owner_party_name = party_names.get(unit.owner_party_id, "")
+            detail.project_name = project_names.get(unit.project_id, "")
+            if unit.id in decided:
+                detail.assessment = "included" if decided[unit.id] else "excluded"
+            elif unit.id in pending_ids:
+                detail.assessment = "pending"
+            detail.certificate_count = cert_counts.get(unit.id, 0)
+            if current is not None:
+                terminal, end = current
+                detail.current_tenant_name = tenant_names.get(
+                    terminal.tenant_party_id, ""
+                )
+                detail.current_contract_number = terminal.contract_number
+                detail.current_contract_end_date = end
+            items.append(detail)
+        return items
+
+    async def _party_names(
+        self, db: AsyncSession, party_ids: Sequence[str]
+    ) -> dict[str, str]:
+        if len(party_ids) == 0:
+            return {}
+        return await self.party_name_reader.get_party_names_by_ids(
+            db, party_ids=tuple(party_ids)
+        )
+
+    async def coverage_history(
+        self,
+        db: AsyncSession,
+        unit_id: str,
+        *,
+        scope: EffectivePartyScope,
+    ) -> list[AssetUnitCoverageInterval] | None:
+        """Timeline bars for one unit; None when the unit is out of scope."""
+        self._require_effective_scope(scope)
+        unit = await self.asset_unit_repository.get(db, unit_id=unit_id, scope=scope)
+        if unit is None:
+            return None
+        terminals, upstreams = (
+            await self.asset_contract_repository.coverage_history_for_unit(
+                db, asset_unit_id=unit_id
+            )
+        )
+        contract_ids = tuple(
+            sorted(
+                [contract.id for contract in terminals]
+                + [contract.id for contract in upstreams]
+            )
+        )
+        events = (
+            await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(
+                db, contract_kind="upstream", contract_ids=contract_ids
+            )
+            if contract_ids
+            else ()
+        )
+        terminal_events = (
+            await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(
+                db, contract_kind="terminal", contract_ids=contract_ids
+            )
+            if contract_ids
+            else ()
+        )
+        from .rent_ledger_query_service import effective_end
+
+        all_events = tuple(events) + tuple(terminal_events)
+
+        def _end(contract_id: str, raw_end: date) -> date:
+            contract_events = tuple(
+                event for event in all_events if event.contract_id == contract_id
+            )
+            return effective_end(raw_end, contract_events)
+
         items = [
-            self._unit_detail(unit, rented=unit.id in rented_ids) for unit in units
+            AssetUnitCoverageInterval(
+                contract_kind="terminal",
+                contract_id=contract.id,
+                contract_number=contract.contract_number,
+                start_date=contract.start_date,
+                end_date=_end(contract.id, contract.end_date),
+            )
+            for contract in terminals
+        ] + [
+            AssetUnitCoverageInterval(
+                contract_kind="upstream",
+                contract_id=contract.id,
+                contract_number=contract.contract_number,
+                start_date=contract.start_date,
+                end_date=_end(contract.id, contract.end_date),
+            )
+            for contract in upstreams
         ]
-        return items, total
+        items.sort(key=lambda item: (item.contract_kind, item.start_date))
+        return items
 
     async def list_asset_unit_usage_types(
         self,
@@ -294,7 +620,15 @@ class AssetOperationsQueryService:
                 end_date=today,
             )
         )
-        detail = self._unit_detail(unit, rented=unit.id in rented_ids)
+        enriched = await self._enrich_units(
+            db,
+            [unit],
+            rented_ids=rented_ids,
+            decided={},
+            pending_ids=frozenset(),
+            today=today,
+        )
+        detail = enriched[0]
         return detail.model_copy(update={"terminal_contract_ids": contract_ids})
 
     @staticmethod
@@ -895,6 +1229,23 @@ class AssetOperationsQueryService:
         )
 
 
+class _DefaultPartyNameReader:
+    """Lazily bind the CRUD party reader, keeping tests' injection seam."""
+
+    async def get_party_names_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        party_ids: tuple[str, ...],
+    ) -> dict[str, str]:
+        from ...crud.party import CRUDParty
+
+        return await CRUDParty().get_party_names_by_ids(db, party_ids=party_ids)
+
+
+default_party_name_reader = _DefaultPartyNameReader()
+
+
 asset_operations_query_service = AssetOperationsQueryService(
     asset_unit_repository=default_asset_unit_repository,
     asset_contract_repository=default_asset_contract_repository,
@@ -905,5 +1256,6 @@ __all__ = [
     "AssetOperationsQueryService",
     "AssetContractReader",
     "AssetUnitReader",
+    "PartyNameReader",
     "asset_operations_query_service",
 ]

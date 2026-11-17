@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from datetime import date
 from typing import Any, TypeVar
 
 from sqlalchemy import Select, exists, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
-from ..models.asset_unit import AssetUnit
+from ..models.asset_contract import TerminalContract, TerminalContractAssetUnit
+from ..models.asset_unit import AssetUnit, PropertyCertificateAssetUnit
+from ..models.party import Party
 from ..models.project import Project
+from ..models.property_certificate import PropertyCertificate
 from ..services.party_scope_resolver import EffectivePartyScope
 
 _T = TypeVar("_T", bound=tuple[Any, ...])
@@ -62,6 +66,11 @@ class AssetUnitRepository:
         usage_type: str | None = None,
         query: str | None = None,
         non_rentable_only: bool = False,
+        rentable_only: bool = False,
+        unit_ids: tuple[str, ...] | None = None,
+        exclude_unit_ids: tuple[str, ...] | None = None,
+        missing_certificate_only: bool = False,
+        as_of: date | None = None,
         offset: int = 0,
         limit: int = 50,
     ) -> tuple[list[AssetUnit], int]:
@@ -77,6 +86,31 @@ class AssetUnitRepository:
                     AssetUnit.rentable_area <= 0,
                 )
             )
+        if rentable_only:
+            statement = statement.where(
+                AssetUnit.is_operating.is_(True), AssetUnit.rentable_area > 0
+            )
+        if unit_ids is not None:
+            if len(unit_ids) == 0:
+                return [], 0
+            statement = statement.where(AssetUnit.id.in_(unit_ids))
+        if exclude_unit_ids is not None and len(exclude_unit_ids) > 0:
+            statement = statement.where(~AssetUnit.id.in_(exclude_unit_ids))
+        if missing_certificate_only:
+            statement = statement.where(
+                ~exists(
+                    select(1)
+                    .select_from(PropertyCertificateAssetUnit)
+                    .where(
+                        PropertyCertificateAssetUnit.asset_unit_id == AssetUnit.id,
+                        PropertyCertificateAssetUnit.effective_from <= as_of,
+                        or_(
+                            PropertyCertificateAssetUnit.effective_to.is_(None),
+                            PropertyCertificateAssetUnit.effective_to >= as_of,
+                        ),
+                    )
+                )
+            )
         if project_id is not None:
             statement = statement.where(AssetUnit.project_id == project_id)
         if owner_party_id is not None:
@@ -86,11 +120,44 @@ class AssetUnitRepository:
         normalized_query = query.strip() if query is not None else ""
         if normalized_query != "":
             pattern = f"%{normalized_query}%"
+            # 原型物业页搜索范围：地址、单元、租户、产权证号。
+            tenant_name_match = exists(
+                select(1)
+                .select_from(TerminalContractAssetUnit)
+                .join(
+                    TerminalContract,
+                    TerminalContract.id
+                    == TerminalContractAssetUnit.terminal_contract_id,
+                )
+                .join(
+                    Party,
+                    Party.id == TerminalContract.tenant_party_id,
+                )
+                .where(
+                    TerminalContractAssetUnit.asset_unit_id == AssetUnit.id,
+                    Party.name.ilike(pattern),
+                )
+            )
+            certificate_number_match = exists(
+                select(1)
+                .select_from(PropertyCertificateAssetUnit)
+                .join(
+                    PropertyCertificate,
+                    PropertyCertificate.id
+                    == PropertyCertificateAssetUnit.certificate_id,
+                )
+                .where(
+                    PropertyCertificateAssetUnit.asset_unit_id == AssetUnit.id,
+                    PropertyCertificate.certificate_number.ilike(pattern),
+                )
+            )
             statement = statement.where(
                 or_(
                     AssetUnit.unit_code.ilike(pattern),
                     AssetUnit.name.ilike(pattern),
                     AssetUnit.address.ilike(pattern),
+                    tenant_name_match,
+                    certificate_number_match,
                 )
             )
 
@@ -188,6 +255,49 @@ class AssetUnitRepository:
         )
         rows = (await db.execute(statement)).all()
         return {project_id: manager_party_id for project_id, manager_party_id in rows}
+
+    async def project_names(
+        self,
+        db: AsyncSession,
+        *,
+        project_ids: Iterable[str],
+    ) -> dict[str, str]:
+        """Batched project id → name read for list enrichment."""
+        normalized_ids = tuple(sorted(set(project_ids)))
+        if len(normalized_ids) == 0:
+            return {}
+        statement = select(Project.id, Project.name).where(
+            Project.id.in_(normalized_ids)
+        )
+        return dict((await db.execute(statement)).all())
+
+    async def active_certificate_counts(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: tuple[str, ...],
+        as_of: date,
+    ) -> dict[str, int]:
+        """Count today-active certificate links per unit, page-sized batches."""
+        if len(unit_ids) == 0:
+            return {}
+        statement = (
+            select(
+                PropertyCertificateAssetUnit.asset_unit_id,
+                func.count(),
+            )
+            .where(
+                PropertyCertificateAssetUnit.asset_unit_id.in_(unit_ids),
+                PropertyCertificateAssetUnit.effective_from <= as_of,
+                or_(
+                    PropertyCertificateAssetUnit.effective_to.is_(None),
+                    PropertyCertificateAssetUnit.effective_to >= as_of,
+                ),
+            )
+            .group_by(PropertyCertificateAssetUnit.asset_unit_id)
+        )
+        rows = (await db.execute(statement)).all()
+        return {unit_id: int(count) for unit_id, count in rows}
 
 
 asset_unit_repository = AssetUnitRepository()

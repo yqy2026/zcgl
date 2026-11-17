@@ -532,6 +532,38 @@ class AssetUnitDetail(AssetUnitResponse):
     """Unit facts plus the live terminal contracts covering it."""
 
     terminal_contract_ids: list[str] = Field(default_factory=list)
+    owner_party_name: str = ""
+    project_name: str = ""
+    assessment: Literal["included", "excluded", "pending"] | None = None
+    current_tenant_name: str | None = None
+    current_contract_number: str | None = None
+    current_contract_end_date: date | None = None
+    certificate_count: int = 0
+
+
+class AssetUnitFilterCounts(_StrictPayload):
+    """Counts for the segmented list filters (prototype: 带数量分段筛选)."""
+
+    all: int
+    in_assessment: int
+    vacant: int
+    non_rentable: int
+    missing_certificate: int
+
+
+class AssetUnitCoverageInterval(_StrictPayload):
+    """One bar on the unit's lease timeline (terminal or upstream)."""
+
+    contract_kind: Literal["terminal", "upstream"]
+    contract_id: str
+    contract_number: str
+    start_date: date
+    end_date: date
+
+
+class AssetUnitCoverageHistoryResponse(_StrictPayload):
+    asset_unit_id: str
+    items: list[AssetUnitCoverageInterval]
 
 
 class AssetUnitListResponse(_StrictPayload):
@@ -539,6 +571,7 @@ class AssetUnitListResponse(_StrictPayload):
 
     items: list[AssetUnitDetail]
     total: int
+    counts: AssetUnitFilterCounts | None = None
 
 
 class UpstreamContractDetail(UpstreamContractResponse):
