@@ -78,7 +78,7 @@ describe('AppBreadcrumb', () => {
   it('renders units breadcrumb for /asset-operations/units', () => {
     renderBreadcrumb('/asset-operations/units');
 
-    expect(screen.getByText('资产单元')).toBeInTheDocument();
+    expect(screen.getByText('物业')).toBeInTheDocument();
   });
 
   it('renders intake breadcrumb for /asset-operations/contracts/intake', () => {

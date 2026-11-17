@@ -514,6 +514,41 @@ class AssetContractRepository:
         )
         return tuple((await db.execute(statement)).scalars().all())
 
+    async def list_terminal_unit_labels(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> dict[str, tuple[str, ...]]:
+        """Batched terminal coverage read returning unit display labels.
+
+        Used by read paths that render one label per terminal contract
+        (monthly workbench, contract list enrichment); stays scope-free
+        because callers already scoped the contract ids themselves.
+        """
+        if len(contract_ids) == 0:
+            return {}
+        statement = (
+            select(
+                TerminalContractAssetUnit.terminal_contract_id,
+                AssetUnit.unit_code,
+                AssetUnit.name,
+            )
+            .join(
+                AssetUnit, AssetUnit.id == TerminalContractAssetUnit.asset_unit_id
+            )
+            .where(TerminalContractAssetUnit.terminal_contract_id.in_(contract_ids))
+            .order_by(
+                TerminalContractAssetUnit.terminal_contract_id,
+                TerminalContractAssetUnit.asset_unit_id,
+            )
+        )
+        rows = (await db.execute(statement)).all()
+        labels: dict[str, list[str]] = {}
+        for contract_id, unit_code, unit_name in rows:
+            labels.setdefault(contract_id, []).append(unit_name or unit_code)
+        return {key: tuple(value) for key, value in labels.items()}
+
     async def find_upstream_overlaps(
         self,
         db: AsyncSession,

@@ -7,8 +7,8 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Alert, Table, Tag, Input } from 'antd';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Alert, Button, Table, Tag, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
@@ -117,6 +117,7 @@ function UpstreamList(props: {
   statusLabels: Record<UpstreamContractListItem['status'], string>;
 }): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [ownerPartyId, setOwnerPartyId] = useState<string | undefined>();
@@ -180,13 +181,23 @@ function UpstreamList(props: {
     <ContractPageShell
       title={props.title}
       extra={
-        <OwnerPartySelect
-          value={ownerPartyId}
-          onChange={value => {
-            setOwnerPartyId(value);
-            setPagination(previous => ({ ...previous, current: 1 }));
-          }}
-        />
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <OwnerPartySelect
+            value={ownerPartyId}
+            onChange={value => {
+              setOwnerPartyId(value);
+              setPagination(previous => ({ ...previous, current: 1 }));
+            }}
+          />
+          <Button
+            type="primary"
+            onClick={() => {
+              navigate('/asset-operations/contracts/intake?contract_type=upstream_lease');
+            }}
+          >
+            ＋ 录入已签合同
+          </Button>
+        </div>
       }
       searchProps={{
         searchText,
@@ -296,6 +307,7 @@ function TerminalList(props: {
   statusLabels: Record<TerminalContractListItem['status'], string>;
 }): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [rentUnpaid, setRentUnpaid] = useState(false);
   const [depositUnsettled, setDepositUnsettled] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -406,6 +418,14 @@ function TerminalList(props: {
               setPagination(previous => ({ ...previous, current: 1 }));
             }}
           />
+          <Button
+            type="primary"
+            onClick={() => {
+              navigate('/asset-operations/contracts/intake?contract_type=terminal');
+            }}
+          >
+            ＋ 录入已签合同
+          </Button>
         </div>
       }
       searchProps={{

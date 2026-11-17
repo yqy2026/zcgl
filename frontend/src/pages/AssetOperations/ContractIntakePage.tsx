@@ -8,6 +8,7 @@
  */
 
 import { useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Input, Tag } from 'antd';
@@ -78,7 +79,14 @@ function newIdempotencyKey(): string {
 }
 
 export function ContractIntakePage(): React.ReactElement {
-  const [contractType, setContractType] = useState<ContractIntakeType>('terminal');
+  // 原型：录入入口按来源预选类型（上游页 → 承租合同，终端页 → 终端合同）。
+  const [searchParams] = useSearchParams();
+  const presetType = searchParams.get('contract_type');
+  const [contractType, setContractType] = useState<ContractIntakeType>(
+    presetType === 'upstream_lease' || presetType === 'management_agreement'
+      ? presetType
+      : 'terminal',
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [session, setSession] = useState<ContractIntakeSession | null>(null);
   const { control, getValues, handleSubmit, reset, watch, setValue } = useForm<FormState>({
