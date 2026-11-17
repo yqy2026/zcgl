@@ -23,6 +23,35 @@ class ImportBatchRepository:
             )
         ).scalar_one_or_none()
 
+    async def list_batches(
+        self,
+        db: AsyncSession,
+        *,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[ImportBatch], int]:
+        """Recent batches (both modes mixed), newest first."""
+        from sqlalchemy import func, select
+
+        count = int(
+            (
+                await db.execute(select(func.count()).select_from(ImportBatch))
+            ).scalar_one()
+        )
+        rows = (
+            (
+                await db.execute(
+                    select(ImportBatch)
+                    .order_by(ImportBatch.created_at.desc(), ImportBatch.id)
+                    .offset(offset)
+                    .limit(limit)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return list(rows), count
+
     async def list_changes(
         self,
         db: AsyncSession,

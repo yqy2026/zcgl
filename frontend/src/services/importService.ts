@@ -117,6 +117,54 @@ export const importService = {
     return response.data as Blob;
   },
 
+  async downloadUpdateTemplate(): Promise<Blob> {
+    const response = await apiClient.getAxiosInstance().post<Blob>(
+      `${API_BASE}/imports/templates/update`,
+      undefined,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+  async listBatches(
+    offset = 0,
+    limit = 20
+  ): Promise<{ items: ImportBatchStatus[]; total: number }> {
+    const response = await apiClient.get<{
+      items?: unknown[];
+      total?: number;
+    }>(`${API_BASE}/import-batches`, {
+      params: { offset, limit },
+      cache: false,
+    });
+    if (!response.success) {
+      throw new ImportError('导入批次列表加载失败', extractErrorCode(response));
+    }
+    const rawItems = Array.isArray(response.data?.items) ? response.data.items : [];
+    return {
+      items: rawItems.map(item => {
+        const record = item as Record<string, unknown>;
+        return {
+          id: String(record.id ?? ''),
+          mode: record.mode === 'update' ? 'update' : 'create',
+          status: String(record.status ?? 'uploaded') as ImportBatchStatus['status'],
+          template_version: String(record.template_version ?? ''),
+          row_count: Number(record.row_count ?? 0),
+          valid_count: Number(record.valid_count ?? 0),
+          error_count: Number(record.error_count ?? 0),
+          warning_count: Number(record.warning_count ?? 0),
+          proposal_hash: null,
+          version: Number(record.version ?? 1),
+          committed_at:
+            record.committed_at == null ? null : String(record.committed_at),
+          reverted_at:
+            record.reverted_at == null ? null : String(record.reverted_at),
+        };
+      }),
+      total: Number(response.data?.total ?? 0),
+    };
+  },
+
   async stageScanFiles(files: File[]): Promise<Array<{ id: string; file_name: string }>> {
     try {
       const formData = new FormData();

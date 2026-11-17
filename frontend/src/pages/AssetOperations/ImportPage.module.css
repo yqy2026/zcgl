@@ -1,7 +1,32 @@
 .importPage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+
+.importPage > h1 {
+  grid-column: 1 / -1;
+}
+
+.mainColumn {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  min-width: 0;
+}
+
+@media (max-width: 72rem) {
+  .importPage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .batchesAside {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--color-border, #e4e6ea);
+    padding-top: 12px;
+  }
 }
 
 .pageTitle {
@@ -42,4 +67,28 @@
   display: flex;
   gap: var(--spacing-sm);
   max-width: 30rem;
+}
+
+.guideSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.batchCard {
+  border: 1px solid var(--color-border, #e4e6ea);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.batchesAside {
+  border-left: 1px solid var(--color-border, #e4e6ea);
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
 }
