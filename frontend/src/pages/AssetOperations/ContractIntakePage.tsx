@@ -17,6 +17,7 @@ import { assetOperationsService, AssetOperationsError } from '@/services/assetOp
 import type { ContractIntakeSession, ContractIntakeType } from '@/services/assetOperationsService';
 
 import styles from './ContractIntakePage.module.css';
+import PartyPicker from './PartyPicker';
 import RentScheduleEditor from './RentScheduleEditor';
 import type { RentScheduleInput } from '@/services/assetLedgerService';
 
@@ -325,10 +326,34 @@ export function ContractIntakePage(): React.ReactElement {
                 <div className={styles.fieldGrid}>
                   {renderField('合同编号', 'contractNumber')}
                   {!isTerminal ? renderField('合同名称', 'name') : null}
-                  {isTerminal ? renderField('租户 Party ID', 'tenantPartyId') : null}
-                  {isTerminal ? renderField('出租方 Party ID', 'lessorPartyId') : null}
-                  {setUpstreamType ? renderField('产权方 Party ID', 'ownerPartyId') : null}
-                  {setUpstreamType ? renderField('运营方 Party ID', 'operatorPartyId') : null}
+                  {isTerminal ? (
+                    <PartyPicker
+                      label="租户主体"
+                      value={form.tenantPartyId}
+                      onChange={value => setValue('tenantPartyId', value)}
+                    />
+                  ) : null}
+                  {isTerminal ? (
+                    <PartyPicker
+                      label="出租方主体"
+                      value={form.lessorPartyId}
+                      onChange={value => setValue('lessorPartyId', value)}
+                    />
+                  ) : null}
+                  {setUpstreamType ? (
+                    <PartyPicker
+                      label="产权方主体"
+                      value={form.ownerPartyId}
+                      onChange={value => setValue('ownerPartyId', value)}
+                    />
+                  ) : null}
+                  {setUpstreamType ? (
+                    <PartyPicker
+                      label="运营方主体"
+                      value={form.operatorPartyId}
+                      onChange={value => setValue('operatorPartyId', value)}
+                    />
+                  ) : null}
                   {renderField('起租日', 'startDate', { type: 'date' })}
                   {renderField('到期日', 'endDate', { type: 'date' })}
                   {contractType !== 'management_agreement'

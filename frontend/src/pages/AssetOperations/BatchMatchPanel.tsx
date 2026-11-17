@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Select, Tag } from 'antd';
 import {
@@ -76,6 +76,27 @@ export default function BatchMatchPanel(): React.ReactElement {
       void client.invalidateQueries({ queryKey: ['archive-matrix'] });
     },
   });
+  // 完成率卡片的拖放/点击把文件经自定义事件转交本面板，保持单一预览入口。
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const dropHandler = (event: Event): void => {
+      const files = (event as CustomEvent<File[]>).detail ?? [];
+      commit.reset();
+      if (files.length > 0 && !preview.isPending && !commit.isPending) {
+        preview.mutate(files);
+      }
+    };
+    const pickHandler = (): void => {
+      fileInputRef.current?.click();
+    };
+    window.addEventListener('archive-batch-drop', dropHandler);
+    window.addEventListener('archive-batch-pick', pickHandler);
+    return () => {
+      window.removeEventListener('archive-batch-drop', dropHandler);
+      window.removeEventListener('archive-batch-pick', pickHandler);
+    };
+  }, [preview, commit]);
+
   const items = remaining?.items ?? [];
   function selectedIds(): string[] {
     return items
@@ -91,6 +112,7 @@ export default function BatchMatchPanel(): React.ReactElement {
         识别目标；识别结果仅是建议，提交前可逐份调整。未识别出的文件请到对应合同详情上传。
       </p>
       <input
+        ref={fileInputRef}
         type="file"
         multiple
         accept=".pdf,.png,.jpg,.jpeg"
