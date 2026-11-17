@@ -33,8 +33,10 @@ from ...schemas.asset_operations import (
     RenewalChainItem,
     RentScheduleItem,
     TerminalContractDetail,
+    TerminalContractFilterCounts,
     UpstreamContractDetail,
 )
+from ...schemas.rent_queries import RentEntryView
 from ..party_scope_resolver import EffectivePartyScope
 from .contract_projections import (
     derive_terminal_contract_status,
@@ -810,52 +812,156 @@ class AssetOperationsQueryService:
         rent_unpaid: bool = False,
         deposit_unsettled: bool = False,
     ) -> tuple[list[TerminalContractDetail], int]:
-        self._require_effective_scope(scope)
-        extra_filters: dict[str, set[str]] = {}
-        if rent_unpaid:
-            from .rent_ledger_query_service import rent_ledger_query_service
-
-            extra_filters[
-                "contract_ids"
-            ] = await rent_ledger_query_service.unpaid_contract_ids(
-                db, today=self.business_today()
-            )
-        if deposit_unsettled:
-            from ...crud.deposit_queries import deposit_query_repository
-            from .deposit_query_service import project_deposit_facts
-
-            facts = await deposit_query_repository.load_facts(
-                db, scope=scope, contract_kind="terminal"
-            )
-            unsettled_ids = {
-                view.contract_id
-                for view in project_deposit_facts(facts, today=self.business_today())
-                if view.status != "settled"
-            }
-            extra_filters["contract_ids"] = (
-                extra_filters["contract_ids"] & unsettled_ids
-                if "contract_ids" in extra_filters
-                else unsettled_ids
-            )
-        contracts, total = await self.asset_contract_repository.list_terminal(
+        items, total, _ = await self.list_terminal_contracts_view(
             db,
             scope=scope,
             contract_mode=contract_mode,
             upstream_contract_id=upstream_contract_id,
             owner_party_id=owner_party_id,
             query=query,
+            filter_value=(
+                "rent_unpaid" if rent_unpaid else "deposit_unsettled"
+                if deposit_unsettled
+                else None
+            ),
             offset=offset,
             limit=limit,
-            **extra_filters,
         )
-        events_by_id = await self._events_by_contract(
-            db, contract_kind="terminal", contracts=contracts
+        return items, total
+
+    async def list_terminal_contracts_view(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+        contract_mode: str | None = None,
+        upstream_contract_id: str | None = None,
+        owner_party_id: str | None = None,
+        query: str | None = None,
+        filter_value: str | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> tuple[list[TerminalContractDetail], int, TerminalContractFilterCounts]:
+        """Filtered page plus per-filter counts (prototype segmented bar)."""
+        self._require_effective_scope(scope)
+        today = self.business_today()
+        contracts, _ = await self.asset_contract_repository.list_terminal(
+            db,
+            scope=scope,
+            contract_mode=contract_mode,
+            upstream_contract_id=upstream_contract_id,
+            owner_party_id=owner_party_id,
+            offset=0,
+            limit=5000,
+        )
+        events = (
+            await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(
+                db,
+                contract_kind="terminal",
+                contract_ids=tuple(sorted(c.id for c in contracts)),
+            )
+        )
+        events_by_id: dict[str, tuple[ContractLifecycleEvent, ...]] = {}
+        for event in events:
+            events_by_id.setdefault(event.contract_id, []).append(event)
+        events_by_id = {key: tuple(value) for key, value in events_by_id.items()}
+
+        statuses: dict[str, str] = {}
+        for contract in contracts:
+            contract_events = events_by_id.get(contract.id, ())
+            successor_id, successor_from = self._active_successor(
+                contract_events, as_of=today
+            )
+            _ = successor_id
+            statuses[contract.id] = derive_terminal_contract_status(
+                contract,
+                as_of=today,
+                lifecycle_events=contract_events,
+                successor_effective_from=successor_from,
+            )
+
+        from .rent_ledger_query_service import rent_ledger_query_service
+
+        rent_unpaid_ids = await rent_ledger_query_service.unpaid_contract_ids(
+            db, today=today
+        )
+        from ...crud.deposit_queries import deposit_query_repository
+        from .deposit_query_service import project_deposit_facts
+
+        deposit_facts = await deposit_query_repository.load_facts(
+            db, scope=scope, contract_kind="terminal"
+        )
+        unsettled_ids = {
+            view.contract_id
+            for view in project_deposit_facts(deposit_facts, today=today)
+            if view.status != "settled"
+        }
+
+        counts = TerminalContractFilterCounts(
+            active=len([c for c in contracts if statuses[c.id] == "active"]),
+            expiring_180=len([c for c in contracts if statuses[c.id] == "expiring"]),
+            rent_unpaid=len([c for c in contracts if c.id in rent_unpaid_ids]),
+            deposit_unsettled=len(
+                [c for c in contracts if c.id in unsettled_ids]
+            ),
+            missing_scan=len(
+                [c for c in contracts if c.scan_document_id is None]
+            ),
+            ended=len(
+                [
+                    c
+                    for c in contracts
+                    if statuses[c.id] in {"ended", "historical"}
+                ]
+            ),
+        )
+
+        def _matches(contract: TerminalContract) -> bool:
+            if filter_value == "active":
+                return statuses[contract.id] == "active"
+            if filter_value == "expiring_180":
+                return statuses[contract.id] == "expiring"
+            if filter_value == "rent_unpaid":
+                return contract.id in rent_unpaid_ids
+            if filter_value == "deposit_unsettled":
+                return contract.id in unsettled_ids
+            if filter_value == "missing_scan":
+                return contract.scan_document_id is None
+            if filter_value == "ended":
+                return statuses[contract.id] in {"ended", "historical"}
+            return True
+
+        filtered = [contract for contract in contracts if _matches(contract)]
+        filtered.sort(key=lambda contract: contract.contract_number)
+
+        normalized_query = (query or "").strip()
+        if normalized_query != "":
+            tenant_ids = tuple(
+                sorted({c.tenant_party_id for c in filtered if c.tenant_party_id})
+            )
+            tenant_names = await self.party_name_reader.get_party_names_by_ids(
+                db, party_ids=tenant_ids
+            )
+            pattern = normalized_query.lower()
+            filtered = [
+                contract
+                for contract in filtered
+                if pattern in contract.contract_number.lower()
+                or pattern
+                in tenant_names.get(contract.tenant_party_id, "").lower()
+            ]
+
+        total = len(filtered)
+        page = filtered[offset : offset + limit]
+
+        events_by_page = await self._events_by_contract(
+            db, contract_kind="terminal", contracts=page
         )
         upstream_ids = tuple(
             sorted(
                 {
                     contract.upstream_contract_id
-                    for contract in contracts
+                    for contract in page
                     if contract.upstream_contract_id is not None
                 }
             )
@@ -866,20 +972,89 @@ class AssetOperationsQueryService:
             scope=scope,
         )
         upstream_by_id = {upstream.id: upstream for upstream in upstreams}
-        today = self.business_today()
-        items = [
-            self._terminal_detail(
+
+        page_ids = tuple(sorted(contract.id for contract in page))
+        schedules = (
+            await self.asset_contract_repository.list_rent_schedules(
+                db, contract_kind="terminal", contract_ids=page_ids
+            )
+            if page_ids
+            else ()
+        )
+        unit_labels = await self.asset_contract_repository.list_terminal_unit_labels(
+            db, contract_ids=page_ids
+        )
+        tenant_names_page = await self.party_name_reader.get_party_names_by_ids(
+            db,
+            party_ids=tuple(
+                sorted({c.tenant_party_id for c in page if c.tenant_party_id})
+            ),
+        )
+
+        # 本月到账状态：整年台账事实一次读入后按页内合同聚合。
+        from ...crud.rent_ledger_queries import rent_ledger_query_repository
+
+        matrix_facts = await rent_ledger_query_repository.matrix_facts(
+            db, scope=scope, ledger_type="terminal_rent", year=today.year
+        )
+        month_views, _ = rent_ledger_query_service._views(
+            matrix_facts, today=today
+        )
+        month = today.strftime("%Y-%m")
+        month_entries: dict[str, list[RentEntryView]] = {}
+        for view in month_views.values():
+            if view.period == month and view.status != "void":
+                month_entries.setdefault(view.contract_id, []).append(view)
+
+        items: list[TerminalContractDetail] = []
+        for contract in page:
+            detail = self._terminal_detail(
                 contract,
-                events=events_by_id.get(contract.id, ()),
+                events=events_by_page.get(contract.id, ()),
                 upstream=upstream_by_id.get(contract.upstream_contract_id or ""),
                 coverages=(),
                 schedules=(),
                 chain=(),
                 today=today,
             )
-            for contract in contracts
-        ]
-        return items, total
+            detail.tenant_party_name = tenant_names_page.get(
+                contract.tenant_party_id, ""
+            )
+            upstream = upstream_by_id.get(contract.upstream_contract_id or "")
+            detail.upstream_contract_number = (
+                upstream.contract_number if upstream is not None else None
+            )
+            detail.unit_labels = list(unit_labels.get(contract.id, ()))
+            contract_schedules = [
+                row
+                for row in schedules
+                if row.contract_id == contract.id
+                and row.stage_start <= today <= row.stage_end
+            ]
+            detail.current_monthly_rent = (
+                contract_schedules[0].actual_monthly_rent
+                if contract_schedules
+                else None
+            )
+            entries = month_entries.get(contract.id, [])
+            if entries:
+                remaining = sum(
+                    (row.remaining_amount for row in entries), Decimal("0")
+                )
+                due = sum((row.due_amount for row in entries), Decimal("0"))
+                if remaining <= 0:
+                    detail.current_month_collection_status = "paid"
+                elif remaining < due:
+                    detail.current_month_collection_status = "partial"
+                else:
+                    detail.current_month_collection_status = "unpaid"
+                detail.current_month_remaining = remaining
+            else:
+                detail.current_month_collection_status = "none"
+                detail.current_month_remaining = None
+            detail.has_scan = contract.scan_document_id is not None
+            items.append(detail)
+        return items, total, counts
 
     async def get_terminal_contract(
         self,

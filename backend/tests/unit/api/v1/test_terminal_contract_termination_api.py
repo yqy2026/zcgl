@@ -371,6 +371,9 @@ async def test_list_and_detail_endpoints_bind_scope_and_filters(
     )
     query_service = SimpleNamespace(
         list_terminal_contracts=AsyncMock(return_value=([detail_response], 1)),
+        list_terminal_contracts_view=AsyncMock(
+            return_value=([detail_response], 1, None)
+        ),
         get_terminal_contract=AsyncMock(return_value=detail_response),
     )
     monkeypatch.setattr(module.party_scope_resolver, "resolve", resolver)
@@ -396,7 +399,7 @@ async def test_list_and_detail_endpoints_bind_scope_and_filters(
     assert list_result.total == 1
     assert list_result.items[0].id == "terminal-1"
     assert detail_result.id == "terminal-1"
-    list_call = query_service.list_terminal_contracts.await_args
+    list_call = query_service.list_terminal_contracts_view.await_args
     assert list_call.kwargs["scope"] is scope
     assert list_call.kwargs["contract_mode"] == "sublease"
     assert list_call.kwargs["query"] == "TM-001"

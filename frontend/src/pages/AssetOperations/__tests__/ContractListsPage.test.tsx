@@ -119,6 +119,13 @@ function makeTerminal(overrides: Partial<TerminalContractListItem> = {}): Termin
     coverages: [],
     lifecycleEvents: [],
     renewalChain: [],
+    tenantPartyName: '凤凰创意',
+    upstreamContractNumber: null,
+    unitLabels: ['101 室'],
+    currentMonthlyRent: 20000,
+    currentMonthCollectionStatus: 'unpaid',
+    currentMonthRemaining: 20000,
+    hasScan: true,
     ...overrides,
   };
 }
@@ -230,7 +237,8 @@ describe('TerminalContractsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('TM-001')).toBeTruthy();
-      expect(screen.getByText('暂无上游')).toBeTruthy();
+      expect(screen.getByText('未录入')).toBeTruthy();
+      expect(screen.getByText('本月未到账')).toBeTruthy();
     });
     await waitFor(() => {
       expect(screen.getByText('在左侧选择一份合同查看详情。')).toBeTruthy();
@@ -240,23 +248,35 @@ describe('TerminalContractsPage', () => {
     await userEvent.setup().click(screen.getByText('TM-001'));
 
     await waitFor(() => {
-      expect(screen.getByText(/上游合同/)).toBeTruthy();
+      expect(screen.getAllByText(/上游合同/).length).toBeGreaterThan(0);
     });
   });
 });
 
-it('filters unsettled deposits separately from unpaid rent and resets pagination', async () => {
-  mockedService.listTerminalContracts.mockResolvedValue({ items: [], total: 0 });
+it('switches segmented filters with pagination reset and counts', async () => {
+  mockedService.listTerminalContracts.mockResolvedValue({
+    items: [],
+    total: 0,
+    counts: {
+      active: 3,
+      expiring180: 2,
+      rentUnpaid: 5,
+      depositUnsettled: 1,
+      missingScan: 0,
+      ended: 4,
+    },
+  });
   renderPage(<TerminalContractsPage />);
   const user = userEvent.setup();
-  await user.click(screen.getByLabelText('押金未结清'));
+
+  // 分段筛选带数量渲染
+  await user.click(await screen.findByText('押金未结清 1'));
   await waitFor(() =>
     expect(mockedService.listTerminalContracts).toHaveBeenLastCalledWith(
       expect.objectContaining({ filter: 'deposit_unsettled', offset: 0 })
     )
   );
-  await user.click(screen.getByLabelText('租金未到账'));
-  expect(screen.getByLabelText('押金未结清')).not.toBeChecked();
+  await user.click(screen.getByText('租金未到账 5'));
   await waitFor(() =>
     expect(mockedService.listTerminalContracts).toHaveBeenLastCalledWith(
       expect.objectContaining({ filter: 'rent_unpaid' })

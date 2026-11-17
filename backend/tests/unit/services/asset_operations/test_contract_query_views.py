@@ -178,15 +178,60 @@ class _Reader:
             if c.upstream_contract_id == upstream_contract_id
         )
 
+    async def list_terminal_unit_labels(self, _db, *, contract_ids):
+        return {}
+
 
 class _DB:
     pass
 
 
+class _PartyNames:
+    async def get_party_names_by_ids(self, _db, *, party_ids):
+        return {}
+
+
 def _service(reader: _Reader) -> AssetOperationsQueryService:
     return AssetOperationsQueryService(
         asset_contract_repository=reader,  # type: ignore[arg-type]
+        party_name_reader=_PartyNames(),  # type: ignore[arg-type]
         business_today=lambda: TODAY,
+    )
+
+
+@pytest.fixture
+def terminal_ledger_boundary(monkeypatch):
+    """终端列表的计数/本月到账聚合依赖台账与押金单例，这里整体旁路。"""
+    from unittest.mock import AsyncMock
+
+    from src.crud.deposit_queries import deposit_query_repository
+    from src.crud.rent_ledger_queries import rent_ledger_query_repository
+    from src.services.asset_operations.rent_ledger_query_service import (
+        rent_ledger_query_service,
+    )
+
+    monkeypatch.setattr(
+        rent_ledger_query_service,
+        "unpaid_contract_ids",
+        AsyncMock(return_value=set()),
+    )
+    monkeypatch.setattr(
+        rent_ledger_query_service,
+        "_views",
+        staticmethod(lambda facts, *, today: ({}, {})),
+    )
+    from src.services.asset_operations import deposit_query_service as dep_mod
+
+    monkeypatch.setattr(dep_mod, "project_deposit_facts", lambda facts, *, today: [])
+    monkeypatch.setattr(
+        deposit_query_repository,
+        "load_facts",
+        AsyncMock(return_value=object()),
+    )
+    monkeypatch.setattr(
+        rent_ledger_query_repository,
+        "matrix_facts",
+        AsyncMock(return_value=None),
     )
 
 
@@ -225,7 +270,9 @@ async def test_upstream_list_marks_exited_after_replayed_event() -> None:
 
 
 @pytest.mark.asyncio
-async def test_terminal_list_derives_ended_and_warnings() -> None:
+async def test_terminal_list_derives_ended_and_warnings(
+    terminal_ledger_boundary,
+) -> None:
     reader = _Reader()
     reader.events.append(
         _event(
@@ -246,7 +293,9 @@ async def test_terminal_list_derives_ended_and_warnings() -> None:
 
 
 @pytest.mark.asyncio
-async def test_terminal_list_flags_missing_upstream() -> None:
+async def test_terminal_list_flags_missing_upstream(
+    terminal_ledger_boundary,
+) -> None:
     reader = _Reader()
     reader.terminals = [_terminal(upstream_contract_id=None)]
     service = _service(reader)
@@ -366,3 +415,67 @@ async def test_detail_returns_none_for_unknown_contract() -> None:
 
     assert await service.get_upstream_contract(_DB(), "missing", scope=SCOPE) is None
     assert await service.get_terminal_contract(_DB(), "missing", scope=SCOPE) is None
+
+
+@pytest.mark.asyncio
+async def test_terminal_view_counts_and_page_enrichment(
+    terminal_ledger_boundary, monkeypatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    from src.crud.rent_ledger_queries import rent_ledger_query_repository
+    from src.services.asset_operations.rent_ledger_query_service import (
+        rent_ledger_query_service,
+    )
+
+    reader = _Reader()
+    reader.terminals = [
+        _terminal(),
+        _terminal(
+            id="terminal-2",
+            contract_number="TM-002",
+            scan_document_id=None,
+        ),
+    ]
+    reader.events = [
+        _event(
+            contract_id="terminal-2",
+            event_type="terminated",
+            effective_date=date(2026, 5, 31),
+        )
+    ]
+
+    class _Names:
+        async def get_party_names_by_ids(self, _db, *, party_ids):
+            return {"tenant-1": "凤凰创意"}
+
+    service = AssetOperationsQueryService(
+        asset_contract_repository=reader,  # type: ignore[arg-type]
+        party_name_reader=_Names(),  # type: ignore[arg-type]
+        business_today=lambda: TODAY,
+    )
+
+    unpaid = {"terminal-1"}
+    monkeypatch.setattr(
+        rent_ledger_query_service,
+        "unpaid_contract_ids",
+        AsyncMock(return_value=unpaid),
+    )
+
+    # 默认终端合同止日 2026-12-31，距今 67 天 → 180 天内到期而非生效中。
+    items, total, counts = await service.list_terminal_contracts_view(
+        _DB(), scope=SCOPE, filter_value="expiring_180"
+    )
+
+    assert total == 1
+    assert items[0].id == "terminal-1"
+    assert items[0].tenant_party_name == "凤凰创意"
+    assert items[0].upstream_contract_number == "UP-001"
+    assert items[0].has_scan is True
+    # 计数按派生状态与事实集合统计，而不是按当前筛选。
+    assert counts.active == 0
+    assert counts.expiring_180 == 1
+    assert counts.ended == 1
+    assert counts.missing_scan == 1
+    assert counts.rent_unpaid == 1
+    _ = rent_ledger_query_repository

@@ -526,6 +526,7 @@ class TerminalContractListResponse(_StrictPayload):
 
     items: list[TerminalContractDetail]
     total: int
+    counts: TerminalContractFilterCounts | None = None
 
 
 class AssetUnitDetail(AssetUnitResponse):
@@ -599,6 +600,27 @@ class TerminalContractDetail(TerminalContractResponse):
     renewal_chain: list[RenewalChainItem] = Field(default_factory=list)
     lifecycle_events: list[LifecycleEventItem] = Field(default_factory=list)
     rent_summary: dict[str, object] = Field(default_factory=dict)
+    # 列表富化字段（WP3 终端合同页对齐原型）
+    tenant_party_name: str = ""
+    upstream_contract_number: str | None = None
+    unit_labels: list[str] = Field(default_factory=list)
+    current_monthly_rent: Decimal | None = None
+    current_month_collection_status: (
+        Literal["paid", "partial", "unpaid", "none"] | None
+    ) = None
+    current_month_remaining: Decimal | None = None
+    has_scan: bool = True
+
+
+class TerminalContractFilterCounts(_StrictPayload):
+    """Counts for the segmented terminal-contract filters (带数量)."""
+
+    active: int
+    expiring_180: int
+    rent_unpaid: int
+    deposit_unsettled: int
+    missing_scan: int
+    ended: int
 
 
 class ContractIntakeSessionResponse(_StrictPayload):

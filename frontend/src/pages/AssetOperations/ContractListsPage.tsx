@@ -8,7 +8,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Alert, Button, Table, Tag, Input } from 'antd';
+import { Alert, Button, Segmented, Table, Tag, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
@@ -43,12 +43,6 @@ const TERMINAL_STATUS_LABELS: Record<TerminalContractListItem['status'], string>
   expiring: '即将到期',
   ended: '已结束',
   historical: '历史版本',
-};
-
-const WARNING_LABELS: Record<string, string> = {
-  UPSTREAM_CONTRACT_MISSING: '暂无上游',
-  TERMINAL_TERM_EXCEEDS_UPSTREAM: '租期越界',
-  ARCHIVE_DOCUMENT_MISSING: '缺扫描件',
 };
 
 export function isScopeForbidden(error: unknown): boolean {
@@ -302,14 +296,38 @@ function UpstreamList(props: {
   );
 }
 
+type TerminalViewFilter =
+  | 'active'
+  | 'expiring_180'
+  | 'rent_unpaid'
+  | 'deposit_unsettled'
+  | 'missing_scan'
+  | 'ended';
+
+const TERMINAL_FILTER_LABELS: { value: TerminalViewFilter; label: string }[] = [
+  { value: 'active', label: '生效中' },
+  { value: 'expiring_180', label: '180 天内到期' },
+  { value: 'rent_unpaid', label: '租金未到账' },
+  { value: 'deposit_unsettled', label: '押金未结清' },
+  { value: 'missing_scan', label: '缺扫描件' },
+  { value: 'ended', label: '已结束' },
+];
+
+function daysUntil(dateText: string): number {
+  const target = new Date(dateText).getTime();
+  if (Number.isNaN(target)) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.ceil((target - Date.now()) / 86400000);
+}
+
 function TerminalList(props: {
   title: string;
   statusLabels: Record<TerminalContractListItem['status'], string>;
 }): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [rentUnpaid, setRentUnpaid] = useState(false);
-  const [depositUnsettled, setDepositUnsettled] = useState(false);
+  const [viewFilter, setViewFilter] = useState<TerminalViewFilter>('active');
   const [searchText, setSearchText] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [ownerPartyId, setOwnerPartyId] = useState<string | undefined>();
@@ -320,17 +338,12 @@ function TerminalList(props: {
       'asset-operations-terminal-contracts',
       appliedSearch,
       ownerPartyId ?? '',
+      viewFilter,
       pagination.current,
-      rentUnpaid,
-      depositUnsettled,
     ],
     queryFn: () =>
       assetOperationsService.listTerminalContracts({
-        ...(depositUnsettled
-          ? { filter: 'deposit_unsettled' }
-          : rentUnpaid
-            ? { filter: 'rent_unpaid' }
-            : {}),
+        filter: viewFilter,
         q: appliedSearch.trim() === '' ? undefined : appliedSearch.trim(),
         ownerPartyId,
         offset: (pagination.current - 1) * pagination.pageSize,
@@ -346,34 +359,146 @@ function TerminalList(props: {
 
   const columns: ColumnsType<TerminalContractListItem> = useMemo(
     () => [
-      { title: '合同编号', dataIndex: 'contractNumber', key: 'contractNumber' },
+      {
+        title: '终端租户 · 合同号',
+        key: 'tenant',
+        render: (_: unknown, record: TerminalContractListItem) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 500 }}>
+              {record.tenantPartyName !== '' ? record.tenantPartyName : record.tenantPartyId}
+            </span>
+            <span
+              style={{
+                fontSize: 12,
+                color: 'var(--color-text-secondary)',
+                fontFamily: 'ui-monospace, Menlo, monospace',
+              }}
+            >
+              {record.contractNumber}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: '资产单元',
+        key: 'units',
+        render: (_: unknown, record: TerminalContractListItem) =>
+          record.unitLabels.length === 0
+            ? '—'
+            : record.unitLabels.length === 1
+              ? record.unitLabels[0]
+              : `${record.unitLabels[0]} 等（合并 ${record.unitLabels.length}）`,
+      },
       {
         title: '模式',
         dataIndex: 'contractMode',
         key: 'contractMode',
+        width: 100,
         render: (_: unknown, record) =>
           record.contractMode === 'sublease' ? '转租' : '产权方直签',
       },
       {
+        title: '上游合同',
+        key: 'upstream',
+        render: (_: unknown, record: TerminalContractListItem) =>
+          record.upstreamContractId == null ? (
+            <span style={{ color: 'var(--color-warning, #874d00)' }}>未录入</span>
+          ) : (
+            (record.upstreamContractNumber ?? record.upstreamContractId)
+          ),
+      },
+      {
+        title: '租期至',
+        key: 'endDate',
+        width: 130,
+        render: (_: unknown, record: TerminalContractListItem) => {
+          const overrun = record.warnings.some(
+            warning => warning.code === 'TERMINAL_TERM_EXCEEDS_UPSTREAM'
+          );
+          const left = daysUntil(record.endDate);
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span
+                style={
+                  overrun
+                    ? { color: 'var(--color-error, #cf1322)', fontWeight: 600 }
+                    : left <= 90
+                      ? { color: 'var(--color-warning, #874d00)' }
+                      : undefined
+                }
+              >
+                {record.endDate}
+              </span>
+              {overrun ? (
+                <span style={{ fontSize: 12, color: 'var(--color-error, #cf1322)' }}>
+                  租期越界
+                </span>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        title: '月租金',
+        key: 'rent',
+        align: 'right',
+        width: 120,
+        render: (_: unknown, record: TerminalContractListItem) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {record.currentMonthlyRent != null ? formatMoney(record.currentMonthlyRent) : '—'}
+            </span>
+            {record.currentMonthCollectionStatus === 'unpaid' ? (
+              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>本月未到账</span>
+            ) : record.currentMonthCollectionStatus === 'partial' ? (
+              <span style={{ fontSize: 12, color: 'var(--color-warning, #874d00)' }}>
+                部分到账 · 欠 {formatMoney(record.currentMonthRemaining ?? 0)}
+              </span>
+            ) : record.currentMonthCollectionStatus === 'paid' ? (
+              <span style={{ fontSize: 12, color: 'var(--color-success, #237804)' }}>本月已到账</span>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        title: '押金 / 保证金',
+        key: 'deposit',
+        align: 'right',
+        width: 130,
+        render: (_: unknown, record: TerminalContractListItem) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {record.depositAmount > 0 ? formatMoney(record.depositAmount) : '—'}
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              {record.rentCollector === 'operator' ? '本公司收取' : '产权方收取'}
+            </span>
+          </div>
+        ),
+      },
+      {
         title: '状态',
         key: 'status',
+        width: 90,
         render: (_: unknown, record) => (
           <div>
             <Tag color={record.status === 'active' ? 'blue' : 'default'}>
               {props.statusLabels[record.status]}
             </Tag>
-            {record.warnings.map(warning => (
-              <Tag key={warning.code} color="gold">
-                {WARNING_LABELS[warning.code] ?? warning.code}
-              </Tag>
-            ))}
           </div>
         ),
       },
       {
-        title: '期限',
-        key: 'term',
-        render: (_: unknown, record) => `${record.startDate} ~ ${record.endDate}`,
+        title: '扫描件',
+        key: 'scan',
+        width: 70,
+        align: 'center',
+        render: (_: unknown, record: TerminalContractListItem) =>
+          record.hasScan ? (
+            '有'
+          ) : (
+            <span style={{ color: 'var(--color-error, #cf1322)' }}>缺</span>
+          ),
       },
     ],
     [props.statusLabels]
@@ -382,35 +507,48 @@ function TerminalList(props: {
   const items = listQuery.data?.items ?? [];
   const detail = detailQuery.data ?? null;
 
+  const counts = listQuery.data?.counts ?? null;
+  const countFor = (value: TerminalViewFilter): number | null => {
+    if (counts == null) {
+      return null;
+    }
+    if (value === 'active') {
+      return counts.active;
+    }
+    if (value === 'expiring_180') {
+      return counts.expiring180;
+    }
+    if (value === 'rent_unpaid') {
+      return counts.rentUnpaid;
+    }
+    if (value === 'deposit_unsettled') {
+      return counts.depositUnsettled;
+    }
+    if (value === 'missing_scan') {
+      return counts.missingScan;
+    }
+    return counts.ended;
+  };
+
   return (
     <ContractPageShell
       title={props.title}
+      filterBar={
+        <Segmented
+          aria-label="终端合同视图筛选"
+          value={viewFilter}
+          onChange={value => {
+            setViewFilter(value as TerminalViewFilter);
+            setPagination(previous => ({ ...previous, current: 1 }));
+          }}
+          options={TERMINAL_FILTER_LABELS.map(option => ({
+            value: option.value,
+            label: `${option.label}${countFor(option.value) != null ? ` ${countFor(option.value)}` : ''}`,
+          }))}
+        />
+      }
       extra={
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label>
-            <input
-              type="checkbox"
-              checked={rentUnpaid}
-              onChange={event => {
-                setRentUnpaid(event.target.checked);
-                setDepositUnsettled(false);
-                setPagination(previous => ({ ...previous, current: 1 }));
-              }}
-            />
-            租金未到账
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={depositUnsettled}
-              onChange={event => {
-                setDepositUnsettled(event.target.checked);
-                setRentUnpaid(false);
-                setPagination(previous => ({ ...previous, current: 1 }));
-              }}
-            />
-            押金未结清
-          </label>
           <OwnerPartySelect
             value={ownerPartyId}
             onChange={value => {
@@ -428,6 +566,7 @@ function TerminalList(props: {
           </Button>
         </div>
       }
+      searchPlaceholder="搜租户、单元、合同号（含已结束）"
       searchProps={{
         searchText,
         setSearchText,
@@ -530,7 +669,9 @@ interface ListQueryState {
 
 function ContractPageShell<T extends { id: string }>(props: {
   extra?: React.ReactNode;
+  filterBar?: React.ReactNode;
   title: string;
+  searchPlaceholder?: string;
   searchProps: SearchState;
   listQueryState: ListQueryState;
   columns: ColumnsType<T>;
@@ -550,6 +691,7 @@ function ContractPageShell<T extends { id: string }>(props: {
     <div className={styles.page}>
       <h1 style={{ margin: 0, fontSize: 20 }}>{props.title}</h1>
       {props.extra}
+      {props.filterBar != null ? <div>{props.filterBar}</div> : null}
 
       {props.listQueryState.isError ? (
         <Alert
@@ -566,8 +708,8 @@ function ContractPageShell<T extends { id: string }>(props: {
       ) : null}
 
       <Input.Search
-        aria-label="搜索合同编号"
-        placeholder="搜索合同编号"
+        aria-label={props.searchPlaceholder ?? '搜索合同编号'}
+        placeholder={props.searchPlaceholder ?? '搜索合同编号'}
         value={props.searchProps.searchText}
         onChange={event => props.searchProps.setSearchText(event.target.value)}
         onSearch={value => {

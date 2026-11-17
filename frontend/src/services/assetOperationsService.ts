@@ -257,11 +257,33 @@ export interface TerminalContractListItem {
     reason: string | null;
   }[];
   renewalChain: { contractId: string; contractNumber: string; relation: string }[];
+  /** 列表富化字段（WP3 终端合同页对齐原型） */
+  tenantPartyName: string;
+  upstreamContractNumber: string | null;
+  unitLabels: string[];
+  currentMonthlyRent: number | null;
+  currentMonthCollectionStatus: 'paid' | 'partial' | 'unpaid' | 'none' | null;
+  currentMonthRemaining: number | null;
+  hasScan: boolean;
+}
+
+export interface TerminalContractFilterCounts {
+  active: number;
+  expiring180: number;
+  rentUnpaid: number;
+  depositUnsettled: number;
+  missingScan: number;
+  ended: number;
 }
 
 export interface ContractListResult<T> {
   items: T[];
   total: number;
+  counts?: unknown;
+}
+
+export interface TerminalContractListResult extends ContractListResult<TerminalContractListItem> {
+  counts: TerminalContractFilterCounts | null;
 }
 
 function normalizeSession(raw: RawUnitRecord): ContractIntakeSession {
@@ -442,6 +464,28 @@ function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
     coverages: normalizeCoverages(raw.coverages),
     lifecycleEvents: normalizeEvents(raw.lifecycle_events),
     renewalChain: normalizeChain(raw.renewal_chain),
+    tenantPartyName: String(normalized.tenant_party_name ?? ''),
+    upstreamContractNumber:
+      normalized.upstream_contract_number == null
+        ? null
+        : String(normalized.upstream_contract_number),
+    unitLabels: Array.isArray(normalized.unit_labels)
+      ? normalized.unit_labels.map(String)
+      : [],
+    currentMonthlyRent:
+      normalized.current_monthly_rent == null
+        ? null
+        : Number(normalized.current_monthly_rent),
+    currentMonthCollectionStatus: (
+      ['paid', 'partial', 'unpaid', 'none'] as const
+    ).includes(normalized.current_month_collection_status as never)
+      ? (normalized.current_month_collection_status as TerminalContractListItem['currentMonthCollectionStatus'])
+      : null,
+    currentMonthRemaining:
+      normalized.current_month_remaining == null
+        ? null
+        : Number(normalized.current_month_remaining),
+    hasScan: raw.has_scan !== false,
   };
 }
 
@@ -842,7 +886,13 @@ export class AssetOperationsService {
 
   async listTerminalContracts(
     params: {
-      filter?: 'rent_unpaid' | 'deposit_unsettled';
+      filter?:
+        | 'active'
+        | 'expiring_180'
+        | 'rent_unpaid'
+        | 'deposit_unsettled'
+        | 'missing_scan'
+        | 'ended';
       contractMode?: string;
       upstreamContractId?: string;
       ownerPartyId?: string;
@@ -850,11 +900,12 @@ export class AssetOperationsService {
       offset?: number;
       limit?: number;
     } = {}
-  ): Promise<ContractListResult<TerminalContractListItem>> {
+  ): Promise<TerminalContractListResult> {
     try {
       const result = await apiClient.get<{
         items: RawUnitRecord[];
         total: number;
+        counts?: RawUnitRecord | null;
       }>(`${API_BASE}/terminal-contracts`, {
         params: {
           ...(params.filter != null ? { filter: params.filter } : {}),
@@ -876,9 +927,21 @@ export class AssetOperationsService {
         );
       }
       const payload = result.data ?? { items: [], total: 0 };
+      const countsRaw = payload.counts ?? null;
       return {
         items: (payload.items ?? []).map(normalizeTerminal),
         total: Number(payload.total ?? 0),
+        counts:
+          countsRaw == null
+            ? null
+            : {
+                active: Number(countsRaw.active ?? 0),
+                expiring180: Number(countsRaw.expiring_180 ?? 0),
+                rentUnpaid: Number(countsRaw.rent_unpaid ?? 0),
+                depositUnsettled: Number(countsRaw.deposit_unsettled ?? 0),
+                missingScan: Number(countsRaw.missing_scan ?? 0),
+                ended: Number(countsRaw.ended ?? 0),
+              },
       };
     } catch (error) {
       if (error instanceof AssetOperationsError) {
