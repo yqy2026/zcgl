@@ -8,7 +8,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.models.asset_contract import TerminalContract, UpstreamContract
+from src.models.asset_contract import (
+    ContractLifecycleEvent,
+    TerminalContract,
+    UpstreamContract,
+)
 from src.services.asset_operations.errors import (
     OccupancyReportAlreadySubmittedError,
     OccupancyReportPeriodInvalidError,
@@ -511,3 +515,76 @@ async def test_overview_deposits_carry_names_and_numbers(monkeypatch, repos):
     assert deposit.contract_number == "ZZ-1"
     assert deposit.counterparty_name == "凤凰创意"
     assert deposit.status == "refundable_unreturned"
+
+
+@pytest.mark.asyncio
+async def test_expired_upstream_counts_skip_renewed_predecessor(monkeypatch, repos):
+    """P1-2：已续签前驱不进在租/越界计数（与终端页 historical 口径对齐）。"""
+    from datetime import datetime
+
+    reader_renewed = _terminal("t-renewed", "ZZ-OLD")
+    reader_normal = _terminal("t-normal", "ZZ-NEW")
+
+    # 工作台用例里上游是 lease，需要真实 UpstreamContract 覆盖 end_date 到期场景
+    upstreams = [
+        _upstream("u1", "CZ-2026-001"),
+        _upstream("u3", "CZ-2025-003", end=date(2026, 10, 31)),
+    ]
+    monkeypatch.setattr(
+        module.asset_contract_repository,
+        "list_upstream",
+        AsyncMock(return_value=(upstreams, len(upstreams))),
+    )
+    renewed_event = ContractLifecycleEvent(
+        id="ev-renew",
+        contract_kind="terminal",
+        contract_id="t-renewed",
+        event_type="renewed",
+        effective_date=date(2026, 11, 1),
+        successor_contract_id="t-normal",
+        handover_status="completed",
+        deposit_settlement_status="settled",
+        reason="续签",
+        created_by="actor-1",
+        created_at=datetime(2026, 11, 1),
+        idempotency_key="ev-key-renew",
+    )
+    monkeypatch.setattr(
+        module.asset_contract_repository,
+        "list_lifecycle_events_by_contract_ids",
+        AsyncMock(return_value=(renewed_event,)),
+    )
+
+    async def terminals_by_upstream(db, *, upstream_contract_id):
+        if upstream_contract_id == "u3":
+            return (reader_renewed, reader_normal)
+        return ()
+
+    monkeypatch.setattr(
+        module.asset_contract_repository,
+        "list_terminal_by_upstream",
+        terminals_by_upstream,
+    )
+    # 报送卡降级路径顺带覆盖 P2-1 收窄后的异常白名单。
+    monkeypatch.setattr(
+        module.occupancy_report_draft_service,
+        "get_draft",
+        AsyncMock(
+            side_effect=OccupancyReportScopeMissingError(
+                operator_party_id="op", year=2026
+            )
+        ),
+    )
+
+    service = module.MonthlyWorkbenchService(business_today_fn=lambda: TODAY)
+    view = await service.overview(
+        None, scope=_scope(), operator_party_id="op", actor_id="actor"
+    )
+
+    expired = next(
+        item
+        for item in view.expired_upstream
+        if item.contract_id == "u3"
+    )
+    # t-renewed 已被 t-normal 接续：active 只计 t-normal，前驱不双计。
+    assert expired.active_terminal_count == 1

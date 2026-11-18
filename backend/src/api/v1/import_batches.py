@@ -206,11 +206,11 @@ async def list_import_batches(
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ) -> ImportBatchListResponse:
-    """Recent batches (create & update modes mixed) for the side panel."""
+    """The actor's recent batches (create & update modes mixed)."""
     from ...crud.import_batch import import_batch_repository
 
     batches, total = await import_batch_repository.list_batches(
-        db, offset=offset, limit=limit
+        db, created_by=str(current_user.id), offset=offset, limit=limit
     )
     return ImportBatchListResponse(
         items=[ImportBatchStatusResponse.model_validate(row) for row in batches],

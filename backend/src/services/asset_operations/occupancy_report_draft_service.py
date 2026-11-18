@@ -224,16 +224,9 @@ class OccupancyReportDraftService:
         )
         version_numbers: dict[str, int | None] = {}
         if version_ids:
-            from sqlalchemy import select as sa_select
-
-            from ...models.assessment_scope import AssessmentScopeVersion
-
-            statement = sa_select(
-                AssessmentScopeVersion.id, AssessmentScopeVersion.version_number
-            ).where(AssessmentScopeVersion.id.in_(version_ids))
-            version_numbers = {
-                row[0]: row[1] for row in (await db.execute(statement)).all()
-            }
+            version_numbers = await assessment_scope_repository.version_numbers_by_ids(
+                db, version_ids=version_ids
+            )
         items = [
             OccupancyReportSummaryRow(
                 report_id=row.id,

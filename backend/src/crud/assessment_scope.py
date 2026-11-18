@@ -19,6 +19,20 @@ from ..models.project import Project
 
 
 class AssessmentScopeRepository:
+    async def version_numbers_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        version_ids: tuple[str, ...],
+    ) -> dict[str, int | None]:
+        """Batched version_id → version_number read for report history."""
+        if len(version_ids) == 0:
+            return {}
+        statement = select(
+            AssessmentScopeVersion.id, AssessmentScopeVersion.version_number
+        ).where(AssessmentScopeVersion.id.in_(version_ids))
+        return {row[0]: row[1] for row in (await db.execute(statement)).all()}
+
     """Read and persist scope versions scoped by operator party, never by user."""
 
     async def party_exists(self, db: AsyncSession, *, party_id: str) -> bool:

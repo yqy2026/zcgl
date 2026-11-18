@@ -774,7 +774,7 @@ V4-0 裁决（2026-11-15，业务确认授权代裁决）升格自活跃计划�
 
 终端合同列表行富化（读投影，不入库）：`tenant_party_name`、`upstream_contract_number`、`unit_labels[]`（多单元即合并出租）、`current_monthly_rent`（当天所在租金阶段实际月租）、`current_month_collection_status`（`paid`/`partial`/`unpaid`/`none`，按当前业务月租金台账聚合）与 `current_month_remaining`、`has_scan`；响应附六值筛选计数 `counts`。
 
-上游合同详情富化（读投影，不入库）：`days_to_expiry`（到期剩余天数，已过为负）、`payment_plan[]`（按租金阶段的付款计划：期间〔终止已回放〕、月租、期数、已付期数、下期应付日、合计、首期/第 N 次递增注记）、`units_matrix[]`（当天覆盖单元 × 当前在租终端合同：租户、合同号、租期至、当期月租、扫描件有无；空置单元租户为 null）。
+上游合同详情富化（读投影，不入库）：`days_to_expiry`（到期剩余天数，已过为负）、`payment_plan[]`（按租金阶段的付款计划：期间〔终止已回放〕、月租、期数与合计〔同一截止口径：不足整月部分不计〕、已付期数、下期应付日、首期/第 N 次递增注记）、`units_matrix[]`（当天覆盖单元 × 当前在租终端合同：租户、合同号、租期至、当期月租、扫描件有无；空置单元租户为 null）。
 
 ## 5. 状态机
 

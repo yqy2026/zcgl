@@ -8,7 +8,9 @@ import { AssetUnitsPage } from '../AssetUnitsPage';
 import { ASSET_OPERATIONS_V5_ROUTES } from '@/constants/routes';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
-vi.mock('@/components/System/CapabilityGuard', () => ({ default: () => null }));
+vi.mock('@/components/System/CapabilityGuard', () => ({
+  default: ({ children }: { children?: React.ReactNode }) => children ?? null,
+}));
 
 vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
   const actual = await importOriginal<typeof import('@/services/assetOperationsService')>();

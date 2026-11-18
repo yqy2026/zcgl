@@ -881,16 +881,19 @@ class AssetOperationsQueryService:
         for index, stage in enumerate(
             sorted(schedules, key=lambda row: row.stage_start)
         ):
+            # 期数/合计与期间同口径：终止回放后的合同截止截断阶段。
+            effective_stage_end = min(stage.stage_end, end)
             months = (
-                (stage.stage_end.year - stage.stage_start.year) * 12
-                + stage.stage_end.month
+                (effective_stage_end.year - stage.stage_start.year) * 12
+                + effective_stage_end.month
                 - stage.stage_start.month
                 + 1
             )
+            months = max(months, 0)
             stage_views = [
                 view
                 for view in active_views
-                if stage.stage_start <= view.period_start <= min(stage.stage_end, end)
+                if stage.stage_start <= view.period_start <= effective_stage_end
             ]
             paid = len([view for view in stage_views if view.status == "paid"])
             pending = [view for view in stage_views if view.remaining_amount > 0]
@@ -909,7 +912,7 @@ class AssetOperationsQueryService:
                     period_count=max(months, 0),
                     paid_count=paid,
                     next_due_date=next_due,
-                    total_amount=stage.actual_monthly_rent * max(months, 0),
+                    total_amount=stage.actual_monthly_rent * months,
                     note=note,
                 )
             )
@@ -1114,8 +1117,9 @@ class AssetOperationsQueryService:
 
         from .rent_ledger_query_service import rent_ledger_query_service
 
+        scoped_terminal_ids = tuple(sorted(c.id for c in contracts))
         rent_unpaid_ids = await rent_ledger_query_service.unpaid_contract_ids(
-            db, today=today
+            db, today=today, contract_ids=scoped_terminal_ids
         )
         from ...crud.deposit_queries import deposit_query_repository
         from .deposit_query_service import project_deposit_facts

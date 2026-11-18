@@ -20,6 +20,7 @@ import type { AssetUnitListItem } from '@/services/assetOperationsService';
 import { occupancyReportService } from '@/services/occupancyReportService';
 import { projectService } from '@/services/projectService';
 
+import CapabilityGuard from '@/components/System/CapabilityGuard';
 import styles from './AssetUnitsPage.module.css';
 import ChangeTimelinePanel from './ChangeTimelinePanel';
 import OwnerPartySelect from './OwnerPartySelect';
@@ -614,17 +615,19 @@ export function AssetUnitsPage(): React.ReactElement {
                 </Link>
               </div>
               {detail.rentalStatus === 'vacant' ? (
-                <VacancyNoteEditor
-                  unit={detail}
-                  onSaved={() => {
-                    void queryClient.invalidateQueries({
-                      queryKey: ['asset-operations-units'],
-                    });
-                    void queryClient.invalidateQueries({
-                      queryKey: ['asset-operations-unit', detail.id],
-                    });
-                  }}
-                />
+                <CapabilityGuard action="write" resource="asset_ops" fallback={<></>}>
+                  <VacancyNoteEditor
+                    unit={detail}
+                    onSaved={() => {
+                      void queryClient.invalidateQueries({
+                        queryKey: ['asset-operations-units'],
+                      });
+                      void queryClient.invalidateQueries({
+                        queryKey: ['asset-operations-unit', detail.id],
+                      });
+                    }}
+                  />
+                </CapabilityGuard>
               ) : null}
               <LeaseTimeline unitId={detail.id} />
               <RenameForm
@@ -644,17 +647,19 @@ export function AssetUnitsPage(): React.ReactElement {
                 }
               />
               <UnitCertificates key={detail.id} unitId={detail.id} />
-              <BoundaryActionsModal
-                unit={detail}
-                onDone={() => {
-                  void queryClient.invalidateQueries({
-                    queryKey: ['asset-operations-units'],
-                  });
-                  void queryClient.invalidateQueries({
-                    queryKey: ['asset-operations-unit', detail.id],
-                  });
-                }}
-              />
+              <CapabilityGuard action="write" resource="asset_ops" fallback={<></>}>
+                <BoundaryActionsModal
+                  unit={detail}
+                  onDone={() => {
+                    void queryClient.invalidateQueries({
+                      queryKey: ['asset-operations-units'],
+                    });
+                    void queryClient.invalidateQueries({
+                      queryKey: ['asset-operations-unit', detail.id],
+                    });
+                  }}
+                />
+              </CapabilityGuard>
               <ChangeTimelinePanel targetType="asset_unit" targetId={detail.id} />
             </div>
           )}

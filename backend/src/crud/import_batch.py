@@ -27,22 +27,30 @@ class ImportBatchRepository:
         self,
         db: AsyncSession,
         *,
+        created_by: str,
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[ImportBatch], int]:
-        """Recent batches (both modes mixed), newest first."""
+        """The actor's recent batches (both modes mixed), newest first.
+
+        Owner-only to match the detail/commit paths: a batch whose
+        created_by differs is invisible here, exactly as ``get_batch``
+        hides it.
+        """
         from sqlalchemy import func, select
 
+        base = select(ImportBatch).where(ImportBatch.created_by == created_by)
         count = int(
             (
-                await db.execute(select(func.count()).select_from(ImportBatch))
+                await db.execute(
+                    select(func.count()).select_from(base.order_by(None).subquery())
+                )
             ).scalar_one()
         )
         rows = (
             (
                 await db.execute(
-                    select(ImportBatch)
-                    .order_by(ImportBatch.created_at.desc(), ImportBatch.id)
+                    base.order_by(ImportBatch.created_at.desc(), ImportBatch.id)
                     .offset(offset)
                     .limit(limit)
                 )

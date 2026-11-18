@@ -5,6 +5,7 @@
 
 ## 未发布
 
+- fix(asset-ops): PR #113 双轴复核修复——导入批次列表补 created_by 过滤（对齐详情 owner 口径）；工作台上游到期卡跳过已续签前驱（终止回放外补 renewed 回放，消除前驱+后继双计）；payment_plan 期数/合计随终止截止截断；unpaid_contract_ids 按 scoped contract ids 下推；待确认宗地降级收窄异常白名单；历史列表版本号读取下沉 repository；物业页拆合/空置写块包 CapabilityGuard（REQ-WBK-001 / REQ-IMP-001）。
 - feat(asset-ops): 原型对齐 WP7-9——终止表单类型三选一卡+房屋交接 select、档案完成率卡+拖放区（经事件转交批量配对）、录入页主体搜索选择器替换手输 Party ID（frontend/prototype/asset-ops-v5.html 对齐）。
 - feat(asset-ops): 原型对齐 WP6 导入页——`GET /import-batches` 批次历史列表；四步条/三步条、模板说明卡（三表真实列名）、更新模式「导出当前台账」接线、右栏批次列表。
 - feat(asset-ops): 原型对齐 WP5 报送页——`GET /occupancy-reports` 历史列表+草稿 `project_counts`；报送说明固定句式（数字浅蓝高亮）、报送记录横排卡片、逐宗明细列对齐原型+只看未出租+合计行。

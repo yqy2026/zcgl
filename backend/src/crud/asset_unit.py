@@ -96,7 +96,9 @@ class AssetUnitRepository:
             statement = statement.where(AssetUnit.id.in_(unit_ids))
         if exclude_unit_ids is not None and len(exclude_unit_ids) > 0:
             statement = statement.where(~AssetUnit.id.in_(exclude_unit_ids))
-        if missing_certificate_only:
+        if missing_certificate_only and as_of is not None:
+            # 契约：走该筛选必须携带统计日（service 层传业务当天）；None 时
+            # 跳过过滤而非误判全部缺证（effective_from <= NULL 恒 False）。
             statement = statement.where(
                 ~exists(
                     select(1)

@@ -18,6 +18,7 @@ from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...core.exception_handler import ResourceNotFoundError
 from ...crud.asset_contract import asset_contract_repository
 from ...crud.deposit_queries import deposit_query_repository
 from ...crud.management_fee_matrix import management_fee_matrix_repository
@@ -50,6 +51,7 @@ from .archive_matrix_service import archive_matrix_service
 from .contract_projections import derive_upstream_contract_status
 from .deposit_query_service import project_deposit_facts
 from .errors import (
+    AssessmentScopeOperatorForbiddenError,
     OccupancyReportAlreadySubmittedError,
     OccupancyReportPeriodInvalidError,
     OccupancyReportScopeMissingError,
@@ -666,9 +668,17 @@ class MonthlyWorkbenchService:
             active = 0
             overrun = 0
             for terminal in terminals_by_upstream.get(contract.id, ()):
-                end = _effective_terminal_end(
-                    terminal, terminal_events.get(terminal.id, ())
+                t_events = terminal_events.get(terminal.id, ())
+                # 与终端页状态机同口径：存在未撤销且已生效的 renewed 事件，
+                # 前驱即为 historical，不进在租/越界计数（避免前驱+后继双计）。
+                successor_id, _successor_from = (
+                    asset_operations_query_service._active_successor(
+                        t_events, as_of=today
+                    )
                 )
+                if successor_id is not None:
+                    continue
+                end = _effective_terminal_end(terminal, t_events)
                 if end > contract.end_date:
                     overrun += 1
                 if end >= today:
@@ -776,7 +786,13 @@ class MonthlyWorkbenchService:
                 actor_id=actor_id,
                 scope=scope,
             )
-        except Exception:  # noqa: BLE001 - pending confirmations are advisory
+        except (
+            AssessmentScopeOperatorForbiddenError,
+            OccupancyReportScopeMissingError,
+            ResourceNotFoundError,
+        ):
+            # 待确认宗地是 advisory 区块：无范围/越权/单元不可见时静默降级，
+            # 其余异常（DB 故障等）照常上抛，失败要响（红线 11）。
             return []
         return [
             WorkbenchPendingScopeUnit(
