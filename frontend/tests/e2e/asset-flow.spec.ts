@@ -11,7 +11,7 @@ test.describe('@asset-operations asset unit flow', () => {
     await expect(page).toHaveURL(/\/asset-operations\/units$/);
     await expect(page.getByRole('heading', { name: '物业' })).toBeVisible();
 
-    const searchInput = page.getByLabel('搜索单元编号、名称或地址');
+    const searchInput = page.getByLabel('搜地址、单元、租户、产权证号');
     await expect(searchInput).toBeVisible();
     await searchInput.fill('测试');
 
