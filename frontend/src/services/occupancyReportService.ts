@@ -855,10 +855,10 @@ export const occupancyReportService = {
       scopeVersionNumber: number | null;
     }[]
   > => {
-    const raw = await get<RawRecord>(
-      `/occupancy-reports`,
-      { operator_party_id: operatorPartyId, year }
-    );
+    const raw = await get<RawRecord>(`/occupancy-reports`, {
+      operator_party_id: operatorPartyId,
+      year,
+    });
     const items = Array.isArray(raw.items) ? (raw.items as RawRecord[]) : [];
     return items.map(item => ({
       reportId: String(item.report_id ?? ''),
@@ -866,10 +866,8 @@ export const occupancyReportService = {
       status: item.status === 'submitted' ? 'submitted' : 'draft',
       occupancyRate: requireDecimalFromAny(item.occupancy_rate, 'occupancy_rate'),
       unitCount: item.unit_count == null ? null : Number(item.unit_count),
-      rentedUnitCount:
-        item.rented_unit_count == null ? null : Number(item.rented_unit_count),
-      submittedAt:
-        item.submitted_at == null ? null : String(item.submitted_at),
+      rentedUnitCount: item.rented_unit_count == null ? null : Number(item.rented_unit_count),
+      submittedAt: item.submitted_at == null ? null : String(item.submitted_at),
       scopeVersionNumber:
         item.scope_version_number == null ? null : Number(item.scope_version_number),
     }));

@@ -27,13 +27,16 @@ export default function PartyPicker(props: {
         value: party.id,
         label: `${party.name}（${party.id.slice(0, 8)}…）`,
       })),
-    [partiesQuery.data],
+    [partiesQuery.data]
   );
   const selectedName = (partiesQuery.data?.items ?? []).find(
-    party => party.id === props.value,
+    party => party.id === props.value
   )?.name;
   return (
-    <label className="intake-party-picker" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <label
+      className="intake-party-picker"
+      style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+    >
       {props.label}
       <Select
         aria-label={props.label}
@@ -46,7 +49,11 @@ export default function PartyPicker(props: {
           props.onChange(value ?? '');
         }}
         notFoundContent={
-          partiesQuery.isFetching ? '搜索中…' : keyword.trim() === '' ? '输入名称搜索主体' : '未找到匹配主体'
+          partiesQuery.isFetching
+            ? '搜索中…'
+            : keyword.trim() === ''
+              ? '输入名称搜索主体'
+              : '未找到匹配主体'
         }
         options={options}
         placeholder={props.hint ?? '输入主体名称搜索后选择'}

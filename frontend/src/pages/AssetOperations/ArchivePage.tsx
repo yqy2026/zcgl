@@ -159,13 +159,25 @@ export default function ArchivePage(): React.ReactElement {
                     <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
                       {item.label}
                     </span>
-                    <span style={{ fontSize: 20, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    <span
+                      style={{ fontSize: 20, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}
+                    >
                       {item.existing ?? 0} / {item.required}
                       <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 6 }}>
-                        · {item.completion_rate != null ? `${(item.completion_rate * 100).toFixed(1)}%` : '—'}
+                        ·{' '}
+                        {item.completion_rate != null
+                          ? `${(item.completion_rate * 100).toFixed(1)}%`
+                          : '—'}
                       </span>
                     </span>
-                    <div style={{ height: 4, borderRadius: 2, background: '#eef0f2', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: 4,
+                        borderRadius: 2,
+                        background: '#eef0f2',
+                        overflow: 'hidden',
+                      }}
+                    >
                       <div
                         style={{
                           width: `${item.completion_rate != null ? Math.round(item.completion_rate * 100) : 0}%`,
@@ -176,7 +188,9 @@ export default function ArchivePage(): React.ReactElement {
                     </div>
                   </div>
                 ))}
-              <div style={{ background: '#fff', padding: 12, display: 'flex', alignItems: 'center' }}>
+              <div
+                style={{ background: '#fff', padding: 12, display: 'flex', alignItems: 'center' }}
+              >
                 <div
                   role="button"
                   tabIndex={0}
@@ -198,9 +212,7 @@ export default function ArchivePage(): React.ReactElement {
                     cursor: 'pointer',
                   }}
                   onClick={() => {
-                    window.dispatchEvent(
-                      new CustomEvent('archive-batch-pick'),
-                    );
+                    window.dispatchEvent(new CustomEvent('archive-batch-pick'));
                   }}
                   onDragOver={event => {
                     event.preventDefault();
@@ -210,7 +222,7 @@ export default function ArchivePage(): React.ReactElement {
                     const files = Array.from(event.dataTransfer.files ?? []);
                     if (files.length > 0) {
                       window.dispatchEvent(
-                        new CustomEvent('archive-batch-drop', { detail: files }),
+                        new CustomEvent('archive-batch-drop', { detail: files })
                       );
                     }
                   }}

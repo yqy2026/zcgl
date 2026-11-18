@@ -315,11 +315,15 @@ function LinesTable(props: { lines: OccupancyReportLine[]; caption: string }): R
               <Table.Summary.Cell index={0}>
                 <b>合计</b>
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={1} colSpan={3}>{vacantOnly ? `${rows.length} 宗未出租` : `${rows.length} 宗`}</Table.Summary.Cell>
+              <Table.Summary.Cell index={1} colSpan={3}>
+                {vacantOnly ? `${rows.length} 宗未出租` : `${rows.length} 宗`}
+              </Table.Summary.Cell>
               <Table.Summary.Cell index={4} align="right">
                 <span className={styles.numeric}>{formatArea(sum.land)}</span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={5} align="right">{null}</Table.Summary.Cell>
+              <Table.Summary.Cell index={5} align="right">
+                {null}
+              </Table.Summary.Cell>
               <Table.Summary.Cell index={6} align="right">
                 <span className={styles.numeric}>{formatArea(sum.rentable)}</span>
               </Table.Summary.Cell>
@@ -356,7 +360,11 @@ function wan(value: number): string {
  */
 function StatementParagraph(props: {
   period: string;
-  projectCounts: { projectCount: number; operatingProjectCount: number; nonOperatingProjectCount: number };
+  projectCounts: {
+    projectCount: number;
+    operatingProjectCount: number;
+    nonOperatingProjectCount: number;
+  };
   totals: OccupancyReportTotals;
 }): React.ReactElement {
   const highlight = {
@@ -401,7 +409,12 @@ function StatementParagraph(props: {
       <div>
         4、在管经营性存量物业共 {num(props.totals.unitCount)} 宗，已出租{' '}
         {num(props.totals.rentedUnitCount)} 宗，按宗数计算出租率为{' '}
-        {num(props.totals.occupancyRate == null ? '—' : `${(props.totals.occupancyRate * 100).toFixed(2)}%`)}。
+        {num(
+          props.totals.occupancyRate == null
+            ? '—'
+            : `${(props.totals.occupancyRate * 100).toFixed(2)}%`
+        )}
+        。
       </div>
     </div>
   );
@@ -428,9 +441,7 @@ function HistoryStrip(props: {
     );
   }
   if (query.isError) {
-    return (
-      <p className={styles.sectionNote}>报送记录暂不可用（{errorText(query.error)}）</p>
-    );
+    return <p className={styles.sectionNote}>报送记录暂不可用（{errorText(query.error)}）</p>;
   }
   const items = query.data ?? [];
   return (
@@ -464,9 +475,7 @@ function HistoryStrip(props: {
           >
             <span style={{ fontSize: 12, fontWeight: 600 }}>{item.period}</span>
             <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-              {item.occupancyRate == null
-                ? '草稿'
-                : `${(item.occupancyRate * 100).toFixed(1)}%`}
+              {item.occupancyRate == null ? '草稿' : `${(item.occupancyRate * 100).toFixed(1)}%`}
             </span>
             <span style={{ fontSize: 11, opacity: 0.75 }}>
               {item.status === 'submitted'
@@ -1149,16 +1158,20 @@ function DraftSection(props: {
                 style={{
                   background: 'var(--color-bg-container, #fff)',
                   borderWidth: 1,
-                borderStyle: 'solid',
-                borderColor: 'var(--color-border, #e4e6ea)',
+                  borderStyle: 'solid',
+                  borderColor: 'var(--color-border, #e4e6ea)',
                   borderRadius: 8,
                   paddingTop: 16,
-                paddingLeft: 20,
-                paddingRight: 20,
-                paddingBottom: 16,
+                  paddingLeft: 20,
+                  paddingRight: 20,
+                  paddingBottom: 16,
                 }}
               >
-                <StatementParagraph period={draft.period} projectCounts={draft.projectCounts} totals={draft.totals} />
+                <StatementParagraph
+                  period={draft.period}
+                  projectCounts={draft.projectCounts}
+                  totals={draft.totals}
+                />
               </div>
             </section>
             <Alert
@@ -1773,7 +1786,7 @@ export function OccupancyReportsPage(): React.ReactElement {
         ) : null}
       </div>
 
-            <section style={{ marginTop: 12 }}>
+      <section style={{ marginTop: 12 }}>
         <h3 className={styles.blockTitle}>报送记录</h3>
         <p className={styles.sectionNote}>已报送的月份锁定为快照，点开只读查看</p>
         <HistoryStrip

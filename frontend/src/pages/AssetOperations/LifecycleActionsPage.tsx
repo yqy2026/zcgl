@@ -315,8 +315,7 @@ export function TerminalActionsPage(): React.ReactElement {
                         field.value === option.value
                           ? '0.0625rem solid var(--ant-color-primary, #0e63e5)'
                           : '0.0625rem solid #d9d9d9',
-                      background:
-                        field.value === option.value ? '#eef4fe' : '#fff',
+                      background: field.value === option.value ? '#eef4fe' : '#fff',
                       textAlign: 'left',
                       cursor: 'pointer',
                       font: 'inherit',

@@ -19,10 +19,7 @@ import {
   type MonthlyMoneyTask,
   type MonthlyWorkbenchView,
 } from '@/services/monthlyWorkbenchService';
-import {
-  occupancyReportService,
-  type OperatorParty,
-} from '@/services/occupancyReportService';
+import { occupancyReportService, type OperatorParty } from '@/services/occupancyReportService';
 
 import styles from './MonthlyPage.module.css';
 
@@ -119,10 +116,10 @@ function MoneyCard({
             const partial = task.paidAmount > 0;
             const name = `${task.contractName}${previousMonth ? ` · ${monthNumber(task.period)} 月${isCollection ? '欠租' : '未付'}` : ''}`;
             const sub =
-              (isCollection ? `${task.counterpartyName}${task.unitLabel != null ? ` · ${task.unitLabel}` : ''}` : `付 ${task.counterpartyName}`) +
-              (late
-                ? ` · 已逾期 ${task.daysOverdue} 天`
-                : ` · ${task.dueDate.slice(5)} 前`) +
+              (isCollection
+                ? `${task.counterpartyName}${task.unitLabel != null ? ` · ${task.unitLabel}` : ''}`
+                : `付 ${task.counterpartyName}`) +
+              (late ? ` · 已逾期 ${task.daysOverdue} 天` : ` · ${task.dueDate.slice(5)} 前`) +
               (partial ? ` · 部分付款 · 欠 ${formatMoney(task.remainingAmount)}` : '');
             return (
               <li key={task.ledgerEntryId}>
@@ -190,13 +187,22 @@ export default function MonthlyPage(): React.ReactElement {
     if (partiesQuery.isError) {
       return (
         <div className={styles.page}>
-          <Alert type="error" showIcon message="运营主体加载失败" description={errorText(partiesQuery.error)} />
+          <Alert
+            type="error"
+            showIcon
+            message="运营主体加载失败"
+            description={errorText(partiesQuery.error)}
+          />
         </div>
       );
     }
     return (
       <div className={styles.page}>
-        <Alert type="warning" showIcon message="尚无可用的运营主体，请先在主体管理中登记法人主体。" />
+        <Alert
+          type="warning"
+          showIcon
+          message="尚无可用的运营主体，请先在主体管理中登记法人主体。"
+        />
       </div>
     );
   }
@@ -231,7 +237,12 @@ export default function MonthlyPage(): React.ReactElement {
           message="本月工作台加载失败"
           description={errorText(error)}
           action={
-            <Button size="small" onClick={() => { void workbenchQuery.refetch(); }}>
+            <Button
+              size="small"
+              onClick={() => {
+                void workbenchQuery.refetch();
+              }}
+            >
               重试
             </Button>
           }
@@ -253,9 +264,7 @@ export default function MonthlyPage(): React.ReactElement {
   const yearNo = Number(view.month.slice(0, 4));
   const leftCount = Math.max(view.progress.total - view.progress.done, 0);
   const percent =
-    view.progress.total > 0
-      ? Math.round((view.progress.done / view.progress.total) * 100)
-      : 100;
+    view.progress.total > 0 ? Math.round((view.progress.done / view.progress.total) * 100) : 100;
   const report = view.occupancyReport;
   const reportTag =
     report.status === 'submitted' ? (
@@ -275,17 +284,16 @@ export default function MonthlyPage(): React.ReactElement {
                 ? '有待确认宗地'
                 : reason === 'change_note_required'
                   ? '较上月有变动，变动说明未填'
-                  : reason,
+                  : reason
             )
             .join('；')}`
         : null;
   const archiveMissing = view.archiveGaps.reduce((sum, gap) => sum + gap.missing, 0);
 
   const openLedgerEntry = (task: MonthlyMoneyTask): void => {
-    const ledgerType =
-      task.contractKind === 'upstream' ? 'upstream_rent' : 'terminal_rent';
+    const ledgerType = task.contractKind === 'upstream' ? 'upstream_rent' : 'terminal_rent';
     navigate(
-      `/asset-operations/ledgers?ledger_type=${ledgerType}&entry_id=${encodeURIComponent(task.ledgerEntryId)}&period=${task.period}`,
+      `/asset-operations/ledgers?ledger_type=${ledgerType}&entry_id=${encodeURIComponent(task.ledgerEntryId)}&period=${task.period}`
     );
   };
 
@@ -294,7 +302,8 @@ export default function MonthlyPage(): React.ReactElement {
       <div className={styles.header}>
         <div className={styles.headerText}>
           <span className={styles.dateLine}>
-            {yearNo} 年 {monthNo} 月{view.daysLeftInMonth > 0 ? ` · 还剩 ${view.daysLeftInMonth} 天` : ''}
+            {yearNo} 年 {monthNo} 月
+            {view.daysLeftInMonth > 0 ? ` · 还剩 ${view.daysLeftInMonth} 天` : ''}
           </span>
           <h1 className={styles.headline}>
             {leftCount > 0 ? `本月还有 ${leftCount} 件没做完` : '本月任务已全部完成'}
@@ -341,7 +350,9 @@ export default function MonthlyPage(): React.ReactElement {
         <section className={styles.card} aria-label="委托管理费对账">
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleRow}>
-              <b className={styles.cardTitle}>{monthNumber(view.managementFees.period)} 月委托管理费对账</b>
+              <b className={styles.cardTitle}>
+                {monthNumber(view.managementFees.period)} 月委托管理费对账
+              </b>
               <span className={styles.cardNote}>双方盖章后确认</span>
             </div>
             <p className={styles.cardSummary}>产权方实收终端租金 × 协议比例</p>
@@ -366,7 +377,11 @@ export default function MonthlyPage(): React.ReactElement {
                   formula = `产权方已收 ${item.receivedLineCount}/${item.lineCount} 户 · 月底仍未收的顺延下月`;
                 } else if (item.status === 'missing') {
                   formula = '上月有在管委托物业，尚未出对账单';
-                } else if (item.baseAmount != null && item.feeAmount != null && item.baseAmount > 0) {
+                } else if (
+                  item.baseAmount != null &&
+                  item.feeAmount != null &&
+                  item.baseAmount > 0
+                ) {
                   const ratePercent = Math.round((item.feeAmount / item.baseAmount) * 1000) / 10;
                   formula = `${item.lineCount}/${item.lineCount} 户已收齐 · ${formatMoney(item.baseAmount)} × ${ratePercent}% = ${formatMoney(item.feeAmount)}${item.status === 'confirmed' ? ' · 双方已盖章' : ''}`;
                 } else {
@@ -435,7 +450,7 @@ export default function MonthlyPage(): React.ReactElement {
             <Button
               onClick={() => {
                 navigate(
-                  `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${view.month}`,
+                  `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${view.month}`
                 );
               }}
             >
@@ -459,7 +474,9 @@ export default function MonthlyPage(): React.ReactElement {
                 <b className={`${styles.cardTitle} ${styles.alertCardTitle}`}>
                   上游合同已到期，尚未续签或退出
                 </b>
-                <span className={styles.cardNote}>期间单元仍按在管计宗；名下的终端合同暂无上游依据</span>
+                <span className={styles.cardNote}>
+                  期间单元仍按在管计宗；名下的终端合同暂无上游依据
+                </span>
               </div>
             </div>
             <ul className={styles.rows}>
@@ -481,7 +498,7 @@ export default function MonthlyPage(): React.ReactElement {
                       size="small"
                       onClick={() => {
                         navigate(
-                          `/asset-operations/contracts/upstream?contract_id=${encodeURIComponent(item.contractId)}`,
+                          `/asset-operations/contracts/upstream?contract_id=${encodeURIComponent(item.contractId)}`
                         );
                       }}
                     >
@@ -512,7 +529,7 @@ export default function MonthlyPage(): React.ReactElement {
                     className={styles.taskRow}
                     onClick={() => {
                       navigate(
-                        `/asset-operations/contracts/upstream?contract_id=${encodeURIComponent(item.contractId)}`,
+                        `/asset-operations/contracts/upstream?contract_id=${encodeURIComponent(item.contractId)}`
                       );
                     }}
                   >
@@ -567,7 +584,10 @@ export default function MonthlyPage(): React.ReactElement {
                     <span className={styles.taskMain}>
                       <span className={styles.taskName}>{gap.label}</span>
                     </span>
-                    <span className={styles.taskAmount} style={{ color: 'var(--color-error, #cf1322)' }}>
+                    <span
+                      className={styles.taskAmount}
+                      style={{ color: 'var(--color-error, #cf1322)' }}
+                    >
                       缺 {gap.missing}
                     </span>
                   </button>
@@ -585,7 +605,10 @@ export default function MonthlyPage(): React.ReactElement {
                     <span className={styles.taskMain}>
                       <span className={styles.taskName}>未关联任何产权证的物业</span>
                     </span>
-                    <span className={styles.taskAmount} style={{ color: 'var(--color-error, #cf1322)' }}>
+                    <span
+                      className={styles.taskAmount}
+                      style={{ color: 'var(--color-error, #cf1322)' }}
+                    >
                       {view.unlinkedUnitCount} 宗
                     </span>
                   </button>
@@ -640,13 +663,14 @@ export default function MonthlyPage(): React.ReactElement {
               <div key={unit.assetUnitId} className={styles.pendingScopeRow}>
                 <span className={styles.pendingScopeText}>
                   {unit.unitName}（{unit.unitCode}）·{' '}
-                  {unit.reason === 'new_takeover' ? '新接管' : '接管边界待确认'} · 确认纳入后才计入本月报送
+                  {unit.reason === 'new_takeover' ? '新接管' : '接管边界待确认'} ·
+                  确认纳入后才计入本月报送
                 </span>
                 <Button
                   size="small"
                   onClick={() => {
                     navigate(
-                      `/asset-operations/units?unit_id=${encodeURIComponent(unit.assetUnitId)}`,
+                      `/asset-operations/units?unit_id=${encodeURIComponent(unit.assetUnitId)}`
                     );
                   }}
                 >
@@ -657,7 +681,7 @@ export default function MonthlyPage(): React.ReactElement {
                   type="primary"
                   onClick={() => {
                     navigate(
-                      `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${view.month}`,
+                      `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${view.month}`
                     );
                   }}
                 >

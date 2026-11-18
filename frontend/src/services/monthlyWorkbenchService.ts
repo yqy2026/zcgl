@@ -229,7 +229,7 @@ function parseMoneyCard(record: RawRecord): MonthlyMoneyCard {
     pendingAmount: num(record, 'pending_amount'),
     doneCount: num(record, 'done_count'),
     doneAmount: num(record, 'done_amount'),
-    items: (record.items as RawRecord[] | undefined ?? []).map(parseMoneyTask),
+    items: ((record.items as RawRecord[] | undefined) ?? []).map(parseMoneyTask),
   };
 }
 
@@ -246,87 +246,85 @@ function parseView(record: RawRecord): MonthlyWorkbenchView {
     rentCollections: parseMoneyCard(record.rent_collections as RawRecord),
     managementFees: {
       period: str(record.management_fees as RawRecord, 'period'),
-      items:
-        ((record.management_fees as RawRecord).items as RawRecord[] | undefined ?? []).map(
-          (item) => ({
-            ownerPartyId: str(item, 'owner_party_id'),
-            ownerPartyName: str(item, 'owner_party_name'),
-            statementId: nullableStr(item, 'statement_id'),
-            statementNumber: nullableStr(item, 'statement_number'),
-            status: str(item, 'status') as MonthlyManagementFeeItem['status'],
-            baseAmount: nullableNum(item, 'base_amount'),
-            feeAmount: nullableNum(item, 'fee_amount'),
-            receivedLineCount: num(item, 'received_line_count'),
-            lineCount: num(item, 'line_count'),
-          }),
-        ),
+      items: (((record.management_fees as RawRecord).items as RawRecord[] | undefined) ?? []).map(
+        item => ({
+          ownerPartyId: str(item, 'owner_party_id'),
+          ownerPartyName: str(item, 'owner_party_name'),
+          statementId: nullableStr(item, 'statement_id'),
+          statementNumber: nullableStr(item, 'statement_number'),
+          status: str(item, 'status') as MonthlyManagementFeeItem['status'],
+          baseAmount: nullableNum(item, 'base_amount'),
+          feeAmount: nullableNum(item, 'fee_amount'),
+          receivedLineCount: num(item, 'received_line_count'),
+          lineCount: num(item, 'line_count'),
+        })
+      ),
     },
     occupancyReport: {
       operatorPartyId: str(record.occupancy_report as RawRecord, 'operator_party_id'),
       period: str(record.occupancy_report as RawRecord, 'period'),
-      status: str(record.occupancy_report as RawRecord, 'status') as MonthlyOccupancyReportCard['status'],
+      status: str(
+        record.occupancy_report as RawRecord,
+        'status'
+      ) as MonthlyOccupancyReportCard['status'],
       unavailableReason: nullableStr(record.occupancy_report as RawRecord, 'unavailable_reason'),
       unitCount: nullableNum(record.occupancy_report as RawRecord, 'unit_count'),
       rentedUnitCount: nullableNum(record.occupancy_report as RawRecord, 'rented_unit_count'),
       occupancyRate: nullableNum(record.occupancy_report as RawRecord, 'occupancy_rate'),
       rateDelta: nullableNum(record.occupancy_report as RawRecord, 'rate_delta'),
-      gateReasons:
-        ((record.occupancy_report as RawRecord).gate_reasons as string[] | undefined ?? []).map(
-          item => String(item),
-        ),
+      gateReasons: (
+        ((record.occupancy_report as RawRecord).gate_reasons as string[] | undefined) ?? []
+      ).map(item => String(item)),
       canSubmit: (record.occupancy_report as RawRecord).can_submit === true,
     },
-    expiredUpstream:
-      ((record.expired_upstream as RawRecord[] | undefined ?? [])).map(item => ({
-        contractId: str(item, 'contract_id'),
-        contractNumber: str(item, 'contract_number'),
-        name: str(item, 'name'),
-        contractType: str(item, 'contract_type') as MonthlyExpiredUpstreamItem['contractType'],
-        endDate: str(item, 'end_date'),
-        daysPast: num(item, 'days_past'),
-        unitCount: num(item, 'unit_count'),
-        activeTerminalCount: num(item, 'active_terminal_count'),
-        hasPendingRenewal: item.has_pending_renewal === true,
-      })),
-    expiringUpstream:
-      ((record.expiring_upstream as RawRecord[] | undefined ?? [])).map(item => ({
-        contractId: str(item, 'contract_id'),
-        contractNumber: str(item, 'contract_number'),
-        name: str(item, 'name'),
-        contractType: str(item, 'contract_type') as MonthlyExpiringUpstreamItem['contractType'],
-        ownerPartyName: str(item, 'owner_party_name'),
-        endDate: str(item, 'end_date'),
-        daysLeft: num(item, 'days_left'),
-        overrunTerminalCount: num(item, 'overrun_terminal_count'),
-      })),
-    archiveGaps:
-      ((record.archive_gaps as RawRecord[] | undefined ?? [])).map(item => ({
-        documentType: str(item, 'document_type'),
-        label: str(item, 'label'),
-        missing: num(item, 'missing'),
-      })),
+    expiredUpstream: ((record.expired_upstream as RawRecord[] | undefined) ?? []).map(item => ({
+      contractId: str(item, 'contract_id'),
+      contractNumber: str(item, 'contract_number'),
+      name: str(item, 'name'),
+      contractType: str(item, 'contract_type') as MonthlyExpiredUpstreamItem['contractType'],
+      endDate: str(item, 'end_date'),
+      daysPast: num(item, 'days_past'),
+      unitCount: num(item, 'unit_count'),
+      activeTerminalCount: num(item, 'active_terminal_count'),
+      hasPendingRenewal: item.has_pending_renewal === true,
+    })),
+    expiringUpstream: ((record.expiring_upstream as RawRecord[] | undefined) ?? []).map(item => ({
+      contractId: str(item, 'contract_id'),
+      contractNumber: str(item, 'contract_number'),
+      name: str(item, 'name'),
+      contractType: str(item, 'contract_type') as MonthlyExpiringUpstreamItem['contractType'],
+      ownerPartyName: str(item, 'owner_party_name'),
+      endDate: str(item, 'end_date'),
+      daysLeft: num(item, 'days_left'),
+      overrunTerminalCount: num(item, 'overrun_terminal_count'),
+    })),
+    archiveGaps: ((record.archive_gaps as RawRecord[] | undefined) ?? []).map(item => ({
+      documentType: str(item, 'document_type'),
+      label: str(item, 'label'),
+      missing: num(item, 'missing'),
+    })),
     unlinkedUnitCount: num(record, 'unlinked_unit_count'),
-    depositsPending:
-      ((record.deposits_pending as RawRecord[] | undefined ?? [])).map(item => ({
-        depositId: str(item, 'deposit_id'),
-        contractKind: str(item, 'contract_kind') as MonthlyDepositItem['contractKind'],
-        contractId: str(item, 'contract_id'),
-        contractNumber: str(item, 'contract_number'),
-        counterpartyName: str(item, 'counterparty_name'),
-        collector: str(item, 'collector') as MonthlyDepositItem['collector'],
-        status: str(item, 'status'),
-        direction: str(item, 'direction'),
-        agreedAmount: num(item, 'agreed_amount'),
-        heldAmount: num(item, 'held_amount'),
-        outstandingAmount: num(item, 'outstanding_amount'),
-      })),
-    pendingScopeUnits:
-      ((record.pending_scope_units as RawRecord[] | undefined ?? [])).map(item => ({
+    depositsPending: ((record.deposits_pending as RawRecord[] | undefined) ?? []).map(item => ({
+      depositId: str(item, 'deposit_id'),
+      contractKind: str(item, 'contract_kind') as MonthlyDepositItem['contractKind'],
+      contractId: str(item, 'contract_id'),
+      contractNumber: str(item, 'contract_number'),
+      counterpartyName: str(item, 'counterparty_name'),
+      collector: str(item, 'collector') as MonthlyDepositItem['collector'],
+      status: str(item, 'status'),
+      direction: str(item, 'direction'),
+      agreedAmount: num(item, 'agreed_amount'),
+      heldAmount: num(item, 'held_amount'),
+      outstandingAmount: num(item, 'outstanding_amount'),
+    })),
+    pendingScopeUnits: ((record.pending_scope_units as RawRecord[] | undefined) ?? []).map(
+      item => ({
         assetUnitId: str(item, 'asset_unit_id'),
         unitCode: str(item, 'unit_code'),
         unitName: str(item, 'unit_name'),
         reason: str(item, 'reason') as MonthlyPendingScopeUnit['reason'],
-      })),
+      })
+    ),
   };
 }
 

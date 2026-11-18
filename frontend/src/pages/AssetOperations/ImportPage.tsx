@@ -202,211 +202,223 @@ export default function ImportPage(): React.ReactElement {
     <div className={styles.importPage}>
       <h1 className={styles.pageTitle}>数据导入</h1>
       <div className={styles.mainColumn}>
-      {actionError != '' ? <Alert type="error" showIcon title={actionError} /> : null}
+        {actionError != '' ? <Alert type="error" showIcon title={actionError} /> : null}
 
-      <section className={styles.modeSection} aria-label="导入模式">
-        <Button type={mode === 'create' ? 'primary' : 'default'} onClick={() => setMode('create')}>
-          新增导入
-        </Button>
-        <Button type={mode === 'update' ? 'primary' : 'default'} onClick={() => setMode('update')}>
-          更新导入
-        </Button>
+        <section className={styles.modeSection} aria-label="导入模式">
+          <Button
+            type={mode === 'create' ? 'primary' : 'default'}
+            onClick={() => setMode('create')}
+          >
+            新增导入
+          </Button>
+          <Button
+            type={mode === 'update' ? 'primary' : 'default'}
+            onClick={() => setMode('update')}
+          >
+            更新导入
+          </Button>
+          {mode === 'create' ? (
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() => templateMutation.mutate()}
+              loading={templateMutation.isPending}
+            >
+              下载三表模板
+            </Button>
+          ) : null}
+        </section>
+
+        <Steps
+          aria-label="导入步骤"
+          size="small"
+          current={
+            batch == null
+              ? 0
+              : batch.status === 'invalid'
+                ? 2
+                : batch.status === 'ready' ||
+                    batch.status === 'committed' ||
+                    batch.status === 'reverted'
+                  ? mode === 'create'
+                    ? 3
+                    : 2
+                  : 1
+          }
+          items={
+            mode === 'create'
+              ? [
+                  { title: '下载模板' },
+                  { title: '上传并校验' },
+                  { title: '处理问题' },
+                  { title: '确认导入' },
+                ]
+              : [{ title: '导出现有台账' }, { title: '上传并核对差异' }, { title: '确认更新' }]
+          }
+        />
+
         {mode === 'create' ? (
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={() => templateMutation.mutate()}
-            loading={templateMutation.isPending}
-          >
-            下载三表模板
-          </Button>
-        ) : null}
-      </section>
-
-      <Steps
-        aria-label="导入步骤"
-        size="small"
-        current={
-          batch == null ? 0 : batch.status === 'invalid' ? 2 : batch.status === 'ready' || batch.status === 'committed' || batch.status === 'reverted' ? mode === 'create' ? 3 : 2 : 1
-        }
-        items={
-          mode === 'create'
-            ? [
-                { title: '下载模板' },
-                { title: '上传并校验' },
-                { title: '处理问题' },
-                { title: '确认导入' },
-              ]
-            : [
-                { title: '导出现有台账' },
-                { title: '上传并核对差异' },
-                { title: '确认更新' },
-              ]
-        }
-      />
-
-      {mode === 'create' ? (
-        <section className={styles.guideSection} aria-label="模板说明">
-          <h2 className={styles.sectionTitle}>1 · 下载模板</h2>
-          <p className={styles.hintText}>
-            一行一个最小可租单元；合并出租的合同，在「单元编号」列用顿号分隔。
-          </p>
-          {TEMPLATE_GUIDE.map(sheet => (
-            <p key={sheet.name} className={styles.hintText}>
-              <b>{sheet.name}</b>：{sheet.columns}
+          <section className={styles.guideSection} aria-label="模板说明">
+            <h2 className={styles.sectionTitle}>1 · 下载模板</h2>
+            <p className={styles.hintText}>
+              一行一个最小可租单元；合并出租的合同，在「单元编号」列用顿号分隔。
             </p>
-          ))}
-        </section>
-      ) : (
-        <section className={styles.guideSection} aria-label="导出现有台账">
-          <h2 className={styles.sectionTitle}>1 · 导出现有台账</h2>
-          <p className={styles.hintText}>
-            在导出的表上改；按单元编号 / 合同号匹配，只改填了的列，留空的不动。
-            出租状态、计宗等派生字段不能导入，填了也会被忽略。
-          </p>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={() => updateTemplateMutation.mutate()}
-            loading={updateTemplateMutation.isPending}
-          >
-            导出当前台账（Excel · 3 张表）
-          </Button>
-        </section>
-      )}
-
-      <section className={styles.uploadSection} aria-label="扫描件暂存">
-        <h2 className={styles.sectionTitle}>第一步 暂存已签扫描件</h2>
-        <Upload
-          multiple
-          accept=".pdf,.jpg,.jpeg,.png"
-          showUploadList={false}
-          beforeUpload={(file: File) => {
-            stagingMutation.mutate([file]);
-            return false;
-          }}
-        >
-          <Button loading={stagingMutation.isPending}>选择扫描件（可多选）</Button>
-        </Upload>
-        {stagedFiles.length > 0 ? (
-          <p className={styles.hintText}>
-            已暂存 {stagedFiles.length} 份：{stagedFiles.join('、')}；工作簿扫描件列填写这些文件名。
-          </p>
+            {TEMPLATE_GUIDE.map(sheet => (
+              <p key={sheet.name} className={styles.hintText}>
+                <b>{sheet.name}</b>：{sheet.columns}
+              </p>
+            ))}
+          </section>
         ) : (
-          <p className={styles.hintText}>
-            新增合同必须先暂存扫描件，Excel 引用文件名；缺件阻断整批提交。
-          </p>
+          <section className={styles.guideSection} aria-label="导出现有台账">
+            <h2 className={styles.sectionTitle}>1 · 导出现有台账</h2>
+            <p className={styles.hintText}>
+              在导出的表上改；按单元编号 / 合同号匹配，只改填了的列，留空的不动。
+              出租状态、计宗等派生字段不能导入，填了也会被忽略。
+            </p>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() => updateTemplateMutation.mutate()}
+              loading={updateTemplateMutation.isPending}
+            >
+              导出当前台账（Excel · 3 张表）
+            </Button>
+          </section>
         )}
-      </section>
 
-      <section className={styles.uploadSection} aria-label="工作簿上传">
-        <h2 className={styles.sectionTitle}>第二步 上传工作簿</h2>
-        <Upload
-          accept=".xlsx"
-          maxCount={1}
-          showUploadList={false}
-          beforeUpload={(file: File) => {
-            setActionError('');
-            uploadMutation.mutate(file);
-            return false;
-          }}
-        >
-          <Button loading={uploadMutation.isPending}>选择三表工作簿（.xlsx）</Button>
-        </Upload>
-      </section>
-
-      {batch != null ? (
-        <section className={styles.batchSection} aria-label="批次状态">
-          <h2 className={styles.sectionTitle}>批次状态</h2>
-          <p>
-            <Tag color={batch.status === 'invalid' ? 'red' : 'blue'}>
-              {STATUS_TEXT[batch.status]}
-            </Tag>
-            行数 {batch.row_count} · 通过 {batch.valid_count} · 错误 {batch.error_count} · 提醒{' '}
-            {batch.warning_count}
-          </p>
-
-          {batch.status === 'ready' || batch.status === 'invalid' ? (
-            <>
-              {batch.status === 'invalid' ? (
-                <Alert type="error" showIcon title="存在错误行，修正工作簿后重新上传" />
-              ) : null}
-              <Table<ImportBatchChange>
-                rowKey="id"
-                size="small"
-                dataSource={items}
-                loading={changesQuery.isLoading}
-                pagination={{ pageSize: 20, showSizeChanger: false }}
-                columns={[
-                  {
-                    title: '级别',
-                    dataIndex: 'severity',
-                    width: 80,
-                    render: (_: unknown, record) => (
-                      <Tag color={SEVERITY_TAG[record.severity].color}>
-                        {SEVERITY_TAG[record.severity].text}
-                      </Tag>
-                    ),
-                  },
-                  { title: '来源', dataIndex: 'sheet_name', width: 90 },
-                  { title: '行', dataIndex: 'row_number', width: 60 },
-                  { title: '对象', dataIndex: 'target_key', width: 140 },
-                  { title: '说明', dataIndex: 'effect_summary' },
-                  ...(mode === 'update'
-                    ? [
-                        {
-                          title: '纳入',
-                          width: 70,
-                          render: (_: unknown, record: ImportBatchChange) =>
-                            record.severity === 'change' ? (
-                              <Checkbox
-                                checked={record.selected}
-                                onChange={event =>
-                                  selectionMutation.mutate({
-                                    [record.id]: event.target.checked,
-                                  })
-                                }
-                              />
-                            ) : null,
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-              {batch.status === 'ready' ? (
-                <Button
-                  type="primary"
-                  icon={<ThunderboltOutlined />}
-                  loading={commitMutation.isPending}
-                  disabled={batch.error_count > 0}
-                  onClick={() => commitMutation.mutate()}
-                >
-                  预览并整批提交（{changes.filter(item => item.selected).length} 项）
-                </Button>
-              ) : null}
-            </>
-          ) : null}
-
-          {batch.status === 'committed' ? (
-            <div className={styles.revertBox}>
-              <Input
-                aria-label="撤销原因"
-                placeholder="撤销原因（必填）"
-                value={revertReason}
-                onChange={event => setRevertReason(event.target.value)}
-              />
-              <Button
-                danger
-                icon={<RollbackOutlined />}
-                loading={revertMutation.isPending}
-                disabled={revertReason.trim() === ''}
-                onClick={() => revertMutation.mutate()}
-              >
-                七日内整批撤销
-              </Button>
-            </div>
-          ) : null}
+        <section className={styles.uploadSection} aria-label="扫描件暂存">
+          <h2 className={styles.sectionTitle}>第一步 暂存已签扫描件</h2>
+          <Upload
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png"
+            showUploadList={false}
+            beforeUpload={(file: File) => {
+              stagingMutation.mutate([file]);
+              return false;
+            }}
+          >
+            <Button loading={stagingMutation.isPending}>选择扫描件（可多选）</Button>
+          </Upload>
+          {stagedFiles.length > 0 ? (
+            <p className={styles.hintText}>
+              已暂存 {stagedFiles.length} 份：{stagedFiles.join('、')}
+              ；工作簿扫描件列填写这些文件名。
+            </p>
+          ) : (
+            <p className={styles.hintText}>
+              新增合同必须先暂存扫描件，Excel 引用文件名；缺件阻断整批提交。
+            </p>
+          )}
         </section>
-      ) : null}
 
+        <section className={styles.uploadSection} aria-label="工作簿上传">
+          <h2 className={styles.sectionTitle}>第二步 上传工作簿</h2>
+          <Upload
+            accept=".xlsx"
+            maxCount={1}
+            showUploadList={false}
+            beforeUpload={(file: File) => {
+              setActionError('');
+              uploadMutation.mutate(file);
+              return false;
+            }}
+          >
+            <Button loading={uploadMutation.isPending}>选择三表工作簿（.xlsx）</Button>
+          </Upload>
+        </section>
+
+        {batch != null ? (
+          <section className={styles.batchSection} aria-label="批次状态">
+            <h2 className={styles.sectionTitle}>批次状态</h2>
+            <p>
+              <Tag color={batch.status === 'invalid' ? 'red' : 'blue'}>
+                {STATUS_TEXT[batch.status]}
+              </Tag>
+              行数 {batch.row_count} · 通过 {batch.valid_count} · 错误 {batch.error_count} · 提醒{' '}
+              {batch.warning_count}
+            </p>
+
+            {batch.status === 'ready' || batch.status === 'invalid' ? (
+              <>
+                {batch.status === 'invalid' ? (
+                  <Alert type="error" showIcon title="存在错误行，修正工作簿后重新上传" />
+                ) : null}
+                <Table<ImportBatchChange>
+                  rowKey="id"
+                  size="small"
+                  dataSource={items}
+                  loading={changesQuery.isLoading}
+                  pagination={{ pageSize: 20, showSizeChanger: false }}
+                  columns={[
+                    {
+                      title: '级别',
+                      dataIndex: 'severity',
+                      width: 80,
+                      render: (_: unknown, record) => (
+                        <Tag color={SEVERITY_TAG[record.severity].color}>
+                          {SEVERITY_TAG[record.severity].text}
+                        </Tag>
+                      ),
+                    },
+                    { title: '来源', dataIndex: 'sheet_name', width: 90 },
+                    { title: '行', dataIndex: 'row_number', width: 60 },
+                    { title: '对象', dataIndex: 'target_key', width: 140 },
+                    { title: '说明', dataIndex: 'effect_summary' },
+                    ...(mode === 'update'
+                      ? [
+                          {
+                            title: '纳入',
+                            width: 70,
+                            render: (_: unknown, record: ImportBatchChange) =>
+                              record.severity === 'change' ? (
+                                <Checkbox
+                                  checked={record.selected}
+                                  onChange={event =>
+                                    selectionMutation.mutate({
+                                      [record.id]: event.target.checked,
+                                    })
+                                  }
+                                />
+                              ) : null,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+                {batch.status === 'ready' ? (
+                  <Button
+                    type="primary"
+                    icon={<ThunderboltOutlined />}
+                    loading={commitMutation.isPending}
+                    disabled={batch.error_count > 0}
+                    onClick={() => commitMutation.mutate()}
+                  >
+                    预览并整批提交（{changes.filter(item => item.selected).length} 项）
+                  </Button>
+                ) : null}
+              </>
+            ) : null}
+
+            {batch.status === 'committed' ? (
+              <div className={styles.revertBox}>
+                <Input
+                  aria-label="撤销原因"
+                  placeholder="撤销原因（必填）"
+                  value={revertReason}
+                  onChange={event => setRevertReason(event.target.value)}
+                />
+                <Button
+                  danger
+                  icon={<RollbackOutlined />}
+                  loading={revertMutation.isPending}
+                  disabled={revertReason.trim() === ''}
+                  onClick={() => revertMutation.mutate()}
+                >
+                  七日内整批撤销
+                </Button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
       </div>
 
       <aside className={styles.batchesAside} aria-label="导入批次">
@@ -440,8 +452,8 @@ export default function ImportPage(): React.ReactElement {
                 </Tag>
               </div>
               <p className={styles.hintText}>
-                行数 {item.row_count} · 通过 {item.valid_count} · 错误 {item.error_count} ·
-                提醒 {item.warning_count}
+                行数 {item.row_count} · 通过 {item.valid_count} · 错误 {item.error_count} · 提醒{' '}
+                {item.warning_count}
               </p>
             </div>
           ))

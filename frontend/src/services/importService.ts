@@ -118,11 +118,9 @@ export const importService = {
   },
 
   async downloadUpdateTemplate(): Promise<Blob> {
-    const response = await apiClient.getAxiosInstance().post<Blob>(
-      `${API_BASE}/imports/templates/update`,
-      undefined,
-      { responseType: 'blob' }
-    );
+    const response = await apiClient
+      .getAxiosInstance()
+      .post<Blob>(`${API_BASE}/imports/templates/update`, undefined, { responseType: 'blob' });
     return response.data;
   },
 
@@ -155,10 +153,8 @@ export const importService = {
           warning_count: Number(record.warning_count ?? 0),
           proposal_hash: null,
           version: Number(record.version ?? 1),
-          committed_at:
-            record.committed_at == null ? null : String(record.committed_at),
-          reverted_at:
-            record.reverted_at == null ? null : String(record.reverted_at),
+          committed_at: record.committed_at == null ? null : String(record.committed_at),
+          reverted_at: record.reverted_at == null ? null : String(record.reverted_at),
         };
       }),
       total: Number(response.data?.total ?? 0),

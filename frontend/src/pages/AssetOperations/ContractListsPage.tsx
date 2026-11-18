@@ -267,9 +267,7 @@ function UpstreamList(props: {
             {detail.contractType === 'lease' && detail.paymentPlan.length > 0 ? (
               <PaymentPlanTable plan={detail.paymentPlan} />
             ) : null}
-            {detail.unitsMatrix.length > 0 ? (
-              <UnitsMatrixTable rows={detail.unitsMatrix} />
-            ) : null}
+            {detail.unitsMatrix.length > 0 ? <UnitsMatrixTable rows={detail.unitsMatrix} /> : null}
             <ChangeTimelinePanel targetType="upstream_contract" targetId={detail.id} />
             <ContractScanPanel kind="upstream" contractId={detail.id} />
             <ContractSupplementsPanel kind="upstream" contractId={detail.id} />
@@ -437,9 +435,7 @@ function TerminalList(props: {
                 {record.endDate}
               </span>
               {overrun ? (
-                <span style={{ fontSize: 12, color: 'var(--color-error, #cf1322)' }}>
-                  租期越界
-                </span>
+                <span style={{ fontSize: 12, color: 'var(--color-error, #cf1322)' }}>租期越界</span>
               ) : null}
             </div>
           );
@@ -462,7 +458,9 @@ function TerminalList(props: {
                 部分到账 · 欠 {formatMoney(record.currentMonthRemaining ?? 0)}
               </span>
             ) : record.currentMonthCollectionStatus === 'paid' ? (
-              <span style={{ fontSize: 12, color: 'var(--color-success, #237804)' }}>本月已到账</span>
+              <span style={{ fontSize: 12, color: 'var(--color-success, #237804)' }}>
+                本月已到账
+              </span>
             ) : null}
           </div>
         ),
@@ -501,11 +499,7 @@ function TerminalList(props: {
         width: 70,
         align: 'center',
         render: (_: unknown, record: TerminalContractListItem) =>
-          record.hasScan ? (
-            '有'
-          ) : (
-            <span style={{ color: 'var(--color-error, #cf1322)' }}>缺</span>
-          ),
+          record.hasScan ? '有' : <span style={{ color: 'var(--color-error, #cf1322)' }}>缺</span>,
       },
     ],
     [props.statusLabels]
@@ -674,10 +668,7 @@ interface ListQueryState {
   emptyText: string;
 }
 
-function ExpiryBox(props: {
-  endDate: string;
-  daysToExpiry: number | null;
-}): React.ReactElement {
+function ExpiryBox(props: { endDate: string; daysToExpiry: number | null }): React.ReactElement {
   const days = props.daysToExpiry ?? daysUntil(props.endDate);
   if (!Number.isFinite(days)) {
     return <></>;
@@ -707,9 +698,7 @@ function ExpiryBox(props: {
     >
       <span style={{ fontSize: 12 }}>到期</span>
       <b style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{tone.label}</b>
-      <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
-        {props.endDate}
-      </span>
+      <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{props.endDate}</span>
     </div>
   );
 }
@@ -743,18 +732,13 @@ function PaymentPlanTable(props: {
         <tbody>
           {props.plan.map(stage => {
             const percent =
-              stage.periodCount > 0
-                ? Math.round((stage.paidCount / stage.periodCount) * 100)
-                : 0;
+              stage.periodCount > 0 ? Math.round((stage.paidCount / stage.periodCount) * 100) : 0;
             return (
               <tr key={`${stage.stageStart}-${stage.stageEnd}`}>
                 <td style={{ padding: 6 }}>
                   {stage.stageStart.slice(0, 7)} ~ {stage.stageEnd.slice(0, 7)}
                   {stage.note !== '' ? (
-                    <span style={{ color: 'var(--color-text-tertiary)' }}>
-                      {' '}
-                      · {stage.note}
-                    </span>
+                    <span style={{ color: 'var(--color-text-tertiary)' }}> · {stage.note}</span>
                   ) : null}
                 </td>
                 <td
@@ -793,13 +777,9 @@ function PaymentPlanTable(props: {
                       }}
                     />
                   </div>
-                  <span
-                    style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}
-                  >
+                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
                     已付 {stage.paidCount}/{stage.periodCount}
-                    {stage.nextDueDate != null
-                      ? ` · 下期 ${stage.nextDueDate.slice(0, 7)}`
-                      : ''}
+                    {stage.nextDueDate != null ? ` · 下期 ${stage.nextDueDate.slice(0, 7)}` : ''}
                   </span>
                 </td>
                 <td
@@ -853,9 +833,7 @@ function UnitsMatrixTable(props: {
             <tr key={row.assetUnitId}>
               <td style={{ padding: 6 }}>
                 {row.unitName}
-                <span style={{ color: 'var(--color-text-tertiary)' }}>
-                  （{row.unitCode}）
-                </span>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>（{row.unitCode}）</span>
               </td>
               <td
                 style={{
@@ -872,14 +850,10 @@ function UnitsMatrixTable(props: {
                 {row.tenantPartyName != null ? (
                   row.tenantPartyName
                 ) : (
-                  <span style={{ color: 'var(--color-success, #237804)' }}>
-                    空置 · 可租
-                  </span>
+                  <span style={{ color: 'var(--color-success, #237804)' }}>空置 · 可租</span>
                 )}
               </td>
-              <td style={{ padding: 6 }}>
-                {row.terminalContractNumber ?? '—'}
-              </td>
+              <td style={{ padding: 6 }}>{row.terminalContractNumber ?? '—'}</td>
               <td style={{ padding: 6 }}>{row.terminalEndDate ?? '—'}</td>
               <td
                 style={{

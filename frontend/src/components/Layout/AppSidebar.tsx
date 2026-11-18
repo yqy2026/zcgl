@@ -24,7 +24,7 @@ interface AppSidebarProps {
  */
 function withMenuBadges(
   items: MenuProps['items'],
-  badges: { monthlyLeft: number | null; archiveMissing: number | null },
+  badges: { monthlyLeft: number | null; archiveMissing: number | null }
 ): MenuProps['items'] {
   return (items ?? []).map(item => {
     if (item != null && typeof item === 'object' && 'key' in item) {
@@ -46,9 +46,7 @@ function withMenuBadges(
           label: (
             <span>
               档案
-              <span
-                style={{ marginLeft: 6, fontSize: 12, color: 'var(--color-error, #cf1322)' }}
-              >
+              <span style={{ marginLeft: 6, fontSize: 12, color: 'var(--color-error, #cf1322)' }}>
                 缺 {badges.archiveMissing} 份
               </span>
             </span>

@@ -86,7 +86,7 @@ export function ContractIntakePage(): React.ReactElement {
   const [contractType, setContractType] = useState<ContractIntakeType>(
     presetType === 'upstream_lease' || presetType === 'management_agreement'
       ? presetType
-      : 'terminal',
+      : 'terminal'
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [session, setSession] = useState<ContractIntakeSession | null>(null);

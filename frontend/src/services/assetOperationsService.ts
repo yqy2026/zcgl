@@ -457,8 +457,7 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
     coverages: normalizeCoverages(raw.coverages),
     lifecycleEvents: normalizeEvents(raw.lifecycle_events),
     renewalChain: normalizeChain(raw.renewal_chain),
-    daysToExpiry:
-      normalized.days_to_expiry == null ? null : Number(normalized.days_to_expiry),
+    daysToExpiry: normalized.days_to_expiry == null ? null : Number(normalized.days_to_expiry),
     paymentPlan: Array.isArray(normalized.payment_plan)
       ? normalized.payment_plan.map((item: RawUnitRecord) => ({
           stageStart: String(item.stage_start ?? ''),
@@ -477,14 +476,10 @@ function normalizeUpstream(raw: RawUnitRecord): UpstreamContractListItem {
           unitCode: String(item.unit_code ?? ''),
           unitName: String(item.unit_name ?? ''),
           rentableArea: Number(item.rentable_area ?? 0),
-          tenantPartyName:
-            item.tenant_party_name == null ? null : String(item.tenant_party_name),
+          tenantPartyName: item.tenant_party_name == null ? null : String(item.tenant_party_name),
           terminalContractNumber:
-            item.terminal_contract_number == null
-              ? null
-              : String(item.terminal_contract_number),
-          terminalEndDate:
-            item.terminal_end_date == null ? null : String(item.terminal_end_date),
+            item.terminal_contract_number == null ? null : String(item.terminal_contract_number),
+          terminalEndDate: item.terminal_end_date == null ? null : String(item.terminal_end_date),
           monthlyRent: item.monthly_rent == null ? null : Number(item.monthly_rent),
           hasScan: item.has_scan == null ? null : item.has_scan === true,
         }))
@@ -524,16 +519,12 @@ function normalizeTerminal(raw: RawUnitRecord): TerminalContractListItem {
       normalized.upstream_contract_number == null
         ? null
         : String(normalized.upstream_contract_number),
-    unitLabels: Array.isArray(normalized.unit_labels)
-      ? normalized.unit_labels.map(String)
-      : [],
+    unitLabels: Array.isArray(normalized.unit_labels) ? normalized.unit_labels.map(String) : [],
     currentMonthlyRent:
-      normalized.current_monthly_rent == null
-        ? null
-        : Number(normalized.current_monthly_rent),
-    currentMonthCollectionStatus: (
-      ['paid', 'partial', 'unpaid', 'none'] as const
-    ).includes(normalized.current_month_collection_status as never)
+      normalized.current_monthly_rent == null ? null : Number(normalized.current_monthly_rent),
+    currentMonthCollectionStatus: (['paid', 'partial', 'unpaid', 'none'] as const).includes(
+      normalized.current_month_collection_status as never
+    )
       ? (normalized.current_month_collection_status as TerminalContractListItem['currentMonthCollectionStatus'])
       : null,
     currentMonthRemaining:
@@ -1570,10 +1561,7 @@ export class AssetOperationsService {
         retry: false,
       });
       if (!result.success) {
-        throw new AssetOperationsError(
-          `预览失败: ${result.error}`,
-          extractErrorCode(result)
-        );
+        throw new AssetOperationsError(`预览失败: ${result.error}`, extractErrorCode(result));
       }
       return result.data ?? {};
     } catch (error) {
@@ -1619,10 +1607,7 @@ export class AssetOperationsService {
         },
       });
       if (!result.success) {
-        throw new AssetOperationsError(
-          `提交失败: ${result.error}`,
-          extractErrorCode(result)
-        );
+        throw new AssetOperationsError(`提交失败: ${result.error}`, extractErrorCode(result));
       }
       return result.data ?? {};
     } catch (error) {
@@ -1675,7 +1660,8 @@ export class AssetOperationsService {
   }
 
   /** 物业台账导出（xlsx blob），参数与列表筛选一致。 */
-  async exportAssetUnits(params: AssetUnitListParams): Promise<Blob> {    try {
+  async exportAssetUnits(params: AssetUnitListParams): Promise<Blob> {
+    try {
       const result = await apiClient
         .getAxiosInstance()
         .get<Blob>(`${API_BASE}/asset-units/export`, {

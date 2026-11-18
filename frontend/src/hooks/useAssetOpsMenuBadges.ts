@@ -43,10 +43,8 @@ export function useAssetOpsMenuBadges(): AssetOpsMenuBadges {
   const archiveMissing = archiveQuery.data
     ? archiveQuery.data.categories.reduce(
         (sum, category) =>
-          category.supported && (category.required ?? 0) > 0
-            ? sum + (category.missing ?? 0)
-            : sum,
-        0,
+          category.supported && (category.required ?? 0) > 0 ? sum + (category.missing ?? 0) : sum,
+        0
       )
     : null;
 

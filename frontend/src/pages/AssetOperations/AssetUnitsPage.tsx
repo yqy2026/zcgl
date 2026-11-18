@@ -141,8 +141,7 @@ export function AssetUnitsPage(): React.ReactElement {
     retry: false,
   });
 
-  const selectedId =
-    selectedUnitId !== '' ? selectedUnitId : (unitsQuery.data?.items[0]?.id ?? '');
+  const selectedId = selectedUnitId !== '' ? selectedUnitId : (unitsQuery.data?.items[0]?.id ?? '');
   const detailQuery = useQuery({
     queryKey: ['asset-operations-unit', selectedId],
     queryFn: () => assetOperationsService.getAssetUnit(selectedId),
@@ -174,8 +173,7 @@ export function AssetUnitsPage(): React.ReactElement {
     children: AssetUnitListItem[];
   }
   type ListRow = GroupRow | (AssetUnitListItem & { isGroup?: false });
-  const isGroupRow = (record: ListRow): record is GroupRow =>
-    (record as GroupRow).isGroup === true;
+  const isGroupRow = (record: ListRow): record is GroupRow => (record as GroupRow).isGroup === true;
   const groupCell = { onCell: (record: ListRow) => (isGroupRow(record) ? { colSpan: 0 } : {}) };
 
   const columns: ColumnsType<ListRow> = useMemo(
@@ -183,8 +181,7 @@ export function AssetUnitsPage(): React.ReactElement {
       {
         title: '资产单元',
         key: 'unit',
-        onCell: (record: ListRow) =>
-          isGroupRow(record) ? { colSpan: 9 } : ({} as object),
+        onCell: (record: ListRow) => (isGroupRow(record) ? { colSpan: 9 } : ({} as object)),
         render: (_: unknown, record: ListRow) =>
           isGroupRow(record) ? (
             <b style={{ fontSize: 13 }}>
@@ -320,10 +317,7 @@ export function AssetUnitsPage(): React.ReactElement {
 
   // 分页内按项目聚成组头行（组头不可选，展开显示单元）。
   const tableRows: ListRow[] = useMemo(() => {
-    const groups = new Map<
-      string,
-      { projectName: string; children: AssetUnitListItem[] }
-    >();
+    const groups = new Map<string, { projectName: string; children: AssetUnitListItem[] }>();
     for (const unit of units) {
       const key = unit.projectId || '未分组';
       let group = groups.get(key);
@@ -486,9 +480,7 @@ export function AssetUnitsPage(): React.ReactElement {
           <Button loading={exporting} onClick={exportLedger}>
             导出台账
           </Button>
-          <Button onClick={() => navigate(ASSET_OPERATIONS_V5_ROUTES.IMPORTS)}>
-            批量导入单元
-          </Button>
+          <Button onClick={() => navigate(ASSET_OPERATIONS_V5_ROUTES.IMPORTS)}>批量导入单元</Button>
         </div>
         {exportError != null ? <Alert type="error" showIcon title={exportError} /> : null}
       </div>
@@ -557,9 +549,7 @@ export function AssetUnitsPage(): React.ReactElement {
                     {CURRENT_YEAR} 考核 · {ASSESSMENT_LABELS[detail.assessment]}
                   </Tag>
                 ) : null}
-                {detail.certificateCount === 0 ? (
-                  <Tag color="red">缺产权证</Tag>
-                ) : null}
+                {detail.certificateCount === 0 ? <Tag color="red">缺产权证</Tag> : null}
               </div>
               <div style={{ marginTop: 8 }}>
                 <div className={styles.fieldRow}>
@@ -694,9 +684,7 @@ function VacancyNoteEditor(props: {
   return (
     <section className={styles.vacancyBlock} aria-label="空置原因">
       <b style={{ fontSize: 13 }}>空置原因</b>
-      <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-        备注，不影响计宗
-      </span>
+      <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>备注，不影响计宗</span>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {Object.entries(VACANCY_LABELS).map(([value, label]) => (
           <Button
@@ -736,11 +724,7 @@ function VacancyNoteEditor(props: {
           title={mutation.error instanceof Error ? mutation.error.message : '保存失败'}
         />
       ) : null}
-      <Button
-        size="small"
-        loading={mutation.isPending}
-        onClick={() => mutation.mutate()}
-      >
+      <Button size="small" loading={mutation.isPending} onClick={() => mutation.mutate()}>
         保存空置备注
       </Button>
     </section>
@@ -833,7 +817,7 @@ function LeaseTimeline({ unitId }: { unitId: string }): React.ReactElement {
                         navigate(
                           item.contractKind === 'terminal'
                             ? `/asset-operations/contracts/terminal?contract_id=${encodeURIComponent(item.contractId)}`
-                            : `/asset-operations/contracts/upstream?contract_id=${encodeURIComponent(item.contractId)}`,
+                            : `/asset-operations/contracts/upstream?contract_id=${encodeURIComponent(item.contractId)}`
                         );
                       }}
                       style={{
@@ -906,7 +890,11 @@ function BoundaryActionsModal(props: {
     <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
       <Button onClick={() => setOpen(true)}>拆分 / 合并单元</Button>
       {open ? (
-        <BoundaryActionsModalInner unit={props.unit} onClose={() => setOpen(false)} onDone={props.onDone} />
+        <BoundaryActionsModalInner
+          unit={props.unit}
+          onClose={() => setOpen(false)}
+          onDone={props.onDone}
+        />
       ) : null}
     </div>
   );
@@ -931,8 +919,16 @@ function BoundaryActionsModalInner(props: {
         activeKey={tab}
         onChange={key => setTab(key as 'split' | 'merge')}
         items={[
-          { key: 'split', label: '拆分', children: <SplitForm unit={props.unit} onClose={props.onClose} onDone={props.onDone} /> },
-          { key: 'merge', label: '合并', children: <MergeForm unit={props.unit} onClose={props.onClose} onDone={props.onDone} /> },
+          {
+            key: 'split',
+            label: '拆分',
+            children: <SplitForm unit={props.unit} onClose={props.onClose} onDone={props.onDone} />,
+          },
+          {
+            key: 'merge',
+            label: '合并',
+            children: <MergeForm unit={props.unit} onClose={props.onClose} onDone={props.onDone} />,
+          },
         ]}
       />
     </Modal>
@@ -994,14 +990,8 @@ function SplitForm(props: {
       part.buildingArea.trim() !== '' &&
       part.rentableArea.trim() !== ''
   );
-  const rentableSum = parts.reduce(
-    (sum, part) => sum + (Number(part.rentableArea) || 0),
-    0
-  );
-  const buildingSum = parts.reduce(
-    (sum, part) => sum + (Number(part.buildingArea) || 0),
-    0
-  );
+  const rentableSum = parts.reduce((sum, part) => sum + (Number(part.rentableArea) || 0), 0);
+  const buildingSum = parts.reduce((sum, part) => sum + (Number(part.buildingArea) || 0), 0);
   const sumOk =
     Math.abs(rentableSum - props.unit.rentableArea) < 0.01 &&
     Math.abs(buildingSum - props.unit.buildingArea) < 0.01;
@@ -1128,8 +1118,8 @@ function SplitForm(props: {
             color: sumOk ? 'var(--color-success, #237804)' : 'var(--color-error, #cf1322)',
           }}
         >
-          面积合计 {buildingSum.toLocaleString('zh-CN')} / 原 {props.unit.buildingArea.toLocaleString('zh-CN')} ㎡ ·{' '}
-          {sumOk ? '一致' : '不一致'}
+          面积合计 {buildingSum.toLocaleString('zh-CN')} / 原{' '}
+          {props.unit.buildingArea.toLocaleString('zh-CN')} ㎡ · {sumOk ? '一致' : '不一致'}
         </span>
       </div>
       {error != null ? <Alert type="error" showIcon title={error} /> : null}
@@ -1191,8 +1181,7 @@ function MergeForm(props: {
 
   const candidatesQuery = useQuery({
     queryKey: ['asset-operations-units-merge-candidates'],
-    queryFn: () =>
-      assetOperationsService.listAssetUnits({ limit: 200, offset: 0 }),
+    queryFn: () => assetOperationsService.listAssetUnits({ limit: 200, offset: 0 }),
     staleTime: 60 * 1000,
     retry: false,
   });
@@ -1291,7 +1280,12 @@ function MergeForm(props: {
           <Button
             type="primary"
             loading={pending}
-            disabled={sourceIds.length < 2 || effectiveDate === '' || unitCode.trim() === '' || name.trim() === ''}
+            disabled={
+              sourceIds.length < 2 ||
+              effectiveDate === '' ||
+              unitCode.trim() === '' ||
+              name.trim() === ''
+            }
             onClick={() => {
               void run('preview');
             }}

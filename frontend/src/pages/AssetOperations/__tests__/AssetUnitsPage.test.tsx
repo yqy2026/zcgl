@@ -349,7 +349,9 @@ describe('AssetUnitsPage', () => {
 
   it('shows the vacancy editor for vacant units and saves the note', async () => {
     mockedService.listAssetUnits.mockResolvedValue({
-      items: [makeUnit({ rentalStatus: 'vacant', currentTenantName: null, currentContractNumber: null })],
+      items: [
+        makeUnit({ rentalStatus: 'vacant', currentTenantName: null, currentContractNumber: null }),
+      ],
       total: 1,
       counts: null,
     });

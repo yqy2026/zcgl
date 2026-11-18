@@ -112,9 +112,7 @@ function view() {
         overrunTerminalCount: 1,
       },
     ],
-    archiveGaps: [
-      { documentType: 'terminal_contract', label: '终端合同', missing: 3 },
-    ],
+    archiveGaps: [{ documentType: 'terminal_contract', label: '终端合同', missing: 3 }],
     unlinkedUnitCount: 2,
     depositsPending: [
       {
@@ -203,14 +201,12 @@ it('navigates to the ledger entry when a payment row is clicked', async () => {
   const row = await screen.findByText('一德路后座 · 10 月未付');
   fireEvent.click(row.closest('button') as HTMLElement);
   expect(await screen.findByTestId('location')).toHaveTextContent(
-    'ledger_type=upstream_rent&entry_id=e2&period=2026-10',
+    'ledger_type=upstream_rent&entry_id=e2&period=2026-10'
   );
 });
 
 it('shows scope recovery instead of cards when the request is forbidden', async () => {
-  overviewQuery.mockRejectedValue(
-    new AssetOperationsError('拒绝', 'PARTY_SCOPE_MISSING'),
-  );
+  overviewQuery.mockRejectedValue(new AssetOperationsError('拒绝', 'PARTY_SCOPE_MISSING'));
   show();
   expect(await screen.findByText('没有可访问的资产范围')).toBeTruthy();
   expect(screen.queryByText(/本月还有/)).toBeNull();
@@ -234,7 +230,7 @@ it('prompts to register operators when none exist', async () => {
   partiesQuery.mockResolvedValue([]);
   show();
   expect(
-    await screen.findByText('尚无可用的运营主体，请先在主体管理中登记法人主体。'),
+    await screen.findByText('尚无可用的运营主体，请先在主体管理中登记法人主体。')
   ).toBeTruthy();
   expect(overviewQuery).not.toHaveBeenCalled();
 });
