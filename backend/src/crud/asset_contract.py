@@ -534,9 +534,7 @@ class AssetContractRepository:
                 AssetUnit.unit_code,
                 AssetUnit.name,
             )
-            .join(
-                AssetUnit, AssetUnit.id == TerminalContractAssetUnit.asset_unit_id
-            )
+            .join(AssetUnit, AssetUnit.id == TerminalContractAssetUnit.asset_unit_id)
             .where(TerminalContractAssetUnit.terminal_contract_id.in_(contract_ids))
             .order_by(
                 TerminalContractAssetUnit.terminal_contract_id,
@@ -567,8 +565,7 @@ class AssetContractRepository:
             select(TerminalContractAssetUnit.asset_unit_id, TerminalContract)
             .join(
                 TerminalContract,
-                TerminalContract.id
-                == TerminalContractAssetUnit.terminal_contract_id,
+                TerminalContract.id == TerminalContractAssetUnit.terminal_contract_id,
             )
             .where(
                 TerminalContractAssetUnit.asset_unit_id.in_(unit_ids),
@@ -580,7 +577,7 @@ class AssetContractRepository:
                 TerminalContract.start_date,
             )
         )
-        return tuple((await db.execute(statement)).all())
+        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
 
     async def coverage_history_for_unit(
         self,
@@ -590,29 +587,37 @@ class AssetContractRepository:
     ) -> tuple[tuple[TerminalContract, ...], tuple[UpstreamContract, ...]]:
         """Every terminal/upstream contract that ever covered the unit."""
         terminal_rows = (
-            await db.execute(
-                select(TerminalContract)
-                .join(
-                    TerminalContractAssetUnit,
-                    TerminalContractAssetUnit.terminal_contract_id
-                    == TerminalContract.id,
+            (
+                await db.execute(
+                    select(TerminalContract)
+                    .join(
+                        TerminalContractAssetUnit,
+                        TerminalContractAssetUnit.terminal_contract_id
+                        == TerminalContract.id,
+                    )
+                    .where(TerminalContractAssetUnit.asset_unit_id == asset_unit_id)
+                    .order_by(TerminalContract.start_date)
                 )
-                .where(TerminalContractAssetUnit.asset_unit_id == asset_unit_id)
-                .order_by(TerminalContract.start_date)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         upstream_rows = (
-            await db.execute(
-                select(UpstreamContract)
-                .join(
-                    UpstreamContractAssetUnit,
-                    UpstreamContractAssetUnit.upstream_contract_id
-                    == UpstreamContract.id,
+            (
+                await db.execute(
+                    select(UpstreamContract)
+                    .join(
+                        UpstreamContractAssetUnit,
+                        UpstreamContractAssetUnit.upstream_contract_id
+                        == UpstreamContract.id,
+                    )
+                    .where(UpstreamContractAssetUnit.asset_unit_id == asset_unit_id)
+                    .order_by(UpstreamContract.start_date)
                 )
-                .where(UpstreamContractAssetUnit.asset_unit_id == asset_unit_id)
-                .order_by(UpstreamContract.start_date)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return tuple(terminal_rows), tuple(upstream_rows)
 
     async def find_upstream_overlaps(

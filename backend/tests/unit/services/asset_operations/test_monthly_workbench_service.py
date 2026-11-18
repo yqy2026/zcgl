@@ -1,13 +1,14 @@
 """Monthly workbench aggregation: cards, carry-over and progress math."""
 
 import importlib
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from types import SimpleNamespace as Row
 from unittest.mock import AsyncMock
 
 import pytest
 
+from src.models.asset_contract import TerminalContract, UpstreamContract
 from src.services.asset_operations.errors import (
     OccupancyReportAlreadySubmittedError,
     OccupancyReportPeriodInvalidError,
@@ -58,27 +59,41 @@ def _entry(
 
 
 def _upstream(cid, number, *, kind="lease", end=date(2027, 6, 30), owner="owner-1"):
-    return Row(
+    return UpstreamContract(
         id=cid,
         contract_number=number,
-        name=f"物业{number}",
         contract_type=kind,
+        name=f"物业{number}",
         owner_party_id=owner,
+        operator_party_id="operator-1",
         start_date=date(2023, 1, 1),
         end_date=end,
+        deposit_amount=Decimal("0"),
+        renewed_from_id=None,
+        scan_document_id="scan-up",
+        version=1,
+        created_at=datetime(2026, 1, 1),
+        updated_at=datetime(2026, 1, 1),
     )
 
 
 def _terminal(cid, number, *, collector="operator", tenant="tenant-1"):
-    return Row(
+    return TerminalContract(
         id=cid,
         contract_number=number,
-        name=number,
         contract_mode="sublease",
         tenant_party_id=tenant,
-        rent_collector=collector,
+        lessor_party_id="operator-1",
+        upstream_contract_id=None,
         start_date=date(2024, 1, 1),
         end_date=date(2028, 1, 31),
+        deposit_amount=Decimal("0"),
+        rent_collector=collector,
+        renewed_from_id=None,
+        scan_document_id="scan-tm",
+        version=1,
+        created_at=datetime(2026, 1, 1),
+        updated_at=datetime(2026, 1, 1),
     )
 
 
@@ -135,8 +150,15 @@ def repos(monkeypatch):
             due=Decimal("60000"),
             due_date=date(2026, 10, 25),
         ),
-        "e3": _entry("e3", "u1", period="2026-11", status="paid",
-                     due=Decimal("0"), paid=Decimal("58000"), remaining=Decimal("0")),
+        "e3": _entry(
+            "e3",
+            "u1",
+            period="2026-11",
+            status="paid",
+            due=Decimal("0"),
+            paid=Decimal("58000"),
+            remaining=Decimal("0"),
+        ),
     }
     terminal_entries = {
         "t1e": _entry(
@@ -425,7 +447,10 @@ async def test_overview_rejects_invalid_month(monkeypatch, repos):
     service = module.MonthlyWorkbenchService(business_today_fn=lambda: TODAY)
     with pytest.raises(OccupancyReportPeriodInvalidError):
         await service.overview(
-            None, scope=_scope(), operator_party_id="op", actor_id="actor",
+            None,
+            scope=_scope(),
+            operator_party_id="op",
+            actor_id="actor",
             month="2026-13",
         )
 
@@ -446,6 +471,7 @@ async def test_overview_deposits_carry_names_and_numbers(monkeypatch, repos):
             outstanding_amount=Decimal("16000"),
         )
     ]
+
     async def load_facts(db, *, scope, contract_kind, **kwargs):
         _ = db, scope, kwargs
         return ("facts",) if contract_kind == "terminal" else ()

@@ -440,8 +440,7 @@ def test_registered_merge_routes_validate_header_and_return_service_contract(
 
 def test_unit_read_and_update_routes_use_asset_ops_guard() -> None:
     routes = {
-        (route.path, next(iter(route.methods))): route
-        for route in module.router.routes
+        (route.path, next(iter(route.methods))): route for route in module.router.routes
     }
     list_route = routes[("/asset-units", "GET")]
     detail_route = routes[("/asset-units/{unit_id}", "GET")]

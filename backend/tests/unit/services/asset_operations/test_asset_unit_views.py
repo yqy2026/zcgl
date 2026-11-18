@@ -68,9 +68,7 @@ class _UnitReader:
             ]
         if kwargs.get("rentable_only"):
             rows = [
-                unit
-                for unit in rows
-                if unit.is_operating and unit.rentable_area > 0
+                unit for unit in rows if unit.is_operating and unit.rentable_area > 0
             ]
         exclude = kwargs.get("exclude_unit_ids")
         if exclude:
@@ -105,9 +103,7 @@ class _ContractReader:
     async def list_rented_unit_ids(self, _db, *, as_of, scope):
         return self.rented_unit_ids
 
-    async def find_terminal_overlaps(
-        self, _db, *, unit_ids, start_date, end_date
-    ):
+    async def find_terminal_overlaps(self, _db, *, unit_ids, start_date, end_date):
         if set(unit_ids) & self.rented_unit_ids:
             return ("terminal-1",)
         return ()
@@ -170,9 +166,7 @@ def _query_service(
 async def test_unit_list_derives_rental_status_and_occupancy() -> None:
     rented = _unit()
     vacant = _unit(id="unit-2", unit_code="U-002")
-    non_rentable = _unit(
-        id="unit-3", unit_code="U-003", is_operating=False
-    )
+    non_rentable = _unit(id="unit-3", unit_code="U-003", is_operating=False)
     service = _query_service([rented, vacant, non_rentable], {"unit-1"})
 
     items, total = await service.list_asset_units(_DB(), scope=SCOPE)

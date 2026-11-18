@@ -41,9 +41,7 @@ def _workbook_bytes(workbook: Workbook) -> bytes:
     return buffer.getvalue()
 
 
-def build_asset_unit_workbook(
-    items: list[AssetUnitDetail], *, year: int
-) -> bytes:
+def build_asset_unit_workbook(items: list[AssetUnitDetail], *, year: int) -> bytes:
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "物业台账"
@@ -82,7 +80,7 @@ def build_asset_unit_workbook(
                 item.building_area,
                 item.rentable_area,
                 nature,
-                _ASSESSMENT_LABELS.get(item.assessment, "—"),
+                _ASSESSMENT_LABELS.get(item.assessment or "", "—"),
                 status,
                 item.current_tenant_name or "",
                 item.current_contract_end_date or "",

@@ -72,7 +72,10 @@ async def list_terminal_contracts(
         "missing_scan",
         "ended",
     ]
-    | None = Query(None, description="视图筛选：生效中/180天内到期/租金未到账/押金未结清/缺扫描件/已结束"),
+    | None = Query(
+        None,
+        description="视图筛选：生效中/180天内到期/租金未到账/押金未结清/缺扫描件/已结束",
+    ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz: Annotated[
@@ -91,18 +94,20 @@ async def list_terminal_contracts(
     try:
         actor_id = str(current_user.id)
         scope = await party_scope_resolver.resolve(db, user_id=actor_id)
-        items, total, counts = (
-            await asset_operations_query_service.list_terminal_contracts_view(
-                db,
-                scope=scope,
-                contract_mode=contract_mode,
-                upstream_contract_id=upstream_contract_id,
-                owner_party_id=owner_party_id,
-                query=q,
-                filter_value=filter,
-                offset=offset,
-                limit=limit,
-            )
+        (
+            items,
+            total,
+            counts,
+        ) = await asset_operations_query_service.list_terminal_contracts_view(
+            db,
+            scope=scope,
+            contract_mode=contract_mode,
+            upstream_contract_id=upstream_contract_id,
+            owner_party_id=owner_party_id,
+            query=q,
+            filter_value=filter,
+            offset=offset,
+            limit=limit,
         )
         return TerminalContractListResponse(items=items, total=total, counts=counts)
     except BaseBusinessError:

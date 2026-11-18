@@ -231,7 +231,9 @@ class OccupancyReportDraftService:
             statement = sa_select(
                 AssessmentScopeVersion.id, AssessmentScopeVersion.version_number
             ).where(AssessmentScopeVersion.id.in_(version_ids))
-            version_numbers = dict((await db.execute(statement)).all())
+            version_numbers = {
+                row[0]: row[1] for row in (await db.execute(statement)).all()
+            }
         items = [
             OccupancyReportSummaryRow(
                 report_id=row.id,

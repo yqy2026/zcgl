@@ -159,23 +159,17 @@ class _Reader:
 
     async def list_upstream_coverages(self, _db, *, contract_id):
         return tuple(
-            c
-            for c in self.upstream_coverages
-            if c.upstream_contract_id == contract_id
+            c for c in self.upstream_coverages if c.upstream_contract_id == contract_id
         )
 
     async def list_terminal_coverages(self, _db, *, contract_id):
         return tuple(
-            c
-            for c in self.terminal_coverages
-            if c.terminal_contract_id == contract_id
+            c for c in self.terminal_coverages if c.terminal_contract_id == contract_id
         )
 
     async def list_terminal_by_upstream(self, _db, *, upstream_contract_id):
         return tuple(
-            c
-            for c in self.terminals
-            if c.upstream_contract_id == upstream_contract_id
+            c for c in self.terminals if c.upstream_contract_id == upstream_contract_id
         )
 
     async def list_terminal_unit_labels(self, _db, *, contract_ids):

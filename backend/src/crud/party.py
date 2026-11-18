@@ -412,7 +412,7 @@ class CRUDParty:
         if len(party_ids) == 0:
             return {}
         statement = select(Party.id, Party.name).where(Party.id.in_(party_ids))
-        return dict((await db.execute(statement)).all())
+        return {row[0]: row[1] for row in (await db.execute(statement)).all()}
 
     async def update_party(
         self,

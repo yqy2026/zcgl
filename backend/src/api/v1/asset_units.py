@@ -70,7 +70,9 @@ async def list_asset_units(
     filter: Literal[
         "all", "in_assessment", "vacant", "non_rentable", "missing_certificate"
     ]
-    | None = Query(None, description="视图过滤：全部/纳入报送/空置可租/不可租/缺产权证"),
+    | None = Query(
+        None, description="视图过滤：全部/纳入报送/空置可租/不可租/缺产权证"
+    ),
     assessment_operator_party_id: str | None = Query(
         None, description="考核范围运营主体（提供时行内返回考核状态）"
     ),
@@ -97,7 +99,11 @@ async def list_asset_units(
     try:
         actor_id = str(current_user.id)
         scope = await party_scope_resolver.resolve(db, user_id=actor_id)
-        items, total, counts = await asset_operations_query_service.list_asset_units_view(  # noqa: E501
+        (
+            items,
+            total,
+            counts,
+        ) = await asset_operations_query_service.list_asset_units_view(  # noqa: E501
             db,
             scope=scope,
             project_id=project_id,
@@ -159,10 +165,15 @@ async def export_asset_units(
 
         actor_id = str(current_user.id)
         scope = await party_scope_resolver.resolve(db, user_id=actor_id)
-        year = assessment_year or datetime.now(
-            UTC
-        ).astimezone(ZoneInfo("Asia/Shanghai")).year
-        items, _total, _counts = await asset_operations_query_service.list_asset_units_view(  # noqa: E501
+        year = (
+            assessment_year
+            or datetime.now(UTC).astimezone(ZoneInfo("Asia/Shanghai")).year
+        )
+        (
+            items,
+            _total,
+            _counts,
+        ) = await asset_operations_query_service.list_asset_units_view(  # noqa: E501
             db,
             scope=scope,
             project_id=project_id,
@@ -179,9 +190,7 @@ async def export_asset_units(
         return Response(
             content=content,
             media_type=XLSX_MEDIA_TYPE,
-            headers={
-                "Content-Disposition": 'attachment; filename="asset-units.xlsx"'
-            },
+            headers={"Content-Disposition": 'attachment; filename="asset-units.xlsx"'},
         )
     except BaseBusinessError:
         raise

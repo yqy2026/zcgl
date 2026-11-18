@@ -14,6 +14,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from datetime import date, timedelta
 from decimal import Decimal
+from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,9 +74,7 @@ def _month_bounds(month: str) -> tuple[date, date]:
     year, mon = int(month[:4]), int(month[5:7])
     start = date(year, mon, 1)
     end = (
-        date(year, 12, 31)
-        if mon == 12
-        else date(year, mon + 1, 1) - timedelta(days=1)
+        date(year, 12, 31) if mon == 12 else date(year, mon + 1, 1) - timedelta(days=1)
     )
     return start, end
 
@@ -85,15 +84,12 @@ def _effective_terminal_end(
     events: tuple[ContractLifecycleEvent, ...],
 ) -> date:
     reversed_ids = {
-        event.reversed_event_id
-        for event in events
-        if event.event_type == "reversed"
+        event.reversed_event_id for event in events if event.event_type == "reversed"
     }
     ends = [
         event.effective_date - timedelta(days=1)
         for event in events
-        if event.event_type in {"terminated", "exited"}
-        and event.id not in reversed_ids
+        if event.event_type in {"terminated", "exited"} and event.id not in reversed_ids
     ]
     return min([terminal.end_date, *ends])
 
@@ -107,27 +103,29 @@ def _merge_facts(
     repository reads, so a naive concatenation would duplicate rent
     stages and double-generate obligations; identities dedupe by id.
     """
+    from typing import Any
+
     contracts: dict[str, UpstreamContract | TerminalContract] = {}
-    entries: dict[str, object] = {}
-    records: dict[str, object] = {}
-    schedules: dict[str, object] = {}
-    events: dict[str, ContractLifecycleEvent] = {}
+    entries: dict[str, Any] = {}
+    records: dict[str, Any] = {}
+    schedules: dict[str, Any] = {}
+    events: dict[str, Any] = {}
     for facts in batches:
         for contract in facts.contracts:
             contracts[contract.id] = contract
-        for row in facts.entries:
-            entries[row.id] = row
-        for row in facts.records:
-            records[row.id] = row
-        for row in facts.schedules:
-            schedules[row.id] = row
-        for row in facts.events:
-            events[row.id] = row
+        for entry_row in facts.entries:
+            entries[entry_row.id] = entry_row
+        for record_row in facts.records:
+            records[record_row.id] = record_row
+        for schedule_row in facts.schedules:
+            schedules[schedule_row.id] = schedule_row
+        for event_row in facts.events:
+            events[event_row.id] = event_row
     return RentQueryFacts(
         tuple(contracts.values()),
-        tuple(entries.values()),  # type: ignore[arg-type]
-        tuple(records.values()),  # type: ignore[arg-type]
-        tuple(schedules.values()),  # type: ignore[arg-type]
+        tuple(entries.values()),
+        tuple(records.values()),
+        tuple(schedules.values()),
         tuple(events.values()),
     )
 
@@ -198,7 +196,9 @@ class MonthlyWorkbenchService:
         )
         party_ids = {contract.owner_party_id for contract in upstreams}
         party_ids.update(
-            contract.tenant_party_id for contract in terminal_facts.contracts
+            contract.tenant_party_id
+            for contract in terminal_facts.contracts
+            if isinstance(contract, TerminalContract)
         )
         party_names = await _PARTY_CRUD.get_party_names_by_ids(
             db, party_ids=tuple(sorted(party_ids))
@@ -215,7 +215,8 @@ class MonthlyWorkbenchService:
         operator_ids = tuple(
             contract.id
             for contract in terminal_facts.contracts
-            if contract.rent_collector == "operator"
+            if isinstance(contract, TerminalContract)
+            and contract.rent_collector == "operator"
         )
         terminal_unit_labels = (
             await asset_contract_repository.list_terminal_unit_labels(
@@ -293,10 +294,10 @@ class MonthlyWorkbenchService:
             WorkbenchArchiveGapItem(
                 document_type=category.document_type,
                 label=category.label,
-                missing=category.missing,
+                missing=category.missing or 0,
             )
             for category in completion.categories
-            if category.supported and category.required and category.missing > 0
+            if category.supported and category.required and (category.missing or 0) > 0
         ]
         deposits = await self._pending_deposits(db, scope=scope)
         pending_scope_units = await self._pending_scope_units(
@@ -362,7 +363,8 @@ class MonthlyWorkbenchService:
             involved_ids = {
                 contract.id
                 for contract in facts.contracts
-                if contract.rent_collector == "operator"
+                if isinstance(contract, TerminalContract)
+                and contract.rent_collector == "operator"
             }
 
         items: list[WorkbenchMoneyTask] = []
@@ -382,16 +384,24 @@ class MonthlyWorkbenchService:
             if view.remaining_amount <= 0 or view.period > month:
                 continue
             if is_upstream:
-                counterparty = party_names.get(contract.owner_party_id, "")
+                counterparty = party_names.get(
+                    cast(UpstreamContract, contract).owner_party_id, ""
+                )
             else:
-                counterparty = party_names.get(contract.tenant_party_id, "")
+                counterparty = party_names.get(
+                    cast(TerminalContract, contract).tenant_party_id, ""
+                )
             labels = unit_labels.get(contract.id, ())
             items.append(
                 WorkbenchMoneyTask(
                     contract_kind="upstream" if is_upstream else "terminal",
                     contract_id=contract.id,
                     contract_number=contract.contract_number,
-                    contract_name=contract.name or contract.contract_number,
+                    contract_name=(
+                        cast(UpstreamContract, contract).name
+                        if is_upstream
+                        else cast(TerminalContract, contract).contract_number
+                    ),
                     counterparty_name=counterparty,
                     unit_label=(
                         labels[0]
@@ -598,9 +608,7 @@ class MonthlyWorkbenchService:
         for contract in upstreams:
             events = events_by_upstream.get(contract.id, ())
             successor_id, successor_from = (
-                asset_operations_query_service._active_successor(
-                    events, as_of=today
-                )
+                asset_operations_query_service._active_successor(events, as_of=today)
             )
             status = derive_upstream_contract_status(
                 contract,
@@ -698,8 +706,8 @@ class MonthlyWorkbenchService:
                         contract_number="",
                         counterparty_name="",
                         collector=view.collector,
-                        status=view.status,  # type: ignore[arg-type]
-                        direction=view.direction,  # type: ignore[arg-type]
+                        status=view.status,
+                        direction=view.direction,
                         agreed_amount=view.agreed_amount,
                         held_amount=view.held_amount,
                         outstanding_amount=view.outstanding_amount,
@@ -721,7 +729,9 @@ class MonthlyWorkbenchService:
             )
             terminals = list(rows)
         numbers = {contract.id: contract.contract_number for contract in upstreams}
-        numbers.update({contract.id: contract.contract_number for contract in terminals})
+        numbers.update(
+            {contract.id: contract.contract_number for contract in terminals}
+        )
         owners = {contract.id: contract.owner_party_id for contract in upstreams}
         tenants = {contract.id: contract.tenant_party_id for contract in terminals}
         names = await _PARTY_CRUD.get_party_names_by_ids(
@@ -731,9 +741,7 @@ class MonthlyWorkbenchService:
         for item in items:
             item.contract_number = numbers.get(item.contract_id, item.contract_id)
             if item.contract_kind == "upstream":
-                item.counterparty_name = names.get(
-                    owners.get(item.contract_id, ""), ""
-                )
+                item.counterparty_name = names.get(owners.get(item.contract_id, ""), "")
             else:
                 item.counterparty_name = names.get(
                     tenants.get(item.contract_id, ""), ""
@@ -775,7 +783,7 @@ class MonthlyWorkbenchService:
                 asset_unit_id=pending.asset_unit_id,
                 unit_code=pending.unit_snapshot.unit_code,
                 unit_name=pending.unit_snapshot.name,
-                reason=pending.reason,  # type: ignore[arg-type]
+                reason=pending.reason,
             )
             for pending in overview.pending
         ]

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Protocol
+from typing import Any, Protocol
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,6 +90,21 @@ class AssetUnitReader(Protocol):
         *,
         scope: EffectivePartyScope,
     ) -> Sequence[str]: ...
+
+    async def project_names(
+        self,
+        db: AsyncSession,
+        *,
+        project_ids: Iterable[str],
+    ) -> dict[str, str]: ...
+
+    async def active_certificate_counts(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: tuple[str, ...],
+        as_of: date,
+    ) -> dict[str, int]: ...
 
 
 class AssetContractReader(Protocol):
@@ -198,6 +213,28 @@ class AssetContractReader(Protocol):
         *,
         upstream_contract_id: str,
     ) -> tuple[TerminalContract, ...]: ...
+
+    async def list_terminal_unit_labels(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> dict[str, tuple[str, ...]]: ...
+
+    async def list_active_terminals_by_units(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: tuple[str, ...],
+        as_of: date,
+    ) -> tuple[tuple[str, TerminalContract], ...]: ...
+
+    async def coverage_history_for_unit(
+        self,
+        db: AsyncSession,
+        *,
+        asset_unit_id: str,
+    ) -> tuple[tuple[TerminalContract, ...], tuple[UpstreamContract, ...]]: ...
 
 
 class PartyNameReader(Protocol):
@@ -310,7 +347,7 @@ class AssetOperationsQueryService:
             unit_id for unit_id, included in decided.items() if included
         )
 
-        base_kwargs: dict[str, object] = {
+        base_kwargs: dict[str, Any] = {
             "scope": scope,
             "project_id": project_id,
             "owner_party_id": owner_party_id,
@@ -318,7 +355,7 @@ class AssetOperationsQueryService:
             "query": query,
         }
 
-        def restricted(**extra: object) -> dict[str, object]:
+        def restricted(**extra: Any) -> dict[str, Any]:
             merged = dict(base_kwargs)
             merged.update(extra)
             return merged
@@ -371,7 +408,7 @@ class AssetOperationsQueryService:
         today: date,
         rented_ids: set[str],
         included_ids: frozenset[str],
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         if filter == "non_rentable":
             return {"non_rentable_only": True}
         if filter == "vacant":
@@ -385,7 +422,7 @@ class AssetOperationsQueryService:
             return {"missing_certificate_only": True, "as_of": today}
         return {}
 
-    async def _count_units(self, db: AsyncSession, **kwargs: object) -> int:
+    async def _count_units(self, db: AsyncSession, **kwargs: Any) -> int:
         _, total = await self.asset_unit_repository.list(
             db, offset=0, limit=1, **kwargs
         )
@@ -409,9 +446,7 @@ class AssetOperationsQueryService:
         )
         if version is None:
             return {}, frozenset()
-        items = await assessment_scope_repository.list_items(
-            db, version_id=version.id
-        )
+        items = await assessment_scope_repository.list_items(db, version_id=version.id)
         candidates = await assessment_scope_repository.list_managed_units(
             db,
             operator_party_id=operator_party_id,
@@ -421,10 +456,8 @@ class AssetOperationsQueryService:
         )
         from .assessment_scope_command_service import view_for
 
-        view = view_for(version, items, candidates)
-        decided = {
-            item.asset_unit_id: item.included for item in view.items
-        }
+        view = view_for(version, tuple(items), candidates)
+        decided = {item.asset_unit_id: item.included for item in view.items}
         pending = frozenset(unit_id for unit_id, _reason in view.pending)
         return decided, pending
 
@@ -461,17 +494,13 @@ class AssetOperationsQueryService:
         )
         terminal_events: dict[str, tuple[ContractLifecycleEvent, ...]] = {}
         if terminal_ids:
-            events = (
-                await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
-                    db, contract_kind="terminal", contract_ids=terminal_ids
-                )
+            events = await self.asset_contract_repository.list_lifecycle_events_by_contract_ids(  # noqa: E501
+                db, contract_kind="terminal", contract_ids=terminal_ids
             )
             grouped: dict[str, list[ContractLifecycleEvent]] = {}
             for event in events:
                 grouped.setdefault(event.contract_id, []).append(event)
-            terminal_events = {
-                key: tuple(value) for key, value in grouped.items()
-            }
+            terminal_events = {key: tuple(value) for key, value in grouped.items()}
         tenant_ids = tuple(
             sorted(
                 {
@@ -486,9 +515,7 @@ class AssetOperationsQueryService:
 
         terminal_by_unit: dict[str, tuple[TerminalContract, date]] = {}
         for unit_id, terminal in terminal_rows:
-            end = effective_end(
-                terminal.end_date, terminal_events.get(terminal.id, ())
-            )
+            end = effective_end(terminal.end_date, terminal_events.get(terminal.id, ()))
             if end < today:
                 continue
             current = terminal_by_unit.get(unit_id)
@@ -537,10 +564,11 @@ class AssetOperationsQueryService:
         unit = await self.asset_unit_repository.get(db, unit_id=unit_id, scope=scope)
         if unit is None:
             return None
-        terminals, upstreams = (
-            await self.asset_contract_repository.coverage_history_for_unit(
-                db, asset_unit_id=unit_id
-            )
+        (
+            terminals,
+            upstreams,
+        ) = await self.asset_contract_repository.coverage_history_for_unit(
+            db, asset_unit_id=unit_id
         )
         contract_ids = tuple(
             sorted(
@@ -843,15 +871,9 @@ class AssetOperationsQueryService:
             db, contract_kind="upstream", contract_id=contract.id
         )
 
-        from types import SimpleNamespace
+        from ...crud.rent_ledger_queries import RentQueryFacts
 
-        facts = SimpleNamespace(
-            contracts=(contract,),
-            entries=entries,
-            records=records,
-            schedules=schedules,
-            events=events,
-        )
+        facts = RentQueryFacts((contract,), entries, records, schedules, events)
         views, _ = rent_ledger_query_service._views(facts, today=today)
         end = effective_end(contract.end_date, events)
         active_views = [view for view in views.values() if view.status != "void"]
@@ -948,31 +970,33 @@ class AssetOperationsQueryService:
                 )
             ),
         )
-        terminal_by_unit: dict[str, tuple[TerminalContract, date]] = {}
+        terminal_by_unit: dict[str, tuple[TerminalContract | None, date | None]] = {}
         for terminal in terminal_contracts:
-            covered = (
-                await self.asset_contract_repository.list_terminal_coverages(
-                    db, contract_id=terminal.id
-                )
+            covered = await self.asset_contract_repository.list_terminal_coverages(
+                db, contract_id=terminal.id
             )
             end = effective_end(terminal.end_date, tuple(grouped.get(terminal.id, ())))
             if end < today:
                 continue
             for link in covered:
                 current = terminal_by_unit.get(link.asset_unit_id)
-                if current is None or terminal.start_date > current[0].start_date:
+                if (
+                    current is None
+                    or current[0] is None
+                    or terminal.start_date > current[0].start_date
+                ):
                     terminal_by_unit[link.asset_unit_id] = (terminal, end)
         matrix: list[UpstreamUnitMatrixItem] = []
         for unit in units:
-            terminal, end = terminal_by_unit.get(unit.id, (None, None))
+            current_terminal, current_end = terminal_by_unit.get(unit.id, (None, None))
             stage = (
                 [
                     row
                     for row in schedules
-                    if row.contract_id == terminal.id
+                    if row.contract_id == current_terminal.id
                     and row.stage_start <= today <= row.stage_end
                 ]
-                if terminal is not None
+                if current_terminal is not None
                 else []
             )
             matrix.append(
@@ -982,18 +1006,20 @@ class AssetOperationsQueryService:
                     unit_name=unit.name,
                     rentable_area=unit.rentable_area,
                     tenant_party_name=(
-                        tenant_names.get(terminal.tenant_party_id, "")
-                        if terminal is not None
+                        tenant_names.get(current_terminal.tenant_party_id, "")
+                        if current_terminal is not None
                         else None
                     ),
                     terminal_contract_number=(
-                        terminal.contract_number if terminal is not None else None
+                        current_terminal.contract_number
+                        if current_terminal is not None
+                        else None
                     ),
-                    terminal_end_date=end,
+                    terminal_end_date=current_end,
                     monthly_rent=stage[0].actual_monthly_rent if stage else None,
                     has_scan=(
-                        terminal.scan_document_id is not None
-                        if terminal is not None
+                        current_terminal.scan_document_id is not None
+                        if current_terminal is not None
                         else None
                     ),
                 )
@@ -1022,7 +1048,9 @@ class AssetOperationsQueryService:
             owner_party_id=owner_party_id,
             query=query,
             filter_value=(
-                "rent_unpaid" if rent_unpaid else "deposit_unsettled"
+                "rent_unpaid"
+                if rent_unpaid
+                else "deposit_unsettled"
                 if deposit_unsettled
                 else None
             ),
@@ -1063,10 +1091,12 @@ class AssetOperationsQueryService:
                 contract_ids=tuple(sorted(c.id for c in contracts)),
             )
         )
-        events_by_id: dict[str, tuple[ContractLifecycleEvent, ...]] = {}
+        grouped_events: dict[str, list[ContractLifecycleEvent]] = {}
         for event in events:
-            events_by_id.setdefault(event.contract_id, []).append(event)
-        events_by_id = {key: tuple(value) for key, value in events_by_id.items()}
+            grouped_events.setdefault(event.contract_id, []).append(event)
+        events_by_id: dict[str, tuple[ContractLifecycleEvent, ...]] = {
+            key: tuple(value) for key, value in grouped_events.items()
+        }
 
         statuses: dict[str, str] = {}
         for contract in contracts:
@@ -1103,18 +1133,10 @@ class AssetOperationsQueryService:
             active=len([c for c in contracts if statuses[c.id] == "active"]),
             expiring_180=len([c for c in contracts if statuses[c.id] == "expiring"]),
             rent_unpaid=len([c for c in contracts if c.id in rent_unpaid_ids]),
-            deposit_unsettled=len(
-                [c for c in contracts if c.id in unsettled_ids]
-            ),
-            missing_scan=len(
-                [c for c in contracts if c.scan_document_id is None]
-            ),
+            deposit_unsettled=len([c for c in contracts if c.id in unsettled_ids]),
+            missing_scan=len([c for c in contracts if c.scan_document_id is None]),
             ended=len(
-                [
-                    c
-                    for c in contracts
-                    if statuses[c.id] in {"ended", "historical"}
-                ]
+                [c for c in contracts if statuses[c.id] in {"ended", "historical"}]
             ),
         )
 
@@ -1149,8 +1171,7 @@ class AssetOperationsQueryService:
                 contract
                 for contract in filtered
                 if pattern in contract.contract_number.lower()
-                or pattern
-                in tenant_names.get(contract.tenant_party_id, "").lower()
+                or pattern in tenant_names.get(contract.tenant_party_id, "").lower()
             ]
 
         total = len(filtered)
@@ -1199,9 +1220,7 @@ class AssetOperationsQueryService:
         matrix_facts = await rent_ledger_query_repository.matrix_facts(
             db, scope=scope, ledger_type="terminal_rent", year=today.year
         )
-        month_views, _ = rent_ledger_query_service._views(
-            matrix_facts, today=today
-        )
+        month_views, _ = rent_ledger_query_service._views(matrix_facts, today=today)
         month = today.strftime("%Y-%m")
         month_entries: dict[str, list[RentEntryView]] = {}
         for view in month_views.values():
@@ -1240,9 +1259,7 @@ class AssetOperationsQueryService:
             )
             entries = month_entries.get(contract.id, [])
             if entries:
-                remaining = sum(
-                    (row.remaining_amount for row in entries), Decimal("0")
-                )
+                remaining = sum((row.remaining_amount for row in entries), Decimal("0"))
                 due = sum((row.due_amount for row in entries), Decimal("0"))
                 if remaining <= 0:
                     detail.current_month_collection_status = "paid"

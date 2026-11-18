@@ -286,10 +286,10 @@ class AssetUnitRepository:
         normalized_ids = tuple(sorted(set(project_ids)))
         if len(normalized_ids) == 0:
             return {}
-        statement = select(Project.id, Project.name).where(
+        statement = select(Project.id, Project.project_name).where(
             Project.id.in_(normalized_ids)
         )
-        return dict((await db.execute(statement)).all())
+        return {row[0]: row[1] for row in (await db.execute(statement)).all()}
 
     async def active_certificate_counts(
         self,
