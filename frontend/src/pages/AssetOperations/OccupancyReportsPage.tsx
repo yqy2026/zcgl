@@ -359,7 +359,14 @@ function StatementParagraph(props: {
   projectCounts: { projectCount: number; operatingProjectCount: number; nonOperatingProjectCount: number };
   totals: OccupancyReportTotals;
 }): React.ReactElement {
-  const highlight = { background: '#eef4fe', padding: '0 4px', borderRadius: 3 };
+  const highlight = {
+    background: '#eef4fe',
+    paddingTop: 0,
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingBottom: 0,
+    borderRadius: 3,
+  };
   const num = (value: React.ReactNode): React.ReactElement => (
     <span style={{ ...highlight, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
   );
@@ -1141,9 +1148,14 @@ function DraftSection(props: {
               <div
                 style={{
                   background: 'var(--color-bg-container, #fff)',
-                  border: '1px solid var(--color-border, #e4e6ea)',
+                  borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: 'var(--color-border, #e4e6ea)',
                   borderRadius: 8,
-                  padding: '16px 20px',
+                  paddingTop: 16,
+                paddingLeft: 20,
+                paddingRight: 20,
+                paddingBottom: 16,
                 }}
               >
                 <StatementParagraph period={draft.period} projectCounts={draft.projectCounts} totals={draft.totals} />
@@ -1453,9 +1465,14 @@ function SnapshotSection(props: { reportId: string }): React.ReactElement {
             <div
               style={{
                 background: 'var(--color-bg-container, #fff)',
-                border: '1px solid var(--color-border, #e4e6ea)',
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: 'var(--color-border, #e4e6ea)',
                 borderRadius: 8,
-                padding: '16px 20px',
+                paddingTop: 16,
+                paddingLeft: 20,
+                paddingRight: 20,
+                paddingBottom: 16,
                 marginTop: 12,
               }}
             >

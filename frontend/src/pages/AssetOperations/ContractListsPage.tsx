@@ -696,7 +696,10 @@ function ExpiryBox(props: {
         display: 'flex',
         alignItems: 'baseline',
         gap: 8,
-        padding: '6px 12px',
+        paddingTop: 6,
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingBottom: 6,
         borderRadius: 8,
         ...tone,
       }}
@@ -719,7 +722,8 @@ function PaymentPlanTable(props: {
       <b style={{ fontSize: 13 }}>付款计划</b>
       <p
         style={{
-          margin: '4px 0 8px',
+          marginTop: 4,
+          marginBottom: 8,
           fontSize: 12,
           color: 'var(--color-text-secondary)',
         }}
@@ -729,11 +733,11 @@ function PaymentPlanTable(props: {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr style={{ color: 'var(--color-text-secondary)' }}>
-            <th style={{ textAlign: 'left', padding: '4px 6px' }}>期间</th>
-            <th style={{ textAlign: 'right', padding: '4px 6px' }}>月租金</th>
-            <th style={{ textAlign: 'right', padding: '4px 6px' }}>期数</th>
-            <th style={{ textAlign: 'left', padding: '4px 6px' }}>进度</th>
-            <th style={{ textAlign: 'right', padding: '4px 6px' }}>合计</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>期间</th>
+            <th style={{ textAlign: 'right', padding: 6 }}>月租金</th>
+            <th style={{ textAlign: 'right', padding: 6 }}>期数</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>进度</th>
+            <th style={{ textAlign: 'right', padding: 6 }}>合计</th>
           </tr>
         </thead>
         <tbody>
@@ -744,7 +748,7 @@ function PaymentPlanTable(props: {
                 : 0;
             return (
               <tr key={`${stage.stageStart}-${stage.stageEnd}`}>
-                <td style={{ padding: '4px 6px' }}>
+                <td style={{ padding: 6 }}>
                   {stage.stageStart.slice(0, 7)} ~ {stage.stageEnd.slice(0, 7)}
                   {stage.note !== '' ? (
                     <span style={{ color: 'var(--color-text-tertiary)' }}>
@@ -755,7 +759,7 @@ function PaymentPlanTable(props: {
                 </td>
                 <td
                   style={{
-                    padding: '4px 6px',
+                    padding: 6,
                     textAlign: 'right',
                     fontVariantNumeric: 'tabular-nums',
                   }}
@@ -764,14 +768,14 @@ function PaymentPlanTable(props: {
                 </td>
                 <td
                   style={{
-                    padding: '4px 6px',
+                    padding: 6,
                     textAlign: 'right',
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
                   {stage.periodCount}
                 </td>
-                <td style={{ padding: '4px 6px' }}>
+                <td style={{ padding: 6 }}>
                   <div
                     style={{
                       height: 6,
@@ -800,7 +804,7 @@ function PaymentPlanTable(props: {
                 </td>
                 <td
                   style={{
-                    padding: '4px 6px',
+                    padding: 6,
                     textAlign: 'right',
                     fontVariantNumeric: 'tabular-nums',
                   }}
@@ -824,7 +828,8 @@ function UnitsMatrixTable(props: {
       <b style={{ fontSize: 13 }}>资产单元与终端合同</b>
       <p
         style={{
-          margin: '4px 0 8px',
+          marginTop: 4,
+          marginBottom: 8,
           fontSize: 12,
           color: 'var(--color-text-secondary)',
         }}
@@ -834,19 +839,19 @@ function UnitsMatrixTable(props: {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr style={{ color: 'var(--color-text-secondary)' }}>
-            <th style={{ textAlign: 'left', padding: '4px 6px' }}>单元</th>
-            <th style={{ textAlign: 'right', padding: '4px 6px' }}>面积㎡</th>
-            <th style={{ textAlign: 'left', padding: '4px 6px' }}>终端租户</th>
-            <th style={{ textAlign: 'left', padding: '4px 6px' }}>终端合同</th>
-            <th style={{ textAlign: 'left', padding: '4px 6px' }}>租期至</th>
-            <th style={{ textAlign: 'right', padding: '4px 6px' }}>月租金</th>
-            <th style={{ textAlign: 'center', padding: '4px 6px' }}>扫描件</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>单元</th>
+            <th style={{ textAlign: 'right', padding: 6 }}>面积㎡</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>终端租户</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>终端合同</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>租期至</th>
+            <th style={{ textAlign: 'right', padding: 6 }}>月租金</th>
+            <th style={{ textAlign: 'center', padding: 6 }}>扫描件</th>
           </tr>
         </thead>
         <tbody>
           {props.rows.map(row => (
             <tr key={row.assetUnitId}>
-              <td style={{ padding: '4px 6px' }}>
+              <td style={{ padding: 6 }}>
                 {row.unitName}
                 <span style={{ color: 'var(--color-text-tertiary)' }}>
                   （{row.unitCode}）
@@ -854,7 +859,7 @@ function UnitsMatrixTable(props: {
               </td>
               <td
                 style={{
-                  padding: '4px 6px',
+                  padding: 6,
                   textAlign: 'right',
                   fontVariantNumeric: 'tabular-nums',
                 }}
@@ -863,7 +868,7 @@ function UnitsMatrixTable(props: {
                   maximumFractionDigits: 2,
                 })}
               </td>
-              <td style={{ padding: '4px 6px' }}>
+              <td style={{ padding: 6 }}>
                 {row.tenantPartyName != null ? (
                   row.tenantPartyName
                 ) : (
@@ -872,20 +877,20 @@ function UnitsMatrixTable(props: {
                   </span>
                 )}
               </td>
-              <td style={{ padding: '4px 6px' }}>
+              <td style={{ padding: 6 }}>
                 {row.terminalContractNumber ?? '—'}
               </td>
-              <td style={{ padding: '4px 6px' }}>{row.terminalEndDate ?? '—'}</td>
+              <td style={{ padding: 6 }}>{row.terminalEndDate ?? '—'}</td>
               <td
                 style={{
-                  padding: '4px 6px',
+                  padding: 6,
                   textAlign: 'right',
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {row.monthlyRent != null ? formatMoney(row.monthlyRent) : '—'}
               </td>
-              <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+              <td style={{ padding: 6, textAlign: 'center' }}>
                 {row.hasScan == null ? (
                   '—'
                 ) : row.hasScan ? (

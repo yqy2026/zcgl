@@ -583,9 +583,10 @@ function normalizeReportDraft(raw: RawRecord): OccupancyReportDraft {
         ? null
         : normalizeVersionSummary(requireRecord(raw.scope_version, 'scope_version')),
     totals: normalizeTotals(requireRecord(raw.totals, 'totals')),
-    projectCounts: normalizeProjectCounts(
-      requireRecord(raw.project_counts, 'project_counts')
-    ),
+    projectCounts:
+      raw.project_counts == null
+        ? { projectCount: 0, operatingProjectCount: 0, nonOperatingProjectCount: 0 }
+        : normalizeProjectCounts(requireRecord(raw.project_counts, 'project_counts')),
     lines: requireRecordArray(raw, 'lines').map(normalizeReportLine),
     pending: requireRecordArray(raw, 'pending').map(normalizePendingUnit),
     changes: requireRecordArray(raw, 'changes').map(normalizeFieldChange),

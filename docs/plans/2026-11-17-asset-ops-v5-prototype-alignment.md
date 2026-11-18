@@ -1,6 +1,8 @@
 # 资产运营 v5 原型对齐收口（prototype-alignment）
 
-> 状态：🔄 进行中（2026-11-17 开出）
+> 状态：🔄 收口校验中（2026-11-17 开出；WP1–9 已实现并提交）
+>
+> 实施记录（2026-11-18）：WP1 本月工作台（monthly-workbench 端点+MonthlyPage+侧栏徽标）、WP2 物业页（五值筛选/分组/富化/时间轴/拆合/导出）、WP3 终端合同页（六值筛选+富化）、WP4 上游详情（到期框/付款计划/单元矩阵）、WP5 报送页（固定句式/记录卡/明细对齐）、WP6 导入页（批次列表/步骤条/模板说明/更新底稿）、WP7 终止表单（三选一+交接）、WP8 档案完成率卡+拖放区、WP9 录入主体选择器均已落地并随 7 个提交进入 feature/asset-ops-v5-prototype-alignment。收口校验：后端全量 4773 通过、前端全量 1575（2 条 fixture 兼容修复后全绿）、lint/type-check/guard:ui/build、field-drift 与 docs-lint 全部通过。
 > 依据：`frontend/prototype/asset-ops-v5.html`（布局/文案/交互终稿）+ `asset-ops-v5-handoff.md`（业务规则）。
 > 前提裁决：生产已确立「列表 + 常驻详情栏 + URL 状态 + 预览-确认命令」的实现模式（V1–V4 验收）；原型三栏/弹窗形态按**功能等价**映射（每个控件、每条信息、每个状态必须在生产出现），不做像素级复刻。handoff 明示「在现有前端工程里按既有模式重新实现」。
 
@@ -40,7 +42,7 @@
 - 前端：分段筛选（Segmented 带数量）、项目下拉、搜索占位符对齐（地址、单元、租户、产权证号）、按项目分组行（组头折叠）、列补齐、详情栏加：空置原因块（chips+预计起租月 → PUT vacancy-note）、租赁时间轴（上终端/下上游/斜纹空置/红线今天，点段跳合同）、合同链列表、「拆分 / 合并单元」弹窗（接 split/merge preview+commit）、「编辑基本信息」扩为多字段（PATCH 支持范围）、「导出台账」「批量导入单元」
 
 ### WP3 终端合同页对齐
-- 后端：`filter` 增 `active|expiring_180|missing_scan|ended`（保留旧 2 值）；列表行补 `tenant_party_name/upstream_contract_number/unit_labels[](合并 N)/current_monthly_rent/current_month_collection{status,amount}/deposit_status/has_scan`；响应加 `counts{...}`；`q` 扩租户名
+- 后端：`filter` 增 `active|expiring_180|missing_scan|ended`（保留旧 2 值）；列表行补 `tenant_party_name/upstream_contract_number/unit_labels`（合并 N 标注）/`current_monthly_rent/current_month_collection{status,amount}/deposit_status/has_scan`；响应加 `counts{...}`；`q` 扩租户名
 - 前端：Segmented 6 项带数量、列补齐（租户·合同号/单元/模式/上游 未录入黄字/租期至 越界红/月租金+到账状态/押金/扫描件）、搜索含已结束
 
 ### WP4 上游合同页对齐

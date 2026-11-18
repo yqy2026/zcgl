@@ -144,6 +144,8 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 
 派生字段：`rental_status`、`active_terminal_contracts`、`assessment_status`、`certificate_gap`、`upstream_risk`。
 
+列表/详情富化（读投影，不入库）：`owner_party_name`、`project_name`、`assessment`（`included`/`excluded`/`pending`，按指定运营主体与年度的当前考核范围版本解析；无版本时为 null）、`current_tenant_name`、`current_contract_number`、`current_contract_end_date`（当天仍在租的最近起租终端合同，终止已回放）、`certificate_count`（当天有效产权证关联数）。租赁时间轴（`coverage-history`）为覆盖过该单元的全部终端/上游合同区间读投影。
+
 ### 4.7 AssetUnitBoundaryChange
 
 | 字段 | 类型 | 约束 |
@@ -739,17 +741,17 @@ V4-0 裁决（2026-11-15，业务确认授权代裁决）升格自活跃计划�
 
 ### 4.30 MonthlyWorkItem
 
-| 字段 | 类型 | 约束 |
-|---|---|---|
-| `item_type` | enum | `upstream_rent` / `terminal_rent` / `management_fee` / `occupancy_report` / `expired_upstream` / `expiring_contract` / `archive_gap` / `deposit` / `new_unit_scope` |
-| `target_type` / `target_id` | enum / UUID | 深链目标 |
-| `period` | year-month | 工作期 |
-| `due_date` | date? | 无固定截止日事项为空 |
-| `status` | enum | 派生：`pending` / `partial` / `completed` / `overdue` |
-| `amount` | decimal? | 涉及金额时的待处理金额 |
-| `days_overdue` | integer? | 逾期天数 |
+本月工作台读模型（`GET /api/v1/monthly-workbench`），每次请求按当前事实无状态派生，不落任务表：
 
-该对象不持久化为可编辑待办；完成数只统计有截止日的四类月度事项。
+| 分区 | 内容 | 派生口径 |
+|---|---|---|
+| `progress` | `{total, done}` | 仅计四类截止任务：承租租金未结笔数 + 转租终端租金未到账笔数 + 上月管理费未确认物业数 + 报送 1 件 |
+| `rent_payments` / `rent_collections` | 合同 × 账期行（金额三值、`due_date`、`days_overdue`、`status`、`record_type_hint`、行标签含主体名/单元标签） | 租金台账视图；往月未清项自然结转并带逾期天数；收租卡只含 `rent_collector=operator` 的转租合同 |
+| `management_fees` | 上月各委托物业 `{status, base_amount, fee_amount, received_line_count, line_count, statement_id}` | `collecting`（产权方已收 a/b 户，月底未收顺延）/`pending_stamp`/`confirmed` 取自对账单状态；有在管委托协议但未出单记 `missing` |
+| `occupancy_report` | `{status: draft/submitted/missing_scope, unit_count, rented_unit_count, occupancy_rate, rate_delta, gate_reasons}` | 已报送/缺考核范围降级为状态而非错误 |
+| 随时处理区 | `expired_upstream`（到期未续签未退出，附在租终端数）/ `expiring_upstream`（180 天内到期，附越界终端数）/ `archive_gaps` + `unlinked_unit_count` / `deposits_pending`（非 settled 押金，含主体名与合同号）/ `pending_scope_units`（年中新增待确认） | 各自从合同状态派生、档案完成率、押金投影与考核范围 pending 派生；处理完毕自动消失 |
+
+工作台不提供任何写端点；事项完成从对应业务事实自动消失或折叠。
 
 ### 4.31 AssetContractWriteReceipt
 
@@ -766,6 +768,13 @@ V4-0 裁决（2026-11-15，业务确认授权代裁决）升格自活跃计划�
 `command_kind` 的数据库字符串容量为 64，CHECK 白名单与上述命令集合一致；管理费确认 / 更正命令分别为 32 / 34 字符，不得沿用旧的 30 字符容量。
 
 回执与命令的业务写入在同一事务提交（合同确认时即合同、资产单元覆盖及租金阶段；终止时包括覆盖截止、事件、租金重排、免租补收和押金抵扣）。同一操作者以同键重试同一规范化请求时返回首次响应；同键改写合同条款、覆盖单元、终止抵扣分配、补收免租或命令类型时返回 `IDEMPOTENCY_CONFLICT`。回执是命令可靠性事实，不作为合同业务状态或审计事件的替代。
+
+
+### 4.32 合同列表富化读投影（WP3/WP4）
+
+终端合同列表行富化（读投影，不入库）：`tenant_party_name`、`upstream_contract_number`、`unit_labels[]`（多单元即合并出租）、`current_monthly_rent`（当天所在租金阶段实际月租）、`current_month_collection_status`（`paid`/`partial`/`unpaid`/`none`，按当前业务月租金台账聚合）与 `current_month_remaining`、`has_scan`；响应附六值筛选计数 `counts`。
+
+上游合同详情富化（读投影，不入库）：`days_to_expiry`（到期剩余天数，已过为负）、`payment_plan[]`（按租金阶段的付款计划：期间〔终止已回放〕、月租、期数、已付期数、下期应付日、合计、首期/第 N 次递增注记）、`units_matrix[]`（当天覆盖单元 × 当前在租终端合同：租户、合同号、租期至、当期月租、扫描件有无；空置单元租户为 null）。
 
 ## 5. 状态机
 

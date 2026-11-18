@@ -718,7 +718,15 @@ function VacancyNoteEditor(props: {
           aria-label="预计起租月份"
           value={expectedStart}
           onChange={event => setExpectedStart(event.target.value)}
-          style={{ padding: '2px 8px', borderRadius: 4, border: '1px solid #d9d9d9' }}
+          style={{
+            paddingTop: 2,
+            paddingLeft: 8,
+            paddingRight: 8,
+            borderRadius: 4,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: '#d9d9d9',
+          }}
         />
       </label>
       {mutation.isError ? (
@@ -810,7 +818,7 @@ function LeaseTimeline({ unitId }: { unitId: string }): React.ReactElement {
                   height: 14,
                   borderRadius: 4,
                   background:
-                    'repeating-linear-gradient(135deg, #fafbfc 0 4px, #e9ecef 4px 8px)',
+                    'repeating-linear-gradient(135deg, #fafbfc 0 0.25rem, #e9ecef 0.25rem 0.5rem)',
                   marginTop: 2,
                 }}
               >
@@ -935,7 +943,17 @@ function PreviewImpact({ preview }: { preview: Record<string, unknown> }): React
   const impact = preview['impact'] as Record<string, unknown> | undefined;
   const warnings = (preview['warnings'] as string[] | undefined) ?? [];
   return (
-    <div style={{ background: '#eef4fe', borderRadius: 8, padding: '10px 12px', fontSize: 13 }}>
+    <div
+      style={{
+        background: '#eef4fe',
+        borderRadius: 8,
+        paddingTop: 10,
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingBottom: 10,
+        fontSize: 13,
+      }}
+    >
       {impact != null ? (
         <div>
           原单元停止计宗：{String(impact['source_units_stop_on'] ?? '—')}；新单元起计：
@@ -1035,7 +1053,11 @@ function SplitForm(props: {
       {parts.map((part, index) => (
         <div
           key={index}
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 110px 110px 28px', gap: 8 }}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 6.875rem 6.875rem 1.75rem',
+            gap: 8,
+          }}
         >
           <input
             aria-label={`新单元编号 ${index + 1}`}

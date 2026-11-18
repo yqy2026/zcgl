@@ -306,12 +306,15 @@ export function TerminalActionsPage(): React.ReactElement {
                     aria-pressed={field.value === option.value}
                     onClick={() => field.onChange(option.value)}
                     style={{
-                      padding: '8px 10px',
+                      paddingTop: 8,
+                      paddingLeft: 10,
+                      paddingRight: 10,
+                      paddingBottom: 8,
                       borderRadius: 6,
                       border:
                         field.value === option.value
-                          ? '1px solid var(--ant-color-primary, #0e63e5)'
-                          : '1px solid #d9d9d9',
+                          ? '0.0625rem solid var(--ant-color-primary, #0e63e5)'
+                          : '0.0625rem solid #d9d9d9',
                       background:
                         field.value === option.value ? '#eef4fe' : '#fff',
                       textAlign: 'left',

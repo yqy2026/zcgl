@@ -131,10 +131,10 @@ export default function ArchivePage(): React.ReactElement {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr)) 260px',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr)) 16.25rem',
                 gap: 1,
                 background: 'var(--color-border, #e4e6ea)',
-                border: '1px solid var(--color-border, #e4e6ea)',
+                border: '0.0625rem solid var(--color-border, #e4e6ea)',
                 borderRadius: 8,
                 overflow: 'hidden',
                 marginBottom: 12,
@@ -145,7 +145,16 @@ export default function ArchivePage(): React.ReactElement {
                 .map(item => (
                   <div
                     key={`card-${item.document_type}`}
-                    style={{ background: '#fff', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}
+                    style={{
+                      background: '#fff',
+                      paddingTop: 14,
+                      paddingLeft: 18,
+                      paddingRight: 18,
+                      paddingBottom: 14,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
                   >
                     <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
                       {item.label}
@@ -175,7 +184,9 @@ export default function ArchivePage(): React.ReactElement {
                   style={{
                     flex: 1,
                     height: '100%',
-                    border: '1.5px dashed #c9cdd4',
+                    borderWidth: 1.5,
+                    borderStyle: 'dashed',
+                    borderColor: '#c9cdd4',
                     borderRadius: 8,
                     display: 'flex',
                     flexDirection: 'column',
