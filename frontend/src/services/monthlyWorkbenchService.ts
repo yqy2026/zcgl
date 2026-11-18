@@ -51,6 +51,8 @@ function toServiceError(error: unknown): AssetOperationsError {
 
 type RawRecord = Record<string, unknown>;
 
+const API_BASE = '/api/v1';
+
 function num(record: RawRecord, field: string): number {
   const value = record[field];
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -334,7 +336,7 @@ export class MonthlyWorkbenchService {
     month?: string;
   }): Promise<MonthlyWorkbenchView> {
     try {
-      const result: Envelope = await apiClient.get('/api/v1/monthly-workbench', {
+      const result: Envelope = await apiClient.get(`${API_BASE}/monthly-workbench`, {
         cache: false,
         params: {
           operator_party_id: params.operatorPartyId,
