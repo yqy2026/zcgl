@@ -126,7 +126,17 @@ def repos(monkeypatch):
     )
     monkeypatch.setattr(
         module.asset_contract_repository,
+        "list_terminals_by_upstream_batched",
+        AsyncMock(return_value=()),
+    )
+    monkeypatch.setattr(
+        module.asset_contract_repository,
         "list_upstream_coverages",
+        AsyncMock(return_value=()),
+    )
+    monkeypatch.setattr(
+        module.asset_contract_repository,
+        "list_upstream_coverages_batched",
         AsyncMock(return_value=()),
     )
     monkeypatch.setattr(
@@ -555,15 +565,15 @@ async def test_expired_upstream_counts_skip_renewed_predecessor(monkeypatch, rep
         AsyncMock(return_value=(renewed_event,)),
     )
 
-    async def terminals_by_upstream(db, *, upstream_contract_id):
-        if upstream_contract_id == "u3":
-            return (reader_renewed, reader_normal)
+    async def terminals_by_upstream_batched(db, *, upstream_contract_ids):
+        if "u3" in upstream_contract_ids:
+            return (("u3", reader_renewed), ("u3", reader_normal))
         return ()
 
     monkeypatch.setattr(
         module.asset_contract_repository,
-        "list_terminal_by_upstream",
-        terminals_by_upstream,
+        "list_terminals_by_upstream_batched",
+        terminals_by_upstream_batched,
     )
     # 报送卡降级路径顺带覆盖 P2-1 收窄后的异常白名单。
     monkeypatch.setattr(

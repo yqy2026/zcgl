@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -235,6 +236,27 @@ class AssetContractReader(Protocol):
         *,
         asset_unit_id: str,
     ) -> tuple[tuple[TerminalContract, ...], tuple[UpstreamContract, ...]]: ...
+
+    async def list_terminal_coverages_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> tuple[tuple[str, TerminalContractAssetUnit], ...]: ...
+
+    async def list_terminals_by_upstream_batched(
+        self,
+        db: AsyncSession,
+        *,
+        upstream_contract_ids: tuple[str, ...],
+    ) -> tuple[tuple[str, TerminalContract], ...]: ...
+
+    async def list_upstream_coverages_batched(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> tuple[tuple[str, UpstreamContractAssetUnit], ...]: ...
 
 
 class PartyNameReader(Protocol):
@@ -973,11 +995,19 @@ class AssetOperationsQueryService:
                 )
             ),
         )
+        covered_rows = (
+            await self.asset_contract_repository.list_terminal_coverages_by_ids(
+                db, contract_ids=terminal_ids
+            )
+        )
+        covered_by_contract: dict[str, list[TerminalContractAssetUnit]] = defaultdict(
+            list
+        )
+        for _contract_id, link in covered_rows:
+            covered_by_contract[link.terminal_contract_id].append(link)
         terminal_by_unit: dict[str, tuple[TerminalContract | None, date | None]] = {}
         for terminal in terminal_contracts:
-            covered = await self.asset_contract_repository.list_terminal_coverages(
-                db, contract_id=terminal.id
-            )
+            covered = covered_by_contract.get(terminal.id, ())
             end = effective_end(terminal.end_date, tuple(grouped.get(terminal.id, ())))
             if end < today:
                 continue

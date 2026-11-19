@@ -31,6 +31,7 @@ from ...models.asset_contract import (
     ContractLifecycleEvent,
     TerminalContract,
     UpstreamContract,
+    UpstreamContractAssetUnit,
 )
 from ...schemas.monthly_workbench import (
     MonthlyWorkbenchView,
@@ -635,11 +636,14 @@ class MonthlyWorkbenchService:
     ) -> dict[str, dict[str, int]]:
         """Unit counts plus active/overrun terminal counts per contract."""
         terminals_by_upstream: dict[str, list[TerminalContract]] = defaultdict(list)
-        for contract, _ in flagged:
-            for terminal in await asset_contract_repository.list_terminal_by_upstream(
-                db, upstream_contract_id=contract.id
-            ):
-                terminals_by_upstream[contract.id].append(terminal)
+        for (
+            upstream_id,
+            terminal,
+        ) in await asset_contract_repository.list_terminals_by_upstream_batched(
+            db,
+            upstream_contract_ids=tuple(sorted(contract.id for contract, _ in flagged)),
+        ):
+            terminals_by_upstream[upstream_id].append(terminal)
         terminal_ids = tuple(
             sorted(
                 terminal.id
@@ -660,11 +664,20 @@ class MonthlyWorkbenchService:
             terminal_events = {
                 key: tuple(value) for key, value in grouped_events.items()
             }
+        coverages_by_contract: dict[str, list[UpstreamContractAssetUnit]] = defaultdict(
+            list
+        )
+        for (
+            upstream_id,
+            link,
+        ) in await asset_contract_repository.list_upstream_coverages_batched(
+            db,
+            contract_ids=tuple(sorted(contract.id for contract, _ in flagged)),
+        ):
+            coverages_by_contract[upstream_id].append(link)
         counts: dict[str, dict[str, int]] = {}
         for contract, _ in flagged:
-            coverages = await asset_contract_repository.list_upstream_coverages(
-                db, contract_id=contract.id
-            )
+            coverages = coverages_by_contract.get(contract.id, ())
             active = 0
             overrun = 0
             for terminal in terminals_by_upstream.get(contract.id, ()):

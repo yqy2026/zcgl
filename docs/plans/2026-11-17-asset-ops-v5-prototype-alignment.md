@@ -1,6 +1,8 @@
 # 资产运营 v5 原型对齐收口（prototype-alignment）
 
-> 状态：🔄 收口校验中（2026-11-17 开出；WP1–9 已实现并提交）
+> 状态：🔄 PR 验收中（2026-11-17 开出；WP1–9 + 复核修复已提交，PR #113 CI 全绿）
+>
+> 复核轮（2026-11-19）：双轴对抗复核结论 P0 无、A1–A4 鉴权/范围轴全部通过；P1×3（导入列表 owner 过滤、续签前驱回放、payment_plan 截断口径）与 P2×5 已修复入提交；P2-3 N+1 三处已批量收口。遗留仅 P3 记录项（工作台两年租金窗口、counts 不随搜索联动、同一产权方多协议合并展示），均为记录即可。
 >
 > 实施记录（2026-11-18）：WP1 本月工作台（monthly-workbench 端点+MonthlyPage+侧栏徽标）、WP2 物业页（五值筛选/分组/富化/时间轴/拆合/导出）、WP3 终端合同页（六值筛选+富化）、WP4 上游详情（到期框/付款计划/单元矩阵）、WP5 报送页（固定句式/记录卡/明细对齐）、WP6 导入页（批次列表/步骤条/模板说明/更新底稿）、WP7 终止表单（三选一+交接）、WP8 档案完成率卡+拖放区、WP9 录入主体选择器均已落地并随 7 个提交进入 feature/asset-ops-v5-prototype-alignment。收口校验：后端全量 4773 通过、前端全量 1575（2 条 fixture 兼容修复后全绿）、lint/type-check/guard:ui/build、field-drift 与 docs-lint 全部通过。
 > 依据：`frontend/prototype/asset-ops-v5.html`（布局/文案/交互终稿）+ `asset-ops-v5-handoff.md`（业务规则）。

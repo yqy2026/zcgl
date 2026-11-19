@@ -175,6 +175,28 @@ class _Reader:
     async def list_terminal_unit_labels(self, _db, *, contract_ids):
         return {}
 
+    async def list_terminal_coverages_by_ids(self, _db, *, contract_ids):
+        return tuple(
+            (link.terminal_contract_id, link)
+            for link in self.terminal_coverages
+            if link.terminal_contract_id in set(contract_ids)
+        )
+
+    async def list_terminals_by_upstream_batched(self, _db, *, upstream_contract_ids):
+        wanted = set(upstream_contract_ids)
+        return tuple(
+            (c.upstream_contract_id, c)
+            for c in self.terminals
+            if c.upstream_contract_id in wanted
+        )
+
+    async def list_upstream_coverages_batched(self, _db, *, contract_ids):
+        return tuple(
+            (link.upstream_contract_id, link)
+            for link in self.upstream_coverages
+            if link.upstream_contract_id in set(contract_ids)
+        )
+
 
 class _DB:
     pass

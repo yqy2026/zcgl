@@ -579,6 +579,72 @@ class AssetContractRepository:
         )
         return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
 
+    async def list_terminal_coverages_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> tuple[tuple[str, TerminalContractAssetUnit], ...]:
+        """Batched terminal coverage read: (contract_id, link) rows."""
+        if len(contract_ids) == 0:
+            return ()
+        statement = (
+            select(TerminalContractAssetUnit)
+            .where(TerminalContractAssetUnit.terminal_contract_id.in_(contract_ids))
+            .order_by(
+                TerminalContractAssetUnit.terminal_contract_id,
+                TerminalContractAssetUnit.asset_unit_id,
+            )
+        )
+        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
+
+    async def list_terminals_by_upstream_batched(
+        self,
+        db: AsyncSession,
+        *,
+        upstream_contract_ids: tuple[str, ...],
+    ) -> tuple[tuple[str, TerminalContract], ...]:
+        """Batched terminals grouped by upstream: (upstream_id, terminal) rows.
+
+        Read-path counterpart of the fail-closed ``list_terminal_by_upstream``;
+        callers must pass upstream ids already resolved within scope.
+        """
+        if len(upstream_contract_ids) == 0:
+            return ()
+        statement = (
+            select(UpstreamContract.id, TerminalContract)
+            .join(
+                TerminalContract,
+                TerminalContract.upstream_contract_id == UpstreamContract.id,
+            )
+            .where(UpstreamContract.id.in_(upstream_contract_ids))
+            .order_by(
+                UpstreamContract.id,
+                TerminalContract.start_date,
+                TerminalContract.id,
+            )
+        )
+        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
+
+    async def list_upstream_coverages_batched(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> tuple[tuple[str, UpstreamContractAssetUnit], ...]:
+        """Batched upstream coverage read: (contract_id, link) rows."""
+        if len(contract_ids) == 0:
+            return ()
+        statement = (
+            select(UpstreamContractAssetUnit)
+            .where(UpstreamContractAssetUnit.upstream_contract_id.in_(contract_ids))
+            .order_by(
+                UpstreamContractAssetUnit.upstream_contract_id,
+                UpstreamContractAssetUnit.asset_unit_id,
+            )
+        )
+        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
+
     async def coverage_history_for_unit(
         self,
         db: AsyncSession,
