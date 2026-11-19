@@ -667,14 +667,11 @@ class MonthlyWorkbenchService:
         coverages_by_contract: dict[str, list[UpstreamContractAssetUnit]] = defaultdict(
             list
         )
-        for (
-            upstream_id,
-            link,
-        ) in await asset_contract_repository.list_upstream_coverages_batched(
+        for link in await asset_contract_repository.list_upstream_coverages_batched(
             db,
             contract_ids=tuple(sorted(contract.id for contract, _ in flagged)),
         ):
-            coverages_by_contract[upstream_id].append(link)
+            coverages_by_contract[link.upstream_contract_id].append(link)
         counts: dict[str, dict[str, int]] = {}
         for contract, _ in flagged:
             coverages = coverages_by_contract.get(contract.id, ())

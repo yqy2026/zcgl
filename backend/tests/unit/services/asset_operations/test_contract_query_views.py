@@ -177,7 +177,7 @@ class _Reader:
 
     async def list_terminal_coverages_by_ids(self, _db, *, contract_ids):
         return tuple(
-            (link.terminal_contract_id, link)
+            link
             for link in self.terminal_coverages
             if link.terminal_contract_id in set(contract_ids)
         )
@@ -192,7 +192,7 @@ class _Reader:
 
     async def list_upstream_coverages_batched(self, _db, *, contract_ids):
         return tuple(
-            (link.upstream_contract_id, link)
+            link
             for link in self.upstream_coverages
             if link.upstream_contract_id in set(contract_ids)
         )

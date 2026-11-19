@@ -242,7 +242,7 @@ class AssetContractReader(Protocol):
         db: AsyncSession,
         *,
         contract_ids: tuple[str, ...],
-    ) -> tuple[tuple[str, TerminalContractAssetUnit], ...]: ...
+    ) -> tuple[TerminalContractAssetUnit, ...]: ...
 
     async def list_terminals_by_upstream_batched(
         self,
@@ -256,7 +256,7 @@ class AssetContractReader(Protocol):
         db: AsyncSession,
         *,
         contract_ids: tuple[str, ...],
-    ) -> tuple[tuple[str, UpstreamContractAssetUnit], ...]: ...
+    ) -> tuple[UpstreamContractAssetUnit, ...]: ...
 
 
 class PartyNameReader(Protocol):
@@ -1003,7 +1003,7 @@ class AssetOperationsQueryService:
         covered_by_contract: dict[str, list[TerminalContractAssetUnit]] = defaultdict(
             list
         )
-        for _contract_id, link in covered_rows:
+        for link in covered_rows:
             covered_by_contract[link.terminal_contract_id].append(link)
         terminal_by_unit: dict[str, tuple[TerminalContract | None, date | None]] = {}
         for terminal in terminal_contracts:

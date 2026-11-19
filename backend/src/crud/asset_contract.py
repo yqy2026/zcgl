@@ -584,8 +584,8 @@ class AssetContractRepository:
         db: AsyncSession,
         *,
         contract_ids: tuple[str, ...],
-    ) -> tuple[tuple[str, TerminalContractAssetUnit], ...]:
-        """Batched terminal coverage read: (contract_id, link) rows."""
+    ) -> tuple[TerminalContractAssetUnit, ...]:
+        """Batched terminal coverage read (link carries terminal_contract_id)."""
         if len(contract_ids) == 0:
             return ()
         statement = (
@@ -596,7 +596,7 @@ class AssetContractRepository:
                 TerminalContractAssetUnit.asset_unit_id,
             )
         )
-        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
+        return tuple((await db.execute(statement)).scalars().all())
 
     async def list_terminals_by_upstream_batched(
         self,
@@ -631,8 +631,8 @@ class AssetContractRepository:
         db: AsyncSession,
         *,
         contract_ids: tuple[str, ...],
-    ) -> tuple[tuple[str, UpstreamContractAssetUnit], ...]:
-        """Batched upstream coverage read: (contract_id, link) rows."""
+    ) -> tuple[UpstreamContractAssetUnit, ...]:
+        """Batched upstream coverage read (link carries upstream_contract_id)."""
         if len(contract_ids) == 0:
             return ()
         statement = (
@@ -643,7 +643,7 @@ class AssetContractRepository:
                 UpstreamContractAssetUnit.asset_unit_id,
             )
         )
-        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
+        return tuple((await db.execute(statement)).scalars().all())
 
     async def coverage_history_for_unit(
         self,
