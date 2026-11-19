@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
@@ -21,6 +21,7 @@ from ...models.auth import User
 from ...schemas.asset_operations import (
     AssetUnitBoundaryCommitResponse,
     AssetUnitBoundaryPreviewResponse,
+    AssetUnitCoverageHistoryResponse,
     AssetUnitDetail,
     AssetUnitListResponse,
     AssetUnitMergeCommitRequest,
@@ -63,9 +64,20 @@ async def list_asset_units(
     project_id: str | None = Query(None, description="项目过滤"),
     owner_party_id: str | None = Query(None, description="产权方过滤"),
     usage_type: str | None = Query(None, description="用途过滤"),
-    q: str | None = Query(None, max_length=100, description="编号/名称/地址搜索"),
-    filter: Literal["all", "non_rentable"] | None = Query(
-        None, description="视图过滤：all / non_rentable"
+    q: str | None = Query(
+        None, max_length=100, description="编号/名称/地址/租户/产权证号搜索"
+    ),
+    filter: Literal[
+        "all", "in_assessment", "vacant", "non_rentable", "missing_certificate"
+    ]
+    | None = Query(
+        None, description="视图过滤：全部/纳入报送/空置可租/不可租/缺产权证"
+    ),
+    assessment_operator_party_id: str | None = Query(
+        None, description="考核范围运营主体（提供时行内返回考核状态）"
+    ),
+    assessment_year: int | None = Query(
+        None, ge=2000, le=2200, description="考核范围年度，默认当年"
     ),
     offset: int = Query(0, ge=0, description="跳过条数"),
     limit: int = Query(50, ge=1, le=200, description="返回条数"),
@@ -87,7 +99,11 @@ async def list_asset_units(
     try:
         actor_id = str(current_user.id)
         scope = await party_scope_resolver.resolve(db, user_id=actor_id)
-        items, total = await asset_operations_query_service.list_asset_units(
+        (
+            items,
+            total,
+            counts,
+        ) = await asset_operations_query_service.list_asset_units_view(  # noqa: E501
             db,
             scope=scope,
             project_id=project_id,
@@ -95,14 +111,91 @@ async def list_asset_units(
             usage_type=usage_type,
             query=q,
             filter=filter,
+            assessment_operator_party_id=assessment_operator_party_id,
+            assessment_year=assessment_year,
             offset=offset,
             limit=limit,
         )
-        return AssetUnitListResponse(items=items, total=total)
+        return AssetUnitListResponse(items=items, total=total, counts=counts)
     except BaseBusinessError:
         raise
     except Exception as exc:
         raise internal_error("查询资产单元列表失败", original_error=exc) from exc
+
+
+@router.get(
+    "/asset-units/export",
+    summary="导出物业台账",
+)
+async def export_asset_units(
+    project_id: str | None = Query(None, description="项目过滤"),
+    owner_party_id: str | None = Query(None, description="产权方过滤"),
+    usage_type: str | None = Query(None, description="用途过滤"),
+    q: str | None = Query(None, max_length=100, description="搜索"),
+    filter: Literal[
+        "all", "in_assessment", "vacant", "non_rentable", "missing_certificate"
+    ]
+    | None = Query(None, description="视图过滤"),
+    assessment_operator_party_id: str | None = Query(None),
+    assessment_year: int | None = Query(None, ge=2000, le=2200),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="asset_ops",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> Response:
+    """Export the filtered unit ledger as one xlsx sheet (≤5000 rows)."""
+    _ = _authz
+    try:
+        from datetime import UTC, datetime
+        from zoneinfo import ZoneInfo
+
+        from ...services.asset_operations.asset_unit_export_service import (
+            EXPORT_ROW_LIMIT,
+            XLSX_MEDIA_TYPE,
+            build_asset_unit_workbook,
+        )
+
+        actor_id = str(current_user.id)
+        scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+        year = (
+            assessment_year
+            or datetime.now(UTC).astimezone(ZoneInfo("Asia/Shanghai")).year
+        )
+        (
+            items,
+            _total,
+            _counts,
+        ) = await asset_operations_query_service.list_asset_units_view(  # noqa: E501
+            db,
+            scope=scope,
+            project_id=project_id,
+            owner_party_id=owner_party_id,
+            usage_type=usage_type,
+            query=q,
+            filter=filter,
+            assessment_operator_party_id=assessment_operator_party_id,
+            assessment_year=assessment_year,
+            offset=0,
+            limit=EXPORT_ROW_LIMIT,
+        )
+        content = build_asset_unit_workbook(items, year=year)
+        return Response(
+            content=content,
+            media_type=XLSX_MEDIA_TYPE,
+            headers={"Content-Disposition": 'attachment; filename="asset-units.xlsx"'},
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("导出物业台账失败", original_error=exc) from exc
 
 
 @router.get(
@@ -136,6 +229,44 @@ async def list_asset_unit_usage_types(
         raise
     except Exception as exc:
         raise internal_error("查询资产单元业态选项失败", original_error=exc) from exc
+
+
+@router.get(
+    "/asset-units/{unit_id}/coverage-history",
+    response_model=AssetUnitCoverageHistoryResponse,
+    summary="查询资产单元租赁时间轴",
+)
+async def get_asset_unit_coverage_history(
+    unit_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="asset_ops",
+                resource_id="{unit_id}",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> AssetUnitCoverageHistoryResponse:
+    """Timeline bars: every terminal/upstream contract that covered the unit."""
+    _ = _authz
+    try:
+        actor_id = str(current_user.id)
+        scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+        items = await asset_operations_query_service.coverage_history(
+            db, unit_id, scope=scope
+        )
+        if items is None:
+            raise ResourceNotFoundError("AssetUnit", unit_id)
+        return AssetUnitCoverageHistoryResponse(asset_unit_id=unit_id, items=items)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询资产单元租赁时间轴失败", original_error=exc) from exc
 
 
 @router.get(

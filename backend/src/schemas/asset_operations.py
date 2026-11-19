@@ -526,12 +526,45 @@ class TerminalContractListResponse(_StrictPayload):
 
     items: list[TerminalContractDetail]
     total: int
+    counts: TerminalContractFilterCounts | None = None
 
 
 class AssetUnitDetail(AssetUnitResponse):
     """Unit facts plus the live terminal contracts covering it."""
 
     terminal_contract_ids: list[str] = Field(default_factory=list)
+    owner_party_name: str = ""
+    project_name: str = ""
+    assessment: Literal["included", "excluded", "pending"] | None = None
+    current_tenant_name: str | None = None
+    current_contract_number: str | None = None
+    current_contract_end_date: date | None = None
+    certificate_count: int = 0
+
+
+class AssetUnitFilterCounts(_StrictPayload):
+    """Counts for the segmented list filters (prototype: 带数量分段筛选)."""
+
+    all: int
+    in_assessment: int
+    vacant: int
+    non_rentable: int
+    missing_certificate: int
+
+
+class AssetUnitCoverageInterval(_StrictPayload):
+    """One bar on the unit's lease timeline (terminal or upstream)."""
+
+    contract_kind: Literal["terminal", "upstream"]
+    contract_id: str
+    contract_number: str
+    start_date: date
+    end_date: date
+
+
+class AssetUnitCoverageHistoryResponse(_StrictPayload):
+    asset_unit_id: str
+    items: list[AssetUnitCoverageInterval]
 
 
 class AssetUnitListResponse(_StrictPayload):
@@ -539,6 +572,34 @@ class AssetUnitListResponse(_StrictPayload):
 
     items: list[AssetUnitDetail]
     total: int
+    counts: AssetUnitFilterCounts | None = None
+
+
+class UpstreamPaymentPlanItem(_StrictPayload):
+    """One rent stage of the upstream payment plan (prototype 付款计划行)."""
+
+    stage_start: date
+    stage_end: date
+    monthly_rent: Decimal
+    period_count: int
+    paid_count: int
+    next_due_date: date | None = None
+    total_amount: Decimal
+    note: str = ""
+
+
+class UpstreamUnitMatrixItem(_StrictPayload):
+    """One covered unit with its live terminal contract (prototype 单元×终端矩阵行)."""
+
+    asset_unit_id: str
+    unit_code: str
+    unit_name: str
+    rentable_area: Decimal
+    tenant_party_name: str | None = None
+    terminal_contract_number: str | None = None
+    terminal_end_date: date | None = None
+    monthly_rent: Decimal | None = None
+    has_scan: bool | None = None
 
 
 class UpstreamContractDetail(UpstreamContractResponse):
@@ -553,6 +614,9 @@ class UpstreamContractDetail(UpstreamContractResponse):
     terminal_contract_ids: list[str] = Field(default_factory=list)
     lifecycle_events: list[LifecycleEventItem] = Field(default_factory=list)
     rent_summary: dict[str, object] = Field(default_factory=dict)
+    payment_plan: list[UpstreamPaymentPlanItem] = Field(default_factory=list)
+    units_matrix: list[UpstreamUnitMatrixItem] = Field(default_factory=list)
+    days_to_expiry: int | None = None
 
 
 class TerminalContractDetail(TerminalContractResponse):
@@ -566,6 +630,46 @@ class TerminalContractDetail(TerminalContractResponse):
     renewal_chain: list[RenewalChainItem] = Field(default_factory=list)
     lifecycle_events: list[LifecycleEventItem] = Field(default_factory=list)
     rent_summary: dict[str, object] = Field(default_factory=dict)
+    # 列表富化字段（WP3 终端合同页对齐原型）
+    tenant_party_name: str = ""
+    upstream_contract_number: str | None = None
+    unit_labels: list[str] = Field(default_factory=list)
+    current_monthly_rent: Decimal | None = None
+    current_month_collection_status: (
+        Literal["paid", "partial", "unpaid", "none"] | None
+    ) = None
+    current_month_remaining: Decimal | None = None
+    has_scan: bool = True
+
+
+class TerminalContractFilterCounts(_StrictPayload):
+    """Counts for the segmented terminal-contract filters (带数量)."""
+
+    active: int
+    expiring_180: int
+    rent_unpaid: int
+    deposit_unsettled: int
+    missing_scan: int
+    ended: int
+
+
+class OccupancyReportSummaryRow(_StrictPayload):
+    """One month in the reporting history strip (prototype 报送记录卡片)."""
+
+    report_id: str
+    period: str
+    status: Literal["draft", "submitted"]
+    occupancy_rate: Decimal | None
+    unit_count: int | None
+    rented_unit_count: int | None
+    submitted_at: datetime | None
+    scope_version_number: int | None
+
+
+class OccupancyReportHistoryResponse(_StrictPayload):
+    operator_party_id: str
+    year: int
+    items: list[OccupancyReportSummaryRow]
 
 
 class ContractIntakeSessionResponse(_StrictPayload):

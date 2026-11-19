@@ -440,8 +440,7 @@ def test_registered_merge_routes_validate_header_and_return_service_contract(
 
 def test_unit_read_and_update_routes_use_asset_ops_guard() -> None:
     routes = {
-        (route.path, next(iter(route.methods))): route
-        for route in module.router.routes
+        (route.path, next(iter(route.methods))): route for route in module.router.routes
     }
     list_route = routes[("/asset-units", "GET")]
     detail_route = routes[("/asset-units/{unit_id}", "GET")]
@@ -530,6 +529,7 @@ async def test_unit_read_and_update_endpoints_bind_scope(
     )
     query_service = SimpleNamespace(
         list_asset_units=AsyncMock(return_value=([detail], 1)),
+        list_asset_units_view=AsyncMock(return_value=([detail], 1, None)),
         get_asset_unit_detail=AsyncMock(return_value=detail),
     )
     command_service = SimpleNamespace(
@@ -577,7 +577,7 @@ async def test_unit_read_and_update_endpoints_bind_scope(
     assert got.terminal_contract_ids == ["terminal-1"]
     assert updated.name == "改名后的商铺"
     assert noted == update_response
-    list_call = query_service.list_asset_units.await_args
+    list_call = query_service.list_asset_units_view.await_args
     assert list_call.kwargs["filter"] == "non_rentable"
     assert list_call.kwargs["scope"] is scope
     update_call = command_service.update_asset_unit.await_args

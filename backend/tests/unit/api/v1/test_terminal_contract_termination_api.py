@@ -156,9 +156,7 @@ async def test_termination_endpoints_bind_path_actor_scope_and_idempotency(
     assert commit_call.kwargs["idempotency_key"] == "terminate-request-1"
 
 
-def test_reversal_route_uses_asset_ops_write_and_required_idempotency_header() -> (
-    None
-):
+def test_reversal_route_uses_asset_ops_write_and_required_idempotency_header() -> None:
     routes = {route.path: route for route in module.router.routes}
     reversal_route = routes["/terminal-contracts/{contract_id}/termination-reversal"]
 
@@ -321,8 +319,7 @@ async def test_renewal_endpoint_binds_path_actor_scope_and_idempotency(
 
 def test_list_and_detail_routes_use_asset_ops_read() -> None:
     routes = {
-        (route.path, next(iter(route.methods))): route
-        for route in module.router.routes
+        (route.path, next(iter(route.methods))): route for route in module.router.routes
     }
     list_route = routes[("/terminal-contracts", "GET")]
     detail_route = routes[("/terminal-contracts/{contract_id}", "GET")]
@@ -371,6 +368,9 @@ async def test_list_and_detail_endpoints_bind_scope_and_filters(
     )
     query_service = SimpleNamespace(
         list_terminal_contracts=AsyncMock(return_value=([detail_response], 1)),
+        list_terminal_contracts_view=AsyncMock(
+            return_value=([detail_response], 1, None)
+        ),
         get_terminal_contract=AsyncMock(return_value=detail_response),
     )
     monkeypatch.setattr(module.party_scope_resolver, "resolve", resolver)
@@ -396,7 +396,7 @@ async def test_list_and_detail_endpoints_bind_scope_and_filters(
     assert list_result.total == 1
     assert list_result.items[0].id == "terminal-1"
     assert detail_result.id == "terminal-1"
-    list_call = query_service.list_terminal_contracts.await_args
+    list_call = query_service.list_terminal_contracts_view.await_args
     assert list_call.kwargs["scope"] is scope
     assert list_call.kwargs["contract_mode"] == "sublease"
     assert list_call.kwargs["query"] == "TM-001"

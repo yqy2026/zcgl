@@ -7,7 +7,7 @@ test.describe('Mobile Smoke', () => {
     await ensureAuthenticated(page);
     await page.goto('/asset-operations/units');
     await expect(page).toHaveURL(/\/asset-operations\/units/);
-    await expect(page.getByRole('heading', { name: '资产单元' })).toBeVisible({
+    await expect(page.getByRole('heading', { name: '物业' })).toBeVisible({
       timeout: 15_000,
     });
 

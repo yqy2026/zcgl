@@ -105,3 +105,17 @@
 .summaryDescriptions {
   max-width: 60rem;
 }
+
+.historyCard {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem 0.75rem;
+  border: 0.0625rem solid var(--color-border, #e4e6ea);
+  border-radius: 0.5rem;
+  background: var(--color-bg-container, #fff);
+  cursor: pointer;
+  min-width: 5.5rem;
+  font: inherit;
+  text-align: left;
+}

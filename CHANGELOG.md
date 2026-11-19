@@ -5,7 +5,17 @@
 
 ## 未发布
 
-- feat(asset-ops): 年度台账 Excel 导出——`GET /rent-ledgers/export` 同范围同步导出 xlsx（租金合同行×12 月应付/实收/剩余+合计，管理费业主行×状态/金额+年确认合计），台账页新增导出按钮（#109-4）。
+- perf(asset-ops): PR #113 复核 P2-3 N+1 收口——上游详情单元矩阵与工作台到期卡的三处 per-row coverage/terminal 循环改批量 IN 读（新增 list_terminal_coverages_by_ids / list_terminals_by_upstream_batched / list_upstream_coverages_batched，scope 内 id 由调用方收敛，侧栏徽标全站触发的重聚合随之降本）。
+
+——导入批次列表补 created_by 过滤（对齐详情 owner 口径）；工作台上游到期卡跳过已续签前驱（终止回放外补 renewed 回放，消除前驱+后继双计）；payment_plan 期数/合计随终止截止截断；unpaid_contract_ids 按 scoped contract ids 下推；待确认宗地降级收窄异常白名单；历史列表版本号读取下沉 repository；物业页拆合/空置写块包 CapabilityGuard（REQ-WBK-001 / REQ-IMP-001）。
+- feat(asset-ops): 原型对齐 WP7-9——终止表单类型三选一卡+房屋交接 select、档案完成率卡+拖放区（经事件转交批量配对）、录入页主体搜索选择器替换手输 Party ID（frontend/prototype/asset-ops-v5.html 对齐）。
+- feat(asset-ops): 原型对齐 WP6 导入页——`GET /import-batches` 批次历史列表；四步条/三步条、模板说明卡（三表真实列名）、更新模式「导出当前台账」接线、右栏批次列表。
+- feat(asset-ops): 原型对齐 WP5 报送页——`GET /occupancy-reports` 历史列表+草稿 `project_counts`；报送说明固定句式（数字浅蓝高亮）、报送记录横排卡片、逐宗明细列对齐原型+只看未出租+合计行。
+- feat(asset-ops): 原型对齐 WP4 上游详情——到期色框 days_to_expiry、付款计划阶段表（payment_plan 期间/月租/期数/进度/合计，终止已回放）、单元×终端合同矩阵（units_matrix，空置绿字缺件红字）。
+- feat(asset-ops): 原型对齐 WP3 终端合同页——filter 扩六值带计数（生效中/180 天到期/租金未到账/押金未结清/缺扫描件/已结束）、搜索含租户名、行内富化（租户/上游号/合并 N/月租+到账状态/扫描件）。
+- feat(asset-ops): 原型对齐 WP2 物业页——`GET /asset-units` 五值筛选+counts+富化（考核/租户/证数）、`coverage-history` 时间轴、`export` xlsx；空置原因 UI、拆分/合并弹窗、项目分组表格、导出台账。
+- feat(asset-ops): 原型对齐 WP1 本月工作台——`GET /api/v1/monthly-workbench` 无状态聚合四张截止任务卡+随时处理区+进度（往月未清带逾期天数结转）；MonthlyPage、侧栏徽标（本月未完成/档案缺 N 份）、根路径重定向、合同页「＋ 录入已签合同」按类型预选（REQ-WBK-001）。
+
 - feat(asset-ops): 档案面板 PDF 首页缩略图——`GET /archive/documents/{id}/thumbnail` 复用下载范围校验链，fitz 渲染首页 PNG，审计记 read 非下载；面板 PDF 条目展示缩略图（#109-3）。
 - feat(asset-ops): 单元/合同列表产权方与业态筛选——产权方选项取 owner 角色主体，业态新增 `GET /asset-units/usage-types` 去重端点，终端合同新增 `owner_party_id` 按覆盖单元匹配（#109-2）。
 - feat(asset-ops): 合同/单元详情接入变更时间线面板——消费既有 `GET /business-change-events`，动作标签+北京时间+业务摘要+原因，范围缺失降级提示（#109-1）。

@@ -12,7 +12,7 @@ const CORE_ROUTE_CASES: UsabilityRouteCase[] = [
   {
     path: '/asset-operations/units',
     urlPattern: /\/asset-operations\/units$/,
-    titlePattern: /资产单元/,
+    titlePattern: /物业/,
     readySelectors: ['.ant-table', '.ant-empty', '.ant-alert'],
   },
   {

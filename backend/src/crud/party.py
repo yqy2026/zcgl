@@ -402,6 +402,18 @@ class CRUDParty:
             )
         return parties
 
+    async def get_party_names_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        party_ids: tuple[str, ...],
+    ) -> dict[str, str]:
+        """Batched id → display-name read for read-model enrichment."""
+        if len(party_ids) == 0:
+            return {}
+        statement = select(Party.id, Party.name).where(Party.id.in_(party_ids))
+        return {row[0]: row[1] for row in (await db.execute(statement)).all()}
+
     async def update_party(
         self,
         db: AsyncSession,

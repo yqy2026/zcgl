@@ -15,8 +15,8 @@ const NotFoundPage: React.FC = () => {
       title="404"
       subTitle="页面不存在或已被移除"
       extra={
-        <Button type="primary" onClick={() => navigate('/dashboard')}>
-          返回工作台
+        <Button type="primary" onClick={() => navigate('/asset-operations/monthly')}>
+          返回本月
         </Button>
       }
     />

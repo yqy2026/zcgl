@@ -8,6 +8,7 @@
  */
 
 import { useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Input, Tag } from 'antd';
@@ -16,6 +17,7 @@ import { assetOperationsService, AssetOperationsError } from '@/services/assetOp
 import type { ContractIntakeSession, ContractIntakeType } from '@/services/assetOperationsService';
 
 import styles from './ContractIntakePage.module.css';
+import PartyPicker from './PartyPicker';
 import RentScheduleEditor from './RentScheduleEditor';
 import type { RentScheduleInput } from '@/services/assetLedgerService';
 
@@ -78,7 +80,14 @@ function newIdempotencyKey(): string {
 }
 
 export function ContractIntakePage(): React.ReactElement {
-  const [contractType, setContractType] = useState<ContractIntakeType>('terminal');
+  // 原型：录入入口按来源预选类型（上游页 → 承租合同，终端页 → 终端合同）。
+  const [searchParams] = useSearchParams();
+  const presetType = searchParams.get('contract_type');
+  const [contractType, setContractType] = useState<ContractIntakeType>(
+    presetType === 'upstream_lease' || presetType === 'management_agreement'
+      ? presetType
+      : 'terminal'
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [session, setSession] = useState<ContractIntakeSession | null>(null);
   const { control, getValues, handleSubmit, reset, watch, setValue } = useForm<FormState>({
@@ -317,10 +326,34 @@ export function ContractIntakePage(): React.ReactElement {
                 <div className={styles.fieldGrid}>
                   {renderField('合同编号', 'contractNumber')}
                   {!isTerminal ? renderField('合同名称', 'name') : null}
-                  {isTerminal ? renderField('租户 Party ID', 'tenantPartyId') : null}
-                  {isTerminal ? renderField('出租方 Party ID', 'lessorPartyId') : null}
-                  {setUpstreamType ? renderField('产权方 Party ID', 'ownerPartyId') : null}
-                  {setUpstreamType ? renderField('运营方 Party ID', 'operatorPartyId') : null}
+                  {isTerminal ? (
+                    <PartyPicker
+                      label="租户主体"
+                      value={form.tenantPartyId}
+                      onChange={value => setValue('tenantPartyId', value)}
+                    />
+                  ) : null}
+                  {isTerminal ? (
+                    <PartyPicker
+                      label="出租方主体"
+                      value={form.lessorPartyId}
+                      onChange={value => setValue('lessorPartyId', value)}
+                    />
+                  ) : null}
+                  {setUpstreamType ? (
+                    <PartyPicker
+                      label="产权方主体"
+                      value={form.ownerPartyId}
+                      onChange={value => setValue('ownerPartyId', value)}
+                    />
+                  ) : null}
+                  {setUpstreamType ? (
+                    <PartyPicker
+                      label="运营方主体"
+                      value={form.operatorPartyId}
+                      onChange={value => setValue('operatorPartyId', value)}
+                    />
+                  ) : null}
                   {renderField('起租日', 'startDate', { type: 'date' })}
                   {renderField('到期日', 'endDate', { type: 'date' })}
                   {contractType !== 'management_agreement'

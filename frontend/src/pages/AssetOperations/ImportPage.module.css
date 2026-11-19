@@ -1,7 +1,32 @@
 .importPage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18.75rem;
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+
+.importPage > h1 {
+  grid-column: 1 / -1;
+}
+
+.mainColumn {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  min-width: 0;
+}
+
+@media (max-width: 72rem) {
+  .importPage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .batchesAside {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 0.0625rem solid var(--color-border, #e4e6ea);
+    padding-top: 0.75rem;
+  }
 }
 
 .pageTitle {
@@ -42,4 +67,28 @@
   display: flex;
   gap: var(--spacing-sm);
   max-width: 30rem;
+}
+
+.guideSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.batchCard {
+  border: 0.0625rem solid var(--color-border, #e4e6ea);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.batchesAside {
+  border-left: 0.0625rem solid var(--color-border, #e4e6ea);
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 16.25rem;
 }

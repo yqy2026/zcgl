@@ -15,6 +15,7 @@ from ...models.auth import User
 from ...schemas.asset_operations import (
     OccupancyReportDraftResponse,
     OccupancyReportExportResponse,
+    OccupancyReportHistoryResponse,
     OccupancyReportNoteResponse,
     OccupancyReportSnapshotResponse,
     OccupancyReportSubmissionPreviewResponse,
@@ -33,6 +34,45 @@ from ...services.asset_operations import (
 from ...services.party_scope_resolver import party_scope_resolver
 
 router = APIRouter(tags=["资产运营"])
+
+
+@router.get(
+    "/occupancy-reports",
+    response_model=OccupancyReportHistoryResponse,
+    summary="查询报送历史列表",
+)
+async def list_occupancy_reports(
+    operator_party_id: Annotated[str, Query(min_length=1)],
+    year: int = Query(..., ge=2000, le=2200),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="asset_ops",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> OccupancyReportHistoryResponse:
+    """Submitted months plus the live draft row (history strip cards)."""
+    _ = _authz
+    try:
+        actor_id = str(current_user.id)
+        scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+        return await occupancy_report_draft_service.history(
+            db,
+            operator_party_id=operator_party_id,
+            year=year,
+            actor_id=actor_id,
+            scope=scope,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询报送历史失败", original_error=exc) from exc
 
 
 @router.get(

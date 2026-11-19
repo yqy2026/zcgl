@@ -6,6 +6,19 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { ContractIntakePage } from '../ContractIntakePage';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
+
+vi.mock('@/pages/AssetOperations/PartyPicker', () => ({
+  default: (props: { label: string; value: string; onChange: (value: string) => void }) => (
+    <label>
+      {props.label}
+      <input
+        aria-label={props.label}
+        value={props.value}
+        onChange={event => props.onChange(event.target.value)}
+      />
+    </label>
+  ),
+}));
 import type { ContractIntakeSession } from '@/services/assetOperationsService';
 
 vi.mock(import('@/services/assetOperationsService'), async importOriginal => {
@@ -87,8 +100,8 @@ describe('ContractIntakePage', () => {
     await user.type(await screen.findByLabelText('合同编号'), 'MG-100');
     expect(screen.queryByLabelText('押金金额')).toBeNull();
     await user.type(screen.getByLabelText('合同名称'), '委托协议');
-    await user.type(screen.getByLabelText('产权方 Party ID'), 'owner-1');
-    await user.type(screen.getByLabelText('运营方 Party ID'), 'operator-1');
+    await user.type(screen.getByLabelText('产权方主体'), 'owner-1');
+    await user.type(screen.getByLabelText('运营方主体'), 'operator-1');
     await user.type(screen.getByLabelText('起租日'), '2026-01-01');
     await user.type(screen.getByLabelText('到期日'), '2026-12-31');
     await user.type(screen.getByLabelText('覆盖资产单元 ID（逗号分隔）'), 'unit-1');
@@ -174,8 +187,8 @@ describe('ContractIntakePage', () => {
     await user.click(screen.getByRole('button', { name: '上传并创建会话' }));
 
     await user.type(await screen.findByLabelText('合同编号'), 'TM-100');
-    await user.type(screen.getByLabelText('租户 Party ID'), 'tenant-1');
-    await user.type(screen.getByLabelText('出租方 Party ID'), 'operator-1');
+    await user.type(screen.getByLabelText('租户主体'), 'tenant-1');
+    await user.type(screen.getByLabelText('出租方主体'), 'operator-1');
     await user.type(screen.getByLabelText('起租日'), '2026-01-01');
     await user.type(screen.getByLabelText('到期日'), '2026-12-31');
     await user.type(screen.getByLabelText('覆盖资产单元 ID（逗号分隔）'), 'unit-1');

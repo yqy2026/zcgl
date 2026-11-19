@@ -28,6 +28,13 @@ class ImportBatchChangePage(BaseModel):
     total: int
 
 
+class ImportBatchListResponse(BaseModel):
+    """Recent import batches for the side panel (both modes mixed)."""
+
+    items: list[ImportBatchStatusResponse]
+    total: int
+
+
 class ImportBatchStatusResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

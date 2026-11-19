@@ -196,18 +196,23 @@ class RentLedgerQueryRepository:
         return RentQueryFacts((contract,), (entry,), records, schedules, events)
 
     async def terminal_outstanding_facts(
-        self, db: AsyncSession, *, today: date
+        self,
+        db: AsyncSession,
+        *,
+        today: date,
+        contract_ids: tuple[str, ...] | None = None,
     ) -> tuple[tuple[RentLedgerEntry, ...], tuple[RentPaymentRecord, ...]]:
+        conditions = [
+            RentLedgerEntry.contract_kind == "terminal",
+            RentLedgerEntry.voided_at.is_(None),
+            RentLedgerEntry.period <= today.strftime("%Y-%m"),
+        ]
+        if contract_ids is not None:
+            if len(contract_ids) == 0:
+                return (), ()
+            conditions.append(RentLedgerEntry.contract_id.in_(contract_ids))
         entries = tuple(
-            (
-                await db.execute(
-                    select(RentLedgerEntry).where(
-                        RentLedgerEntry.contract_kind == "terminal",
-                        RentLedgerEntry.voided_at.is_(None),
-                        RentLedgerEntry.period <= today.strftime("%Y-%m"),
-                    )
-                )
-            )
+            (await db.execute(select(RentLedgerEntry).where(*conditions)))
             .scalars()
             .all()
         )

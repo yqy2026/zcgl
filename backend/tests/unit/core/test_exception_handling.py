@@ -125,7 +125,7 @@ class TestAPIExceptionHandling:
     """测试API层异常处理"""
 
     @patch(
-        "src.api.v1.asset_units.asset_operations_query_service.list_asset_units",
+        "src.api.v1.asset_units.asset_operations_query_service.list_asset_units_view",
         new_callable=AsyncMock,
     )
     @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)
@@ -154,7 +154,7 @@ class TestAPIExceptionHandling:
         assert data["error"]["message"] == "资产ID格式不正确"
 
     @patch(
-        "src.api.v1.asset_units.asset_operations_query_service.list_asset_units",
+        "src.api.v1.asset_units.asset_operations_query_service.list_asset_units_view",
         new_callable=AsyncMock,
     )
     @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)

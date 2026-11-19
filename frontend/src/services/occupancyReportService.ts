@@ -563,6 +563,7 @@ export interface OccupancyReportDraft {
   firstReport: boolean;
   scopeVersion: AssessmentScopeVersionSummary | null;
   totals: OccupancyReportTotals;
+  projectCounts: OccupancyReportProjectCounts;
   lines: OccupancyReportLine[];
   pending: OccupancyReportPendingUnit[];
   changes: OccupancyReportFieldChange[];
@@ -582,6 +583,10 @@ function normalizeReportDraft(raw: RawRecord): OccupancyReportDraft {
         ? null
         : normalizeVersionSummary(requireRecord(raw.scope_version, 'scope_version')),
     totals: normalizeTotals(requireRecord(raw.totals, 'totals')),
+    projectCounts:
+      raw.project_counts == null
+        ? { projectCount: 0, operatingProjectCount: 0, nonOperatingProjectCount: 0 }
+        : normalizeProjectCounts(requireRecord(raw.project_counts, 'project_counts')),
     lines: requireRecordArray(raw, 'lines').map(normalizeReportLine),
     pending: requireRecordArray(raw, 'pending').map(normalizePendingUnit),
     changes: requireRecordArray(raw, 'changes').map(normalizeFieldChange),
@@ -833,6 +838,39 @@ export const occupancyReportService = {
     } catch (error) {
       throw toServiceError(error);
     }
+  },
+
+  listHistory: async (
+    operatorPartyId: string,
+    year: number
+  ): Promise<
+    {
+      reportId: string;
+      period: string;
+      status: 'draft' | 'submitted';
+      occupancyRate: number | null;
+      unitCount: number | null;
+      rentedUnitCount: number | null;
+      submittedAt: string | null;
+      scopeVersionNumber: number | null;
+    }[]
+  > => {
+    const raw = await get<RawRecord>(`/occupancy-reports`, {
+      operator_party_id: operatorPartyId,
+      year,
+    });
+    const items = Array.isArray(raw.items) ? (raw.items as RawRecord[]) : [];
+    return items.map(item => ({
+      reportId: String(item.report_id ?? ''),
+      period: String(item.period ?? ''),
+      status: item.status === 'submitted' ? 'submitted' : 'draft',
+      occupancyRate: requireDecimalFromAny(item.occupancy_rate, 'occupancy_rate'),
+      unitCount: item.unit_count == null ? null : Number(item.unit_count),
+      rentedUnitCount: item.rented_unit_count == null ? null : Number(item.rented_unit_count),
+      submittedAt: item.submitted_at == null ? null : String(item.submitted_at),
+      scopeVersionNumber:
+        item.scope_version_number == null ? null : Number(item.scope_version_number),
+    }));
   },
 
   getAssessmentScope: async (

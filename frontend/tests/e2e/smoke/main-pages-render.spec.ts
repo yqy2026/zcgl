@@ -10,7 +10,7 @@ import { ensureAuthenticated } from '../helpers/auth';
 const main = (page: import('@playwright/test').Page) => page.locator('main');
 
 const PAGES: Array<{ name: string; path: string; marker: RegExp }> = [
-  { name: '资产单元', path: '/asset-operations/units', marker: /资产单元/ },
+  { name: '物业', path: '/asset-operations/units', marker: /物业/ },
   {
     name: '上游合同',
     path: '/asset-operations/contracts/upstream',

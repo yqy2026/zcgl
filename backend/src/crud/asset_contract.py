@@ -514,6 +514,178 @@ class AssetContractRepository:
         )
         return tuple((await db.execute(statement)).scalars().all())
 
+    async def list_terminal_unit_labels(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> dict[str, tuple[str, ...]]:
+        """Batched terminal coverage read returning unit display labels.
+
+        Used by read paths that render one label per terminal contract
+        (monthly workbench, contract list enrichment); stays scope-free
+        because callers already scoped the contract ids themselves.
+        """
+        if len(contract_ids) == 0:
+            return {}
+        statement = (
+            select(
+                TerminalContractAssetUnit.terminal_contract_id,
+                AssetUnit.unit_code,
+                AssetUnit.name,
+            )
+            .join(AssetUnit, AssetUnit.id == TerminalContractAssetUnit.asset_unit_id)
+            .where(TerminalContractAssetUnit.terminal_contract_id.in_(contract_ids))
+            .order_by(
+                TerminalContractAssetUnit.terminal_contract_id,
+                TerminalContractAssetUnit.asset_unit_id,
+            )
+        )
+        rows = (await db.execute(statement)).all()
+        labels: dict[str, list[str]] = {}
+        for contract_id, unit_code, unit_name in rows:
+            labels.setdefault(contract_id, []).append(unit_name or unit_code)
+        return {key: tuple(value) for key, value in labels.items()}
+
+    async def list_active_terminals_by_units(
+        self,
+        db: AsyncSession,
+        *,
+        unit_ids: tuple[str, ...],
+        as_of: date,
+    ) -> tuple[tuple[str, TerminalContract], ...]:
+        """Coverage rows (unit_id, terminal) for contracts spanning as_of.
+
+        Termination replay stays in the service layer; this read only
+        bounds the raw contract interval [start_date, end_date].
+        """
+        if len(unit_ids) == 0:
+            return ()
+        statement = (
+            select(TerminalContractAssetUnit.asset_unit_id, TerminalContract)
+            .join(
+                TerminalContract,
+                TerminalContract.id == TerminalContractAssetUnit.terminal_contract_id,
+            )
+            .where(
+                TerminalContractAssetUnit.asset_unit_id.in_(unit_ids),
+                TerminalContract.start_date <= as_of,
+                TerminalContract.end_date >= as_of,
+            )
+            .order_by(
+                TerminalContractAssetUnit.asset_unit_id,
+                TerminalContract.start_date,
+            )
+        )
+        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
+
+    async def list_terminal_coverages_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> tuple[TerminalContractAssetUnit, ...]:
+        """Batched terminal coverage read (link carries terminal_contract_id)."""
+        if len(contract_ids) == 0:
+            return ()
+        statement = (
+            select(TerminalContractAssetUnit)
+            .where(TerminalContractAssetUnit.terminal_contract_id.in_(contract_ids))
+            .order_by(
+                TerminalContractAssetUnit.terminal_contract_id,
+                TerminalContractAssetUnit.asset_unit_id,
+            )
+        )
+        return tuple((await db.execute(statement)).scalars().all())
+
+    async def list_terminals_by_upstream_batched(
+        self,
+        db: AsyncSession,
+        *,
+        upstream_contract_ids: tuple[str, ...],
+    ) -> tuple[tuple[str, TerminalContract], ...]:
+        """Batched terminals grouped by upstream: (upstream_id, terminal) rows.
+
+        Read-path counterpart of the fail-closed ``list_terminal_by_upstream``;
+        callers must pass upstream ids already resolved within scope.
+        """
+        if len(upstream_contract_ids) == 0:
+            return ()
+        statement = (
+            select(UpstreamContract.id, TerminalContract)
+            .join(
+                TerminalContract,
+                TerminalContract.upstream_contract_id == UpstreamContract.id,
+            )
+            .where(UpstreamContract.id.in_(upstream_contract_ids))
+            .order_by(
+                UpstreamContract.id,
+                TerminalContract.start_date,
+                TerminalContract.id,
+            )
+        )
+        return tuple((row[0], row[1]) for row in (await db.execute(statement)).all())
+
+    async def list_upstream_coverages_batched(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: tuple[str, ...],
+    ) -> tuple[UpstreamContractAssetUnit, ...]:
+        """Batched upstream coverage read (link carries upstream_contract_id)."""
+        if len(contract_ids) == 0:
+            return ()
+        statement = (
+            select(UpstreamContractAssetUnit)
+            .where(UpstreamContractAssetUnit.upstream_contract_id.in_(contract_ids))
+            .order_by(
+                UpstreamContractAssetUnit.upstream_contract_id,
+                UpstreamContractAssetUnit.asset_unit_id,
+            )
+        )
+        return tuple((await db.execute(statement)).scalars().all())
+
+    async def coverage_history_for_unit(
+        self,
+        db: AsyncSession,
+        *,
+        asset_unit_id: str,
+    ) -> tuple[tuple[TerminalContract, ...], tuple[UpstreamContract, ...]]:
+        """Every terminal/upstream contract that ever covered the unit."""
+        terminal_rows = (
+            (
+                await db.execute(
+                    select(TerminalContract)
+                    .join(
+                        TerminalContractAssetUnit,
+                        TerminalContractAssetUnit.terminal_contract_id
+                        == TerminalContract.id,
+                    )
+                    .where(TerminalContractAssetUnit.asset_unit_id == asset_unit_id)
+                    .order_by(TerminalContract.start_date)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        upstream_rows = (
+            (
+                await db.execute(
+                    select(UpstreamContract)
+                    .join(
+                        UpstreamContractAssetUnit,
+                        UpstreamContractAssetUnit.upstream_contract_id
+                        == UpstreamContract.id,
+                    )
+                    .where(UpstreamContractAssetUnit.asset_unit_id == asset_unit_id)
+                    .order_by(UpstreamContract.start_date)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return tuple(terminal_rows), tuple(upstream_rows)
+
     async def find_upstream_overlaps(
         self,
         db: AsyncSession,

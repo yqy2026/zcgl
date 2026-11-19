@@ -121,17 +121,19 @@
 
 | 方法与路径 | 契约 |
 |---|---|
-| `GET /api/v1/asset-operations/monthly?period=YYYY-MM` | 返回日期、四类有截止日事项、随时处理事项、完成数和金额汇总 |
+| `GET /api/v1/monthly-workbench?operator_party_id=&month=` | 无状态派生聚合：`month` 缺省为当前业务月；返回四张截止日任务卡、随时处理区、完成进度与本月剩余天数 |
 
-每条事项返回 `item_type`、`target_type`、`target_id`、`title`、`subtitle`、`due_date`、`status`、`amount`、`days_overdue` 和目标深链。工作台不提供通用“完成事项”写端点，事项完成从对应业务事实自动消失或折叠。
+返回 `progress{total,done}`（只计四类截止任务：待付承租租金笔数 + 未到账终端租金笔数 + 未确认管理费对账物业数 + 报送 1 件）、`rent_payments/rent_collections`（合同 × 账期行：金额三值、`due_date`、`days_overdue`、`status`、`record_type_hint`；往月未清项天然带逾期天数结转）、`management_fees`（上月各委托物业 `collecting/pending_stamp/confirmed/missing` 状态、基数/费用与已收户数；未出单的在管委托协议记 `missing`）、`occupancy_report`（草稿/已报/缺考核范围三态、宗数、出租率、较上月变动、门槛原因）、随时处理区 `expired_upstream/expiring_upstream/archive_gaps/unlinked_unit_count/deposits_pending/pending_scope_units`。工作台不提供任何写端点，事项完成从对应业务事实自动消失或折叠；`OCCUPANCY_REPORT_ALREADY_SUBMITTED`/`OCCUPANCY_REPORT_SCOPE_MISSING` 被降级为报送卡状态而非错误。
 
 ### 5.3 资产单元
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 列表 | `GET /api/v1/asset-units` | 分页返回派生租出状态行；支持 `filter`（本切片 `all`/`non_rentable`，`vacant_rentable` 等待租出批量派生与考核/证照联动切片）、`project_id`、`owner_party_id`、`usage_type`、`q` |
+| 列表 | `GET /api/v1/asset-units` | 分页返回派生租出状态行；`filter`：`all`/`in_assessment`/`vacant`/`non_rentable`/`missing_certificate`（空置=经营可租且当天无在租终端覆盖；缺证=当天无有效产权证关联）；`q` 命中编号/名称/地址/在租租户名/证号；行内富化 `owner_party_name/project_name/assessment`(included/excluded/pending，按 `assessment_operator_party_id`+`assessment_year` 的当前考核范围版本解析)/`current_tenant_name/current_contract_number/current_contract_end_date`（当天仍在租的最近起租终端合同，终止已回放）/`certificate_count`（当天有效关联数）；响应附 `counts{all,in_assessment,vacant,non_rentable,missing_certificate}` |
 | 业态选项 | `GET /api/v1/asset-units/usage-types` | 返回当前数据范围内资产单元的去重业态（`usage_type`）清单，按字典序，用于列表筛选下拉；无有效范围 403 |
-| 详情 | `GET /api/v1/asset-units/{unit_id}` | 返回基础信息、派生租出状态/已租面积/出租率与当前有效终端合同；考核/证照状态与时间轴待联动切片 |
+| 详情 | `GET /api/v1/asset-units/{unit_id}` | 返回基础信息、派生租出状态/已租面积/出租率与当前有效终端合同，富化字段同列表 |
+| 租赁时间轴 | `GET /api/v1/asset-units/{unit_id}/coverage-history` | 覆盖过该单元的全部终端/上游合同区间（终止/退出已回放为生效截止），按类型+起始日排序，供时间轴渲染 |
+| 导出台账 | `GET /api/v1/asset-units/export` | 与列表同筛选参数，xlsx 单表（≤5000 行），列=页面表格列（含考核、出租状态附空置原因、当前租户、租期至、产权证数） |
 | 更新基本信息 | `PATCH /api/v1/asset-units/{unit_id}` | 乐观锁必填；手工字段（名称/地址/用途/面积/在管期等），可租面积不得超建筑面积（422 `ASSET_UNIT_AREA_INVALID`），在管期变化与活跃终端覆盖冲突返回 `ASSET_UNIT_PERIOD_OVERLAP` |
 | 更新空置备注 | `PUT /api/v1/asset-units/{unit_id}/vacancy-note` | 接受原因、预计起租和期望版本 |
 | 关联产权证 | `GET /api/v1/asset-units/{unit_id}/property-certificates?as_of=` | `asset_ops:read`；先校验当前单元可见范围，再按关联有效日读取，默认上海业务当天，起止日均含边界；返回 `{items}`，同证去重，仅包含证照字段，不返回其他关联单元或 Party 关系 |
@@ -176,7 +178,7 @@
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
 | 列表 | `GET /api/v1/upstream-contracts` | 分页返回派生状态行；支持 `contract_type`、`owner_party_id`、`q` 搜索；到期区间与项目过滤待后续切片；续签链与 warning 按调用方范围派生，范围外的关联方按缺失处理 |
-| 详情 | `GET /api/v1/upstream-contracts/{contract_id}` | 返回条款、逐单元覆盖、租金阶段、版本链（前驱/当前/后继）、关联终端合同、生命周期事件和派生状态 |
+| 详情 | `GET /api/v1/upstream-contracts/{contract_id}` | 返回条款、逐单元覆盖、租金阶段、版本链（前驱/当前/后继）、关联终端合同、生命周期事件和派生状态；富化 `days_to_expiry`（到期剩余天数，已过为负）、`payment_plan[]`（承租合同按租金阶段：期间（终止已回放）、月租、期数、已付期数、下期应付日、合计、首期/第 N 次递增注记）、`units_matrix[]`（当天覆盖单元 × 当前在租终端合同：租户、合同号、租期至、当期月租、扫描件有无；空置单元租户为 null） |
 | 更新 | `PATCH /api/v1/upstream-contracts/{contract_id}` | 乐观锁必填；可编辑 `name`、`end_date`、`management_fee_rate`（仅委托管理协议）、押金（委托管理协议只能为 0）和 `oa_reference`；合同级 `payment_cycle` / `payment_day` 确认后只读，付款方式以租金阶段为准；字段不适用于该合同类型返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`；`end_date` 变更同事务跟随仍等于旧值的覆盖行并重排租金义务；不提供即不改 |
 | 登记续签 | `POST /api/v1/upstream-contracts/{contract_id}/renewals` | 携带后继已签条款（编号、期限、租金/比例、押金、扫描件及其会话 owner）与幂等键；各方、类型和覆盖单元由前驱带出，同事务创建后继并追加 `renewed` 事件；已有未撤销后继返回 409 `CONTRACT_ALREADY_RENEWED` |
 | 租金阶段更正预览 | `POST /api/v1/upstream-contracts/{contract_id}/rent-schedule-correction/preview` | 携带完整的新租金阶段列表和原因；返回新旧阶段对照、当月起及补录往月的义务新建 / 更新 / 作废 / 恢复数量、锁定不一致清单和 token；改动当前业务月首日之前已有的阶段内容返回 409 `RENT_SCHEDULE_HISTORY_IMMUTABLE`（往月中没有阶段覆盖的日期可以补录），阶段越出合同期限或重叠返回 422 `RENT_SCHEDULE_INVALID`，委托管理协议返回 422 `CONTRACT_FIELD_NOT_APPLICABLE`，已退出合同返回 409 `UPSTREAM_CONTRACT_ALREADY_EXITED` |
@@ -191,7 +193,7 @@
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 列表 | `GET /api/v1/terminal-contracts` | 分页返回派生状态与风险行；支持 `contract_mode`、`upstream_contract_id`、`owner_party_id`（按覆盖单元的产权方匹配，任一覆盖单元属于该产权方即命中）、`q` 搜索，以及台账类 `filter`：`rent_unpaid`（转租：当前业务月及以前账期仍有剩余金额；直签：上月及以前账期产权方尚未报足；均不含 `void`）、`deposit_unsettled`（押金状态不是 `settled`）；上游关系 warning 按调用方范围派生，范围外上游按缺失处理 |
+| 列表 | `GET /api/v1/terminal-contracts` | 分页返回派生状态与风险行；支持 `contract_mode`、`upstream_contract_id`、`owner_party_id`（按覆盖单元的产权方匹配）、`q`（命中编号或在租租户名，含已结束）；`filter` 六值：`active`（生效中）/`expiring_180`（180 天内到期）/`rent_unpaid`（转租：当前业务月及以前账期仍有剩余；直签：上月及以前产权方未报足；不含 `void`）/`deposit_unsettled`（押金未结清）/`missing_scan`（无扫描件）/`ended`（已结束含历史版本）；响应附 `counts{active,expiring_180,rent_unpaid,deposit_unsettled,missing_scan,ended}`；行内富化 `tenant_party_name/upstream_contract_number/unit_labels`（多单元=合并出租）/`current_monthly_rent`（当天所在租金阶段）/`current_month_collection_status`(paid/partial/unpaid/none) 与 `current_month_remaining`/`has_scan`；上游关系 warning 按调用方范围派生，范围外上游按缺失处理 |
 | 详情 | `GET /api/v1/terminal-contracts/{contract_id}` | 返回覆盖单元、模式、上游、条款、租金阶段、版本链、生命周期事件、版本和派生风险 |
 | 更新 | `PATCH /api/v1/terminal-contracts/{contract_id}` | 乐观锁必填；可编辑绑上游（不得清空，改绑重验类型/出租方/覆盖）、`end_date`、押金，响应重算风险；`end_date` 变更同事务跟随覆盖行并重排租金义务，重叠 409 |
 | 租金阶段更正预览 / 提交 | `POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction/preview`、`POST /api/v1/terminal-contracts/{contract_id}/rent-schedule-correction` | 与上游合同同一契约；已终止合同返回 409 `TERMINAL_CONTRACT_ALREADY_TERMINATED` |
@@ -286,7 +288,8 @@ HTTP 请求与响应细则：
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 草稿 | `GET /api/v1/occupancy-reports/{period}/draft` | 实时返回汇总、逐宗明细、变动、门槛、差异和当前范围版本 |
+| 报送历史列表 | `GET /api/v1/occupancy-reports?operator_party_id=&year=` | 返回该运营主体该年度全部未撤回链行（草稿+已报送）：`period/status/occupancy_rate/unit_count/rented_unit_count/submitted_at/scope_version_number`，供报送记录卡片条渲染 |
+| 草稿 | `GET /api/v1/occupancy-reports/{period}/draft` | 实时返回汇总、逐宗明细、变动、门槛、差异和当前范围版本；附 `project_counts{project_count,operating_project_count,non_operating_project_count}` 供报送说明固定句式取数 |
 | 保存变动说明 | `PUT /api/v1/occupancy-reports/{period}/draft-note` | 保存草稿说明，不生成快照 |
 | 提交预览 | `POST /api/v1/occupancy-reports/{period}/submission-preview` | 返回必处理项、建议项、规范化说明和 `preview_token` |
 | 提交 | `POST /api/v1/occupancy-reports/{period}/submissions` | 消费 token、期望范围版本和幂等键，原子生成报送与逐宗快照 |
@@ -353,6 +356,7 @@ V4-1 产权证附件的公开入口统一为 `/archive/documents`，原 `/proper
 |---|---|---|
 | 下载新增模板 | `GET /api/v1/imports/templates/create` | 返回版本化三表模板（含隐藏 template_version 行与填写说明页） |
 | 导出更新底稿 | `POST /api/v1/imports/templates/update` | 同步导出当前授权范围内对象的三表底稿（xlsx）；阶段列留空——阶段变更不走导入 |
+| 批次列表 | `GET /api/v1/import-batches?offset=&limit=` | 当前操作者自己的批次（`created_by` 过滤，与详情路径同 owner 口径），两种模式混排、创建时间倒序；返回批次状态投影行与 `total`，供导入页右栏批次列表 |
 | 暂存扫描件 | `POST /api/v1/import-batches/scan-staging` | 多文件上传，落入操作者专属导入暂存池（归属 `import-staging-<actor>`），返回文件名清单 |
 | 查看暂存 | `GET /api/v1/import-batches/scan-staging` | 返回当前操作者暂存池文件名清单 |
 | 上传批次 | `POST /api/v1/import-batches` | 接受 `mode` 和文件，返回批次 |

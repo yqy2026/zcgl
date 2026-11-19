@@ -128,6 +128,112 @@ export default function ArchivePage(): React.ReactElement {
               截至 {completion.data.as_of}
               {asOf === '' ? '（今天）' : '（历史时点）'}（北京时间）
             </p>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr)) 16.25rem',
+                gap: 1,
+                background: 'var(--color-border, #e4e6ea)',
+                border: '0.0625rem solid var(--color-border, #e4e6ea)',
+                borderRadius: 8,
+                overflow: 'hidden',
+                marginBottom: 12,
+              }}
+            >
+              {completion.data.categories
+                .filter(item => item.supported && item.required != null && item.required > 0)
+                .map(item => (
+                  <div
+                    key={`card-${item.document_type}`}
+                    style={{
+                      background: '#fff',
+                      paddingTop: 14,
+                      paddingLeft: 18,
+                      paddingRight: 18,
+                      paddingBottom: 14,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                      {item.label}
+                    </span>
+                    <span
+                      style={{ fontSize: 20, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      {item.existing ?? 0} / {item.required}
+                      <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 6 }}>
+                        ·{' '}
+                        {item.completion_rate != null
+                          ? `${(item.completion_rate * 100).toFixed(1)}%`
+                          : '—'}
+                      </span>
+                    </span>
+                    <div
+                      style={{
+                        height: 4,
+                        borderRadius: 2,
+                        background: '#eef0f2',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${item.completion_rate != null ? Math.round(item.completion_rate * 100) : 0}%`,
+                          height: '100%',
+                          background: 'var(--ant-color-primary, #0e63e5)',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              <div
+                style={{ background: '#fff', padding: 12, display: 'flex', alignItems: 'center' }}
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label="拖入或点击选择多份扫描件"
+                  style={{
+                    flex: 1,
+                    height: '100%',
+                    borderWidth: 1.5,
+                    borderStyle: 'dashed',
+                    borderColor: '#c9cdd4',
+                    borderRadius: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 2,
+                    textAlign: 'center',
+                    padding: 8,
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('archive-batch-pick'));
+                  }}
+                  onDragOver={event => {
+                    event.preventDefault();
+                  }}
+                  onDrop={event => {
+                    event.preventDefault();
+                    const files = Array.from(event.dataTransfer.files ?? []);
+                    if (files.length > 0) {
+                      window.dispatchEvent(
+                        new CustomEvent('archive-batch-drop', { detail: files })
+                      );
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>拖入扫描件</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                    自动识别类型，再确认挂到哪个对象
+                  </span>
+                </div>
+              </div>
+            </div>
             <Table<ArchiveCategory>
               rowKey="document_type"
               dataSource={completion.data.categories}

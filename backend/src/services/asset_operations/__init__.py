@@ -46,6 +46,10 @@ from .errors import (
     TerminalContractAlreadyTerminatedError,
 )
 from .lifecycle_rules import validate_upstream_exit
+from .monthly_workbench_service import (
+    MonthlyWorkbenchService,
+    monthly_workbench_service,
+)
 from .occupancy_report_draft_service import (
     OccupancyReportDraftService,
     occupancy_report_draft_service,
@@ -103,4 +107,6 @@ __all__ = [
     "validate_merge",
     "validate_split",
     "validate_upstream_exit",
+    "MonthlyWorkbenchService",
+    "monthly_workbench_service",
 ]

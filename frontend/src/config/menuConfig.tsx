@@ -1,9 +1,10 @@
 /**
  * 菜单配置
  *
- * v5 一次性切换后的菜单：资产运营 + 主体管理 + 系统管理。
- * 旧业务入口（工作台/资产台账/产权证/合同中心/经营台账/经营分析）已随
- * V1-4 切换移除，见 docs/archive/backend-plans/2026-10-23-asset-operations-v5-v1.md。
+ * 对齐原型 asset-ops-v5 侧栏：本月（徽标=未完成件数）/ 报送 / 物业 /
+ * 合同（分组标题，不可点：上游合同、终端合同）/ 台账 / 档案（红字 缺 N 份）/
+ * 数据导入。「录入已签合同」不占菜单位——原型从合同页「＋ 录入已签合同」
+ * 按钮进入（路由保留）。徽标由 AppSidebar 组合渲染。
  */
 
 import type { MenuProps } from 'antd';
@@ -16,9 +17,9 @@ import {
   ApartmentOutlined,
   FileDoneOutlined,
   FileTextOutlined,
-  FileAddOutlined,
   DatabaseOutlined,
   SwapOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 
 export type MenuItemKey = string;
@@ -32,6 +33,7 @@ export interface MenuItemConfig {
 
 export const MENU_GROUP_KEYS = {
   ASSET_OPERATIONS: 'asset-operations-group',
+  CONTRACTS: 'asset-operations-contracts',
 } as const;
 
 /**
@@ -44,9 +46,36 @@ export const MENU_ITEMS: MenuProps['items'] = [
     label: '资产运营',
     children: [
       {
-        key: '/asset-operations/archive',
-        icon: <FileTextOutlined />,
-        label: '档案',
+        key: '/asset-operations/monthly',
+        icon: <CalendarOutlined />,
+        label: '本月',
+      },
+      {
+        key: '/asset-operations/occupancy-reports',
+        icon: <FileDoneOutlined />,
+        label: '报送',
+      },
+      {
+        key: '/asset-operations/units',
+        icon: <DatabaseOutlined />,
+        label: '物业',
+      },
+      {
+        key: MENU_GROUP_KEYS.CONTRACTS,
+        type: 'group',
+        label: '合同',
+        children: [
+          {
+            key: '/asset-operations/contracts/upstream',
+            icon: <FileTextOutlined />,
+            label: '上游合同',
+          },
+          {
+            key: '/asset-operations/contracts/terminal',
+            icon: <SwapOutlined />,
+            label: '终端合同',
+          },
+        ],
       },
       {
         key: '/asset-operations/ledgers',
@@ -54,34 +83,14 @@ export const MENU_ITEMS: MenuProps['items'] = [
         label: '台账',
       },
       {
-        key: '/asset-operations/units',
-        icon: <DatabaseOutlined />,
-        label: '资产单元',
+        key: '/asset-operations/archive',
+        icon: <FileTextOutlined />,
+        label: '档案',
       },
       {
         key: '/asset-operations/imports',
         icon: <FileTextOutlined />,
         label: '数据导入',
-      },
-      {
-        key: '/asset-operations/contracts/intake',
-        icon: <FileAddOutlined />,
-        label: '录入已签合同',
-      },
-      {
-        key: '/asset-operations/contracts/upstream',
-        icon: <FileTextOutlined />,
-        label: '上游合同',
-      },
-      {
-        key: '/asset-operations/contracts/terminal',
-        icon: <SwapOutlined />,
-        label: '终端合同',
-      },
-      {
-        key: '/asset-operations/occupancy-reports',
-        icon: <FileDoneOutlined />,
-        label: '月度出租率报送',
       },
     ],
   },
@@ -145,10 +154,14 @@ export function getSelectedKeys(pathname: string): string[] {
     return ['/asset-operations/contracts/upstream'];
   }
   if (pathname.startsWith('/asset-operations/contracts/intake')) {
-    return ['/asset-operations/contracts/intake'];
+    // 录入页从合同页按钮进入，返回时高亮来源不确定，默认高亮上游合同。
+    return ['/asset-operations/contracts/upstream'];
   }
   if (pathname.startsWith('/asset-operations/occupancy-reports')) {
     return ['/asset-operations/occupancy-reports'];
+  }
+  if (pathname.startsWith('/asset-operations/monthly')) {
+    return ['/asset-operations/monthly'];
   }
   if (pathname.startsWith('/asset-operations/units')) {
     return ['/asset-operations/units'];

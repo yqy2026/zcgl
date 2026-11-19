@@ -26,6 +26,7 @@ from ...models.auth import User
 from ...schemas.import_batch import (
     ImportBatchChangePage,
     ImportBatchChangeResponse,
+    ImportBatchListResponse,
     ImportBatchStatusResponse,
     ImportCommitPreviewResponse,
     ImportCommitRequest,
@@ -191,6 +192,30 @@ async def upload_import_batch(
         content=content,
     )
     return ImportBatchStatusResponse.model_validate(batch)
+
+
+@router.get(
+    "/import-batches",
+    response_model=ImportBatchListResponse,
+    summary="查询导入批次列表",
+)
+async def list_import_batches(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    _authz: AssetOpsRead,
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> ImportBatchListResponse:
+    """The actor's recent batches (create & update modes mixed)."""
+    from ...crud.import_batch import import_batch_repository
+
+    batches, total = await import_batch_repository.list_batches(
+        db, created_by=str(current_user.id), offset=offset, limit=limit
+    )
+    return ImportBatchListResponse(
+        items=[ImportBatchStatusResponse.model_validate(row) for row in batches],
+        total=total,
+    )
 
 
 @router.get(

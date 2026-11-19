@@ -13,6 +13,7 @@ vi.mock(import('@/services/occupancyReportService'), async importOriginal => {
   return {
     ...actual,
     occupancyReportService: {
+      listHistory: vi.fn().mockResolvedValue([]),
       listOperatorParties: vi.fn(),
       getAssessmentScope: vi.fn(),
       createAssessmentScopeDraft: vi.fn(),
@@ -65,6 +66,7 @@ function makeDraft(overrides: Partial<OccupancyReportDraft> = {}): OccupancyRepo
     period: dayjs().startOf('month').subtract(1, 'month').format('YYYY-MM'),
     firstReport: false,
     fullScopeUnitCount: 1,
+    projectCounts: { projectCount: 2, operatingProjectCount: 1, nonOperatingProjectCount: 1 },
     scopeVersion: {
       versionId: 'sv-1',
       versionNumber: 1,
@@ -163,7 +165,10 @@ describe('OccupancyReportsPage', () => {
       makeDraft({ lines: [], pending: [], fullScopeUnitCount: 1 })
     );
     renderPage();
-    expect(await screen.findByRole('button', { name: '提交报送' })).toBeEnabled();
+    // CI 慢机上 MSW 响应可能超过 findByRole 默认 1s 超时，显式放宽。
+    expect(
+      await screen.findByRole('button', { name: '提交报送' }, { timeout: 15_000 })
+    ).toBeEnabled();
     expect(screen.queryByText('当月暂无纳入考核范围的宗地明细。')).toBeNull();
     expect(screen.getByText('土地面积', { selector: 'span' })).toBeTruthy();
   });

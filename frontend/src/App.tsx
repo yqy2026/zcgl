@@ -131,8 +131,8 @@ const ProtectedRoutes: React.FC = () => {
           {protectedRoutes.map(route => (
             <Route key={route.path} path={route.path} element={renderProtectedElement(route)} />
           ))}
-          {/* 默认路由重定向到仪表板 */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* 默认路由重定向到本月工作台（资产运营 v5 首页） */}
+          <Route path="/" element={<Navigate to="/asset-operations/monthly" replace />} />
           {/* 未匹配路由兜底：渲染 404 页而非静默空白 */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

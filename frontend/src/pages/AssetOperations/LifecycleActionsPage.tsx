@@ -22,8 +22,8 @@ import type { RentScheduleInput } from '@/services/assetLedgerService';
 
 interface TerminalTerminationForm {
   effectiveDate: string;
-  terminationType: string;
-  handoverStatus: string;
+  terminationType: 'expiry' | 'early' | 'mutual';
+  handoverStatus: 'pending' | 'completed' | 'not_applicable';
   depositSettlementStatus: string;
   depositOffsetMode: 'auto' | 'none' | 'manual';
   depositOffsets: Record<string, string>;
@@ -286,20 +286,77 @@ export function TerminalActionsPage(): React.ReactElement {
             render={({ field }) => <Input type="date" {...field} />}
           />
         </label>
-        <label className={styles.fieldColumn}>
-          终止类型
+        <fieldset className={styles.fieldColumn}>
+          <legend>终止类型</legend>
           <Controller
             control={terminationControl}
             name="terminationType"
-            render={({ field }) => <Input {...field} />}
+            render={({ field }) => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {(
+                  [
+                    { value: 'expiry', label: '到期终止', desc: '租期届满自然结束' },
+                    { value: 'early', label: '提前终止', desc: '提前退租，触发补收与抵扣' },
+                    { value: 'mutual', label: '协商终止', desc: '双方协商解除' },
+                  ] as const
+                ).map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={field.value === option.value}
+                    onClick={() => field.onChange(option.value)}
+                    style={{
+                      paddingTop: 8,
+                      paddingLeft: 10,
+                      paddingRight: 10,
+                      paddingBottom: 8,
+                      borderRadius: 6,
+                      border:
+                        field.value === option.value
+                          ? '0.0625rem solid var(--ant-color-primary, #0e63e5)'
+                          : '0.0625rem solid #d9d9d9',
+                      background: field.value === option.value ? '#eef4fe' : '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      font: 'inherit',
+                    }}
+                  >
+                    <b style={{ fontSize: 13 }}>{option.label}</b>
+                    <span
+                      style={{
+                        display: 'block',
+                        fontSize: 12,
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {option.desc}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           />
-        </label>
+        </fieldset>
         <label className={styles.fieldColumn}>
           原因
           <Controller
             control={terminationControl}
             name="reason"
             render={({ field }) => <Input {...field} />}
+          />
+        </label>
+        <label className={styles.fieldColumn}>
+          房屋交接
+          <Controller
+            control={terminationControl}
+            name="handoverStatus"
+            render={({ field }) => (
+              <select {...field}>
+                <option value="pending">待交接</option>
+                <option value="completed">已交接</option>
+                <option value="not_applicable">不适用</option>
+              </select>
+            )}
           />
         </label>
         <label className={styles.fieldColumn}>

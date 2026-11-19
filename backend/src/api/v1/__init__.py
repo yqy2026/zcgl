@@ -16,6 +16,7 @@ from . import (
     extraction_sessions,  # noqa: F401
     import_batches,  # noqa: F401
     management_fee_statements,  # noqa: F401
+    monthly_workbench,  # noqa: F401
     occupancy_reports,  # noqa: F401
     party,  # noqa: F401
     rent_ledger_queries,  # noqa: F401

@@ -23,6 +23,7 @@ import {
   Drawer,
   Input,
   Modal,
+  Segmented,
   Select,
   Space,
   Table,
@@ -188,12 +189,22 @@ function TotalsGrid(props: { totals: OccupancyReportTotals }): React.ReactElemen
 }
 
 const LINE_COLUMNS: ColumnsType<OccupancyReportLine> = [
-  { title: '地址', dataIndex: 'addressSnapshot', key: 'addressSnapshot', width: 200 },
-  { title: '项目', dataIndex: 'projectNameSnapshot', key: 'projectNameSnapshot', width: 140 },
-  { title: '用途', dataIndex: 'usageTypeSnapshot', key: 'usageTypeSnapshot', width: 100 },
-  { title: '业主', dataIndex: 'ownerNameSnapshot', key: 'ownerNameSnapshot', width: 140 },
+  { title: '产权方', dataIndex: 'ownerNameSnapshot', key: 'ownerNameSnapshot', width: 150 },
+  { title: '业态类别', dataIndex: 'usageTypeSnapshot', key: 'usageTypeSnapshot', width: 90 },
   {
-    title: '土地面积',
+    title: '项目名称',
+    dataIndex: 'projectNameSnapshot',
+    key: 'projectNameSnapshot',
+    width: 130,
+  },
+  {
+    title: '物业地址',
+    dataIndex: 'addressSnapshot',
+    key: 'addressSnapshot',
+    width: 200,
+  },
+  {
+    title: '土地面积(㎡)',
     dataIndex: 'landArea',
     key: 'landArea',
     align: 'right',
@@ -203,33 +214,54 @@ const LINE_COLUMNS: ColumnsType<OccupancyReportLine> = [
     ),
   },
   {
-    title: '建筑面积',
-    dataIndex: 'buildingArea',
-    key: 'buildingArea',
-    align: 'right',
-    width: 110,
-    render: (_: unknown, record) => (
-      <span className={styles.numeric}>{formatArea(record.buildingArea)}</span>
-    ),
-  },
-  {
-    title: '可租面积',
+    title: '经营性可出租面积(㎡)',
     dataIndex: 'rentableArea',
     key: 'rentableArea',
     align: 'right',
-    width: 110,
+    width: 140,
     render: (_: unknown, record) => (
       <span className={styles.numeric}>{formatArea(record.rentableArea)}</span>
     ),
   },
   {
-    title: '已租面积',
+    title: '经营性已出租面积(㎡)',
     dataIndex: 'rentedArea',
     key: 'rentedArea',
     align: 'right',
-    width: 110,
+    width: 140,
     render: (_: unknown, record) => (
       <span className={styles.numeric}>{formatArea(record.rentedArea)}</span>
+    ),
+  },
+  {
+    title: '可出租物业数',
+    dataIndex: 'unitCount',
+    key: 'unitCount',
+    align: 'right',
+    width: 100,
+    render: (_: unknown, record) => <span className={styles.numeric}>{record.unitCount}</span>,
+  },
+  {
+    title: '已出租物业数',
+    dataIndex: 'rentedUnitCount',
+    key: 'rentedUnitCount',
+    align: 'right',
+    width: 100,
+    render: (_: unknown, record) => (
+      <span className={styles.numeric}>{record.rentedUnitCount}</span>
+    ),
+  },
+  {
+    title: '出租率（按个数）',
+    key: 'rateByCount',
+    align: 'right',
+    width: 110,
+    render: (_: unknown, record) => (
+      <span className={styles.numeric}>
+        {record.unitCount > 0
+          ? `${((record.rentedUnitCount / record.unitCount) * 100).toFixed(1)}%`
+          : '—'}
+      </span>
     ),
   },
   {
@@ -243,27 +275,216 @@ const LINE_COLUMNS: ColumnsType<OccupancyReportLine> = [
       </Tag>
     ),
   },
-  {
-    title: '终端合同',
-    dataIndex: 'terminalContractIds',
-    key: 'terminalContractIds',
-    width: 160,
-    render: (_: unknown, record) =>
-      record.terminalContractIds.length === 0 ? '—' : record.terminalContractIds.join('、'),
-  },
 ];
 
 function LinesTable(props: { lines: OccupancyReportLine[]; caption: string }): React.ReactElement {
+  const [vacantOnly, setVacantOnly] = useState(false);
+  const rows = vacantOnly
+    ? props.lines.filter(line => line.rentalStatus !== 'rented')
+    : props.lines;
+  const sum = {
+    land: rows.reduce((total, line) => total + line.landArea, 0),
+    rentable: rows.reduce((total, line) => total + line.rentableArea, 0),
+    rented: rows.reduce((total, line) => total + line.rentedArea, 0),
+    units: rows.reduce((total, line) => total + line.unitCount, 0),
+    rentedUnits: rows.reduce((total, line) => total + line.rentedUnitCount, 0),
+  };
   return (
-    <div role="region" aria-label={props.caption} tabIndex={0} className={styles.scrollRegion}>
-      <Table<OccupancyReportLine>
-        rowKey="assetUnitId"
-        columns={LINE_COLUMNS}
-        dataSource={props.lines}
-        pagination={false}
-        size="small"
-        scroll={{ x: 1180 }}
-      />
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <Segmented
+          aria-label="明细筛选"
+          value={vacantOnly ? 'vacant' : 'all'}
+          onChange={value => setVacantOnly(value === 'vacant')}
+          options={[
+            { value: 'all', label: '全部' },
+            { value: 'vacant', label: '只看未出租' },
+          ]}
+        />
+      </div>
+      <div role="region" aria-label={props.caption} tabIndex={0} className={styles.scrollRegion}>
+        <Table<OccupancyReportLine>
+          rowKey="assetUnitId"
+          columns={LINE_COLUMNS}
+          dataSource={rows}
+          pagination={false}
+          size="small"
+          scroll={{ x: 1400 }}
+          summary={() => (
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0}>
+                <b>合计</b>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={1} colSpan={3}>
+                {vacantOnly ? `${rows.length} 宗未出租` : `${rows.length} 宗`}
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={4} align="right">
+                <span className={styles.numeric}>{formatArea(sum.land)}</span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={5} align="right">
+                {null}
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={6} align="right">
+                <span className={styles.numeric}>{formatArea(sum.rentable)}</span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={7} align="right">
+                <span className={styles.numeric}>{formatArea(sum.rented)}</span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={8} align="right">
+                <span className={styles.numeric}>{sum.units}</span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={9} align="right">
+                <span className={styles.numeric}>{sum.rentedUnits}</span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={10} align="right">
+                <span className={styles.numeric}>
+                  {sum.units > 0 ? `${((sum.rentedUnits / sum.units) * 100).toFixed(1)}%` : '—'}
+                </span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={11}>{null}</Table.Summary.Cell>
+            </Table.Summary.Row>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function wan(value: number): string {
+  return (value / 10000).toFixed(2);
+}
+
+/**
+ * 报送说明（原型固定句式，逐字照搬，数字浅蓝高亮）。
+ * 经营性项目数 = 明细中不同项目个数；口径注释见原型 handoff §报送页。
+ */
+function StatementParagraph(props: {
+  period: string;
+  projectCounts: {
+    projectCount: number;
+    operatingProjectCount: number;
+    nonOperatingProjectCount: number;
+  };
+  totals: OccupancyReportTotals;
+}): React.ReactElement {
+  const highlight = {
+    background: '#eef4fe',
+    paddingTop: 0,
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingBottom: 0,
+    borderRadius: 3,
+  };
+  const num = (value: React.ReactNode): React.ReactElement => (
+    <span style={{ ...highlight, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+  );
+  const year = Number(props.period.slice(0, 4));
+  const month = Number(props.period.slice(5, 7));
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        fontSize: 15,
+        lineHeight: 1.9,
+      }}
+    >
+      <div>
+        {year} 年 {month} 月份，
+      </div>
+      <div>
+        1、公司在管存量物业项目 {num(props.projectCounts.projectCount)} 个（其中经营性项目{' '}
+        {num(props.projectCounts.operatingProjectCount)} 个，非经营性公房项目{' '}
+        {num(props.projectCounts.nonOperatingProjectCount)} 个）。
+      </div>
+      <div>
+        2、存量土地面积约 {num(wan(props.totals.landArea))} 万平方米，存量物业建筑面积约{' '}
+        {num(wan(props.totals.buildingArea))} 万平方米。
+      </div>
+      <div>
+        3、存量经营性可出租土地物业面积约 {num(wan(props.totals.rentableArea))}{' '}
+        万平方米，经营性已出租土地物业面积约 {num(wan(props.totals.rentedArea))} 万平方米。
+      </div>
+      <div>
+        4、在管经营性存量物业共 {num(props.totals.unitCount)} 宗，已出租{' '}
+        {num(props.totals.rentedUnitCount)} 宗，按宗数计算出租率为{' '}
+        {num(
+          props.totals.occupancyRate == null
+            ? '—'
+            : `${(props.totals.occupancyRate * 100).toFixed(2)}%`
+        )}
+        。
+      </div>
+    </div>
+  );
+}
+
+/** 报送记录横排卡片（原型：月份 + 出租率 + MM-01 已报；最后一张为当月草稿）。 */
+function HistoryStrip(props: {
+  operatorPartyId: string;
+  year: number;
+  currentPeriod: string;
+  onOpenReport: (reportId: string) => void;
+  onOpenDraft: () => void;
+}): React.ReactElement {
+  const query = useQuery({
+    queryKey: ['occupancy-report-history', props.operatorPartyId, props.year],
+    queryFn: () => occupancyReportService.listHistory(props.operatorPartyId, props.year),
+    enabled: props.operatorPartyId !== '',
+  });
+  if (query.isLoading) {
+    return (
+      <p role="status" className={styles.sectionNote}>
+        报送记录加载中…
+      </p>
+    );
+  }
+  if (query.isError) {
+    return <p className={styles.sectionNote}>报送记录暂不可用（{errorText(query.error)}）</p>;
+  }
+  const items = query.data ?? [];
+  return (
+    <div
+      role="region"
+      aria-label="报送记录"
+      tabIndex={0}
+      className={styles.scrollRegion}
+      style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
+    >
+      {items.length === 0 ? (
+        <span className={styles.sectionNote}>{props.year} 年尚无报送记录</span>
+      ) : (
+        items.map(item => (
+          <button
+            key={item.reportId}
+            type="button"
+            className={styles.historyCard}
+            style={
+              item.period === props.currentPeriod
+                ? { borderColor: 'var(--ant-color-primary, #0e63e5)' }
+                : undefined
+            }
+            onClick={() => {
+              if (item.status === 'submitted') {
+                props.onOpenReport(item.reportId);
+              } else {
+                props.onOpenDraft();
+              }
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{item.period}</span>
+            <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+              {item.occupancyRate == null ? '草稿' : `${(item.occupancyRate * 100).toFixed(1)}%`}
+            </span>
+            <span style={{ fontSize: 11, opacity: 0.75 }}>
+              {item.status === 'submitted'
+                ? `${(item.submittedAt ?? '').slice(5, 10)} 已报`
+                : '草稿'}
+            </span>
+          </button>
+        ))
+      )}
     </div>
   );
 }
@@ -928,6 +1149,31 @@ function DraftSection(props: {
             </Space>
 
             <TotalsGrid totals={draft.totals} />
+            <section style={{ marginTop: 12 }}>
+              <h3 className={styles.blockTitle}>报送说明</h3>
+              <p className={styles.sectionNote}>
+                时点 = 当月最后一天 · 万平方米与出租率保留 2 位小数 · 第 2 条含非经营性公房
+              </p>
+              <div
+                style={{
+                  background: 'var(--color-bg-container, #fff)',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: 'var(--color-border, #e4e6ea)',
+                  borderRadius: 8,
+                  paddingTop: 16,
+                  paddingLeft: 20,
+                  paddingRight: 20,
+                  paddingBottom: 16,
+                }}
+              >
+                <StatementParagraph
+                  period={draft.period}
+                  projectCounts={draft.projectCounts}
+                  totals={draft.totals}
+                />
+              </div>
+            </section>
             <Alert
               type="info"
               showIcon
@@ -1229,6 +1475,26 @@ function SnapshotSection(props: { reportId: string }): React.ReactElement {
             </Space>
 
             <TotalsGrid totals={snapshot.totals} />
+            <div
+              style={{
+                background: 'var(--color-bg-container, #fff)',
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: 'var(--color-border, #e4e6ea)',
+                borderRadius: 8,
+                paddingTop: 16,
+                paddingLeft: 20,
+                paddingRight: 20,
+                paddingBottom: 16,
+                marginTop: 12,
+              }}
+            >
+              <StatementParagraph
+                period={snapshot.period}
+                projectCounts={snapshot.projectCounts}
+                totals={snapshot.totals}
+              />
+            </div>
             <Alert
               type="info"
               showIcon
@@ -1519,6 +1785,18 @@ export function OccupancyReportsPage(): React.ReactElement {
           />
         ) : null}
       </div>
+
+      <section style={{ marginTop: 12 }}>
+        <h3 className={styles.blockTitle}>报送记录</h3>
+        <p className={styles.sectionNote}>已报送的月份锁定为快照，点开只读查看</p>
+        <HistoryStrip
+          operatorPartyId={operatorId}
+          year={year}
+          currentPeriod={period}
+          onOpenReport={reportId => updateParams({ report_id: reportId })}
+          onOpenDraft={() => updateParams({ report_id: null })}
+        />
+      </section>
 
       <Tabs
         activeKey={activeTab}

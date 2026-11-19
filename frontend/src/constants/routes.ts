@@ -31,6 +31,7 @@ export const PROTOTYPE_ROUTES = {
 
 // 资产运营 v5 生产路由（V1 纵向切片）
 export const ASSET_OPERATIONS_V5_ROUTES = {
+  MONTHLY: '/asset-operations/monthly',
   ARCHIVE: '/asset-operations/archive',
   LEDGERS: '/asset-operations/ledgers',
   MANAGEMENT_FEE_STATEMENT: '/asset-operations/management-fees/:statement_id',
@@ -139,12 +140,12 @@ export const PROPERTY_CERTIFICATE_ROUTES = {
 
 // 页面重定向配置
 export const REDIRECTS = {
-  ROOT: '/dashboard',
+  ROOT: '/asset-operations/monthly',
   ASSETS_ROOT: '/assets/list',
 } as const;
 
 // 404 处理
-export const NOT_FOUND_REDIRECT = '/dashboard';
+export const NOT_FOUND_REDIRECT = '/asset-operations/monthly';
 
 // 路由类型定义
 export interface RouteConfig {

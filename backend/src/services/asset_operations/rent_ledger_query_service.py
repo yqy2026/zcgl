@@ -366,9 +366,15 @@ class RentLedgerQueryService:
         views, _ = self._views(facts, today=business_today())
         return views[entry_id]
 
-    async def unpaid_contract_ids(self, db: AsyncSession, *, today: date) -> set[str]:
+    async def unpaid_contract_ids(
+        self,
+        db: AsyncSession,
+        *,
+        today: date,
+        contract_ids: tuple[str, ...] | None = None,
+    ) -> set[str]:
         entries, records = await self.repository.terminal_outstanding_facts(
-            db, today=today
+            db, today=today, contract_ids=contract_ids
         )
         records_by_entry: dict[str, list[RentPaymentRecord]] = defaultdict(list)
         for record in records:

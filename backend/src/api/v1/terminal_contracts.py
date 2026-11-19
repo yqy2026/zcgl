@@ -59,11 +59,22 @@ async def list_terminal_contracts(
     owner_party_id: str | None = Query(
         None, description="产权方过滤（按覆盖单元的产权方匹配）"
     ),
-    q: str | None = Query(None, max_length=100, description="编号搜索"),
+    q: str | None = Query(
+        None, max_length=100, description="编号/租户名搜索（含已结束）"
+    ),
     offset: int = Query(0, ge=0, description="跳过条数"),
     limit: int = Query(50, ge=1, le=200, description="返回条数"),
-    filter: Literal["rent_unpaid", "deposit_unsettled"] | None = Query(
-        None, description="租金未到账或押金未结清"
+    filter: Literal[
+        "active",
+        "expiring_180",
+        "rent_unpaid",
+        "deposit_unsettled",
+        "missing_scan",
+        "ended",
+    ]
+    | None = Query(
+        None,
+        description="视图筛选：生效中/180天内到期/租金未到账/押金未结清/缺扫描件/已结束",
     ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
@@ -83,19 +94,22 @@ async def list_terminal_contracts(
     try:
         actor_id = str(current_user.id)
         scope = await party_scope_resolver.resolve(db, user_id=actor_id)
-        items, total = await asset_operations_query_service.list_terminal_contracts(
+        (
+            items,
+            total,
+            counts,
+        ) = await asset_operations_query_service.list_terminal_contracts_view(
             db,
             scope=scope,
             contract_mode=contract_mode,
             upstream_contract_id=upstream_contract_id,
             owner_party_id=owner_party_id,
             query=q,
-            rent_unpaid=filter == "rent_unpaid",
-            deposit_unsettled=filter == "deposit_unsettled",
+            filter_value=filter,
             offset=offset,
             limit=limit,
         )
-        return TerminalContractListResponse(items=items, total=total)
+        return TerminalContractListResponse(items=items, total=total, counts=counts)
     except BaseBusinessError:
         raise
     except Exception as exc:

@@ -59,19 +59,34 @@ class _UnitReader:
         self.get_calls: list[str] = []
 
     async def list(self, _db, **kwargs):
+        rows = list(self.units)
         if kwargs.get("non_rentable_only"):
             rows = [
                 unit
-                for unit in self.units
+                for unit in rows
                 if not unit.is_operating or unit.rentable_area <= 0
             ]
-        else:
-            rows = self.units
+        if kwargs.get("rentable_only"):
+            rows = [
+                unit for unit in rows if unit.is_operating and unit.rentable_area > 0
+            ]
+        exclude = kwargs.get("exclude_unit_ids")
+        if exclude:
+            rows = [unit for unit in rows if unit.id not in set(exclude)]
+        restrict = kwargs.get("unit_ids")
+        if restrict is not None:
+            rows = [unit for unit in rows if unit.id in set(restrict)]
         return list(rows), len(rows)
 
     async def get(self, _db, *, unit_id, scope, for_update=False):
         self.get_calls.append(unit_id)
         return next((u for u in self.units if u.id == unit_id), None)
+
+    async def project_names(self, _db, *, project_ids):
+        return {}
+
+    async def active_certificate_counts(self, _db, *, unit_ids, as_of):
+        return {}
 
     async def lock_for_write(self, _db, *, unit_ids, scope):
         return tuple(self.units)
@@ -88,9 +103,7 @@ class _ContractReader:
     async def list_rented_unit_ids(self, _db, *, as_of, scope):
         return self.rented_unit_ids
 
-    async def find_terminal_overlaps(
-        self, _db, *, unit_ids, start_date, end_date
-    ):
+    async def find_terminal_overlaps(self, _db, *, unit_ids, start_date, end_date):
         if set(unit_ids) & self.rented_unit_ids:
             return ("terminal-1",)
         return ()
@@ -100,8 +113,21 @@ class _ContractReader:
             return ("terminal-1",)
         return ()
 
+    async def list_active_terminals_by_units(self, _db, *, unit_ids, as_of):
+        return ()
+
+    async def list_lifecycle_events_by_contract_ids(
+        self, _db, *, contract_kind, contract_ids
+    ):
+        return ()
+
     async def list_lifecycle_events(self, _db, *, contract_kind, contract_id):
         return ()
+
+
+class _PartyNameReader:
+    async def get_party_names_by_ids(self, _db, *, party_ids):
+        return {}
 
 
 class _DB:
@@ -131,6 +157,7 @@ def _query_service(
     return AssetOperationsQueryService(
         asset_unit_repository=_UnitReader(units),  # type: ignore[arg-type]
         asset_contract_repository=_ContractReader(rented),  # type: ignore[arg-type]
+        party_name_reader=_PartyNameReader(),  # type: ignore[arg-type]
         business_today=lambda: TODAY,
     )
 
@@ -139,9 +166,7 @@ def _query_service(
 async def test_unit_list_derives_rental_status_and_occupancy() -> None:
     rented = _unit()
     vacant = _unit(id="unit-2", unit_code="U-002")
-    non_rentable = _unit(
-        id="unit-3", unit_code="U-003", is_operating=False
-    )
+    non_rentable = _unit(id="unit-3", unit_code="U-003", is_operating=False)
     service = _query_service([rented, vacant, non_rentable], {"unit-1"})
 
     items, total = await service.list_asset_units(_DB(), scope=SCOPE)
@@ -305,3 +330,72 @@ async def test_unit_list_non_rentable_filter_selects_only_non_rentable() -> None
     assert total == 1
     assert [item.id for item in items] == ["unit-3"]
     assert items[0].rental_status == "non_rentable"
+
+
+@pytest.mark.asyncio
+async def test_unit_list_view_filters_counts_and_assessment_labels() -> None:
+    rented = _unit()
+    vacant = _unit(id="unit-2", unit_code="U-002")
+    non_rentable = _unit(id="unit-3", unit_code="U-003", is_operating=False)
+    service = _query_service([rented, vacant, non_rentable], {"unit-1"})
+
+    items, total, counts = await service.list_asset_units_view(
+        _DB(),
+        scope=SCOPE,
+        filter="vacant",
+    )
+
+    # 空置筛选：可租且今天无在租终端合同。
+    assert total == 1
+    assert [item.id for item in items] == ["unit-2"]
+    assert items[0].rental_status == "vacant"
+    # 分段筛选计数与筛选语义一致。
+    assert counts.all == 3
+    assert counts.vacant == 1
+    assert counts.non_rentable == 1
+
+
+@pytest.mark.asyncio
+async def test_unit_list_assessment_marks_decided_and_pending(monkeypatch) -> None:
+    from types import SimpleNamespace as Row
+    from unittest.mock import AsyncMock
+
+    from src.crud import assessment_scope as scope_module
+
+    units = [_unit(), _unit(id="unit-2", unit_code="U-002")]
+    service = AssetOperationsQueryService(
+        asset_unit_repository=_UnitReader(units),  # type: ignore[arg-type]
+        asset_contract_repository=_ContractReader(set()),  # type: ignore[arg-type]
+        party_name_reader=_PartyNameReader(),  # type: ignore[arg-type]
+        business_today=lambda: TODAY,
+    )
+
+    item = Row(asset_unit_id="unit-1", included=False)
+    monkeypatch.setattr(
+        scope_module.assessment_scope_repository,
+        "get_active_version",
+        AsyncMock(return_value=Row(id="v1")),
+    )
+    monkeypatch.setattr(
+        scope_module.assessment_scope_repository,
+        "list_items",
+        AsyncMock(return_value=(item,)),
+    )
+    monkeypatch.setattr(
+        scope_module.assessment_scope_repository,
+        "list_managed_units",
+        AsyncMock(return_value=list(units)),
+    )
+
+    items, _total, counts = await service.list_asset_units_view(
+        _DB(),
+        scope=SCOPE,
+        assessment_operator_party_id="op-1",
+        assessment_year=2026,
+    )
+
+    by_id = {row.id: row for row in items}
+    # unit-1 有落库决定（排除）→ 不纳入；unit-2 是经营性候选但无决定 → 待确认。
+    assert by_id["unit-1"].assessment == "excluded"
+    assert by_id["unit-2"].assessment == "pending"
+    assert counts.in_assessment == 0

@@ -5,9 +5,13 @@
 
 // 静态路由映射 (精确匹配)
 export const staticBreadcrumbMap: Record<string, string> = {
-  // 资产运营
+  // 资产运营（命名对齐原型 v5 侧栏）
+  '/asset-operations/monthly': '本月',
+  '/asset-operations/occupancy-reports': '报送',
+  '/asset-operations/units': '物业',
   '/asset-operations/ledgers': '台账',
-  '/asset-operations/units': '资产单元',
+  '/asset-operations/archive': '档案',
+  '/asset-operations/imports': '数据导入',
   '/asset-operations/contracts/intake': '录入已签合同',
   '/asset-operations/contracts/upstream': '上游合同',
   '/asset-operations/contracts/terminal': '终端合同',
