@@ -63,8 +63,8 @@
 | `code` | string | 系统生成、创建后只读 |
 | `name` | string | 当前主档名称 |
 | `party_type` | enum | `legal_entity` / `individual` |
-| `status` | enum | `draft` / `pending` / `approved` / `rejected` |
-| `active` | boolean | 已审核主体启停状态 |
+| `status` | enum | `active` / `inactive`（启停状态） |
+| `review_status` | enum | `draft` / `pending` / `approved` / `rejected`；**审核流已于 2026-11-20 停用，建档即 `approved`**；枚举与 `submit/approve/reject-review` 路由保留，仅供历史 draft 收尾与回退 |
 | `version` | integer | 乐观锁版本 |
 
 Party 只保存身份，不保存“产权方/终端租户”等固定角色；角色由当前有效业务关系派生。
@@ -125,7 +125,7 @@ Project 只作管理归属标签。项目汇总必须逐资产单元或合同事
 | `unit_code` | string | 全局唯一、创建后只读 |
 | `name` | string | 业务可读名称 |
 | `project_id` | UUID | 管理归属标签 |
-| `owner_party_id` | UUID | 已审核且启用的产权方 Party |
+| `owner_party_id` | UUID | 启用状态（`active`）的产权方 Party |
 | `address` | string | 物业地址 |
 | `usage_type` | enum | 业态类别字典值 |
 | `acquisition_mode` | enum | `owned` / `leased` / `managed` |
@@ -710,7 +710,7 @@ V4-0 裁决（2026-11-15，业务确认授权代裁决）升格自活跃计划�
 
 **阶段行**：租金阶段不进合同主行。承租/终端 sheet 内每份合同可跟随多条阶段行，列与 `ContractRentSchedule` 同构：阶段起（`stage_start`）、阶段止（`stage_end`）、原定月租（`base_monthly_rent`）、递增%（`increase_rate`）、免租月数（`free_rent_months`）、减免额（`discount_amount`）、实际月租（`actual_monthly_rent`）、周期（`payment_cycle`）、缴租日（`due_day`，1–31）。导入器只做阶段完整性校验：阶段行覆盖合同期出现空洞 → error（`RENT_SCHEDULE_GAP` 语义同源）；不做自动归并（归并是判断，交人工）。
 
-**引用键**：主体列填主体全称，导入前必须已审核启用且名称在库内唯一（歧义或缺失 → error，不自动创建主体）；项目列填项目编号；单元列填 `unit_code`（创建后只读，天然键）；终端合同引用上游填上游合同编号（可空，空值 → 风险 warning，不阻断）；扫描件列填批量上传暂存文件名（编号归一化规则与合同扫描件批量配对同源）。跨表只允许向后引用：物业单元 →（无）、承租合同 → 单元 + 扫描件、终端合同 → 单元 +（可选上游）+ 扫描件。
+**引用键**：主体列填主体全称，导入前主体必须处于启用状态（`active`）且名称在库内唯一（歧义或缺失 → error，不自动创建主体；审核流已于 2026-11-20 停用，新建主体建档即 `approved`，不再要求提审）；项目列填项目编号；单元列填 `unit_code`（创建后只读，天然键）；终端合同引用上游填上游合同编号（可空，空值 → 风险 warning，不阻断）；扫描件列填批量上传暂存文件名（编号归一化规则与合同扫描件批量配对同源）。跨表只允许向后引用：物业单元 →（无）、承租合同 → 单元 + 扫描件、终端合同 → 单元 +（可选上游）+ 扫描件。
 
 **新增模式必填键**：
 

@@ -11,6 +11,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.e2e.factories import create_approved_legal_party
+
 pytestmark = pytest.mark.e2e
 
 
@@ -40,11 +42,11 @@ def _create_party(
     return response.json()
 
 
-def test_party_review_workflow_e2e(
+def test_party_create_is_auto_approved_e2e(
     authenticated_client: TestClient,
     csrf_headers: dict[str, str],
 ) -> None:
-    """Create → draft → submit (pending) → approve (approved)."""
+    """建档即生效：审核流停用后新建主体直接 approved，并留自动审核痕迹。"""
     suffix = uuid4().hex[:8]
     created = _create_party(
         authenticated_client,
@@ -56,36 +58,12 @@ def test_party_review_workflow_e2e(
     party_id = created.get("id")
     assert isinstance(party_id, str) and party_id != ""
     assert created.get("party_type") == "legal_entity"
-    assert created.get("review_status") == "draft"
+    assert created.get("review_status") == "approved"
+    assert created.get("review_by") == "system:auto-approve"
+    assert created.get("reviewed_at") is not None
+    assert created.get("review_reason")
     assert created.get("code", "").startswith("LE-")
     assert created.get("status") == "active"
-
-    # Update while draft is allowed.
-    draft_update = authenticated_client.put(
-        f"/api/v1/parties/{party_id}",
-        json={"name": f"E2E主体改名-{suffix}"},
-        headers=csrf_headers,
-    )
-    assert draft_update.status_code == 200
-    assert draft_update.json().get("name") == f"E2E主体改名-{suffix}"
-
-    # Submit review → pending.
-    submit_response = authenticated_client.post(
-        f"/api/v1/parties/{party_id}/submit-review",
-        headers=csrf_headers,
-    )
-    assert submit_response.status_code == 200
-    assert submit_response.json().get("review_status") == "pending"
-
-    # Approve → approved.
-    approve_response = authenticated_client.post(
-        f"/api/v1/parties/{party_id}/approve-review",
-        headers=csrf_headers,
-    )
-    assert approve_response.status_code == 200
-    approved = approve_response.json()
-    assert approved.get("review_status") == "approved"
-    assert approved.get("review_by") is not None
 
     # Approved parties cannot be edited or deleted directly.
     update_blocked = authenticated_client.put(
@@ -117,21 +95,24 @@ def test_party_review_workflow_e2e(
 def test_party_reject_flow_e2e(
     authenticated_client: TestClient,
     csrf_headers: dict[str, str],
+    db_session,
 ) -> None:
-    """A pending party can be rejected and returns to a re-editable state."""
+    """存量 draft 主体仍可提审并被驳回（审核流停用后仅历史数据走此路径）。"""
     suffix = uuid4().hex[:8]
-    created = _create_party(
-        authenticated_client,
-        csrf_headers,
+    party = create_approved_legal_party(
+        db_session,
+        suffix=suffix,
         name=f"E2E驳回主体-{suffix}",
+        review_status="draft",
     )
-    party_id = created.get("id")
-    assert isinstance(party_id, str)
+    party_id = party.id
 
-    authenticated_client.post(
+    submit = authenticated_client.post(
         f"/api/v1/parties/{party_id}/submit-review",
         headers=csrf_headers,
     )
+    assert submit.status_code == 200, submit.text
+    assert submit.json().get("review_status") == "pending"
 
     reject_response = authenticated_client.post(
         f"/api/v1/parties/{party_id}/reject-review",
@@ -205,30 +186,22 @@ def test_party_list_search_and_filter_e2e(
     assert legal_id in legal_ids
     assert individual_id not in legal_ids
 
-    # Newly created parties are drafts; filter by review_status=draft.
+    # 新建主体一律 approved（审核流已停用）；approved 过滤应命中全部。
+    approved_only = authenticated_client.get(
+        f"/api/v1/parties?search={suffix}&review_status=approved"
+    )
+    assert approved_only.status_code == 200
+    approved_ids = {item.get("id") for item in approved_only.json()}
+    assert {legal_id, individual_id}.issubset(approved_ids)
+
+    # 不再产生 draft 主体，draft 过滤应为空。
     draft_only = authenticated_client.get(
         f"/api/v1/parties?search={suffix}&review_status=draft"
     )
     assert draft_only.status_code == 200
     draft_ids = {item.get("id") for item in draft_only.json()}
-    assert {legal_id, individual_id}.issubset(draft_ids)
-
-    # approve the legal party → no longer in draft filter.
-    authenticated_client.post(
-        f"/api/v1/parties/{legal_id}/submit-review",
-        headers=csrf_headers,
-    )
-    authenticated_client.post(
-        f"/api/v1/parties/{legal_id}/approve-review",
-        headers=csrf_headers,
-    )
-    draft_after_approve = authenticated_client.get(
-        f"/api/v1/parties?search={suffix}&review_status=draft"
-    )
-    assert draft_after_approve.status_code == 200
-    draft_ids_after = {item.get("id") for item in draft_after_approve.json()}
-    assert legal_id not in draft_ids_after
-    assert individual_id in draft_ids_after
+    assert legal_id not in draft_ids
+    assert individual_id not in draft_ids
 
 
 def test_party_identifier_pair_validation_e2e(
@@ -274,19 +247,20 @@ def test_party_review_requires_admin_and_csrf_e2e(
 
     suffix = uuid4().hex[:8]
     admin_session = capture_session(authenticated_client)
-    party = _create_party(
-        authenticated_client,
-        csrf_headers,
+    party = create_approved_legal_party(
+        db_session,
+        suffix=suffix,
         name=f"分离审批主体-{suffix}",
+        review_status="draft",
     )
     submit = authenticated_client.post(
-        f"/api/v1/parties/{party['id']}/submit-review", headers=csrf_headers
+        f"/api/v1/parties/{party.id}/submit-review", headers=csrf_headers
     )
     assert submit.status_code == 200, submit.text
 
     # CSRF negative branch (E2E Admission Standard #2).
     csrf_missing = authenticated_client.post(
-        f"/api/v1/parties/{party['id']}/approve-review"
+        f"/api/v1/parties/{party.id}/approve-review"
     )
     assert csrf_missing.status_code == 403
 
@@ -302,7 +276,7 @@ def test_party_review_requires_admin_and_csrf_e2e(
     regular_session = capture_session(authenticated_client)
     regular_headers = restore_session(authenticated_client, regular_session)
     denied = authenticated_client.post(
-        f"/api/v1/parties/{party['id']}/approve-review",
+        f"/api/v1/parties/{party.id}/approve-review",
         headers=regular_headers,
     )
     assert denied.status_code == 403
@@ -311,7 +285,7 @@ def test_party_review_requires_admin_and_csrf_e2e(
     # The admin approval still lands afterwards.
     admin_headers = restore_session(authenticated_client, admin_session)
     approve = authenticated_client.post(
-        f"/api/v1/parties/{party['id']}/approve-review",
+        f"/api/v1/parties/{party.id}/approve-review",
         headers=admin_headers,
     )
     assert approve.status_code == 200, approve.text
