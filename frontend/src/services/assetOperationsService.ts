@@ -1618,6 +1618,30 @@ export class AssetOperationsService {
     }
   }
 
+  /** 项目筛选选项（scoped 去重），供物业页项目下拉。 */
+  async listAssetUnitProjectOptions(): Promise<{ projectId: string; projectName: string }[]> {
+    try {
+      const result = await apiClient.get<{
+        items: { project_id?: unknown; project_name?: unknown }[];
+      }>(`${API_BASE}/asset-units/project-options`, { cache: false });
+      if (!result.success) {
+        throw new AssetOperationsError(
+          `获取项目选项失败: ${result.error}`,
+          extractErrorCode(result)
+        );
+      }
+      return (result.data?.items ?? []).map(item => ({
+        projectId: String(item.project_id ?? ''),
+        projectName: String(item.project_name ?? ''),
+      }));
+    } catch (error) {
+      if (error instanceof AssetOperationsError) {
+        throw error;
+      }
+      throw toServiceError(error);
+    }
+  }
+
   /** 单元租赁时间轴：覆盖过该单元的终端/上游合同区间（终止已回放）。 */
   async getCoverageHistory(unitId: string): Promise<
     {

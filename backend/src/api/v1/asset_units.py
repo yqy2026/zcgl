@@ -27,6 +27,7 @@ from ...schemas.asset_operations import (
     AssetUnitMergeCommitRequest,
     AssetUnitMergePreviewRequest,
     AssetUnitMergeProposal,
+    AssetUnitProjectOptionsResponse,
     AssetUnitResponse,
     AssetUnitSplitCommitRequest,
     AssetUnitSplitPreviewRequest,
@@ -196,6 +197,40 @@ async def export_asset_units(
         raise
     except Exception as exc:
         raise internal_error("导出物业台账失败", original_error=exc) from exc
+
+
+@router.get(
+    "/asset-units/project-options",
+    response_model=AssetUnitProjectOptionsResponse,
+    summary="查询资产单元项目筛选选项",
+)
+async def list_asset_unit_project_options(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="asset_ops",
+                denial_error_factory=AssetOperationsPermissionDeniedError,
+            )
+        ),
+    ] = None,
+) -> AssetUnitProjectOptionsResponse:
+    """Scoped distinct (project_id, project_name) for the list filter."""
+    _ = _authz
+    try:
+        actor_id = str(current_user.id)
+        scope = await party_scope_resolver.resolve(db, user_id=actor_id)
+        items = await asset_operations_query_service.list_asset_unit_project_options(
+            db, scope=scope
+        )
+        return AssetUnitProjectOptionsResponse(items=items)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("查询项目筛选选项失败", original_error=exc) from exc
 
 
 @router.get(

@@ -18,7 +18,6 @@ import { ASSET_OPERATIONS_V5_ROUTES } from '@/constants/routes';
 import { assetOperationsService, AssetOperationsError } from '@/services/assetOperationsService';
 import type { AssetUnitListItem } from '@/services/assetOperationsService';
 import { occupancyReportService } from '@/services/occupancyReportService';
-import { projectService } from '@/services/projectService';
 
 import CapabilityGuard from '@/components/System/CapabilityGuard';
 import styles from './AssetUnitsPage.module.css';
@@ -104,8 +103,8 @@ export function AssetUnitsPage(): React.ReactElement {
   const operatorPartyId = operatorQuery.data?.[0]?.id;
 
   const projectsQuery = useQuery({
-    queryKey: ['asset-operations-unit-projects'],
-    queryFn: () => projectService.getProjects({ page_size: 200 }),
+    queryKey: ['asset-operations-unit-project-options'],
+    queryFn: () => assetOperationsService.listAssetUnitProjectOptions(),
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -450,9 +449,9 @@ export function AssetUnitsPage(): React.ReactElement {
               setProjectId(value);
               setPagination(previous => ({ ...previous, current: 1 }));
             }}
-            options={(projectsQuery.data?.items ?? []).map(project => ({
-              value: project.id,
-              label: project.project_name,
+            options={(projectsQuery.data ?? []).map(project => ({
+              value: project.projectId,
+              label: project.projectName,
             }))}
           />
           <OwnerPartySelect

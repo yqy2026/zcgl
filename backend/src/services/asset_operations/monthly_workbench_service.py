@@ -245,12 +245,14 @@ class MonthlyWorkbenchService:
             upstreams=upstreams,
             events_by_upstream=events_by_upstream,
         )
+        # 报送口径是「报上月」：统计月必须是已结束的自然月（draft 校验拒绝
+        # 当月），任务卡挂在当前月但报送卡回退上一自然月，与原型一致。
         occupancy = await self._occupancy_card(
             db,
             scope=scope,
             operator_party_id=operator_party_id,
             actor_id=actor_id,
-            month=resolved,
+            month=_previous_month(resolved),
         )
         expired, expiring = self._upstream_watchlists(
             upstreams=upstreams,

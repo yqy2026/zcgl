@@ -255,17 +255,20 @@ export default function MonthlyPage(): React.ReactElement {
   if (view == null) {
     return (
       <div className={styles.page}>
-        <Alert type="error" showIcon message="本月工作台响应缺少数据，请重试。" />
+        <Alert type="error" showIcon title="本月工作台响应缺少数据，请重试。" />
       </div>
     );
   }
 
   const monthNo = monthNumber(view.month);
   const yearNo = Number(view.month.slice(0, 4));
+  const report = view.occupancyReport;
+  // 报送卡口径：后端回退到上一已结束自然月（报上月），标题与跳转都用统计月。
+  const reportPeriod = report.period || view.month;
+  const reportMonthNo = monthNumber(reportPeriod);
   const leftCount = Math.max(view.progress.total - view.progress.done, 0);
   const percent =
     view.progress.total > 0 ? Math.round((view.progress.done / view.progress.total) * 100) : 100;
-  const report = view.occupancyReport;
   const reportTag =
     report.status === 'submitted' ? (
       <Tag color="success">已报送</Tag>
@@ -425,7 +428,7 @@ export default function MonthlyPage(): React.ReactElement {
         <section className={styles.card} aria-label="报送存量经营性物业台账">
           <div className={styles.cardHeader}>
             <div className={styles.cardTitleRow}>
-              <b className={styles.cardTitle}>报送 {monthNo} 月存量经营性物业台账</b>
+              <b className={styles.cardTitle}>报送 {reportMonthNo} 月存量经营性物业台账</b>
               {reportTag}
             </div>
             <p className={styles.cardSummary}>
@@ -450,7 +453,7 @@ export default function MonthlyPage(): React.ReactElement {
             <Button
               onClick={() => {
                 navigate(
-                  `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${view.month}`
+                  `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${reportPeriod}`
                 );
               }}
             >
@@ -681,7 +684,7 @@ export default function MonthlyPage(): React.ReactElement {
                   type="primary"
                   onClick={() => {
                     navigate(
-                      `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${view.month}`
+                      `/asset-operations/occupancy-reports?operator_party_id=${encodeURIComponent(operatorParam)}&period=${reportPeriod}`
                     );
                   }}
                 >

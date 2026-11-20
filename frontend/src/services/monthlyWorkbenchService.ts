@@ -53,12 +53,23 @@ type RawRecord = Record<string, unknown>;
 
 const API_BASE = '/api/v1';
 
+// 后端 Decimal 字段经 JSON 序列化为字符串（如 "0"），数字与数字串都接受；
+// 缺失/null → null，坏数据抛错不静默补 0（与 occupancyReportService 同策略）。
 function num(record: RawRecord, field: string): number {
   const value = record[field];
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`Invalid number field: ${field}`);
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new Error(`Invalid number field: ${field}`);
+    }
+    return value;
   }
-  return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  throw new Error(`Invalid number field: ${field}`);
 }
 
 function nullableNum(record: RawRecord, field: string): number | null {

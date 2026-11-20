@@ -293,6 +293,30 @@ class AssetUnitRepository:
         )
         return {row[0]: row[1] for row in (await db.execute(statement)).all()}
 
+    async def project_options(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+    ) -> Sequence[tuple[str, str]]:
+        """Distinct (project_id, project_name) within scope, for filter options."""
+        if scope.scope_mode != "unrestricted" and (
+            scope.error_code is not None or len(scope.effective_party_ids) == 0
+        ):
+            return []
+        statement = (
+            self._apply_scope(select(AssetUnit), scope=scope)
+            .join(Project, Project.id == AssetUnit.project_id)
+            .with_only_columns(AssetUnit.project_id, Project.project_name)
+            .distinct()
+            .order_by(AssetUnit.project_id)
+        )
+        return [
+            (row[0], row[1])
+            for row in (await db.execute(statement)).all()
+            if row[0] and row[1]
+        ]
+
     async def active_certificate_counts(
         self,
         db: AsyncSession,

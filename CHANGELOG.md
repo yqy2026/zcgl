@@ -5,6 +5,9 @@
 
 ## 未发布
 
+- fix(asset-ops): PR #113 验收走查修复三缺陷——工作台报送卡统计月回退上一已结束自然月（draft 校验拒绝当月，对齐「报上月」口径）；workbench 前端 Decimal 字符串解析（后端 JSON 序列化 "0" 致整页加载失败）；物业项目下拉改 GET /asset-units/project-options（v5 无 /projects 端点，原下拉 404）。
+- docs(asset-ops): PR #113 验收归档——2026-11-20 本地栈真实走查 27/28 断言通过（唯一 FAIL 为登录页外链图片超时等三类环境噪音），方案移入 archive/backend-plans/，REQ-WBK-001 转已实现；走查脚本收编 frontend/scripts/acceptance-walkthrough.mjs。
+
 - perf(asset-ops): PR #113 复核 P2-3 N+1 收口——上游详情单元矩阵与工作台到期卡的三处 per-row coverage/terminal 循环改批量 IN 读（新增 list_terminal_coverages_by_ids / list_terminals_by_upstream_batched / list_upstream_coverages_batched，scope 内 id 由调用方收敛，侧栏徽标全站触发的重聚合随之降本）。
 
 ——导入批次列表补 created_by 过滤（对齐详情 owner 口径）；工作台上游到期卡跳过已续签前驱（终止回放外补 renewed 回放，消除前驱+后继双计）；payment_plan 期数/合计随终止截止截断；unpaid_contract_ids 按 scoped contract ids 下推；待确认宗地降级收窄异常白名单；历史列表版本号读取下沉 repository；物业页拆合/空置写块包 CapabilityGuard（REQ-WBK-001 / REQ-IMP-001）。

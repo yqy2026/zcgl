@@ -379,8 +379,9 @@ async def test_overview_cards_progress_and_anytime(monkeypatch, repos):
     assert missing.statement_id is None
     assert missing.owner_party_name == "国资物业"
 
-    # 报送卡：草稿态、门槛与较上月变化透出。
+    # 报送卡：统计月回退上一已结束自然月（报上月），门槛与较上月变化透出。
     report = view.occupancy_report
+    assert report.period == "2026-10"
     assert report.status == "draft"
     assert report.unit_count == 10
     assert report.rate_delta == Decimal("0.0500")

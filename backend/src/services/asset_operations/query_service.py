@@ -29,6 +29,7 @@ from ...schemas.asset_operations import (
     AssetUnitCoverageInterval,
     AssetUnitDetail,
     AssetUnitFilterCounts,
+    AssetUnitProjectOption,
     ContractCoverageItem,
     LifecycleEventItem,
     RenewalChainItem,
@@ -98,6 +99,13 @@ class AssetUnitReader(Protocol):
         *,
         project_ids: Iterable[str],
     ) -> dict[str, str]: ...
+
+    async def project_options(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+    ) -> Sequence[tuple[str, str]]: ...
 
     async def active_certificate_counts(
         self,
@@ -737,6 +745,19 @@ class AssetOperationsQueryService:
                 "warnings": [],
             }
         )
+
+    async def list_asset_unit_project_options(
+        self,
+        db: AsyncSession,
+        *,
+        scope: EffectivePartyScope,
+    ) -> list[AssetUnitProjectOption]:
+        self._require_effective_scope(scope)
+        rows = await self.asset_unit_repository.project_options(db, scope=scope)
+        return [
+            AssetUnitProjectOption(project_id=row[0], project_name=row[1])
+            for row in rows
+        ]
 
     async def get_asset_unit(
         self,

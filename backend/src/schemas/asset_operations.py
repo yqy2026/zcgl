@@ -542,6 +542,17 @@ class AssetUnitDetail(AssetUnitResponse):
     certificate_count: int = 0
 
 
+class AssetUnitProjectOption(_StrictPayload):
+    """Project filter option (scoped distinct pairs)."""
+
+    project_id: str
+    project_name: str
+
+
+class AssetUnitProjectOptionsResponse(_StrictPayload):
+    items: list[AssetUnitProjectOption]
+
+
 class AssetUnitFilterCounts(_StrictPayload):
     """Counts for the segmented list filters (prototype: 带数量分段筛选)."""
 
