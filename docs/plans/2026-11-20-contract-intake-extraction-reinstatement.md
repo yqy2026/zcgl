@@ -1,4 +1,4 @@
-# 合同录入会话接入扫描件解析（B 方案 · 面向表一物业台账填报）
+# 合同录入会话接入扫描件解析（B 方案 · 面向表一物业台账填报 · DeepSeek OCR）
 
 ## Status
 
@@ -47,12 +47,16 @@
 
 ### 1.3 结论
 
-可行且范围比初版更收敛。复用度约 90%：页文本管线、规则候选、DeepSeek 增强、会话仓储、确认链路均已存在并在旧 `/extraction-sessions` 路径跑过。实际新增：
+可行。**OCR 环节由本地 RapidOCR 改为 DeepSeek OCR API（`POST /v1/tools/ocr`）**，取舍见 §4.7：免去本地模型部署与 SHA256 预检、单次可吃整份 PDF（≤1000 页 / ≤100 MiB）、直接返回逐页原始文本、成本 1.5 元/千页。规则候选、候选复核服务、会话仓储、确认链路保持不变。
 
-1. `ContractIntakeSessionService` 增加解析编排（约 80 行）；
-2. `ExtractionSessionRepository.update_candidates`（约 20 行）；
-3. **规则白名单扩 2 项**（`tenant_name` / `rent_free_until`）+ 1 项校验值（`leased_area`），见 §4.3.5；
-4. `ContractIntakePage` 候选回填与证据展示（约 140 行）。
+实际新增：
+
+1. `OcrProvider` 抽象 + 配置开关（`DOCUMENT_OCR_PROVIDER=deepseek|local`），本地管线保留为离线与降级路径；
+2. `DeepSeekOcrProvider`（约 90 行）：multipart 上传、逐页响应解析、错误码映射；
+3. `ContractIntakeSessionService` 增加解析编排（约 80 行）；
+4. `ExtractionSessionRepository.update_candidates`（约 20 行）；
+5. **规则白名单扩 2 项**（`tenant_name` / `rent_free_until`）+ 1 项校验值（`leased_area`），见 §4.3.5；
+6. `ContractIntakePage` 候选回填与证据展示（约 140 行）。
 
 **第一优先合同类型改为 `terminal`（终端租赁）**，因为表一填的是「五羊作为出租方、租给终端租户」的租约（实测承租方为名创优品、佐登堡家具、个人房世超等）。上游承租合同不产出台一任何一列。
 
@@ -69,7 +73,7 @@
 | 页文本管线可用 | `page_text_pipeline.py:70-73`，`min_pdf_text_chars=20`、`dpi=200`、`page=10s`、`document=180s` |
 | 规则候选可用 | `candidate_review.py:113` merge、`:153` build |
 | 合同字段白名单 7 个 | 同上 `:91-99`，含 `payment_cycle`（LLM 那 6 个不含此项） |
-| 后端 OCR 依赖齐备 | 实测 venv：`rapidocr 3.9.1` / `onnxruntime 1.20.1` / `pymupdf 1.24.14`，与 `document_processing_runtime.py:16-20` 精确匹配 |
+| 本地 OCR 管线可用（降级路径） | 实测 venv：`rapidocr 3.9.1` / `onnxruntime 1.20.1` / `pymupdf 1.24.14`，与 `document_processing_runtime.py:16-20` 精确匹配。本方案默认改走 DeepSeek OCR，此路径保留为离线与故障降级，不删除 |
 | 仓储无候选回写能力 | `extraction_sessions.py:41-127`，仅 create/get/transition/delete |
 
 ### 2.2 表一与系统数据模型的对应缺口
@@ -100,7 +104,7 @@
 
 ### 3.1 目标
 
-1. 上传已签**终端租赁合同**扫描件后，在**本地**完成页文本抽取与规则候选，写入会话 `candidate_fields`。
+1. 上传已签**终端租赁合同**扫描件后，完成页文本抽取与规则候选并写入会话 `candidate_fields`；文本抽取默认调用 DeepSeek OCR API，可按配置回落本地管线。
 2. 候选覆盖表一所需的 5 项（承租方名称、租期起、租期止、月租金、免租期截止日），前端逐字段展示值 + 页码 + 原文片段。
 3. 承租方名称用于 **PartyPicker 推荐**，不给「自动选中」；主体审核流已于 2026-11-20 停用（建档即 `approved`），新增终端租户不再需要提审/审核。
 4. 任何解析异常都**不阻断手工补录**，会话必须落到 `ready_for_review`。
@@ -110,12 +114,12 @@
 
 | 不做 | 理由 |
 |---|---|
-| 自动创建或绑定 Party / 资产单元 | §5.4 明文禁止；主体需走审核流 |
+| 自动创建或绑定 Party / 资产单元 | §5.4 明文禁止；主体虽已建档即生效，仍须由操作员显式选择 |
 | 自动生成租金阶段（递增序列） | 解析只出首期月租，递增条款需人工判定 |
 | 生成表一报表（应收/实收/欠租/坪效） | 属报表与收缴模块，非解析能力 |
 | 改动数据模型（加合同级面积/免租日期字段） | 实测无必要（§1.1、§2.2）；如后续口径变化再单独立项 |
 | 上游承租合同优先 | 上游不产出台一任何一列；保留支持但不作验收目标 |
-| 引入视觉大模型读图 | `.env` 无 VISION 配置；国资合同图像外发风险高 |
+| 引入对话式视觉大模型（VLM）做字段问答 | OCR 已由 DeepSeek OCR 专用接口覆盖；再叠一层 VLM 只增加外发面与成本，对 5 个正则可覆盖的字段无收益 |
 
 ## 4. 方案设计
 
@@ -128,7 +132,12 @@ POST /contract-intake-sessions (multipart: file + contract_type=terminal)
   └─ BackgroundTasks 派发 _extract(session_id, storage_path, contract_type)
         │
         ├─ asyncio.to_thread:
-        │    OrderedPageTextPipeline.build(path)
+        │    OcrProvider.extract(path)                ← DOCUMENT_OCR_PROVIDER
+        │      ├ deepseek: POST /v1/tools/ocr
+        │      │           multipart: file + purpose=text_recognition
+        │      │           → pages[].text（逐页模型原始输出）
+        │      └ local   : OrderedPageTextPipeline（PyMuPDF + RapidOCR）
+        │    → list[PageText]（页码 + 行 + text_source，两条路径统一结构）
         │    CandidateReviewService.build_contract_candidates(pages)
         │    [可选] DeepSeekTextEnricher.enrich(...) → merge
         │    按 contract_type 裁剪（terminal 保留全部 5 项）
@@ -141,9 +150,13 @@ GET /contract-intake-sessions/{id}  ← 前端轮询，拿 candidate_fields
 POST /{id}/confirm-terminal        ← 不变；承租方/单元由人工选
 ```
 
+**两条 OCR 路径必须收敛到同一个 `PageText` 结构**（`page_number` / `text_lines` / `text_source`）。这是复用下游 `CandidateReviewService`、证据引用校验与前端出处展示的前提；否则规则层要分叉，维护成本翻倍。
+
 ### 4.2 关键决策：同步改异步
 
-**必须异步。** 最坏耗时 = 整卷 OCR 180s + LLM 3 批 × 120s = **540s**，远超浏览器与反代的 30–60s 超时。保持同步只会让用户看到超时、服务端仍在写一个无人认领的会话。
+**必须异步。** DeepSeek OCR 单次总时长上限 **180 秒**（从开始上传算起，含上传、识别与返回），若叠加 LLM 文本增强（每批 120s × 最多 3 批）最坏 **540 秒**，远超浏览器与反代的 30–60s 超时。保持同步只会让用户看到超时、服务端仍在写一个无人认领的会话。
+
+另有一条硬约束：上传须在 **120 秒内**完成且中途停顿不超过 30 秒，否则返回 `408`。因此不能在请求线程里「边传边等」，必须在后台任务中完成整个上传—识别周期。
 
 实现选择 **FastAPI `BackgroundTasks` + `asyncio.to_thread`**：项目已有先例（`documents/excel/export_ops.py:166`、`system/notifications.py:274`），无新增基础设施。代价需明示：**进程重启会丢失正在解析的会话**（`extracting` 态残留至 Redis TTL 3600s 到期）。因解析是一次性辅助，影响可接受；前端轮询超时后提示重新上传。
 
@@ -174,10 +187,17 @@ def update_candidates(
 
 | 情形 | 错误码 | 会话状态 | 用户可见 |
 |---|---|---|---|
-| 依赖缺失 / 模型哈希不符 | `extraction_unavailable` | `ready_for_review` | warning，手工补录 |
-| 非 PDF / >50 页 / >50MiB | `extraction_unsupported` | `ready_for_review` | warning |
-| 单页 OCR 超时 | 该页 `text_source=None`，其余页继续 | `ready_for_review` | 候选偏少，不报错 |
-| 整卷 180s 超时 | `extraction_timeout` | `ready_for_review` | warning |
+| `DOCUMENT_OCR_ENABLED=false` | `extraction_disabled` | `ready_for_review` | warning，全手填 |
+| `DEEPSEEK_API_KEY` 缺失 / provider 配置非法 | `extraction_unavailable` | `ready_for_review` | warning，手工补录 |
+| `local` 模式下依赖缺失 / 模型哈希不符 | `extraction_unavailable` | `ready_for_review` | warning，手工补录 |
+| 非 PDF / 超 50 页 / 超 50MiB（系统侧限流，严于服务端） | `extraction_unsupported` | `ready_for_review` | warning |
+| 402 余额不足 | `ocr_insufficient_balance` | `ready_for_review` | 「OCR 服务余额不足，请联系管理员」，不重试 |
+| 408 上传过慢 / 504 提交超时 | `ocr_upload_timeout` | `ready_for_review` | warning，可重试 |
+| 413 文件过大 | `extraction_unsupported` | `ready_for_review` | warning |
+| 429 并发超限 | `ocr_rate_limited` | `ready_for_review` | warning，可稍后重试 |
+| 500 / 503 服务内部错误或繁忙 | `ocr_service_unavailable` | `ready_for_review` | 退避重试 2 次后 warning |
+| HTTP 200 但 body 含 `error`（识别中途失败） | `ocr_failed` | `ready_for_review` | warning，取 `error.message` 摘要 |
+| 某页 `finish_reason=length` | `ocr_page_truncated` | `ready_for_review` | 该页不参与抽取，其余页正常 |
 | 规则候选为空 | 无错误码 | `ready_for_review` | 无 warning，全手填 |
 | LLM 关闭 | 无错误码 | `ready_for_review` | 仅规则候选 |
 | LLM 调用失败 | `llm_unavailable` | `ready_for_review` | warning，保留规则候选 |
@@ -214,6 +234,37 @@ def update_candidates(
 | R3 只取首阶段 | 合同含「第二年起递增 / 每两年递增 N%」等条款 | 只取**首个租金阶段**的减免前金额，不取均值、不取末期；递增条款交由人工在 RentScheduleEditor 补后续阶段 |
 
 对 `management_agreement` 仍剔除 `monthly_rent` 与 `rent_free_until`（委托管理协议无租金阶段，§5.5 明文）。
+
+#### 4.3.6 OCR Provider 抽象与 DeepSeek 接入
+
+```python
+class OcrProvider(Protocol):
+    def extract(
+        self, path: Path, *, document_type: Literal["contract"]
+    ) -> list[PageText]: ...
+```
+
+| 实现 | 触发配置 | 行为 |
+|---|---|---|
+| `DeepSeekOcrProvider`（默认） | `DOCUMENT_OCR_PROVIDER=deepseek` | `POST {DEEPSEEK_BASE_URL}/tools/ocr`，multipart 仅 `file` + `purpose`，把 `pages[].text` 按行切为 `PageText` |
+| `LocalRapidOcrProvider` | `=local` | 复用现有 `OrderedPageTextPipeline`（PyMuPDF 取文本，单页 <20 字转 RapidOCR） |
+
+DeepSeek 调用要点：
+
+| 项 | 取值 | 依据 |
+|---|---|---|
+| 端点 | `POST /v1/tools/ocr` | 官方 OCR 指南 |
+| 认证 | `Authorization: Bearer <DEEPSEEK_API_KEY>` | 沿用现有 Key |
+| 表单字段 | 仅 `file`（需带文件名）+ `purpose`；**传其他字段一律 400** | 同上 |
+| `purpose` | `text_recognition` | `rich_layout_recognition` 输出含 `<｜ref｜>`/`<｜box｜>` 与归一化坐标，对规则抽取是噪音；若后续要做「框选定位」再切 |
+| 响应解析 | 响应体前置大量换行用于保活，**整体可直接按 JSON 解析**；`pages[].index` 从 0 开始，需 +1 对齐会话页码 | 同上 |
+| 截断处理 | `pages[].finish_reason == "length"` 表示该页输出不完整 → 该页 `text_source=None`，记 `ocr_page_truncated` warning，**不参与字段抽取** | 避免用半页文本抽租金 |
+| 客户端超时 | `httpx.Timeout(connect=15, read=None, write=120, pool=10)` + 外层 200s 硬中止 | 服务端 180s 兜底，客户端略宽以免误杀 |
+| 错误识别 | 状态码 200 后仍可能是 `{"error": {...}}` 对象，须先判 `error` 键 | 官方：识别开始后状态码已是 200 |
+
+成本：1.5 元/1000 页（按成功页数计）。本批 64 份合同约 1000 页量级，全量重跑约 **1.5 元**，可忽略；仍在文档备案，避免日后无法解释外部支出。
+
+并发：账号级最多 15 个同时识别。本方案用 `asyncio.Semaphore(1)` 串行，不会触顶，也避免与人工录入争抢带宽。
 
 ### 4.4 候选数据契约
 
@@ -267,19 +318,50 @@ def update_candidates(
 
 `WARNING_LABELS`（:29-34）补充新错误码文案。
 
-### 4.6 LLM 开关与合规边界
+### 4.6 数据外发与合规边界
 
-**默认不启用。** 事实：
+**本方案把外发等级从「文本」提升到「合同原件」。** 这是必须显式确认的变更，不能藏在实现细节里。
 
-| 项 | 事实 |
-|---|---|
-| 当前 `backend/.env` | `DOCUMENT_LLM_ENABLED=true`、Key 已配置、`base_url=https://api.deepseek.com/v1` |
-| `.env.example` 基线 | `false`（正确） |
-| 外发内容 | **OCR 纯文本，非图片**（`.env` 无 VISION 配置） |
-| 脱敏范围 | 仅身份证号、手机号；**承租方名称、地址、租金原样发出** |
-| 回报约束 | fail-closed：候选须带页码+原文片段且逐字命中，否则整批作废 |
+| 阶段 | 外发对象 | 外发内容 |
+|---|---|---|
+| OCR（默认开启） | DeepSeek OCR API | **整份 PDF / 图片原件**，含公章、手写批注、甲乙方全称、租金金额、产权信息 |
+| 字段增强（默认关闭） | DeepSeek 对话 API | OCR 产出的纯文本；脱敏仅覆盖身份证号与手机号，主体名称、地址、金额原样发出 |
 
-实施要求：① 部署清单显式声明 `false`；② 若某环境开启，必须在 `warnings` 中返回 `EXTRACTION_TEXT_SENT_TO_THIRD_PARTY`（severity=`info`），文案「本次识别已将合同文本发送至外部模型服务」——**当前实现没有这条，属需补齐的合规缺口**；③ 国资场景建议评估内网私有化模型替换 `base_url`。
+官方隐私条款（`api-docs.deepseek.com/zh-cn/guides/ocr`）：「文件不会存入 Files API，也不会交给对话模型」。这是有利条件，但**不等于「不出内网」，也不构成数据出境或保密审查的合规依据**。
+
+必须落实的四项措施：
+
+1. **可切换**：`DOCUMENT_OCR_PROVIDER=local` 可完全断网运行，供涉密或断网环境使用。默认值由部署方显式指定，不在代码里硬编码 `deepseek`。
+2. **知情**：会话 `warnings` 返回 `EXTRACTION_FILE_SENT_TO_THIRD_PARTY`（severity=`info`），文案「本次识别已将合同扫描件上传至外部 OCR 服务」。**当前实现无此提示，属需补齐的合规缺口。**
+3. **留痕**：每次 OCR 调用记录 `provider`、`page_count`、响应 `id`、耗时、`usage` 到审计日志；**不记录文件内容**。
+4. **可关闭**：`DOCUMENT_OCR_ENABLED=false` 时整条解析链路跳过，会话直接进入 `ready_for_review` + `extraction_disabled` warning，行为与当前完全一致。
+
+LLM 文本增强维持原结论：`DOCUMENT_LLM_ENABLED` 默认 `false`——表一的 5 项靠规则抽取即可覆盖，无需为此再引入第二处外发。
+
+**判断边界**：本方案只保证「技术上可切换、行为上可告知、审计上可追溯」，不替代数据出境与保密审查的结论。国资合同如涉及保密条款或敏感产权，部署时应默认 `local`。
+
+### 4.7 为什么换 OCR：本地 RapidOCR 与 DeepSeek OCR 对照
+
+| 维度 | 本地 RapidOCR（现状，保留为降级） | DeepSeek OCR（本方案默认） |
+|---|---|---|
+| 数据流向 | 全本地，零外发 | **整份文件上传 `api.deepseek.com`** |
+| 服务端上限 | 无（系统自限 50 页 / 50 MiB） | 1000 页 / 100 MiB |
+| 耗时 | 单页 10s、整卷 180s（占本地 CPU） | 单次总时长 180s（含上传，超时返 `504`） |
+| 成本 | 0 | 1.5 元 / 1000 页 |
+| 本地依赖 | `rapidocr` + `onnxruntime` + 3 个 ONNX 模型 + 启动 SHA256 预检 | 仅 `httpx` + API Key |
+| 启动脆弱性 | 模型缺失或哈希不符 → 整机拒绝启动（fail loud） | 无本地模型，启动不受影响 |
+| 识别质量 | PP-OCRv6 small，表格线与手写易丢 | 服务端模型，「模型原始输出不做清理」，表格与版式更强 |
+| 失败模式 | CPU 抢占、单页超时 | 网络、余额（402）、限速（429）、服务繁忙（503） |
+| 离线可用 | 是 | 否 |
+
+选择 DeepSeek OCR 的四条理由：
+
+1. 免去本地模型部署与哈希校验带来的启动脆弱性——当前预检是 fail loud，模型缺失会让整个后端起不来；
+2. 支持整份 PDF 一次提交，无需本地光栅化与逐页调度，代码路径更短；
+3. 识别质量对表格类合同更有利，而表一恰恰要从租金表里抽数；
+4. 成本极低（本批约 1.5 元）。
+
+必须接受的代价：**合同原件离开内网**。缓解与判断边界见 §4.6；不接受该代价的场景切 `local` 即可，下游逻辑完全一致。
 
 ## 5. 决策汇总
 
@@ -297,6 +379,10 @@ def update_candidates(
 | D10 | 合同出租面积 | 识别 / 取单元面积 | **取单元 `rentable_area`** | 实测 67 行 W=J、0 行反例；识别多值反而引入错误 |
 | D11 | 第一优先合同类型 | upstream / terminal | **terminal** | 表一是终端租赁口径，上游不产出台一任何列 |
 | D12 | 合同月租金取哪个字段 | `actual_monthly_rent` / `base_monthly_rent` | **`base_monthly_rent`（减免前）** | 表一要求「免租期内按合同租金照填」；`actual` 在免租期为 0、有折扣时被调低，填表会把该行租金与坪效算小 |
+| D13 | OCR 实现选型 | 本地 RapidOCR / DeepSeek OCR | **DeepSeek OCR 默认，本地保留为降级** | 免本地模型运维与启动脆弱性；整份 PDF 一次提交；表格识别更强；成本 1.5 元/千页。代价是原件外发，见 §4.6 |
+| D14 | OCR `purpose` 取值 | `text_recognition` / `rich_layout_recognition` | **`text_recognition`** | 只要文本；后者输出含 `<｜ref｜>`/`<｜box｜>` 与归一化坐标，污染规则抽取。后续要做框选定位再切 |
+| D15 | 合同原件外发是否接受 | 接受 / 拒绝 | **接受（用户决策），但须可切换+告知+留痕** | 用户明确要求接入 DeepSeek OCR；技术上以 provider 开关兜住不接受该代价的场景 |
+| D16 | OCR 与 LLM 是否级联 | OCR 后必调 LLM / 仅规则 | **仅规则；LLM 默认关** | 表一 5 项均为正则可覆盖的结构化字段；避免第二处外发与额外成本 |
 
 ## 6. 字段映射表
 
@@ -346,8 +432,17 @@ def update_candidates(
 |---|---|
 | 上传后立即返回 | `status == "extracting"`、`candidate_fields == {}` |
 | 解析完成 | `ready_for_review`；5 个键存在且各含 `value`/`extractor`/`evidence` |
-| 依赖缺失（mock 预检抛错） | `ready_for_review` + `EXTRACTION_UNAVAILABLE` + `candidates == {}` |
-| 非 PDF / 超页数 / 超时 | `ready_for_review` + 对应错误码 |
+| **响应前置换行** | mock 返回 `"\n\n\n{...}"` 仍能解析成功（保活换行属前导空白） |
+| **页码对齐** | mock `pages[].index=0..n-1` → `PageText.page_number` 为 `1..n` |
+| **provider 同构** | `deepseek` 与 `local` 两个 provider 对同一份样例产出结构一致的 `list[PageText]`（仅文本内容可不同） |
+| **402 余额不足** | `ocr_insufficient_balance`，`ready_for_review`，**不重试**（mock 调用次数 = 1） |
+| **408 / 504 超时** | `ocr_upload_timeout`，`ready_for_review` |
+| **429 / 503** | 退避重试 2 次后 `ocr_rate_limited` / `ocr_service_unavailable`，`ready_for_review` |
+| **200 但 body 含 error** | 识别出 `ocr_failed`，不误判为成功 |
+| **`finish_reason=length`** | 该页 `text_source=None`、记 `ocr_page_truncated`，其余页仍产出候选 |
+| **OCR 关闭** | `DOCUMENT_OCR_ENABLED=false` → `extraction_disabled`，无任何 HTTP 调用 |
+| `local` 模式依赖缺失（mock 预检抛错） | `ready_for_review` + `EXTRACTION_UNAVAILABLE` + `candidates == {}` |
+| 非 PDF / 超页数 | `ready_for_review` + `extraction_unsupported` |
 | `management_agreement` | 候选**不含** `monthly_rent`、`rent_free_until` |
 | `tenant_name` 不产生 Party ID | 断言 `candidate_fields` 内任何层级无 UUID 形态字符串 |
 | 免租期形态②换算 | 「自 2024-11-08 起免租 12 个月」→ `2025-11-07`，`tier=medium`，含 `derivation` |
@@ -366,51 +461,65 @@ def update_candidates(
 
 取 3 份真实终端租赁合同（建议：名创优品北京路 245/249 号、佐登堡松柏东街、房世超松柏东街——均可在表一找到对应行）。走完整链路：上传 → 轮询 → 候选出现 → 人工选主体/单元 → `confirm-terminal` → 校验合同落库、扫描件改绑；再把这 3 行的 5 个字段与表一现有值逐项比对。
 
+该轮**走真实 DeepSeek OCR**（需有效 Key 与余额），逐份记录页数、耗时、响应 `id` 与 `usage`，作为 A1 与预算备案的实测依据。单元测试一律 mock `httpx`，CI 不依赖外部服务。
+
 ### 7.3 验收标准
 
 | # | 标准 | 判定 |
 |---|---|---|
-| A1 | 20 页扫描合同 180s 内返回候选 | 实测计时 |
-| A2 | LLM 关闭时全链路零外网请求 | 日志核对 `httpx` 调用数 = 0 |
-| A3 | 关闭解析后录入链路与当前完全一致 | 既有 `ContractIntakePage` 测试全绿 |
+| A1 | 3 份真实合同 OCR 全流程在 **180s 服务端上限**内完成并出候选 | 逐份计时；超限即判失败（映射 `ocr_upload_timeout` 不算通过） |
+| A2 | `DOCUMENT_OCR_PROVIDER=local` + LLM 关闭时全链路零外网请求 | 日志核对 `httpx` 调用数 = 0 |
+| A3 | 关闭解析（`DOCUMENT_OCR_ENABLED=false`）后录入链路与当前完全一致 | 既有 `ContractIntakePage` 测试全绿 |
 | A4 | 解析失败不影响任何合同录入 | 手工补录端到端通过 |
 | A5 | 承租方、资产单元均为用户显式选择 | 检查确认请求无自动绑定痕迹 |
 | A6 | 3 份真实合同与表一比对：租期起止 **3/3 一致**、合同月租金**按 `base_monthly_rent` 比对 3/3 一致**、承租方 **3/3 被正确推荐** | 人工比对表 |
-| A7 | 免租期换算偏差 ≤15 天或明确标记待核 | 逐份核 |
+| A7 | 免租期换算偏差 ≤15 天或明确标记待核；存在 `finish_reason=length` 的页不得贡献候选 | 逐份核 |
+| A8 | 默认配置下会话必带 `EXTRACTION_FILE_SENT_TO_THIRD_PARTY` 告知 | 响应体断言 |
+| A9 | 单份合同 OCR 成本与页数可核算（`page_count × 1.5/1000`） | 审计日志抽查 |
 
 ## 8. 风险
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 进程重启丢解析会话 | 中 | 轮询超时提示重传；解析为一次性辅助 |
-| OCR 与既有复核表模型不同（系统 PP-OCRv6 small vs 复核表 PP-OCRv4 mobile） | 中 | **不做机器比对**；复核表以人工核对为准 |
+| **合同原件外发第三方，且不可撤回** | **高** | provider 可切 `local`；会话返回外发告知 warning；审计只记元数据不记内容；涉密合同部署侧默认 `local`（§4.6） |
 | 月租金含代收费用直接填表一导致偏高 | **高** | 命中「管理费/物业费」即降 `medium` 并提示；A6 逐份核 |
 | 误填 `actual`（减免后）导致免租期行为 0、租金与坪效偏小 | **高** | D12 把映射固定为 `base_monthly_rent`；R3 只取首阶段；A6 按 `base` 逐份比对 |
 | 年租金未折月导致该行租金放大 12 倍 | **高** | R2 强制折算并在 `derivation` 留痕；A6 检查量级（与同物业其他行单价对比，偏离 >20% 告警） |
+| DeepSeek OCR 与既有复核表 OCR 引擎不同（服务端模型 vs 复核表 RapidOCR PP-OCRv4） | 中 | **不做机器比对**；复核表以人工核对为准，系统识别仅作录入辅助 |
+| 单次 180s 总时长上限导致长合同超时（`504` / `OCR did not finish in time`） | 中 | 系统侧仍限 50 页；超时映射 `extraction_timeout` 并回落手工补录；A1 实测 20 页合同耗时 |
+| `finish_reason=length` 页文本被截断，据此抽字段会出错 | 中 | 截断页置 `text_source=None` 并记 `ocr_page_truncated`，不参与抽取；A7 核 |
+| 余额不足（402）导致全部解析失败 | 中 | 错误映射 `ocr_insufficient_balance` 并在前端提示联系管理员；不重试 |
+| 服务繁忙（503）/ 限速（429） | 低 | 指数退避重试 2 次（间隔 2s/8s），仍失败则降级手工补录 |
+| 上传带宽被大文件占满，影响同期人工录入 | 低 | `asyncio.Semaphore(1)` 串行 + 50 页上限；必要时错峰 |
+| 进程重启丢解析会话 | 中 | 轮询超时提示重传；解析为一次性辅助 |
 | 免租期换算偏差 | 中 | 形态①优先取合同日期；形态②标 `medium` 并显示推算式 |
 | 用户把承租方推荐当已选中 | 中 | PartyPicker 不预置 ID；未选中时确认按钮校验报错 |
-| `to_thread` 并发 OCR 抢占 CPU | 中 | 模块级 `asyncio.Semaphore(1)`；队满直接降级 `extraction_unavailable` |
 | Redis TTL 与后台任务竞态 | 低 | `update_candidates` 捕获过期直接放弃，不重试 |
 
 ## 9. 实施步骤
 
 | 步 | 内容 | 依赖 |
 |---|---|---|
-| 1 | 白名单扩 2 项 + `monthly_rent` 降级规则 + 单测（纯规则，可独立验） | — |
-| 2 | `ExtractionSessionRepository.update_candidates` + 单测 | — |
-| 3 | `ContractIntakeExtractor`（pipeline + 规则 + 可选 LLM + 类型裁剪）+ 单测 | 1,2 |
-| 4 | `ContractIntakeSessionService` 异步编排、降级、`skip-extraction` + 单测 | 3 |
-| 5 | API 层注入 `BackgroundTasks`、新增端点 | 4 |
-| 6 | 前端轮询、候选回填、PartyPicker 推荐、出处展示、跳过入口 + 组件测试 | 5 |
-| 7 | 集成测试（3 份真实终端合同）+ 验收 A1–A7 | 6 |
-| 8 | 部署清单声明 `DOCUMENT_LLM_ENABLED=false`；如需开启补 `EXTRACTION_TEXT_SENT_TO_THIRD_PARTY` | 4 |
+| 1 | `OcrProvider` 抽象 + `DeepSeekOcrProvider`（multipart 上传、前置换行解析、页码 +1、9 类错误映射、`finish_reason` 截断处理）+ mock 单测 | — |
+| 2 | `LocalRapidOcrProvider` 包装现有 `OrderedPageTextPipeline` + `DOCUMENT_OCR_PROVIDER` 开关 + 两 provider 同构断言 | 1 |
+| 3 | 白名单扩 2 项 + `monthly_rent` 降级规则（R1–R3）+ 单测（纯规则，可独立验） | — |
+| 4 | `ExtractionSessionRepository.update_candidates` + 单测 | — |
+| 5 | `ContractIntakeExtractor`（provider + 规则 + 可选 LLM + 类型裁剪）+ 单测 | 1,2,3,4 |
+| 6 | `ContractIntakeSessionService` 异步编排、降级矩阵、`skip-extraction` + 单测 | 5 |
+| 7 | API 层注入 `BackgroundTasks`、新增端点、外发告知 warning + OCR 审计日志 | 6 |
+| 8 | 前端轮询、候选回填、PartyPicker 推荐、出处展示、跳过入口 + 组件测试 | 7 |
+| 9 | 集成测试（3 份真实终端合同，走真实 OCR）+ 验收 A1–A9 | 8 |
+| 10 | 部署三件套：`DOCUMENT_OCR_PROVIDER` 显式指定、`DOCUMENT_OCR_ENABLED`、`DOCUMENT_LLM_ENABLED=false`；同步 `.env.example` | 7 |
 
-建议 1–5 为后端 PR（可独立验收），6–7 为前端 + 端到端 PR。
+建议 1–7 为后端 PR（可独立验收），8–9 为前端 + 端到端 PR。
 
 **前置条件**：表一填报需要 `tenant_party_id` 有值。**主体审核流已于 2026-11-20 停用（建档即生效）**，终端租户（名创优品、佐登堡等）直接建档即可用于合同录入，不必再走提审/审核；A6 前需先完成这批租户建档。
 
+**另需前置**：`DEEPSEEK_API_KEY` 可用余额（402 会直接导致全部解析失败），以及部署方对「合同原件外发」的书面确认（§4.6）。
+
 ## 10. 引用锚点
 
+- **DeepSeek OCR 指南**：<https://api-docs.deepseek.com/zh-cn/guides/ocr>（端点 `POST /v1/tools/ocr`、`purpose` 两取值、100 MiB / 1000 页 / 180s 限制、1.5 元每千页计费、15 并发限速、错误码表、「文件不存 Files API 且不交对话模型」隐私条款）
 - `docs/design/flows/flow-contract-intake.md` 主流程第 3 步、「关键 UX 约束」
 - `docs/specs/api-contract.md` §5.4、§5.5、§5.6
 - `docs/integrations/pdf-processing.md`

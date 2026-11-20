@@ -6,7 +6,7 @@
 ## 未发布
 
 - feat(party): 停用主体审核流，建档即生效——create_party/import_parties 强制置 approved 并写 review_by=system:auto-approve 痕迹，模型默认值同步改 APPROVED；枚举与 submit/approve/reject-review 三路由保留，供历史 draft 收尾与随时回退（REQ-PTY-001）。
-- docs(plans): 新增合同录入扫描件解析方案（B 方案·面向表一填报）待评审——恢复 flow-contract-intake 第 3 步可选解析；第一优先 terminal 合同，规则白名单扩 tenant_name/rent_free_until，月租固定取 base_monthly_rent（减免前首月），LLM 默认关闭。
+- docs(plans): 新增合同录入扫描件解析方案（B 方案·面向表一填报）待评审——恢复 flow-contract-intake 第 3 步可选解析；OCR 改接 DeepSeek `/v1/tools/ocr`（本地管线保留为降级），第一优先 terminal 合同，月租固定取 base_monthly_rent（减免前首月），LLM 默认关闭。
 - fix(asset-ops): PR #113 验收走查修复三缺陷——工作台报送卡统计月回退上一已结束自然月（draft 校验拒绝当月，对齐「报上月」口径）；workbench 前端 Decimal 字符串解析（后端 JSON 序列化 "0" 致整页加载失败）；物业项目下拉改 GET /asset-units/project-options（v5 无 /projects 端点，原下拉 404）。
 - docs(asset-ops): PR #113 验收归档——2026-11-20 本地栈真实走查 27/28 断言通过（唯一 FAIL 为登录页外链图片超时等三类环境噪音），方案移入 archive/backend-plans/，REQ-WBK-001 转已实现；走查脚本收编 frontend/scripts/acceptance-walkthrough.mjs。
 
