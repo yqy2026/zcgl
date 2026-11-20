@@ -38,6 +38,12 @@ logger = logging.getLogger(__name__)
 
 _CONTACT_METADATA_FIELDS = {"contact_name", "contact_phone"}
 
+# 主体审核流已停用：建档即生效（2026-11-20）。
+# review_status 字段与审核路由保留，便于历史数据兼容与随时恢复；
+# 新建/导入的主体直接置 approved，并写入自动审核痕迹以便审计追溯。
+_AUTO_REVIEW_ACTOR = "system:auto-approve"
+_AUTO_REVIEW_REASON = "建档即生效：主体审核流已停用"
+
 
 class PartyService:
     """Service layer for Party, contact, and user-binding operations."""
@@ -55,10 +61,10 @@ class PartyService:
 
     async def create_party(self, db: AsyncSession, *, obj_in: PartyCreate) -> Party:
         payload = self._normalize_party_payload(obj_in.model_dump())
-        payload.setdefault("review_status", PartyReviewStatus.DRAFT.value)
-        payload.setdefault("review_by", None)
-        payload.setdefault("reviewed_at", None)
-        payload.setdefault("review_reason", None)
+        payload["review_status"] = PartyReviewStatus.APPROVED.value
+        payload["review_by"] = payload.get("review_by") or _AUTO_REVIEW_ACTOR
+        payload["reviewed_at"] = payload.get("reviewed_at") or datetime.now(UTC)
+        payload["review_reason"] = payload.get("review_reason") or _AUTO_REVIEW_REASON
 
         party_type = self._normalize_party_type(payload.get("party_type"))
         self._prepare_identifier_payload(payload, party_type=party_type)
@@ -86,7 +92,7 @@ class PartyService:
             party_id=str(party.id),
             action="create",
             from_status="none",
-            to_status=PartyReviewStatus.DRAFT.value,
+            to_status=PartyReviewStatus.APPROVED.value,
         )
         await self._maybe_await_db_call(getattr(db, "commit", None))
         return party
@@ -220,10 +226,10 @@ class PartyService:
 
         for index, item in enumerate(items):
             payload = self._normalize_party_payload(item.model_dump())
-            payload["review_status"] = PartyReviewStatus.DRAFT.value
-            payload["review_by"] = None
-            payload["reviewed_at"] = None
-            payload["review_reason"] = None
+            payload["review_status"] = PartyReviewStatus.APPROVED.value
+            payload["review_by"] = _AUTO_REVIEW_ACTOR
+            payload["reviewed_at"] = datetime.now(UTC)
+            payload["review_reason"] = _AUTO_REVIEW_REASON
 
             party_type = self._normalize_party_type(payload.get("party_type"))
             self._prepare_identifier_payload(payload, party_type=party_type)
@@ -256,9 +262,9 @@ class PartyService:
                 party_id=str(party.id),
                 action="import",
                 from_status="none",
-                to_status=PartyReviewStatus.DRAFT.value,
+                to_status=PartyReviewStatus.APPROVED.value,
                 operator=operator,
-                reason="批量导入待审核",
+                reason=_AUTO_REVIEW_REASON,
             )
             await self._maybe_await_db_call(getattr(db, "commit", None))
             created_count += 1

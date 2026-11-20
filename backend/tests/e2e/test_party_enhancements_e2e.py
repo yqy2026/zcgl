@@ -11,6 +11,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.e2e.factories import create_approved_legal_party
+
 pytestmark = pytest.mark.e2e
 
 
@@ -28,21 +30,6 @@ def _create_party(
     )
     assert response.status_code == 200, response.text
     return response.json()
-
-
-def _approve_party(
-    authenticated_client: TestClient,
-    csrf_headers: dict[str, str],
-    party_id: str,
-) -> None:
-    submit = authenticated_client.post(
-        f"/api/v1/parties/{party_id}/submit-review", headers=csrf_headers
-    )
-    assert submit.status_code == 200, submit.text
-    approve = authenticated_client.post(
-        f"/api/v1/parties/{party_id}/approve-review", headers=csrf_headers
-    )
-    assert approve.status_code == 200, approve.text
 
 
 def test_party_import_and_contacts_e2e(
@@ -77,12 +64,13 @@ def test_party_import_and_contacts_e2e(
     assert statuses == ["created", "created", "error"]
     assert "主体名称重复" in result["items"][2]["message"]
 
-    # Imported parties land as drafts with auto-generated codes.
+    # 批量导入主体同样建档即生效（审核流已停用），并保留自动审核痕迹。
     imported_party_id = result["items"][0]["party_id"]
     detail = authenticated_client.get(f"/api/v1/parties/{imported_party_id}")
     assert detail.status_code == 200
     imported = detail.json()
-    assert imported["review_status"] == "draft"
+    assert imported["review_status"] == "approved"
+    assert imported["review_by"] == "system:auto-approve"
     assert imported["status"] == "active"
     assert imported["code"].startswith("LE-")
 
@@ -93,7 +81,7 @@ def test_party_import_and_contacts_e2e(
     assert any(
         log["action"] == "import"
         and log["from_status"] == "none"
-        and log["to_status"] == "draft"
+        and log["to_status"] == "approved"
         for log in log_list
     )
 
@@ -153,14 +141,14 @@ def test_party_lifecycle_deactivate_reactivate_e2e(
         authenticated_client, csrf_headers, suffix=suffix, name=f"停用主体-{suffix}"
     )
     party_id = party["id"]
-    _approve_party(authenticated_client, csrf_headers, party_id)
+    # 建档即 approved（审核流已停用），无需再走提审/审核。
 
-    # Only approved parties can enter the lifecycle protocol.
-    draft_party = _create_party(
-        authenticated_client, csrf_headers, suffix=suffix, name=f"草稿主体-{suffix}"
+    # 仅 approved 主体可进入生命周期协议；用工厂直插历史 draft 验证该守卫。
+    draft_party = create_approved_legal_party(
+        db_session, suffix=suffix, name=f"草稿主体-{suffix}", review_status="draft"
     )
     not_approved = authenticated_client.post(
-        f"/api/v1/parties/{draft_party['id']}/status/preview",
+        f"/api/v1/parties/{draft_party.id}/status/preview",
         json={"operation": "deactivate"},
         headers=csrf_headers,
     )

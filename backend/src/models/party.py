@@ -131,7 +131,10 @@ class Party(Base):
         String(50), nullable=False, default="active", comment="状态"
     )
     review_status: Mapped[PartyReviewStatus] = mapped_column(
-        String(50), nullable=False, default=PartyReviewStatus.DRAFT, comment="审核状态"
+        String(50),
+        nullable=False,
+        default=PartyReviewStatus.APPROVED,
+        comment="审核状态（审核流已停用，建档即 approved；字段保留以兼容历史与审计）",
     )
     review_by: Mapped[str | None] = mapped_column(
         String(100), nullable=True, comment="审核人"

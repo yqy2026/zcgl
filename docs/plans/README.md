@@ -8,6 +8,7 @@
 
 | 方案 | 状态 |
 |------|------|
+| [合同录入会话接入扫描件解析（B 方案 · 面向表一填报）](2026-11-20-contract-intake-extraction-reinstatement.md) | 📋 待评审（恢复 `flow-contract-intake.md` 第 3 步「可选解析」，目标为表一物业台账「租赁合同信息」6 列） |
 | [anydoc 办公文档解析引入评估](2026-08-08-anydoc-office-doc-parsing.md) | ⏸ 搁置（备选技术方案，无对应活跃 REQ） |
 
 历史方案见 [`docs/archive/backend-plans/`](../archive/backend-plans/README.md)（含 2026-11-20 验收归档的 [资产运营 v5 原型对齐收口](../archive/backend-plans/2026-11-17-asset-ops-v5-prototype-alignment.md)）。
